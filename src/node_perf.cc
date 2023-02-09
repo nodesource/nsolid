@@ -41,6 +41,9 @@ using v8::Value;
 const uint64_t timeOrigin = PERFORMANCE_NOW();
 // https://w3c.github.io/hr-time/#dfn-time-origin-timestamp
 const double timeOriginTimestamp = GetCurrentTimeInMicroseconds();
+const uint64_t performance_process_start = PERFORMANCE_NOW();
+const double performance_process_start_timestamp =
+    GetCurrentTimeInMicroseconds();
 uint64_t performance_v8_start;
 
 PerformanceState::PerformanceState(Isolate* isolate,
