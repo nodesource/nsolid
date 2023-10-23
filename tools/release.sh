@@ -8,9 +8,7 @@
 
 set -e
 
-[ -z "$NODEJS_RELEASE_HOST" ] && NODEJS_RELEASE_HOST=direct.nodejs.org
-
-webhost=$NODEJS_RELEASE_HOST
+webhost=nsolid-ci.nodesource.com
 webuser=dist
 promotablecmd=dist-promotable
 promotecmd=dist-promote
@@ -37,6 +35,16 @@ while getopts ":i:s:" option; do
     esac
 done
 shift $((OPTIND-1))
+
+project=$(basename `git rev-parse --show-toplevel`)
+
+knownprojects='nsolid-(node|proxy|console)'
+if [[ ! $project =~ $knownprojects ]]; then
+  echo "Uknown project '$project': Must be run from a known nsolid git project"
+fi
+
+# To avoid namespace conflicts on tags, nsolid-node now prefixes tags with `nsolid-`
+[[ $project == 'nsolid-node' ]] && tagprefix=nsolid- || tagprefix=
 
 ################################################################################
 ## Select a GPG key to use
@@ -103,7 +111,7 @@ sign() {
   fi
 
   # shellcheck disable=SC2086,SC2029
-  shapath=$(ssh ${customsshkey} "${webuser}@${webhost}" $signcmd nodejs $1)
+  shapath=$(ssh ${customsshkey} "${webuser}@${webhost}" $signcmd $1 $project)
 
   echo "${shapath}" | grep -q '^/.*/SHASUMS256.txt$' || (\
     echo 'Error: No SHASUMS file returned by sign!' &&\
@@ -114,7 +122,7 @@ sign() {
 
   shafile=$(basename "$shapath")
   shadir=$(dirname "$shapath")
-  tmpdir="/tmp/_node_release.$$"
+  tmpdir="/tmp/_${project}_release.$$"
 
   mkdir -p $tmpdir
 
@@ -169,7 +177,7 @@ fi
 printf "\n# Checking for releases ...\n"
 
 # shellcheck disable=SC2086,SC2029
-promotable=$(ssh ${customsshkey} "$webuser@$webhost" $promotablecmd nodejs)
+promotable=$(ssh ${customsshkey} "$webuser@$webhost" $promotablecmd $project)
 
 if [ "X${promotable}" = "X" ]; then
   echo "No releases to promote!"
@@ -207,7 +215,7 @@ for version in $versions; do
     echo "# Promoting ${version}..."
 
     # shellcheck disable=SC2086,SC2029
-    ssh ${customsshkey} "$webuser@$webhost" $promotecmd nodejs $version && \
+    ssh ${customsshkey} "$webuser@$webhost" $promotecmd $version $project ${nodeversion} && \
       sign "$version"
 
     break

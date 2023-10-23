@@ -7,7 +7,7 @@ SIGN ?=
 PREFIX ?= /usr/local
 FLAKY_TESTS ?= run
 TEST_CI_ARGS ?=
-STAGINGSERVER ?= node-www
+STAGINGSERVER ?= nsolid-staging
 LOGLEVEL ?= silent
 OSTYPE := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ifeq ($(findstring os/390,$OSTYPE),os/390)
@@ -76,9 +76,9 @@ BUILDTYPE_LOWER := $(shell echo $(BUILDTYPE) | tr '[:upper:]' '[:lower:]')
 EXEEXT := $(shell $(PYTHON) -c \
 		"import sys; print('.exe' if sys.platform == 'win32' else '')")
 
-NODE_EXE = node$(EXEEXT)
-NODE ?= ./$(NODE_EXE)
-NODE_G_EXE = node_g$(EXEEXT)
+NODE ?= ./nsolid$(EXEEXT)
+NODE_EXE = nsolid$(EXEEXT)
+NODE_G_EXE = nsolid_g$(EXEEXT)
 NPM ?= ./deps/npm/bin/npm-cli.js
 
 # Flags for packaging.
@@ -305,6 +305,7 @@ v8:
 
 .PHONY: jstest
 jstest: build-addons build-js-native-api-tests build-node-api-tests ## Runs addon tests and JS tests
+	NSOLID_DELAY_INIT="" \
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) --mode=$(BUILDTYPE_LOWER) \
 		$(TEST_CI_ARGS) \
 		--skip-tests=$(CI_SKIP_TESTS) \
@@ -390,7 +391,8 @@ ADDONS_BINDING_SOURCES := \
 ADDONS_PREREQS := config.gypi \
 	deps/npm/node_modules/node-gyp/package.json tools/build-addons.mjs \
 	deps/uv/include/*.h deps/v8/include/*.h \
-	src/node.h src/node_buffer.h src/node_object_wrap.h src/node_version.h
+	src/node.h src/node_buffer.h src/node_object_wrap.h src/node_version.h \
+	src/nsolid.h src/nsolid/nsolid_api.h deps/nsuv/include/*.h
 
 define run_build_addons
 env npm_config_loglevel=$(LOGLEVEL) npm_config_nodedir="$$PWD" \
@@ -827,7 +829,7 @@ docclean:
 	$(RM) -r out/doc
 	$(RM) "$(VERSIONS_DATA)"
 
-RAWVER=$(shell $(PYTHON) tools/getnodeversion.py)
+RAWVER=$(shell $(PYTHON) tools/getnsolidversion.py)
 VERSION=v$(RAWVER)
 CHANGELOG=doc/changelogs/CHANGELOG_V$(firstword $(subst ., ,$(RAWVER))).md
 
@@ -973,7 +975,7 @@ ifeq ($(DESTCPU),ia32)
 override DESTCPU=x86
 endif
 
-TARNAME=node-$(FULLVERSION)
+TARNAME=nsolid-$(FULLVERSION)
 TARBALL=$(TARNAME).tar
 # Custom user-specified variation, use it directly
 ifdef VARIATION
@@ -1141,15 +1143,15 @@ corepack-update:
 .PHONY: pkg-upload
 # Note: this is strictly for release builds on release machines only.
 pkg-upload: pkg
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)"
 	chmod 664 $(TARNAME).pkg
-	scp -p $(TARNAME).pkg $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg.done"
+	scp -p $(TARNAME).pkg $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg.done"
 
 $(TARBALL): release-only doc-only
 	git checkout-index -a -f --prefix=$(TARNAME)/
 	mkdir -p $(TARNAME)/doc/api
-	cp doc/node.1 $(TARNAME)/doc/node.1
+	cp doc/nsolid.1 $(TARNAME)/doc/nsolid.1
 	cp -r out/doc/api/* $(TARNAME)/doc/api/
 	$(RM) -r $(TARNAME)/.editorconfig
 	$(RM) -r $(TARNAME)/.git*
@@ -1190,23 +1192,23 @@ tar: $(TARBALL) ## Create a source tarball.
 .PHONY: tar-upload
 # Note: this is strictly for release builds on release machines only.
 tar-upload: tar
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)"
 	chmod 664 $(TARNAME).tar.gz
-	scp -p $(TARNAME).tar.gz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz.done"
+	scp -p $(TARNAME).tar.gz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz.done"
 ifeq ($(XZ), 1)
 	chmod 664 $(TARNAME).tar.xz
-	scp -p $(TARNAME).tar.xz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz.done"
+	scp -p $(TARNAME).tar.xz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz.done"
 endif
 
 .PHONY: doc-upload
 # Note: this is strictly for release builds on release machines only.
 doc-upload: doc
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/docs/"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/docs/"
 	chmod -R ug=rw-x+X,o=r+X out/doc/
-	scp -pr out/doc/* $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/docs/
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/docs.done"
+	scp -pr out/doc/* $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/docs/
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/docs.done"
 
 .PHONY: $(TARBALL)-headers
 $(TARBALL)-headers: release-only
@@ -1231,14 +1233,14 @@ tar-headers: $(TARBALL)-headers ## Build the node header tarball.
 
 .PHONY: tar-headers-upload
 tar-headers-upload: tar-headers
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)"
 	chmod 664 $(TARNAME)-headers.tar.gz
-	scp -p $(TARNAME)-headers.tar.gz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz.done"
+	scp -p $(TARNAME)-headers.tar.gz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz.done"
 ifeq ($(XZ), 1)
 	chmod 664 $(TARNAME)-headers.tar.xz
-	scp -p $(TARNAME)-headers.tar.xz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz.done"
+	scp -p $(TARNAME)-headers.tar.xz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz.done"
 endif
 
 $(BINARYTAR): release-only
@@ -1253,6 +1255,7 @@ $(BINARYTAR): release-only
 	$(MAKE) install DESTDIR=$(BINARYNAME) V=$(V) PORTABLE=1
 	cp README.md $(BINARYNAME)
 	cp LICENSE $(BINARYNAME)
+	cp LICENSE.NSOLID $(BINARYNAME)
 ifeq ("$(wildcard $(CHANGELOG))","")
 	cp CHANGELOG.md $(BINARYNAME)
 else
@@ -1276,14 +1279,14 @@ binary: $(BINARYTAR) ## Build release binary tarballs.
 .PHONY: binary-upload
 # Note: this is strictly for release builds on release machines only.
 binary-upload: binary
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)"
 	chmod 664 $(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz
-	scp -p $(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz.done"
+	scp -p $(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz.done"
 ifeq ($(XZ), 1)
 	chmod 664 $(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz
-	scp -p $(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz.done"
+	scp -p $(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz.done"
 endif
 
 .PHONY: bench-all
@@ -1345,7 +1348,8 @@ format-md:
 
 
 
-LINT_JS_TARGETS = .eslintrc.js benchmark doc lib test tools
+LINT_JS_TARGETS = .eslintrc.js benchmark doc lib test tools \
+		  agents/*/lib
 
 run-lint-js = tools/node_modules/eslint/bin/eslint.js --cache \
 	--max-warnings=0 --report-unused-disable-directives $(LINT_JS_TARGETS)
@@ -1389,10 +1393,19 @@ LINT_CPP_ADDON_DOC_FILES = $(wildcard $(LINT_CPP_ADDON_DOC_FILES_GLOB))
 LINT_CPP_EXCLUDE ?=
 LINT_CPP_EXCLUDE += src/node_root_certs.h
 LINT_CPP_EXCLUDE += $(LINT_CPP_ADDON_DOC_FILES)
+LINT_CPP_EXCLUDE += $(wildcard test/js-native-api/??_*/*.cc test/js-native-api/??_*/*.h test/node-api/??_*/*.cc test/node-api/??_*/*.h)
+LINT_CPP_EXCLUDE += src/asserts-cpp/asserts.h
+LINT_CPP_EXCLUDE += src/nlohmann/json.h
 # These files were copied more or less verbatim from V8.
 LINT_CPP_EXCLUDE += src/tracing/trace_event.h src/tracing/trace_event_common.h
 
 LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
+	agents/otlp/src/*.cc \
+	agents/otlp/src/*.h \
+	agents/statsd/src/*.cc \
+	agents/statsd/src/*.h \
+	agents/zmq/src/*.cc \
+	agents/zmq/src/*.h \
 	benchmark/napi/*/*.cc \
 	src/*.c \
 	src/*.cc \
@@ -1416,6 +1429,12 @@ LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	tools/code_cache/*.h \
 	tools/snapshot/*.cc \
 	tools/snapshot/*.h \
+	deps/nsolid_cpu_profiler/bindings/*.cc \
+	deps/nsolid_cpu_profiler/src/*.cc \
+	deps/nsolid_cpu_profiler/include/*.h \
+	deps/nsolid_heap_profiler/bindings/*.cc \
+	deps/nsolid_heap_profiler/src/*.cc \
+	deps/nsolid_heap_profiler/include/*.h \
 	))
 
 FORMAT_CPP_FILES ?=
@@ -1562,6 +1581,23 @@ endif
 lint-clean:
 	$(RM) tools/.*lintstamp
 	$(RM) .eslintcache
+
+.PHONY: get-nsolid-version
+get-nsolid-version:
+	@$(PYTHON) ./tools/getnsolidversion.py
+
+.PHONY: test-with-console
+test-with-console: export NSOLID_COMMAND = localhost:9001
+test-with-console:
+	@$(NODE) ./tools/check-for-console.js
+	$(MAKE) build-addons
+	$(MAKE) build-js-native-api-tests
+	$(MAKE) build-node-api-tests
+	# This is broken and won't allow testing to continue.
+	#$(MAKE) cctest
+	$(MAKE) jstest
+	$(MAKE) tooltest
+
 
 HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 1 || echo 0)
 

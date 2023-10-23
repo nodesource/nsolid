@@ -6,6 +6,8 @@
 #include "node_file.h"
 #include "req_wrap-inl.h"
 
+#include "nsolid/nsolid_api.h"
+
 namespace node {
 namespace fs {
 
@@ -307,6 +309,18 @@ FSReqBase* AsyncDestCall(Environment* env, FSReqBase* req_wrap,
     after(uv_req);  // after may delete req_wrap if there is an error
     req_wrap = nullptr;
   } else {
+    if (strncmp(syscall, "open", 4) == 0) {
+      nsolid::EnvInst* envinst =
+        nsolid::EnvInst::GetEnvLocalInst(args.GetIsolate());
+      DCHECK(envinst != nullptr);
+      envinst->inc_fs_handles_opened();
+    }
+    if (strncmp(syscall, "close", 5) == 0) {
+      nsolid::EnvInst* envinst =
+        nsolid::EnvInst::GetEnvLocalInst(args.GetIsolate());
+      DCHECK(envinst != nullptr);
+      envinst->inc_fs_handles_closed();
+    }
     req_wrap->SetReturnValue(args);
   }
 
@@ -335,16 +349,23 @@ int SyncCall(Environment* env, v8::Local<v8::Value> ctx,
              Func fn, Args... args) {
   env->PrintSyncTrace();
   int err = fn(env->event_loop(), &(req_wrap->req), args..., nullptr);
+  v8::Isolate* isolate = env->isolate();
   if (err < 0) {
     v8::Local<v8::Context> context = env->context();
     v8::Local<v8::Object> ctx_obj = ctx.As<v8::Object>();
-    v8::Isolate* isolate = env->isolate();
     ctx_obj->Set(context,
                  env->errno_string(),
                  v8::Integer::New(isolate, err)).Check();
     ctx_obj->Set(context,
                  env->syscall_string(),
                  OneByteString(isolate, syscall)).Check();
+  } else {
+    if (strncmp(syscall, "open", 4) == 0) {
+      env->envinst_->inc_fs_handles_opened();
+    }
+    if (strncmp(syscall, "close", 5) == 0) {
+      env->envinst_->inc_fs_handles_closed();
+    }
   }
   return err;
 }

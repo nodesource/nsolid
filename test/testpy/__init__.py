@@ -154,6 +154,8 @@ class AddonTestConfiguration(SimpleTestConfiguration):
         file_path = os.path.join(self.root, reduce(os.path.join, tst[1:], "") + ".js")
         result.append(
             SimpleTestCase(tst, file_path, arch, mode, self.context, self, self.additional_flags))
+    for tst in result:
+      tst.parallel = True
     return result
 
 class AbortTestConfiguration(SimpleTestConfiguration):

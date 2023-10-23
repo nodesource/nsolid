@@ -471,7 +471,7 @@ parser.add_argument('--release-urlbase',
     dest='release_urlbase',
     help='Provide a custom URL prefix for the `process.release` properties '
          '`sourceUrl` and `headersUrl`. When compiling a release build, this '
-         'will default to https://nodejs.org/download/release/')
+         'will default to NSolid\'s default')
 
 parser.add_argument('--enable-d8',
     action='store_true',
@@ -988,6 +988,24 @@ def get_llvm_version(cc):
 def get_xcode_version(cc):
   return get_version_helper(
     cc, r"(^Apple (?:clang|LLVM) version) ([0-9]+\.[0-9]+)")
+
+def get_glibc_version():
+  try:
+    proc = subprocess.Popen(['/usr/bin/ldd', '--version'],
+                            stdin=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            stdout=subprocess.PIPE)
+  except OSError:
+    error('''No acceptable glibc found!''')
+
+  # print(to_utf8(proc.communicate()[0]))
+  match = re.search(r"ldd \(.*\) ([0-9]+)\.([0-9]+)",
+                    to_utf8(proc.communicate()[0]))
+  if match:
+    return tuple(map(int, match.group(1, 2)))
+  else:
+    return (0, 0)
+
 
 def get_gas_version(cc):
   try:
@@ -2116,6 +2134,13 @@ if bin_override:
 write('config.mk', do_not_edit + config_str)
 
 
+# N|Solid. Copy asserts-cpp and nlohmann::json headers to src/
+shutil.rmtree('./src/asserts-cpp', True)
+shutil.rmtree('./src/nlohmann', True)
+shutil.copytree('./deps/asserts-cpp', './src/asserts-cpp')
+shutil.copytree('./deps/json/single_include/nlohmann', './src/nlohmann')
+shutil.copyfile('src/nlohmann/json.hpp', 'src/nlohmann/json.h')
+
 
 gyp_args = ['--no-parallel', '-Dconfiguring_node=1']
 gyp_args += ['-Dbuild_type=' + config['BUILDTYPE']]
@@ -2135,6 +2160,11 @@ if options.compile_commands_json:
 # override the variable `python` defined in common.gypi
 if bin_override is not None:
   gyp_args += ['-Dpython=' + sys.executable]
+
+if flavor == 'linux':
+  glibc_version = get_glibc_version()
+  if glibc_version < (2, 17):
+    gyp_args += ['-Dnsolid_use_librt=1']
 
 # pass the leftover non-whitespace positional arguments to GYP
 gyp_args += [arg for arg in args if not str.isspace(arg)]

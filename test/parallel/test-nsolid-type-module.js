@@ -1,0 +1,11 @@
+'use strict';
+
+require('../common');
+const assert = require('assert');
+const { spawnSync } = require('child_process');
+const path = require('path');
+
+const file = path.join(__dirname,
+                       '../fixtures/node_modules/nsolid-type-module/index.js');
+const child = spawnSync(process.execPath, [ file ]);
+assert.strictEqual(child.stdout.toString(), 'my name\n');

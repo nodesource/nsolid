@@ -1,0 +1,46 @@
+version: 0.2
+
+# for info on the build phases used here:
+#   http://docs.aws.amazon.com/codebuild/latest/userguide/view-build-details.html#view-build-details-phases
+
+# for info on the buildspec.yml syntax:
+#   http://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+
+phases:
+  install:
+    commands:
+      # Check environment information
+      - npx envinfo
+      - aws s3 cp s3://nodesource-internal-tools/build-key.pem /root/.ssh/id_rsa
+      - chmod 400 /root/.ssh/id_rsa
+      - ssh-keyscan github.com >> /root/.ssh/known_hosts
+
+  pre_build:
+    commands:
+      - mkdir /root/artifacts
+      - cp -r $CODEBUILD_SRC_DIR /
+
+  build:
+    commands:
+      # Configure environment
+      - export CCACHE_NOSTATS=1
+      - export CCACHE_SLOPPINESS="file_macro,include_file_mtime,include_file_ctime,time_macros,file_stat_matches"
+      - export CCACHE_DIR="/efs"
+      - export CCACHE_MAXSIZE="100G"
+      - export CCACHE_NLEVELS=5
+      - export CC='ccache gcc'
+      - export CXX='ccache g++'
+      - umask 002
+      - which g++ gcc && umask
+      - cd /nsolid-node && ./configure && make -j 4 test-only V=1 > /root/artifacts/tests.log.txt 2>&1
+      - tail -n 10 /root/artifacts/tests.log.txt
+  post_build:
+    commands:
+      # Move generated artifacts
+      - cp out/Release/cctest /root/artifacts/ || true
+      - cp out/Release/nsolid /root/artifacts/ || true
+
+artifacts:
+  files:
+    - /root/artifacts/*
+  discard-paths: yes
