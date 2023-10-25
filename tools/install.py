@@ -8,6 +8,7 @@ import os
 import shutil
 import sys
 import re
+import subprocess
 
 # set at init time
 node_prefix = '/usr/local' # PREFIX variable from Makefile
@@ -132,6 +133,56 @@ def corepack_files(action):
     else:
       assert 0 # unhandled action type
 
+def nsolid_cli_files(action):
+  target_path = 'lib/node_modules/nsolid-cli/'
+
+  # don't install cli if the target path is a symlink, it probably means
+  # that a dev version of nsolid-cli is installed there
+  if os.path.islink(abspath(install_path, target_path)): return
+
+  for dirname, subdirs, basenames in os.walk('deps/nsolid-cli', topdown=True):
+    subdirs[:] = filter('test'.__ne__, subdirs) # skip test suites
+    paths = [os.path.join(dirname, basename) for basename in basenames]
+    action(paths, target_path + dirname[15:] + '/')
+
+  # create/remove symlink
+  link_path = abspath(install_path, 'bin/nsolid-cli')
+  if action == uninstall:
+    action([link_path], 'bin/nsolid-cli')
+  elif action == install:
+    try_symlink('../lib/node_modules/nsolid-cli/cli-bin.js', link_path)
+  else:
+    assert(0) # unhandled action type
+
+def nsolid_strict_files(action):
+  target_path = 'lib/node_modules/ncm-ng/'
+
+  for dirname, subdirs, basenames in os.walk('deps/ncm-ng', topdown=True):
+    try:
+      subdirs[:] = filter('test'.__ne__, subdirs) # skip test suites
+      paths = [os.path.join(dirname, basename) for basename in basenames]
+      action(paths, target_path + dirname[11:] + '/')
+    except:
+      pass
+
+  # create/remove symlink
+  link_path = abspath(install_path, 'bin/ncm-agent')
+  if action == uninstall:
+    action([link_path], 'bin/ncm-agent')
+  elif action == install:
+    subprocess.call([abspath(install_path, 'lib/node_modules/ncm-ng/install.sh')])
+    try_symlink('../lib/node_modules/ncm-ng/parallel/agent.js', link_path)
+  else:
+    assert(0) # unhandled action type
+
+  link_path = abspath(install_path, 'bin/nsolid-strict')
+  if action == uninstall:
+    action([link_path], 'bin/nsolid-strict')
+  elif action == install:
+    try_symlink('../lib/node_modules/ncm-ng/parallel/nsolid-strict.sh', link_path)
+  else:
+    assert(0) # unhandled action type
+
 def subdir_files(path, dest, action):
   ret = {}
   for dirpath, dirnames, filenames in os.walk(path):
@@ -142,7 +193,7 @@ def subdir_files(path, dest, action):
 
 def files(action):
   is_windows = sys.platform == 'win32'
-  output_file = 'node'
+  output_file = 'nsolid'
   output_prefix = 'out/Release/'
 
   if is_windows:
@@ -178,19 +229,33 @@ def files(action):
       output_lib = 'libnode.' + variables.get('shlib_suffix')
       action([output_prefix + output_lib], variables.get('libdir') + '/' + output_lib)
 
+  if not is_windows:
+    # Install nsolid -> node compatibility symlink.
+    link_target = 'bin/node'
+    link_path = abspath(install_path, link_target)
+    if action == uninstall:
+      action([link_path], link_target)
+    elif action == install:
+      try_symlink('nsolid', link_path)
+    else:
+      assert(0)  # Unhandled action type.
+
   action(['deps/v8/tools/gdbinit'], 'share/doc/node/')
   action(['deps/v8/tools/lldb_commands.py'], 'share/doc/node/')
 
   if 'freebsd' in sys.platform or 'openbsd' in sys.platform:
-    action(['doc/node.1'], 'man/man1/')
+    action(['doc/nsolid.1'], 'man/man1/')
   else:
-    action(['doc/node.1'], 'share/man/man1/')
+    action(['doc/nsolid.1'], 'share/man/man1/')
 
   if 'true' == variables.get('node_install_npm'):
     npm_files(action)
 
   if 'true' == variables.get('node_install_corepack'):
     corepack_files(action)
+
+  nsolid_cli_files(action)
+  nsolid_strict_files(action)
 
   headers(action)
 
@@ -318,7 +383,11 @@ def headers(action):
     'src/node_buffer.h',
     'src/node_object_wrap.h',
     'src/node_version.h',
+    'src/nsolid.h',
   ], 'include/node/')
+
+  subdir_files('deps/asserts-cpp', 'include/node/asserts-cpp', action)
+  subdir_files('src/nlohmann', 'include/node/nlohmann', action)
 
   # Add the expfile that is created on AIX
   if sys.platform.startswith('aix') or sys.platform == "os400":

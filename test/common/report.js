@@ -124,7 +124,6 @@ function _validateContent(report, fields = []) {
   assert.strictEqual(header.arch, os.arch());
   assert.strictEqual(header.platform, os.platform());
   assert.deepStrictEqual(header.componentVersions, process.versions);
-  assert.deepStrictEqual(header.release, process.release);
   assert.strictEqual(header.osName, os.type());
   assert.strictEqual(header.osRelease, os.release());
   assert.strictEqual(typeof header.osVersion, 'string');

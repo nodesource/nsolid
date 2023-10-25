@@ -441,6 +441,7 @@ static void uv__poll_wine(uv_loop_t* loop, DWORD timeout) {
     reset_timeout = 1;
     user_timeout = timeout;
     timeout = 0;
+    uv__get_loop_metrics(loop)->loop_starting = 1;
   } else {
     reset_timeout = 0;
   }
@@ -471,14 +472,8 @@ static void uv__poll_wine(uv_loop_t* loop, DWORD timeout) {
       reset_timeout = 0;
     }
 
-    /* Placed here because on success the loop will break whether there is an
-     * empty package or not, or if GetQueuedCompletionStatus returned early then
-     * the timeout will be updated and the loop will run again. In either case
-     * the idle time will need to be updated.
-     */
-    uv__metrics_update_idle_time(loop);
-
     if (overlapped) {
+      uv__metrics_update_idle_time(loop);
       uv__metrics_inc_events(loop, 1);
 
       /* Package was dequeued */
@@ -534,6 +529,7 @@ static void uv__poll(uv_loop_t* loop, DWORD timeout) {
     reset_timeout = 1;
     user_timeout = timeout;
     timeout = 0;
+    uv__get_loop_metrics(loop)->loop_starting = 1;
   } else {
     reset_timeout = 0;
   }
@@ -565,19 +561,13 @@ static void uv__poll(uv_loop_t* loop, DWORD timeout) {
       reset_timeout = 0;
     }
 
-    /* Placed here because on success the loop will break whether there is an
-     * empty package or not, or if pGetQueuedCompletionStatusEx returned early
-     * then the timeout will be updated and the loop will run again. In either
-     * case the idle time will need to be updated.
-     */
-    uv__metrics_update_idle_time(loop);
-
     if (success) {
       for (i = 0; i < count; i++) {
         /* Package was dequeued, but see if it is not a empty package
          * meant only to wake us up.
          */
         if (overlappeds[i].lpOverlapped) {
+          uv__metrics_update_idle_time(loop);
           uv__metrics_inc_events(loop, 1);
           if (actual_timeout == 0)
             uv__metrics_inc_events_waiting(loop, 1);
@@ -620,6 +610,12 @@ int uv_run(uv_loop_t *loop, uv_run_mode mode) {
   DWORD timeout;
   int r;
   int can_sleep;
+
+  /* If this is the first time the event loop has run then manually set the
+   * provider exit time so that blocked time can be properly calculated on
+   * first runs. */
+  if (uv__get_loop_metrics(loop)->metrics.loop_count == 0)
+    uv__get_loop_metrics(loop)->provider_exit_time = uv_hrtime();
 
   r = uv__loop_alive(loop);
   if (!r)

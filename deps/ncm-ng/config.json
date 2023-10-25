@@ -1,0 +1,28 @@
+{
+  "name": "nsolid-strict-config",
+  "whitelist": {
+     "package-name-to-whitelist": "^1.0.1"
+  },
+  "rules": [
+     "readme-exists",
+     "readme-size",
+     "disk-usage-expanded-size",
+     "disk-usage-file-count",
+     "disk-usage-dir-count",
+     "has-scm-info",
+     "scm-tagged-versions",
+     "has-install-scripts",
+     "has-gyp-file",
+     "uses-eval",
+     "uses-dynamic-require",
+     "missing-strict-mode",
+     "has-unsafe-regexps",
+     "uses-deprecated-node-apis",
+     "has-lost-callback-errs",
+     "has-abandoned-promises",
+     "has-callback-in-async-function",
+     "has-async-without-await",
+     "license",
+     "deprecated"
+  ]
+}
