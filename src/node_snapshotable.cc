@@ -22,6 +22,7 @@
 #include "node_util.h"
 #include "node_v8.h"
 #include "node_v8_platform-inl.h"
+#include "nsolid/nsolid_bindings.h"
 
 #if HAVE_INSPECTOR
 #include "inspector/worker_inspector.h"  // ParentInspectorHandle

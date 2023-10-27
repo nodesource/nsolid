@@ -131,23 +131,6 @@ jobs:
         run: |
           make lint-py-build
           make lint-py
-  lint-yaml:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9  # v3.5.3
-        with:
-          persist-credentials: false
-      - name: Use Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@bd6b4b6205c4dbad673328db7b31b7fab9e241c0  # v4.6.1
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Environment Information
-        run: npx envinfo
-      - name: Lint YAML
-        run: |
-          make lint-yaml-build || true
-          make lint-yaml
 
   lint-sh:
     if: github.event.pull_request.draft == false
@@ -159,16 +142,6 @@ jobs:
       - run: shellcheck -V
       - name: Lint Shell scripts
         run: tools/lint-sh.mjs .
-  lint-codeowners:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9  # v3.5.3
-        with:
-          persist-credentials: false
-      - uses: mszostok/codeowners-validator@7f3f5e28c6d7b8dfae5731e54ce2272ca384592f
-        with:
-          checks: files,duppatterns
   lint-pr-url:
     if: ${{ github.event.pull_request }}
     runs-on: ubuntu-latest

@@ -38,6 +38,7 @@
 #include "src/profiler/allocation-tracker.h"
 #include "src/profiler/heap-profiler.h"
 #include "src/profiler/heap-snapshot-generator-inl.h"
+#include "src/profiler/output-stream-writer.h"
 
 namespace v8 {
 namespace internal {
@@ -2690,128 +2691,23 @@ bool HeapSnapshotGenerator::FillReferences() {
          dom_explorer_.IterateAndExtractReferences(this);
 }
 
-template<int bytes> struct MaxDecimalDigitsIn;
-template <>
-struct MaxDecimalDigitsIn<1> {
-  static const int kSigned = 3;
-  static const int kUnsigned = 3;
-};
-template<> struct MaxDecimalDigitsIn<4> {
-  static const int kSigned = 11;
-  static const int kUnsigned = 10;
-};
-template<> struct MaxDecimalDigitsIn<8> {
-  static const int kSigned = 20;
-  static const int kUnsigned = 20;
-};
-
-class OutputStreamWriter {
- public:
-  explicit OutputStreamWriter(v8::OutputStream* stream)
-      : stream_(stream),
-        chunk_size_(stream->GetChunkSize()),
-        chunk_(chunk_size_),
-        chunk_pos_(0),
-        aborted_(false) {
-    DCHECK_GT(chunk_size_, 0);
-  }
-  bool aborted() { return aborted_; }
-  void AddCharacter(char c) {
-    DCHECK_NE(c, '\0');
-    DCHECK(chunk_pos_ < chunk_size_);
-    chunk_[chunk_pos_++] = c;
-    MaybeWriteChunk();
-  }
-  void AddString(const char* s) {
-    size_t len = strlen(s);
-    DCHECK_GE(kMaxInt, len);
-    AddSubstring(s, static_cast<int>(len));
-  }
-  void AddSubstring(const char* s, int n) {
-    if (n <= 0) return;
-    DCHECK_LE(n, strlen(s));
-    const char* s_end = s + n;
-    while (s < s_end) {
-      int s_chunk_size =
-          std::min(chunk_size_ - chunk_pos_, static_cast<int>(s_end - s));
-      DCHECK_GT(s_chunk_size, 0);
-      MemCopy(chunk_.begin() + chunk_pos_, s, s_chunk_size);
-      s += s_chunk_size;
-      chunk_pos_ += s_chunk_size;
-      MaybeWriteChunk();
-    }
-  }
-  void AddNumber(unsigned n) { AddNumberImpl<unsigned>(n, "%u"); }
-  void Finalize() {
-    if (aborted_) return;
-    DCHECK(chunk_pos_ < chunk_size_);
-    if (chunk_pos_ != 0) {
-      WriteChunk();
-    }
-    stream_->EndOfStream();
-  }
-
- private:
-  template<typename T>
-  void AddNumberImpl(T n, const char* format) {
-    // Buffer for the longest value plus trailing \0
-    static const int kMaxNumberSize =
-        MaxDecimalDigitsIn<sizeof(T)>::kUnsigned + 1;
-    if (chunk_size_ - chunk_pos_ >= kMaxNumberSize) {
-      int result = SNPrintF(
-          chunk_.SubVector(chunk_pos_, chunk_size_), format, n);
-      DCHECK_NE(result, -1);
-      chunk_pos_ += result;
-      MaybeWriteChunk();
-    } else {
-      base::EmbeddedVector<char, kMaxNumberSize> buffer;
-      int result = SNPrintF(buffer, format, n);
-      USE(result);
-      DCHECK_NE(result, -1);
-      AddString(buffer.begin());
-    }
-  }
-  void MaybeWriteChunk() {
-    DCHECK(chunk_pos_ <= chunk_size_);
-    if (chunk_pos_ == chunk_size_) {
-      WriteChunk();
-    }
-  }
-  void WriteChunk() {
-    if (aborted_) return;
-    if (stream_->WriteAsciiChunk(chunk_.begin(), chunk_pos_) ==
-        v8::OutputStream::kAbort)
-      aborted_ = true;
-    chunk_pos_ = 0;
-  }
-
-  v8::OutputStream* stream_;
-  int chunk_size_;
-  base::ScopedVector<char> chunk_;
-  int chunk_pos_;
-  bool aborted_;
-};
-
-
-// type, name|index, to_node.
-const int HeapSnapshotJSONSerializer::kEdgeFieldsCount = 3;
 // type, name, id, self_size, edge_count, trace_node_id, detachedness.
 const int HeapSnapshotJSONSerializer::kNodeFieldsCount = 7;
 
-void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
+void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream, bool redact) {
   if (AllocationTracker* allocation_tracker =
       snapshot_->profiler()->allocation_tracker()) {
     allocation_tracker->PrepareForSerialization();
   }
   DCHECK_NULL(writer_);
   writer_ = new OutputStreamWriter(stream);
-  SerializeImpl();
+  SerializeImpl(redact);
   delete writer_;
   writer_ = nullptr;
 }
 
 
-void HeapSnapshotJSONSerializer::SerializeImpl() {
+void HeapSnapshotJSONSerializer::SerializeImpl(bool redact) {
   DCHECK_EQ(0, snapshot_->root()->index());
   writer_->AddCharacter('{');
   writer_->AddString("\"snapshot\":{");
@@ -2819,7 +2715,9 @@ void HeapSnapshotJSONSerializer::SerializeImpl() {
   if (writer_->aborted()) return;
   writer_->AddString("},\n");
   writer_->AddString("\"nodes\":[");
-  SerializeNodes();
+  // This is where strings are copied into the strings_ cache so redaction must
+  // be performed here
+  SerializeNodes(redact);
   if (writer_->aborted()) return;
   writer_->AddString("],\n");
   writer_->AddString("\"edges\":[");
@@ -2944,7 +2842,8 @@ void HeapSnapshotJSONSerializer::SerializeEdges() {
   }
 }
 
-void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
+void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry,
+                                               bool redact) {
   // The buffer needs space for 5 unsigned ints, 1 size_t, 1 uint8_t, 7 commas,
   // \n and \0
   static const int kBufferSize =
@@ -2958,7 +2857,11 @@ void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
   }
   buffer_pos = utoa(entry->type(), buffer, buffer_pos);
   buffer[buffer_pos++] = ',';
-  buffer_pos = utoa(GetStringId(entry->name()), buffer, buffer_pos);
+  if (redact && entry->type() == HeapEntry::kString) {
+    buffer_pos = utoa(GetStringId("(redacted)"), buffer, buffer_pos);
+  } else {
+    buffer_pos = utoa(GetStringId(entry->name()), buffer, buffer_pos);
+  }
   buffer[buffer_pos++] = ',';
   buffer_pos = utoa(entry->id(), buffer, buffer_pos);
   buffer[buffer_pos++] = ',';
@@ -2974,10 +2877,10 @@ void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
   writer_->AddString(buffer.begin());
 }
 
-void HeapSnapshotJSONSerializer::SerializeNodes() {
+void HeapSnapshotJSONSerializer::SerializeNodes(bool redact) {
   const std::deque<HeapEntry>& entries = snapshot_->entries();
   for (const HeapEntry& entry : entries) {
-    SerializeNode(&entry);
+    SerializeNode(&entry, redact);
     if (writer_->aborted()) return;
   }
 }

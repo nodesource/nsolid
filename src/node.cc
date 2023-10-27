@@ -44,6 +44,8 @@
 #include "node_v8_platform-inl.h"
 #include "node_version.h"
 
+#include "nsolid/nsolid_api.h"
+
 #if HAVE_OPENSSL
 #include "node_crypto.h"
 #endif
@@ -968,6 +970,13 @@ std::unique_ptr<InitializationResult> InitializeOncePerProcess(
       return result;
     }
 
+    if (per_process::cli_options->print_nsolid_version) {
+      printf("%s\n", NSOLID_VERSION);
+      result->exit_code_ = 0;
+      result->early_return_ = true;
+      return result;
+    }
+
     if (per_process::cli_options->print_v8_help) {
       V8::SetFlagsFromString("--help", static_cast<size_t>(6));
       result->exit_code_ = 0;
@@ -1230,6 +1239,7 @@ int LoadSnapshotDataAndRun(const SnapshotData** snapshot_data_ptr,
                                  per_process::v8_platform.Platform(),
                                  result->args(),
                                  result->exec_args());
+  nsolid::EnvList::Inst()->SetupExitHandlers();
   exit_code = main_instance.Run();
   return exit_code;
 }

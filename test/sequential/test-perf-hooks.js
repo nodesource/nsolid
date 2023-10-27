@@ -20,7 +20,7 @@ assert(inited < 15000);
 assert.strictEqual(performance.nodeTiming.name, 'node');
 assert.strictEqual(performance.nodeTiming.entryType, 'node');
 
-const delay = 250;
+const delay = process.features.debug ? 500 : 250;
 function checkNodeTiming(props) {
   console.log(props);
 

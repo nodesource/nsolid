@@ -357,6 +357,8 @@ inline void FileHandle::Close() {
     return;
   }
 
+  env()->envinst_->inc_fs_handles_closed();
+
   // If the close was successful, we still want to emit a process warning
   // to notify that the file descriptor was gc'd. We want to be noisy about
   // this because not explicitly closing the FileHandle is a bug.
@@ -477,6 +479,7 @@ MaybeLocal<Promise> FileHandle::ClosePromise() {
       close->Reject(
           UVException(isolate, static_cast<int>(req->result), "close"));
     } else {
+      close->env()->envinst_->inc_fs_handles_closed();
       close->Resolve();
     }
   }};

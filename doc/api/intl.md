@@ -4,7 +4,7 @@
 
 <!-- type=misc -->
 
-Node.js has many features that make it easier to write internationalized
+N|Solid has many features that make it easier to write internationalized
 programs. Some of them are:
 
 * Locale-sensitive or Unicode-aware functions in the [ECMAScript Language
@@ -23,17 +23,17 @@ programs. Some of them are:
 * [`require('node:util').TextDecoder`][]
 * [`RegExp` Unicode Property Escapes][]
 
-Node.js and the underlying V8 engine use
+N|Solid and the underlying V8 engine use
 [International Components for Unicode (ICU)][ICU] to implement these features
-in native C/C++ code. The full ICU data set is provided by Node.js by default.
+in native C/C++ code. The full ICU data set is provided by N|Solid by default.
 However, due to the size of the ICU data file, several
 options are provided for customizing the ICU data set either when
-building or running Node.js.
+building or running N|Solid.
 
-## Options for building Node.js
+## Options for building N|Solid
 
-To control how ICU is used in Node.js, four `configure` options are available
-during compilation. Additional details on how to compile Node.js are documented
+To control how ICU is used in N|Solid, four `configure` options are available
+during compilation. Additional details on how to compile N|Solid are documented
 in [BUILDING.md][].
 
 * `--with-intl=none`/`--without-intl`
@@ -41,7 +41,7 @@ in [BUILDING.md][].
 * `--with-intl=small-icu`
 * `--with-intl=full-icu` (default)
 
-An overview of available Node.js and JavaScript features for each `configure`
+An overview of available N|Solid and JavaScript features for each `configure`
 option:
 
 | Feature                                  | `none`                            | `system-icu`                 | `small-icu`            | `full-icu` |
@@ -68,11 +68,12 @@ operation is identical to that of `Date.prototype.toString()`.
 ### Disable all internationalization features (`none`)
 
 If this option is chosen, ICU is disabled and most internationalization
-features mentioned above will be **unavailable** in the resulting `node` binary.
+features mentioned above will be **unavailable** in the resulting `nsolid`
+binary.
 
 ### Build with a pre-installed ICU (`system-icu`)
 
-Node.js can link against an ICU build already installed on the system. In fact,
+N|Solid can link against an ICU build already installed on the system. In fact,
 most Linux distributions already come with ICU installed, and this option would
 make it possible to reuse the same set of data used by other components in the
 OS.
@@ -88,7 +89,7 @@ system.
 
 This option makes the resulting binary link against the ICU library statically,
 and includes a subset of ICU data (typically only the English locale) within
-the `node` executable.
+the `nsolid` executable.
 
 Functionalities that only require the ICU library itself, such as
 [`String.prototype.normalize()`][] and the [WHATWG URL parser][], are fully
@@ -119,13 +120,13 @@ through either:
 * The [`NODE_ICU_DATA`][] environment variable:
 
   ```bash
-  env NODE_ICU_DATA=/some/directory node
+  env NODE_ICU_DATA=/some/directory nsolid
   ```
 
 * The [`--icu-data-dir`][] CLI parameter:
 
   ```bash
-  node --icu-data-dir=/some/directory
+  nsolid --icu-data-dir=/some/directory
   ```
 
 (If both are specified, the `--icu-data-dir` CLI parameter takes precedence.)
@@ -138,7 +139,7 @@ Check ["ICU Data"][] article in the ICU User Guide for other supported formats
 and more details on ICU data in general.
 
 The [full-icu][] npm module can greatly simplify ICU data installation by
-detecting the ICU version of the running `node` executable and downloading the
+detecting the ICU version of the running `nsolid` executable and downloading the
 appropriate data file. After installing the module through `npm i full-icu`,
 the data file will be available at `./node_modules/full-icu`. This path can be
 then passed either to `NODE_ICU_DATA` or `--icu-data-dir` as shown above to
@@ -186,13 +187,13 @@ const hasFullICU = (() => {
 For more verbose tests for `Intl` support, the following resources may be found
 to be helpful:
 
-* [btest402][]: Generally used to check whether Node.js with `Intl` support is
+* [btest402][]: Generally used to check whether N|Solid with `Intl` support is
   built correctly.
 * [Test262][]: ECMAScript's official conformance test suite includes a section
   dedicated to ECMA-402.
 
 ["ICU Data"]: http://userguide.icu-project.org/icudata
-[BUILDING.md]: https://github.com/nodejs/node/blob/HEAD/BUILDING.md
+[BUILDING.md]: https://github.com/nodesource/nsolid/blob/HEAD/BUILDING.md
 [ECMA-262]: https://tc39.github.io/ecma262/
 [ECMA-402]: https://tc39.github.io/ecma402/
 [ICU]: http://site.icu-project.org/

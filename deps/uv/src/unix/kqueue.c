@@ -110,6 +110,7 @@ int uv__io_check_fd(uv_loop_t* loop, int fd) {
 
 
 void uv__io_poll(uv_loop_t* loop, int timeout) {
+  uv__loop_internal_fields_t* lfields;
   struct kevent events[1024];
   struct kevent* ev;
   struct timespec spec;
@@ -138,6 +139,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
     return;
   }
 
+  lfields = uv__get_internal_fields(loop);
   nevents = 0;
 
   while (!QUEUE_EMPTY(&loop->watcher_queue)) {
@@ -205,10 +207,11 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
   base = loop->time;
   count = 48; /* Benchmarks suggest this gives the best throughput. */
 
-  if (uv__get_internal_fields(loop)->flags & UV_METRICS_IDLE_TIME) {
+  if (lfields->flags & UV_METRICS_IDLE_TIME) {
     reset_timeout = 1;
     user_timeout = timeout;
     timeout = 0;
+    uv__get_loop_metrics(loop)->loop_starting = 1;
   } else {
     reset_timeout = 0;
   }
@@ -227,6 +230,12 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
 
     if (pset != NULL)
       pthread_sigmask(SIG_BLOCK, pset, NULL);
+
+    /* Store the current timeout in a location that's globally accessible so
+     * other locations like uv__work_done() can determine whether the queue
+     * of events in the callback were waiting when poll was called.
+     */
+    lfields->current_timeout = timeout;
 
     nfds = kevent(loop->backend_fd,
                   events,
@@ -398,9 +407,11 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
       uv__wait_children(loop);
     }
 
+    uv__metrics_inc_events(loop, nevents);
     if (reset_timeout != 0) {
       timeout = user_timeout;
       reset_timeout = 0;
+      uv__metrics_inc_events_waiting(loop, nevents);
     }
 
     if (have_signals != 0) {

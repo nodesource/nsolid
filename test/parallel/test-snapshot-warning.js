@@ -76,7 +76,7 @@ tmpdir.refresh();
   assert(stats.isFile());
   let match = child.stderr.toString().match(/Warning: test warning/g);
   assert.strictEqual(match.length, 1);
-  match = child.stderr.toString().match(/Use `node --trace-warnings/g);
+  match = child.stderr.toString().match(/Use `nsolid --trace-warnings/g);
   assert.strictEqual(match.length, 1);
 
   child = spawnSync(process.execPath, [
@@ -95,7 +95,7 @@ tmpdir.refresh();
   // Warnings should not be handled more than once.
   match = child.stderr.toString().match(/Warning: test warning/g);
   assert.strictEqual(match.length, 1);
-  match = child.stderr.toString().match(/Use `node --trace-warnings/g);
+  match = child.stderr.toString().match(/Use `nsolid --trace-warnings/g);
   assert.strictEqual(match.length, 1);
 }
 
@@ -127,7 +127,7 @@ tmpdir.refresh();
   console.log(warningFile1, ':', warnings1);
   let match = warnings1.match(/Warning: test warning/g);
   assert.strictEqual(match.length, 1);
-  match = warnings1.match(/Use `node --trace-warnings/g);
+  match = warnings1.match(/Use `nsolid --trace-warnings/g);
   assert.strictEqual(match.length, 1);
   assert.doesNotMatch(child.stderr.toString(), /Warning: test warning/);
 
@@ -155,7 +155,7 @@ tmpdir.refresh();
   console.log(warningFile2, ':', warnings1);
   match = warnings2.match(/Warning: test warning/g);
   assert.strictEqual(match.length, 1);
-  match = warnings2.match(/Use `node --trace-warnings/g);
+  match = warnings2.match(/Use `nsolid --trace-warnings/g);
   assert.strictEqual(match.length, 1);
   assert.doesNotMatch(child.stderr.toString(), /Warning: test warning/);
 }

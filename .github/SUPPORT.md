@@ -1,26 +1,28 @@
 # Support
 
-Node.js contributors have limited availability to address general support
-questions. Please make sure you are using a [currently-supported version of
-Node.js](https://github.com/nodejs/Release#release-schedule).
+N|Solid contributors have limited availability to address general support
+questions. Please make sure you are using a currently supported version of
+N|Solid, which follows the same schedule from [Node.js](https://github.com/nodejs/Release#release-schedule).
 
 When looking for support, please first search for your question in these venues:
 
-* [Node.js Website](https://nodejs.org/en/), especially the
-  [API docs](https://nodejs.org/api/)
-* [Node.js Help](https://github.com/nodejs/help)
-* [Open or closed issues in the Node.js GitHub organization](https://github.com/issues?utf8=%E2%9C%93&q=sort%3Aupdated-desc+org%3Anodejs+is%3Aissue)
-
-If you didn't find an answer in the resources above, try these unofficial
-resources:
-
-* [Questions tagged 'node.js' on Stack Overflow](https://stackoverflow.com/questions/tagged/node.js)
-* [#node.js channel on libera.chat](https://web.libera.chat?channels=node.js&uio=d4)
-* [Node.js Slack Community](https://node-js.slack.com/)
-  * To register: [nodeslackers.com](https://www.nodeslackers.com/)
+* [NodeSource Website](https://nodesource.com/), especially the
+  [Documentation site](https://docs.nodesource.com/)
+* [Open or closed issues in the N|Solid GitHub repository](https://github.com/nodesource/nsolid/issues)
+* [Questions tagged 'nsolid' on Stack Overflow](https://stackoverflow.com/questions/tagged/nsolid)
 
 GitHub issues are for tracking enhancements and bugs, not general support.
 
-The open source license grants you the freedom to use Node.js. It does not
+The open-source license grants you the freedom to use N|Solid. It does not
 guarantee commitments of other people's time. Please be respectful and manage
 your expectations.
+
+## Professional Support Offering
+
+NodeSource offers professional support services for N|Solid, helping companies
+establish and sustain enterprise-grade N|Solid applications and services. The
+support extends from installation and configuration to upgrades, troubleshooting,
+and performance tuning, empowering teams to build and manage highly performant
+and reliable applications. Different levels of engagement are available to
+augment your development and operation teams, keeping your project on track when
+it matters most. For more details, visit [NodeSource Support](https://nodesource.com/services/support).
