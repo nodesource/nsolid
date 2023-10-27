@@ -11003,6 +11003,15 @@ void HeapSnapshot::Serialize(OutputStream* stream,
   serializer.Serialize(stream);
 }
 
+RedactedHeapSnapshot::RedactedHeapSnapshot(const HeapSnapshot* snapshot):
+  snapshot_(snapshot) {
+}
+
+void RedactedHeapSnapshot::Serialize(OutputStream* stream) const {
+  i::HeapSnapshotJSONSerializer serializer(ToInternal(snapshot_));
+  serializer.Serialize(stream, true);
+}
+
 // static
 STATIC_CONST_MEMBER_DEFINITION const SnapshotObjectId
     HeapProfiler::kUnknownObjectId;

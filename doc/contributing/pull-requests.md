@@ -1,3 +1,9 @@
+> \[!IMPORTANT]
+> This document is from and refers to the upstream Node.js project.
+> Portions relating to build and environment setup all apply to both projects.
+> N|Solid branch naming and workflows should defer to
+> [CONTRIBUTING](../../CONTRIBUTING.md)
+
 # Pull requests
 
 * [Dependencies](#dependencies)
@@ -247,7 +253,7 @@ test suite. To run the tests (including code linting) on Unix / macOS:
 
 We can speed up the builds by using [Ninja](https://ninja-build.org/). For more
 information, see
-[Building Node.js with Ninja](building-node-with-ninja.md).
+[Building Node.js with Ninja](building-nsolid-with-ninja.md).
 
 And on Windows:
 

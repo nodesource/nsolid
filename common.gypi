@@ -80,6 +80,9 @@
 
     ##### end V8 defaults #####
 
+    #### NSolid specific configuration ####
+    'nsolid_use_librt%': 0,
+
     'conditions': [
       ['OS == "win"', {
         'os_posix': 0,

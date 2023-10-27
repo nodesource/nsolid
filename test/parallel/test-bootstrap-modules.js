@@ -93,6 +93,16 @@ const expectedModules = new Set([
   'NativeModule internal/net',
   'NativeModule internal/dns/utils',
   'NativeModule internal/process/pre_execution',
+  'Internal Binding nsolid_api',
+  'Internal Binding nsolid_statsd_agent',
+  'Internal Binding nsolid_zmq_agent',
+  'NativeModule internal/agents/statsd/lib/agent',
+  'NativeModule internal/agents/statsd/lib/nsolid',
+  'NativeModule internal/agents/zmq/lib/agent',
+  'NativeModule internal/agents/zmq/lib/nsolid',
+  'NativeModule internal/nsolid_loader',
+  'NativeModule internal/nsolid_module',
+  'NativeModule internal/nsolid_promise_tracking',
 ]);
 
 if (common.isMainThread) {
