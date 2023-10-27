@@ -1,6 +1,8 @@
 #include <cerrno>
 #include <cstdarg>
 
+#include "nsolid/nsolid_api.h"
+
 #include "debug_utils-inl.h"
 #include "node_errors.h"
 #include "node_external_reference.h"
@@ -594,6 +596,10 @@ TryCatchScope::~TryCatchScope() {
         EnhanceFatalException::kEnhance : EnhanceFatalException::kDontEnhance;
     if (message.IsEmpty())
       message = Exception::CreateMessage(env_->isolate(), exception);
+    // EnvList::SetExitCode() is called from Exit(), only from the main thread.
+    if (env_->is_main_thread())
+      nsolid::EnvList::Inst()->SetExitError(
+          env_->isolate(), exception, message);
     ReportFatalException(env_, exception, message, enhance);
     env_->Exit(7);
   }
@@ -1119,6 +1125,9 @@ void TriggerUncaughtException(Isolate* isolate,
   // during bootstrap, or if the user has patched it incorrectly, exit
   // the current Node.js instance.
   if (!fatal_exception_function->IsFunction()) {
+    // EnvList::SetExitCode() is called from Exit(), only from the main thread.
+    if (env->is_main_thread())
+      nsolid::EnvList::Inst()->SetExitError(env->isolate(), error, message);
     ReportFatalException(
         env, error, message, EnhanceFatalException::kDontEnhance);
     env->Exit(6);
@@ -1162,20 +1171,27 @@ void TriggerUncaughtException(Isolate* isolate,
     return;
   }
 
-  // Now we are certain that the exception is fatal.
-  ReportFatalException(env, error, message, EnhanceFatalException::kEnhance);
-  RunAtExit(env);
-
+  int ec;
   // If the global uncaught exception handler sets process.exitCode,
   // exit with that code. Otherwise, exit with 1.
   Local<String> exit_code = env->exit_code_string();
   Local<Value> code;
   if (process_object->Get(env->context(), exit_code).ToLocal(&code) &&
       code->IsInt32()) {
-    env->Exit(code.As<Int32>()->Value());
+    ec = code.As<Int32>()->Value();
   } else {
-    env->Exit(1);
+    ec = 1;
   }
+
+  // EnvList::SetExitCode() is called from Exit(), only from the main thread.
+  if (env->is_main_thread())
+    nsolid::EnvList::Inst()->SetExitError(env->isolate(), error, message);
+
+  // Now we are certain that the exception is fatal.
+  ReportFatalException(env, error, message, EnhanceFatalException::kEnhance);
+  RunAtExit(env);
+
+  env->Exit(ec);
 }
 
 void TriggerUncaughtException(Isolate* isolate, const v8::TryCatch& try_catch) {

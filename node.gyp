@@ -21,12 +21,17 @@
     'node_shared_cares%': 'false',
     'node_shared_libuv%': 'false',
     'node_shared_nghttp2%': 'false',
+    'node_shared_sodium%': 'false',
+    'node_shared_zmq%': 'false',
+    'node_shared_curl%': 'false',
+    'node_shared_protobuf%': 'false',
+    'node_shared_otlp_http_exporter': 'false',
     'node_use_openssl%': 'true',
     'node_shared_openssl%': 'false',
     'node_v8_options%': '',
     'node_enable_v8_vtunejit%': 'false',
-    'node_core_target_name%': 'node',
-    'node_lib_target_name%': 'libnode',
+    'node_core_target_name%': 'nsolid',
+    'node_lib_target_name%': 'libnsolid',
     'node_intermediate_lib_type%': 'static_library',
     'node_builtin_modules_path%': '',
     # We list the deps/ files out instead of globbing them in js2c.py since we
@@ -36,6 +41,12 @@
     # See https://docs.microsoft.com/en-us/troubleshoot/windows-client/shell-experience/command-line-string-limitation
     'library_files': [
       '<@(node_library_files)',
+    ],
+    'agents_files': [
+      'agents/statsd/lib/nsolid.js',
+      'agents/statsd/lib/agent.js',
+      'agents/zmq/lib/nsolid.js',
+      'agents/zmq/lib/agent.js',
     ],
     'deps_files': [
       'deps/v8/tools/splaytree.mjs',
@@ -155,6 +166,7 @@
       'include_dirs': [
         'src',
         'deps/v8/include',
+        'deps/nsuv/include',
         'deps/postject'
       ],
 
@@ -460,6 +472,8 @@
 
       'include_dirs': [
         'src',
+        'deps/nsuv/include',
+        'agents',
         'deps/postject',
         '<(SHARED_INTERMEDIATE_DIR)' # for node_natives.h
       ],
@@ -471,8 +485,19 @@
         'deps/simdutf/simdutf.gyp:simdutf',
         'deps/ada/ada.gyp:ada',
       ],
-
       'sources': [
+        'agents/src/http_client.cc',
+        'agents/otlp/src/datadog_metrics.cc',
+        'agents/otlp/src/dynatrace_metrics.cc',
+        'agents/otlp/src/http_client.cc',
+        'agents/otlp/src/newrelic_metrics.cc',
+        'agents/otlp/src/otlp_agent.cc',
+        'agents/statsd/src/binding.cc',
+        'agents/statsd/src/statsd_agent.cc',
+        'agents/statsd/src/statsd_endpoint.cc',
+        'agents/zmq/src/binding.cc',
+        'agents/zmq/src/http_client.cc',
+        'agents/zmq/src/zmq_agent.cc',
         'src/api/async_resource.cc',
         'src/api/callback.cc',
         'src/api/embed_helpers.cc',
@@ -553,8 +578,13 @@
         'src/node_watchdog.cc',
         'src/node_worker.cc',
         'src/node_zlib.cc',
+        'src/nsolid.cc',
         'src/pipe_wrap.cc',
         'src/process_wrap.cc',
+        'src/nsolid/nsolid_cpu_profiler.cc',
+        'src/nsolid/nsolid_heap_snapshot.cc',
+        'src/nsolid/nsolid_api.cc',
+        'src/nsolid/nsolid_trace.cc',
         'src/signal_wrap.cc',
         'src/spawn_sync.cc',
         'src/stream_base.cc',
@@ -575,6 +605,20 @@
         'src/util.cc',
         'src/uv.cc',
         # headers to make for a more pleasant IDE experience
+        'agents/src/http_client.h',
+        'agents/otlp/src/datadog_metrics.h',
+        'agents/otlp/src/dynatrace_metrics.h',
+        'agents/otlp/src/http_client.h',
+        'agents/otlp/src/metrics_exporter.h',
+        'agents/otlp/src/newrelic_metrics.h',
+        'agents/otlp/src/otlp_agent.h',
+        'agents/statsd/src/statsd_agent.h',
+        'agents/statsd/src/statsd_endpoint.h',
+        'agents/statsd/src/statsd_utils.h',
+        'agents/zmq/src/http_client.h',
+        'agents/zmq/src/zmq_agent.h',
+        'agents/zmq/src/zmq_endpoint.h',
+        'agents/zmq/src/zmq_errors.h',
         'src/aliased_buffer.h',
         'src/aliased_struct.h',
         'src/aliased_struct-inl.h',
@@ -661,9 +705,15 @@
         'src/node_wasi.h',
         'src/node_watchdog.h',
         'src/node_worker.h',
+        'src/nsolid.h',
         'src/pipe_wrap.h',
         'src/req_wrap.h',
         'src/req_wrap-inl.h',
+        'src/nsolid/nsolid_cpu_profiler.h',
+        'src/nsolid/nsolid_heap_snapshot.h',
+        'src/nsolid/nsolid_api.h',
+        'src/nsolid/nsolid_output_stream.h',
+        'src/nsolid/nsolid_trace.h',
         'src/spawn_sync.h',
         'src/stream_base.h',
         'src/stream_base-inl.h',
@@ -687,10 +737,13 @@
         'src/util.h',
         'src/util-inl.h',
         # Dependency headers
+        'deps/nsuv/include/nsuv.h',
+        'deps/nsuv/include/nsuv-inl.h',
         'deps/v8/include/v8.h',
-        'deps/postject/postject-api.h'
+        'deps/postject/postject-api.h',
         # javascript files to make for an even more pleasant IDE experience
         '<@(library_files)',
+        '<@(agents_files)',
         '<@(deps_files)',
         # node.gyp is added by default, common.gypi is added for change detection
         'common.gypi',
@@ -955,6 +1008,7 @@
             # Put the code first so it's a dependency and can be used for invocation.
             'tools/js2c.py',
             '<@(library_files)',
+            '<@(agents_files)',
             '<@(deps_files)',
             'config.gypi'
           ],
@@ -969,6 +1023,7 @@
             '--target',
             '<@(_outputs)',
             'config.gypi',
+            '<@(agents_files)',
             '<@(deps_files)',
           ],
         },
@@ -1239,6 +1294,8 @@
         'deps/uv/include',
         'deps/uvwasi/include',
         'test/cctest',
+        'agents',
+        'deps/nsuv/include',
       ],
 
       'defines': [
@@ -1262,9 +1319,14 @@
         'test/cctest/test_platform.cc',
         'test/cctest/test_report.cc',
         'test/cctest/test_json_utils.cc',
+        'test/cctest/test_nsolid_lru_map.cc',
+        'test/cctest/test_nsolid_thread_safe.cc',
         'test/cctest/test_sockaddr.cc',
         'test/cctest/test_traced_value.cc',
         'test/cctest/test_util.cc',
+        'test/cctest/http_server_fixture.cc',
+        'test/cctest/http_server_fixture.h',
+        'test/cctest/test_agents_zmq_http_client.cc',
       ],
 
       'conditions': [
@@ -1398,6 +1460,7 @@
         }],
       ]
     }, # overlapped-checker
+
     {
       'target_name': 'node_mksnapshot',
       'type': 'executable',
@@ -1419,6 +1482,7 @@
         'deps/v8/include',
         'deps/cares/include',
         'deps/uv/include',
+        'deps/nsuv/include',
         'deps/uvwasi/include',
       ],
 
@@ -1479,6 +1543,7 @@
           ],
           'sources': [
             '<@(library_files)',
+            '<@(agents_files)',
             '<@(deps_files)',
             'common.gypi',
           ],

@@ -9,6 +9,7 @@ const expected_keys = [
   'ares',
   'brotli',
   'modules',
+  'nsolid',
   'uv',
   'v8',
   'zlib',

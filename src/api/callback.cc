@@ -2,6 +2,7 @@
 #include "async_wrap-inl.h"
 #include "env-inl.h"
 #include "v8.h"
+#include "nsolid/nsolid_api.h"
 
 namespace node {
 
@@ -193,6 +194,8 @@ MaybeLocal<Value> InternalMakeCallback(Environment* env,
         async_hooks->fields()[AsyncHooks::kAfter] +
         async_hooks->fields()[AsyncHooks::kUsesExecutionAsyncResource] > 0;
   }
+
+  env->envinst_->inc_makecallback_count();
 
   InternalCallbackScope scope(env, resource, asyncContext, flags);
   if (scope.Failed()) {

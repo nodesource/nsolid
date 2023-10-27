@@ -48,6 +48,12 @@ class CpuSampler : public sampler::Sampler {
           ProfilerStats::Reason::kIsolateNotLocked);
       return;
     }
+
+    // (santigimeno): It prevents a crash when handling a `SIGPROF` signal while
+    // shutting down the profiler.
+    if (!processor_->running()) {
+      return;
+    }
     TickSample* sample = processor_->StartTickSample();
     if (sample == nullptr) {
       ProfilerStats::Instance()->AddReason(

@@ -170,6 +170,7 @@ v8_source_set("cctest_sources") {
     "libplatform/test-tracing.cc",
     "libsampler/signals-and-mutexes.cc",
     "libsampler/test-sampler.cc",
+    "jsonstream-helper.h",
     "manually-externalized-buffer.h",
     "parsing/test-parse-decision.cc",
     "parsing/test-preparser.cc",

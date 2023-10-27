@@ -46,6 +46,7 @@
 #include "util.h"
 #include "uv.h"
 #include "v8.h"
+#include "nsolid.h"
 
 #include <array>
 #include <atomic>
@@ -953,6 +954,8 @@ class Environment : public MemoryRetainer {
   inline void AddHeapSnapshotNearHeapLimitCallback();
 
   inline void RemoveHeapSnapshotNearHeapLimitCallback(size_t heap_limit);
+
+  nsolid::SharedEnvInst envinst_;
 
  private:
   inline void ThrowError(v8::Local<v8::Value> (*fun)(v8::Local<v8::String>),

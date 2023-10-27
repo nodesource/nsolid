@@ -384,6 +384,12 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
   int r;
   int can_sleep;
 
+  /* If this is the first time the event loop has run then manually set the
+   * provider exit time so that blocked time can be properly calculated on
+   * first runs. */
+  if (uv__get_loop_metrics(loop)->metrics.loop_count == 0)
+    uv__get_loop_metrics(loop)->provider_exit_time = uv_hrtime();
+
   r = uv__loop_alive(loop);
   if (!r)
     uv__update_time(loop);
@@ -402,6 +408,8 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
     timeout = 0;
     if ((mode == UV_RUN_ONCE && can_sleep) || mode == UV_RUN_DEFAULT)
       timeout = uv__backend_timeout(loop);
+
+    uv__metrics_inc_loop_count(loop);
 
     uv__io_poll(loop, timeout);
 
