@@ -27,6 +27,12 @@ using CFunctionCallbackWithStrings =
              const v8::FastOneByteString& base);
 using CFunctionWithUint32 = uint32_t (*)(v8::Local<v8::Value>,
                                          const uint32_t input);
+using CFunctionCallbackDouble =
+  void (*)(v8::Local<v8::Object> receiver, double);
+using CFunctionCallbackUint32Uint32Uint64 =
+  void (*)(v8::Local<v8::Object> receiver, uint32_t, uint32_t, uint64_t);
+using CFunctionCallbackUint32Uint32Double =
+  void (*)(v8::Local<v8::Object> receiver, uint32_t, uint32_t, double);
 
 // This class manages the external references from the V8 heap
 // to the C++ addresses in Node.js.
@@ -43,6 +49,9 @@ class ExternalReferenceRegistry {
   V(CFunctionCallbackWithString)                                               \
   V(CFunctionCallbackWithStrings)                                              \
   V(CFunctionWithUint32)                                                       \
+  V(CFunctionCallbackDouble)                                                   \
+  V(CFunctionCallbackUint32Uint32Uint64)                                       \
+  V(CFunctionCallbackUint32Uint32Double)                                       \
   V(const v8::CFunctionInfo*)                                                  \
   V(v8::FunctionCallback)                                                      \
   V(v8::AccessorGetterCallback)                                                \
@@ -113,6 +122,9 @@ class ExternalReferenceRegistry {
   V(url)                                                                       \
   V(util)                                                                      \
   V(pipe_wrap)                                                                 \
+  V(nsolid_api)                                                                \
+  V(nsolid_statsd_agent)                                                       \
+  V(nsolid_zmq_agent)                                                          \
   V(sea)                                                                       \
   V(serdes)                                                                    \
   V(string_decoder)                                                            \

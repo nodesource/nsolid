@@ -686,6 +686,17 @@ class V8_EXPORT HeapSnapshot {
                  SerializationFormat format = kJSON) const;
 };
 
+/**
+ * Wrapper to provide redacted serialization for HeapSnapshot
+ */
+class V8_EXPORT RedactedHeapSnapshot {
+ public:
+  RedactedHeapSnapshot() = delete;
+  RedactedHeapSnapshot(const HeapSnapshot* snapshot);
+  void Serialize(OutputStream* stream) const;
+ private:
+  const HeapSnapshot* snapshot_;
+};
 
 /**
  * An interface for reporting progress and controlling long-running

@@ -62,9 +62,10 @@ testMe.complete("import\t( 'n", common.mustCall((error, data) => {
   assert.strictEqual(completions[lastIndex + 1], '');
   // There is only one Node.js module that starts with n:
   assert.strictEqual(completions[lastIndex + 2], 'net');
-  assert.strictEqual(completions[lastIndex + 3], '');
+  assert.strictEqual(completions[lastIndex + 3], 'nsolid');
+  assert.strictEqual(completions[lastIndex + 4], '');
   // It's possible to pick up non-core modules too
-  completions.slice(lastIndex + 4).forEach((completion) => {
+  completions.slice(lastIndex + 5).forEach((completion) => {
     assert.match(completion, /^n/);
   });
 }));
