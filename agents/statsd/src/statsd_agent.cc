@@ -731,14 +731,9 @@ void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
        it != agent->env_metrics_map_.end();
        ++it) {
     ThreadMetrics& e_metrics = std::get<1>(*it);
-    // Retrieve metrics from the Metrics API.
-    int r = e_metrics.Update(env_metrics_cb_, agent);
-    // The UV_ESRCH and UV_EBADF errors can happen during the env shutdown
-    // process.
-    // Leaving this assertion for the moment in case another error is returned
-    // at some point.
-    // TODO(santi): Remove the assertion.
-    ASSERT(r == 0 || r == UV_ESRCH || r == UV_EBADF);
+    // Retrieve metrics from the Metrics API. Ignore any return error since
+    // there's nothing to be done.
+    e_metrics.Update(env_metrics_cb_, agent);
   }
 
   // Get and send proc metrics
