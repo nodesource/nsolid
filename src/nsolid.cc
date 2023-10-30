@@ -326,6 +326,11 @@ int ThreadMetrics::Update(v8::Isolate* isolate) {
   if (envinst == nullptr || envinst->thread_id() != thread_id_) {
     return UV_ESRCH;
   }
+  // An async update request is currently in process. Let that complete before
+  // running Update() again.
+  if (update_running_) {
+    return UV_EBUSY;
+  }
 
   uv_mutex_lock(&stor_lock_);
   envinst->GetThreadMetrics(&stor_);
