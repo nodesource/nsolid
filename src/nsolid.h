@@ -693,6 +693,7 @@ class NODE_EXTERN ThreadMetrics {
   void* user_data_ = nullptr;
   thread_metrics_proxy_sig proxy_;
 
+  std::atomic<bool> update_running_ = {false};
   uv_mutex_t stor_lock_;
   MetricsStor stor_;
 };
@@ -976,22 +977,32 @@ class NODE_EXTERN Snapshot {
 /** @cond DONT_DOCUMENT */
 template <typename Cb, typename... Data>
 int ThreadMetrics::Update(Cb&& cb, Data&&... data) {
+  bool expected = false;
   // NOLINTNEXTLINE(build/namespaces)
   using namespace std::placeholders;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
 
-  // _1 - ThreadMetrics*
-  std::unique_ptr<UserData> user_data = std::make_unique<UserData>(std::bind(
-        std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
+  update_running_.compare_exchange_strong(expected, true);
+  if (expected) {
+    return UV_EBUSY;
+  }
 
-  user_data_ = static_cast<void*>(user_data.get());
+  // _1 - ThreadMetrics*
+  UserData* user_data = new UserData(
+      std::bind(std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
+
+  user_data_ = user_data;
   proxy_ = thread_metrics_proxy_<UserData>;
   stor_.thread_id = thread_id_;
 
   int er = get_thread_metrics_();
-  if (!er)
-    user_data.release();
+  if (er) {
+    user_data_ = nullptr;
+    proxy_ = nullptr;
+    delete user_data;
+    update_running_ = false;
+  }
   return er;
 }
 
@@ -1001,6 +1012,7 @@ void ThreadMetrics::thread_metrics_proxy_(ThreadMetrics* tm) {
   G* g = static_cast<G*>(tm->user_data_);
   tm->user_data_ = nullptr;
   tm->proxy_ = nullptr;
+  tm->update_running_ = false;
   (*g)(tm);
   delete g;
 }
