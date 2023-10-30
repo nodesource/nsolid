@@ -403,12 +403,9 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
 
   agent->got_proc_metrics();
   for (auto& item : agent->env_metrics_map_) {
-    int r = item.second.metrics_.Update(thr_metrics_cb_, agent);
-    // The UV_ESRCH and UV_EBADF errors can happen during the env shutdown
-    // process. Leaving this assertion for the moment in case another error is
-    // returned at some point.
-    // TODO(santi): Remove the assertion
-    ASSERT(r == 0 || r == UV_ESRCH || r == UV_EBADF);
+    // Retrieve metrics from the Metrics API. Ignore any return error since
+    // there's nothing to be done.
+    item.second.metrics_.Update(thr_metrics_cb_, agent);
   }
 }
 
