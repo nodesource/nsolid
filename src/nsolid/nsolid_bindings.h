@@ -20,6 +20,16 @@ class BindingData : public SnapshotableObject {
   SET_SELF_SIZE(BindingData)
   SET_MEMORY_INFO_NAME(BindingData)
 
+  static void SlowPushClientBucket(
+      const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void FastPushClientBucket(v8::Local<v8::Object> receiver, double val);
+  static void PushClientBucketImpl(BindingData* data, double val);
+
+  static void SlowPushDnsBucket(
+      const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void FastPushDnsBucket(v8::Local<v8::Object> receiver, double val);
+  static void PushDnsBucketImpl(BindingData* data, double val);
+
   static void SlowPushServerBucket(
       const v8::FunctionCallbackInfo<v8::Value>& args);
   static void FastPushServerBucket(v8::Local<v8::Object> receiver, double val);
@@ -55,6 +65,8 @@ class BindingData : public SnapshotableObject {
       ExternalReferenceRegistry* registry);
 
  private:
+  static v8::CFunction fast_push_client_bucket_;
+  static v8::CFunction fast_push_dns_bucket_;
   static v8::CFunction fast_push_server_bucket_;
   static v8::CFunction fast_push_span_data_double_;
   static v8::CFunction fast_push_span_data_uint64_;

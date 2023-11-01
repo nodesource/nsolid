@@ -2043,11 +2043,41 @@ static void AgentId(const FunctionCallbackInfo<Value>& args) {
 }
 
 
-static void PushClientBucket(const FunctionCallbackInfo<Value>& args) {
-  EnvInst* envinst = EnvInst::GetEnvLocalInst(args.GetIsolate());
-  CHECK_NE(envinst, nullptr);
-  CHECK(args[0]->IsNumber());
-  envinst->PushClientBucket(args[0].As<Number>()->Value());
+void BindingData::SlowPushClientBucket(
+    const FunctionCallbackInfo<Value>& args) {
+  DCHECK(args[0]->IsNumber());
+  PushClientBucketImpl(PrincipalRealm::GetBindingData<BindingData>(args),
+                       args[0].As<Number>()->Value());
+}
+
+
+void BindingData::FastPushClientBucket(v8::Local<v8::Object> receiver,
+                                       double val) {
+  PushClientBucketImpl(FromJSObject<BindingData>(receiver), val);
+}
+
+
+void BindingData::PushClientBucketImpl(BindingData* data, double val) {
+  data->env()->envinst_->PushClientBucket(val);
+}
+
+
+void BindingData::SlowPushDnsBucket(
+    const FunctionCallbackInfo<Value>& args) {
+  DCHECK(args[0]->IsNumber());
+  PushDnsBucketImpl(PrincipalRealm::GetBindingData<BindingData>(args),
+                    args[0].As<Number>()->Value());
+}
+
+
+void BindingData::FastPushDnsBucket(v8::Local<v8::Object> receiver,
+                                    double val) {
+  PushDnsBucketImpl(FromJSObject<BindingData>(receiver), val);
+}
+
+
+void BindingData::PushDnsBucketImpl(BindingData* data, double val) {
+  data->env()->envinst_->PushDnsBucket(val);
 }
 
 
@@ -2067,14 +2097,6 @@ void BindingData::FastPushServerBucket(v8::Local<v8::Object> receiver,
 
 void BindingData::PushServerBucketImpl(BindingData* data, double val) {
   data->env()->envinst_->PushServerBucket(val);
-}
-
-
-static void PushDnsBucket(const FunctionCallbackInfo<Value>& args) {
-  EnvInst* envinst = EnvInst::GetEnvLocalInst(args.GetIsolate());
-  CHECK_NE(envinst, nullptr);
-  CHECK(args[0]->IsNumber());
-  envinst->PushDnsBucket(args[0].As<Number>()->Value());
 }
 
 
@@ -2584,7 +2606,10 @@ void BindingData::Deserialize(Local<Context> context,
   CHECK_NOT_NULL(binding);
 }
 
-
+v8::CFunction BindingData::fast_push_client_bucket_(
+    v8::CFunction::Make(FastPushClientBucket));
+v8::CFunction BindingData::fast_push_dns_bucket_(
+    v8::CFunction::Make(FastPushDnsBucket));
 v8::CFunction BindingData::fast_push_server_bucket_(
     v8::CFunction::Make(FastPushServerBucket));
 v8::CFunction BindingData::fast_push_span_data_double_(
@@ -2607,6 +2632,16 @@ void BindingData::Initialize(Local<Object> target,
 
   SetFastMethod(context,
                 target,
+                "pushClientBucket",
+                SlowPushClientBucket,
+                &fast_push_client_bucket_);
+  SetFastMethod(context,
+                target,
+                "pushDnsBucket",
+                SlowPushDnsBucket,
+                &fast_push_dns_bucket_);
+  SetFastMethod(context,
+                target,
                 "pushServerBucket",
                 SlowPushServerBucket,
                 &fast_push_server_bucket_);
@@ -2622,8 +2657,6 @@ void BindingData::Initialize(Local<Object> target,
                 &fast_push_span_data_uint64_);
 
   SetMethod(context, target, "agentId", AgentId);
-  SetMethod(context, target, "pushClientBucket", PushClientBucket);
-  SetMethod(context, target, "pushDnsBucket", PushDnsBucket);
   SetMethod(context, target, "pushSpanDataString", PushSpanDataString);
   SetMethod(context, target, "getEnvMetrics", GetEnvMetrics);
   SetMethod(context, target, "getProcessMetrics", GetProcessMetrics);
@@ -2731,6 +2764,14 @@ void BindingData::Initialize(Local<Object> target,
 void BindingData::RegisterExternalReferences(
     ExternalReferenceRegistry* registry) {
 
+  registry->Register(SlowPushClientBucket);
+  registry->Register(FastPushClientBucket);
+  registry->Register(fast_push_client_bucket_.GetTypeInfo());
+
+  registry->Register(SlowPushDnsBucket);
+  registry->Register(FastPushDnsBucket);
+  registry->Register(fast_push_dns_bucket_.GetTypeInfo());
+
   registry->Register(SlowPushServerBucket);
   registry->Register(FastPushServerBucket);
   registry->Register(fast_push_server_bucket_.GetTypeInfo());
@@ -2744,8 +2785,6 @@ void BindingData::RegisterExternalReferences(
   registry->Register(fast_push_span_data_uint64_.GetTypeInfo());
 
   registry->Register(AgentId);
-  registry->Register(PushClientBucket);
-  registry->Register(PushDnsBucket);
   registry->Register(PushSpanDataString);
   registry->Register(GetEnvMetrics);
   registry->Register(GetProcessMetrics);
