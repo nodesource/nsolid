@@ -1,73 +1,44 @@
 #ifndef SRC_NSOLID_NSOLID_CPU_PROFILER_H_
 #define SRC_NSOLID_NSOLID_CPU_PROFILER_H_
 
-#include <nsolid/nsolid_api.h>
-#include <nsolid/nsolid_util.h>
-#include <v8.h>
-#include <v8-profiler.h>
-#include <tuple>
 #include <map>
+#include "nsolid.h"
+#include "nsolid/nsolid_util.h"
+#include "nsuv-inl.h"
 
-#include "asserts-cpp/asserts.h"
+// pre-declarations.
+namespace v8 {
+class CpuProfiler;
+class CpuProfile;
+}  // namespace v8
 
 namespace node {
 namespace nsolid {
 
+struct CpuProfilerStor {
+ public:
+  explicit CpuProfilerStor(uint64_t thread_id,
+                           uint64_t timeout,
+                           const std::string& title,
+                           void* data,
+                           CpuProfiler::cpu_profiler_proxy_sig proxy,
+                           internal::deleter_sig deleter);
+  NSOLID_DELETE_DEFAULT_CONSTRUCTORS(CpuProfilerStor)
+  ~CpuProfilerStor();
+
+ private:
+  friend class NSolidCpuProfiler;
+  uint64_t thread_id_;
+  uint64_t timeout_;
+  std::string title_;
+  v8::CpuProfiler* profiler_;
+  v8::CpuProfile* profile_;
+  CpuProfiler::cpu_profiler_proxy_sig proxy_;
+  internal::user_data data_;
+};
 
 class NSolidCpuProfiler {
  public:
-  struct CpuProfilerStor {
-    CpuProfilerStor(uint64_t thread_id,
-                    uint64_t timeout,
-                    const std::string& title,
-                    void* data,
-                    CpuProfiler::cpu_profiler_proxy_sig proxy,
-                    internal::deleter_sig deleter):
-      status_(0),
-      thread_id_(thread_id),
-      timeout_(timeout),
-      title_(title),
-      profiler_(nullptr),
-      profile_(nullptr),
-      proxy_(proxy),
-      data_(data, deleter) {
-    }
-
-    ~CpuProfilerStor() {
-      // Don't try to access the profile if the Isolate it comes from is gone
-      SharedEnvInst envinst = GetEnvInst(thread_id_);
-      if (!envinst) {
-        return;
-      }
-
-      // Keep the Isolate alive while diposing the profiler and profile
-      EnvInst::Scope scp(envinst);
-      if (!scp.Success()) {
-        return;
-      }
-
-      if (profile_) {
-        profile_->Delete();
-        profile_ = nullptr;
-      }
-
-      if (profiler_) {
-        profiler_->Dispose();
-        profiler_ = nullptr;
-      }
-    }
-
-    int status_;
-    uint64_t thread_id_;
-    uint64_t timeout_;
-    std::string title_;
-    v8::CpuProfiler* profiler_;
-    v8::CpuProfile* profile_;
-    CpuProfiler::cpu_profiler_proxy_sig proxy_;
-    internal::user_data data_;
-  };
-
-
   static NSolidCpuProfiler* Inst();
 
   int TakeCpuProfile(SharedEnvInst envinst,
@@ -113,7 +84,6 @@ class NSolidCpuProfiler {
   NSolidCpuProfiler();
   ~NSolidCpuProfiler();
 };
-
 
 }  // namespace nsolid
 }  // namespace node
