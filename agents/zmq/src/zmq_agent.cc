@@ -2575,7 +2575,7 @@ void ZmqAgent::handle_auth_response(CURLcode result,
   }
 
 error:
-  Debug("Error Authenticating. Trying again in %ld ms", auth_timer_interval);
+  Debug("Error Authenticating. Trying again in %ld ms\n", auth_timer_interval);
   auth_retries_++;
   if (auth_retries_ == MAX_AUTH_RETRIES) {
     fprintf(stderr,
