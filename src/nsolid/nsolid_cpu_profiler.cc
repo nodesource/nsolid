@@ -1,11 +1,51 @@
-#include <nsolid/nsolid_output_stream.h>
-#include "env-inl.h"
 #include "nsolid_cpu_profiler.h"
+#include "asserts-cpp/asserts.h"
+#include "nsolid/nsolid_api.h"
+#include "nsolid/nsolid_output_stream.h"
+#include "v8-profiler.h"
 
 namespace node {
 namespace nsolid {
 
 std::atomic<bool> NSolidCpuProfiler::is_running = { false };
+
+CpuProfilerStor::CpuProfilerStor(uint64_t thread_id,
+                                 uint64_t timeout,
+                                 const std::string& title,
+                                 void* data,
+                                 CpuProfiler::cpu_profiler_proxy_sig proxy,
+                                 internal::deleter_sig deleter)
+    : thread_id_(thread_id),
+      timeout_(timeout),
+      title_(title),
+      profiler_(nullptr),
+      profile_(nullptr),
+      proxy_(proxy),
+      data_(data, deleter) {}
+
+CpuProfilerStor::~CpuProfilerStor() {
+  // Don't try to access the profile if the Isolate it comes from is gone
+  SharedEnvInst envinst = GetEnvInst(thread_id_);
+  if (!envinst) {
+    return;
+  }
+
+  // Keep the Isolate alive while diposing the profiler and profile
+  EnvInst::Scope scp(envinst);
+  if (!scp.Success()) {
+    return;
+  }
+
+  if (profile_) {
+    profile_->Delete();
+    profile_ = nullptr;
+  }
+
+  if (profiler_) {
+    profiler_->Dispose();
+    profiler_ = nullptr;
+  }
+}
 
 NSolidCpuProfiler::NSolidCpuProfiler(): dummy_stub_(nullptr, nullptr) {
   is_running = true;
