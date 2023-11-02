@@ -836,7 +836,7 @@ void StatsDAgent::status(const Status& st) {
   if (st != status_) {
     status_ = st;
     if (status_cb_) {
-      RunCommand(GetEnvInst(0),
+      RunCommand(GetEnvInst(EnvList::Inst()->main_thread_id()),
                  CommandType::EventLoop,
                  status_command_cb_,
                  this);
