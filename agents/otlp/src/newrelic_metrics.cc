@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "asserts-cpp/asserts.h"
+#include "http_client.h"
 
 using ProcessMetricsStor = node::nsolid::ProcessMetrics::MetricsStor;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;

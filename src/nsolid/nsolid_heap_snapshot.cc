@@ -1,4 +1,8 @@
 #include "nsolid_heap_snapshot.h"
+#include "asserts-cpp/asserts.h"
+#include "nsolid/nsolid_api.h"
+#include "nsolid/nsolid_output_stream.h"
+#include "v8-profiler.h"
 
 namespace node {
 namespace nsolid {

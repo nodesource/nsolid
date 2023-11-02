@@ -1,7 +1,6 @@
 #ifndef AGENTS_STATSD_SRC_STATSD_AGENT_H_
 #define AGENTS_STATSD_SRC_STATSD_AGENT_H_
 
-#include <nsolid/nsolid_api.h>
 // NOLINTNEXTLINE(build/c++11)
 #include <chrono>
 #include <memory>
@@ -9,8 +8,10 @@
 #include <utility>
 #include <vector>
 
-#include "asserts-cpp/asserts.h"
 #include "nlohmann/json.hpp"
+#include "nsolid.h"
+#include "nsolid/thread_safe.h"
+#include "nsuv-inl.h"
 
 #define AGENT_STATUS(X)                                                        \
   X(Unconfigured, "unconfigured")                                              \

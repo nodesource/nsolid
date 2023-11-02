@@ -1,7 +1,4 @@
-#include <utility>
-
 #include "statsd_endpoint.h"
-#include "utils.h"
 #include "nsuv-inl.h"
 
 #define STATSD_DEFAULT_HOSTNAME "0.0.0.0"

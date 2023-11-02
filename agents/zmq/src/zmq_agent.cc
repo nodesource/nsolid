@@ -1,15 +1,11 @@
-#include <openssl/sha.h>
-// NOLINTNEXTLINE(build/c++11)
-#include <thread>
-#include <utility>
+#include <thread>  // NOLINT(build/c++11)
 
-#include "zmq_agent.h"
 #include "debug_utils-inl.h"
 #include "node_internals.h"
+#include "nsolid/nsolid_heap_snapshot.h"
+#include "zmq_agent.h"
 #include "zmq_endpoint.h"
 #include "zmq_errors.h"
-#include "nsolid/nsolid_heap_snapshot.h"
-
 
 namespace node {
 namespace nsolid {

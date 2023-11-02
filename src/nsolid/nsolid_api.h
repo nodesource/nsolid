@@ -3,26 +3,16 @@
 
 #include <atomic>
 #include <functional>
-#include <list>
 #include <map>
 #include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
 
-#include "node.h"
-#include "node_snapshotable.h"
 #include "nsolid.h"
-#include "../../deps/nsuv/include/nsuv-inl.h"
-#include "nsolid_util.h"
 #include "nsolid_trace.h"
-#include "spinlock.h"
-#include "thread_safe.h"
-#include "v8.h"
-// TODO(santigimeno) move json into its own deps folder.
-// We can export it via ADDONS_PREREQS in the Makefile and link against it with
-// our native module builds that depend on it
-#include "nlohmann/json.hpp"
+#include "nsolid_util.h"
+#include "nsuv-inl.h"
 
 namespace node {
 namespace nsolid {

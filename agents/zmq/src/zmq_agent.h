@@ -1,9 +1,6 @@
 #ifndef AGENTS_ZMQ_SRC_ZMQ_AGENT_H_
 #define AGENTS_ZMQ_SRC_ZMQ_AGENT_H_
 
-#include <nsolid/nsolid_api.h>
-#include <nsolid/nsolid_util.h>
-#include <zmq.h>
 // NOLINTNEXTLINE(build/c++11)
 #include <chrono>
 #include <memory>
@@ -13,8 +10,13 @@
 #include <vector>
 
 #include "asserts-cpp/asserts.h"
-#include "nlohmann/json.hpp"
 #include "http_client.h"
+#include "nlohmann/json.hpp"
+#include "nsolid.h"
+#include "nsolid/nsolid_util.h"
+#include "nsolid/thread_safe.h"
+#include "nsuv-inl.h"
+#include "zmq.h"
 
 #define HANDLE_TYPES(X)                                                        \
   X(Command, "Command", ZMQ_SUB, "inproc://monitor-command", "command", false, \

@@ -6,14 +6,8 @@
 #include "nsolid/nsolid_heap_snapshot.h"
 
 #include "env-inl.h"
-#include "memory_tracker-inl.h"
-#include "node_perf.h"
-#include "util.h"
-#include "uv.h"
 
-#include <chrono> // NOLINT [build/c++11]
-#include <cmath>
-#include <memory>
+#include <chrono>  // NOLINT [build/c++11]
 
 #define MICROS_PER_SEC 1000000
 #define NANOS_PER_SEC 1000000000

@@ -2,12 +2,13 @@
 #define AGENTS_OTLP_SRC_DATADOG_METRICS_H_
 
 #include "metrics_exporter.h"
-#include "http_client.h"
 #include "nlohmann/json.h"
 
 namespace node {
 namespace nsolid {
 namespace otlp {
+
+class OTLPHttpClient;
 
 class DatadogMetrics final: public MetricsExporter {
  public:

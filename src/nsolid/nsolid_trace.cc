@@ -1,8 +1,7 @@
-#include "nsolid_api.h"
 #include "nsolid_trace.h"
-#include "nsolid_util.h"
 #include "env-inl.h"
-#include "node_internals.h"
+#include "nsolid_api.h"
+#include "nsolid_util.h"
 
 #define NANOS_PER_SEC 1000000000
 

@@ -1,7 +1,6 @@
-#include "node_internals.h"
 #include "node_external_reference.h"
+#include "node_internals.h"
 #include "zmq_agent.h"
-#include "util.h"
 
 using nlohmann::json;
 using v8::Context;

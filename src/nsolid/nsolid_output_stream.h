@@ -1,8 +1,9 @@
 #ifndef SRC_NSOLID_NSOLID_OUTPUT_STREAM_H_
 #define SRC_NSOLID_NSOLID_OUTPUT_STREAM_H_
 
-#include <v8.h>
-#include <v8-profiler.h>
+#include <string>
+
+#include "v8-profiler.h"
 
 namespace node {
 namespace nsolid {
