@@ -1095,6 +1095,7 @@ int ZmqAgent::send_command_message(const char* command,
     return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE, command);
   }
 
+  const char* real_body = body ? (strlen(body) ? body : "\"\"") : "null";
   auto recorded = create_recorded(system_clock::now());
   int r;
   if (request_id == nullptr) {
@@ -1108,7 +1109,7 @@ int ZmqAgent::send_command_message(const char* command,
                  0,
                  metrics_period_,
                  version_,
-                 body);
+                 real_body);
 
   } else {
     r = snprintf(msg_buf_,
@@ -1122,7 +1123,7 @@ int ZmqAgent::send_command_message(const char* command,
                  0,
                  metrics_period_,
                  version_,
-                 body);
+                 real_body);
   }
 
   if (r < 0) {
@@ -1371,7 +1372,7 @@ int ZmqAgent::generate_snapshot(const json& message,
   }
 
   // send snapshot command reponse thru data channel
-  int r = send_command_message("snapshot", req_id.c_str(), "");
+  int r = send_command_message("snapshot", req_id.c_str(), nullptr);
   if (r < 0) {
     return r;
   }
@@ -2208,7 +2209,7 @@ std::string ZmqAgent::got_cpu_profile(int status,
   // send profile_stop command reponse thru data channel
   // only if the profile is complete
   if (profileStreamComplete) {
-    int r = send_command_message("profile_stop", req_id.c_str(), "");
+    int r = send_command_message("profile_stop", req_id.c_str(), nullptr);
     if (r < 0) {
       return req_id;
     }
@@ -2292,7 +2293,7 @@ int ZmqAgent::start_profiling(const json& message,
   }
 
   // send profile command reponse thru data channel
-  err = send_command_message(kProfile, req_id.c_str(), "");
+  err = send_command_message(kProfile, req_id.c_str(), nullptr);
   if (err < 0) {
     return err;
   }
