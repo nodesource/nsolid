@@ -1,8 +1,8 @@
-#include "datadog_metrics.h"
-
 #include <algorithm>
 
 #include "asserts-cpp/asserts.h"
+#include "datadog_metrics.h"
+#include "http_client.h"
 
 using ProcessMetricsStor = node::nsolid::ProcessMetrics::MetricsStor;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;

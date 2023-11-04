@@ -1,9 +1,10 @@
 #ifndef AGENTS_OTLP_SRC_METRICS_EXPORTER_H_
 #define AGENTS_OTLP_SRC_METRICS_EXPORTER_H_
 
-#include <nsolid/nsolid_api.h>
 #include <utility>
 #include <vector>
+
+#include "nsolid.h"
 
 namespace node {
 namespace nsolid {

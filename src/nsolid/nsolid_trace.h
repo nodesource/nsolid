@@ -1,15 +1,13 @@
 #ifndef SRC_NSOLID_NSOLID_TRACE_H_
 #define SRC_NSOLID_NSOLID_TRACE_H_
 
-#include <array>
-#include <cstdint>
+#include <atomic>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "lru_map.h"
 #include "nsolid.h"
-#include "thread_safe.h"
+#include "nsolid/thread_safe.h"
 
 namespace node {
 namespace nsolid {

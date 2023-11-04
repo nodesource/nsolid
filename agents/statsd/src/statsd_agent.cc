@@ -1,14 +1,10 @@
-#include <openssl/sha.h>
 #include <regex>  // NOLINT(build/c++11)
-#include <thread>  // NOLINT(build/c++11)
-#include <tuple>
-#include <utility>
 
-#include "statsd_agent.h"
+#include "asserts-cpp/asserts.h"
 #include "debug_utils-inl.h"
+#include "statsd_agent.h"
 #include "statsd_endpoint.h"
 #include "utils.h"
-
 
 #define UDP_PACKET_MAX_BYTES 1400
 

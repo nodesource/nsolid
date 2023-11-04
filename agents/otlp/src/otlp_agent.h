@@ -1,14 +1,11 @@
 #ifndef AGENTS_OTLP_SRC_OTLP_AGENT_H_
 #define AGENTS_OTLP_SRC_OTLP_AGENT_H_
 
-#include <nsolid.h>
-#include <nsolid/thread_safe.h>
 #include <memory>
+
 #include "nlohmann/json.hpp"
-
-#include "asserts-cpp/asserts.h"
-#include "metrics_exporter.h"
-
+#include "nsolid.h"
+#include "nsolid/thread_safe.h"
 
 // Class pre-declaration
 namespace opentelemetry {
@@ -26,6 +23,8 @@ namespace node {
 namespace nsolid {
 
 namespace otlp {
+
+class MetricsExporter;
 
 struct JSThreadMetrics {
   ThreadMetrics metrics_;

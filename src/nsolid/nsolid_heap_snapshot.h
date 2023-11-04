@@ -1,16 +1,10 @@
 #ifndef SRC_NSOLID_NSOLID_HEAP_SNAPSHOT_H_
 #define SRC_NSOLID_NSOLID_HEAP_SNAPSHOT_H_
 
-#include <v8.h>
-#include <v8-profiler.h>
-#include <nsolid/nsolid_api.h>
-#include <nsolid/nsolid_output_stream.h>
-#include <new>
-#include <set>
-#include <tuple>
-
-#include "asserts-cpp/asserts.h"
-#include "nlohmann/json.hpp"
+#include <map>
+#include "nsolid.h"
+#include "nsolid/nsolid_util.h"
+#include "nsuv-inl.h"
 
 namespace node {
 namespace nsolid {

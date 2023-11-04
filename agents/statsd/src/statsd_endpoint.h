@@ -1,21 +1,13 @@
 #ifndef AGENTS_STATSD_SRC_STATSD_ENDPOINT_H_
 #define AGENTS_STATSD_SRC_STATSD_ENDPOINT_H_
 
+#include <algorithm>
 #include <memory>
 #include <string>
-#include <algorithm>
-#include <tuple>
 #include <vector>
+
+#include "nsolid/nsolid_util.h"
 #include "uv.h"
-#ifdef USE_LOCAL_NSOLID_DELETE_UNUSED_CONSTRUCTORS
-#define NSOLID_DELETE_UNUSED_CONSTRUCTORS(name)                                \
-  name(const name&) = delete;                                                  \
-  name(name&&) = delete;                                                       \
-  name& operator=(const name&) = delete;                                       \
-  name& operator=(name&&) = delete;
-#else
-#include <nsolid/nsolid_util.h>
-#endif
 
 namespace node {
 namespace nsolid {
