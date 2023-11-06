@@ -936,6 +936,10 @@ void EnvList::RemoveEnv(Environment* env) {
     CHECK(it != env_map_.end());
     CHECK_EQ(envinst_sp, it->second);
 #endif
+    // Remove the main thread id if the main thread is being removed.
+    if (main_thread_id_ == env->thread_id()) {
+      main_thread_id_ = 0xFFFFFFFFFFFFFFFF;
+    }
     env_map_.erase(env->thread_id());
   }
 
