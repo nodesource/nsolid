@@ -614,7 +614,7 @@ class EnvList {
   nsuv::ns_mutex map_lock_;
   // A map of all Environments in the process.
   std::map<uint64_t, SharedEnvInst> env_map_;
-  uint64_t main_thread_id_ = 0xFFFFFFFFFFFFFFFF;
+  std::atomic<uint64_t> main_thread_id_ = {0xFFFFFFFFFFFFFFFF};
   // Lock EnvList while all command queues are being processed. This is to
   // prevent ~EnvList from running while processing all commands.
   nsuv::ns_mutex command_lock_;
