@@ -973,9 +973,6 @@ void EnvList::RemoveEnv(Environment* env) {
   envinst_sp->env()->isolate()->RemoveGCEpilogueCallback(
       EnvInst::v8_gc_epilogue_cb_, envinst_sp.get());
 
-  // Remove the instance from env
-  env->envinst_.reset();
-
   // End any pending spans and notify the user.
   if (env->is_main_thread()) {
     tracer_.endPendingSpans();
@@ -997,6 +994,9 @@ void EnvList::RemoveEnv(Environment* env) {
   // and only accessed from another thread if the env still exists and has been
   // Scope locked.
   envinst_sp->env_.store(nullptr, std::memory_order_relaxed);
+
+  // Remove the instance from env
+  env->envinst_.reset();
 }
 
 
