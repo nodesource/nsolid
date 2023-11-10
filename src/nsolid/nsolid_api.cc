@@ -106,6 +106,8 @@ EnvInst::EnvInst(Environment* env)
 
   er = eloop_cmds_msg_.init(event_loop_, run_event_loop_cmds_, this);
   CHECK_EQ(er, 0);
+  er = interrupt_msg_.init(event_loop_, run_interrupt_msg_, this);
+  CHECK_EQ(er, 0);
   er = metrics_handle_.init(event_loop_);
   CHECK_EQ(er, 0);
   er = info_lock_.init(true);
@@ -118,8 +120,12 @@ EnvInst::EnvInst(Environment* env)
   CHECK_EQ(er, 0);
 
   eloop_cmds_msg_.unref();
+  interrupt_msg_.unref();
   metrics_handle_.unref();
   env->RegisterHandleCleanup(eloop_cmds_msg_.base_handle(),
+                             handle_cleanup_cb_,
+                             nullptr);
+  env->RegisterHandleCleanup(interrupt_msg_.base_handle(),
                              handle_cleanup_cb_,
                              nullptr);
   env->RegisterHandleCleanup(metrics_handle_.base_handle(),
@@ -151,9 +157,11 @@ int EnvInst::RunCommand(SharedEnvInst envinst_sp,
 
   if (type == CommandType::Interrupt) {
     EnvInst::CmdQueueStor cmd_stor = { envinst_sp, cb, data };
+    // Send it off to both locations. The first to run will retrieve the data
+    // from the queue.
     envinst_sp->interrupt_cb_q_.enqueue(std::move(cmd_stor));
-    node::RequestInterrupt(envinst_sp->env(), run_interrupt_, nullptr);
-    return 0;
+    envinst_sp->isolate()->RequestInterrupt(run_interrupt_, nullptr);
+    return envinst_sp->interrupt_msg_.send();
   }
 
   if (type == CommandType::InterruptOnly) {
@@ -452,14 +460,26 @@ void EnvInst::run_event_loop_cmds_(ns_async*, EnvInst* envinst) {
 
 void EnvInst::run_interrupt_msg_(ns_async*, EnvInst* envinst) {
   CmdQueueStor stor;
+  // Need to disable access to JS from here, but first need to make sure the
+  // Isolate still exists before trying to disable JS access.
+  if (envinst->env() != nullptr) {
+    Isolate::DisallowJavascriptExecutionScope scope(
+        envinst->isolate(),
+        Isolate::DisallowJavascriptExecutionScope::CRASH_ON_FAILURE);
+    while (envinst->interrupt_cb_q_.dequeue(stor)) {
+      stor.cb(stor.envinst_sp, stor.data);
+    }
+    return;
+  }
+
   while (envinst->interrupt_cb_q_.dequeue(stor)) {
     stor.cb(stor.envinst_sp, stor.data);
   }
 }
 
 
-void EnvInst::run_interrupt_(void*) {
-  SharedEnvInst envinst_sp = GetCurrent(Isolate::GetCurrent());
+void EnvInst::run_interrupt_(Isolate* isolate, void*) {
+  SharedEnvInst envinst_sp = GetCurrent(isolate);
   if (!envinst_sp) {
     return;
   }
