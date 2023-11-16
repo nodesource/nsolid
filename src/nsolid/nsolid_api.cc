@@ -301,7 +301,10 @@ void EnvInst::SetNodeStartupTime(const char* name, uint64_t ts) {
 std::string EnvInst::GetOnBlockedBody() {
   DCHECK(utils::are_threads_equal(creation_thread(), uv_thread_self()));
   uv_metrics_t metrics;
-  auto SharedEnvInst = GetCurrent(isolate_);
+  SharedEnvInst envinst = GetCurrent(isolate_);
+  if (envinst == nullptr) {
+    return "";
+  }
 
   HandleScope scope(isolate_);
   Local<StackTrace> stack =
@@ -316,7 +319,7 @@ std::string EnvInst::GetOnBlockedBody() {
   std::string body_string = "{";
   // TODO(trevnorris): REMOVE provider_times so libuv don't need to use the
   // floating patch.
-  uv_metrics_info(SharedEnvInst->event_loop(), &metrics);
+  uv_metrics_info(envinst->event_loop(), &metrics);
   uint64_t exit_time = metrics.loop_count == 0 ?
     performance::timeOrigin : provider_times().second;
 
@@ -401,12 +404,14 @@ SharedEnvInst EnvInst::GetInst(uint64_t thread_id) {
 
 
 SharedEnvInst EnvInst::GetCurrent(Isolate* isolate) {
-  return Environment::GetCurrent(isolate)->envinst_;
+  Environment* env = Environment::GetCurrent(isolate);
+  return env == nullptr ? nullptr : env->envinst_;
 }
 
 
 SharedEnvInst EnvInst::GetCurrent(Local<Context> context) {
-  return Environment::GetCurrent(context)->envinst_;
+  Environment* env = Environment::GetCurrent(context);
+  return env == nullptr ? nullptr : env->envinst_;
 }
 
 
