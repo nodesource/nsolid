@@ -1557,8 +1557,7 @@ void EnvList::gen_ptiles_cb_(ns_timer*) {
 }
 
 
-void EnvList::promise_tracking_(const EnvInst& envinst, bool track) {
-  SharedEnvInst envinst_sp = EnvInst::GetInst(envinst.thread_id());
+void EnvList::promise_tracking_(SharedEnvInst envinst_sp, bool track) {
   Environment* env = envinst_sp->env();
   if (env->nsolid_track_promises_fn().IsEmpty() ||
       !envinst_sp->can_call_into_js()) {
@@ -1581,12 +1580,12 @@ void EnvList::promise_tracking_(const EnvInst& envinst, bool track) {
 
 
 void EnvList::enable_promise_tracking_(SharedEnvInst envinst_sp, void*) {
-  EnvList::promise_tracking_(*envinst_sp.get(), true);
+  EnvList::promise_tracking_(envinst_sp, true);
 }
 
 
 void EnvList::disable_promise_tracking_(SharedEnvInst envinst_sp, void*) {
-  EnvList::promise_tracking_(*envinst_sp.get(), false);
+  EnvList::promise_tracking_(envinst_sp, false);
 }
 
 

@@ -594,7 +594,7 @@ class EnvList {
   static void blocked_loop_timer_cb_(nsuv::ns_timer*);
   static void gen_ptiles_cb_(nsuv::ns_timer*);
   static void raw_metrics_timer_cb_(nsuv::ns_timer*);
-  static void promise_tracking_(const EnvInst& envinst, bool track);
+  static void promise_tracking_(SharedEnvInst envinst_sp, bool track);
   static void enable_promise_tracking_(SharedEnvInst envinst_sp, void*);
   static void disable_promise_tracking_(SharedEnvInst envinst_sp, void*);
   static void update_has_metrics_stream_hooks(SharedEnvInst, bool has_metrics);
