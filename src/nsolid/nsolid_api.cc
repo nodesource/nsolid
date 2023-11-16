@@ -2517,7 +2517,7 @@ static void GetOnBlockedBody(const FunctionCallbackInfo<Value>& args) {
 static void SetupArrayBufferExports(Isolate* isolate,
                                     Local<Object> target,
                                     Local<Context> context,
-                                    std::shared_ptr<EnvInst> envinst_sp) {
+                                    SharedEnvInst envinst_sp) {
   std::unique_ptr<BackingStore> bs =
     ArrayBuffer::NewBackingStore(envinst_sp->count_fields,
                                  EnvInst::kFieldCount * sizeof(double),
