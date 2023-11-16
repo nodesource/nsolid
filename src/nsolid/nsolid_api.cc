@@ -989,6 +989,22 @@ void EnvList::RemoveEnv(Environment* env) {
     stor.cb(envinst_sp, stor.data.get());
   });
 
+  // Cleanup the RunCommand queues just to be sure no dangling SharedEnvInst
+  // references are left after the Environment is gone and the EnvInst instance
+  // can be deleted.
+  EnvInst::CmdQueueStor stor;
+  while (envinst_sp->eloop_cmds_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
+  while (envinst_sp->interrupt_cb_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
+  while (envinst_sp->interrupt_only_cb_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
   // Don't allow execution to continue in case a RunCommand() is running in
   // another thread since they might need access to Environment specific
   // resources (like the Isolate) that won't be valid after this returns.
