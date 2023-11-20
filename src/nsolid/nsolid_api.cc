@@ -712,18 +712,11 @@ int EnvInst::CustomCommand(std::string req_id,
     return UV_EEXIST;
   }
 
-  std::string* req_id_alloced = new std::string(req_id);
-  if (req_id_alloced == nullptr) {
-    return UV_ENOMEM;
-  }
-
-  int err = EnvInst::RunCommand(EnvInst::GetInst(thread_id()),
-                                custom_command_,
-                                static_cast<void*>(req_id_alloced),
-                                CommandType::EventLoop);
-
+  int err = nsolid::RunCommand(EnvInst::GetInst(thread_id_),
+                               CommandType::EventLoop,
+                               custom_command_,
+                               req_id);
   if (err) {
-    delete req_id_alloced;
     custom_command_stor_map_.erase(iter.first);
   }
 
@@ -734,16 +727,16 @@ int EnvInst::CustomCommand(std::string req_id,
 int EnvInst::CustomCommandResponse(const std::string& req_id,
                                    const char* value,
                                    bool is_return) {
-  custom_command_stor_map_lock_.lock();
-  auto it = custom_command_stor_map_.find(req_id);
-  if (it == custom_command_stor_map_.end()) {
-    custom_command_stor_map_lock_.unlock();
-    return UV_ENOENT;
-  }
+  CustomCommandStor stor;
+  {
+    ns_mutex::scoped_lock lock(custom_command_stor_map_lock_);
+    auto el = custom_command_stor_map_.extract(req_id);
+    if (el.empty()) {
+      return UV_ENOENT;
+    }
 
-  const CustomCommandStor stor(std::move(it->second));
-  custom_command_stor_map_.erase(it);
-  custom_command_stor_map_lock_.unlock();
+    stor = std::move(el.mapped());
+  }
 
   stor.cb(req_id,
           stor.command,
@@ -1715,26 +1708,36 @@ void EnvList::fill_trace_id_q() {
 }
 
 
-void EnvInst::custom_command_(SharedEnvInst envinst_sp, void* data) {
-  std::string* req_id = static_cast<std::string*>(data);
+void EnvInst::custom_command_(SharedEnvInst envinst_sp,
+                              const std::string req_id) {
+  auto error_cb = [](const std::string& req_id,
+                     const CustomCommandStor& stor,
+                     int err,
+                     SharedEnvInst& envinst_sp) {
+    stor.cb(req_id,
+            stor.command,
+            err,
+            { false, std::string() },
+            { false, std::string() },
+            stor.data);
+    ns_mutex::scoped_lock lock(envinst_sp->custom_command_stor_map_lock_);
+    envinst_sp->custom_command_stor_map_.erase(req_id);
+  };
+
+  CustomCommandStor stor;
+  {
+    ns_mutex::scoped_lock lock(envinst_sp->custom_command_stor_map_lock_);
+    auto it = envinst_sp->custom_command_stor_map_.find(req_id);
+    CHECK_NE(it, envinst_sp->custom_command_stor_map_.end());
+    stor = it->second;
+  }
+
   Environment* env = envinst_sp->env();
   if (env->nsolid_on_command_fn().IsEmpty() ||
       !envinst_sp->can_call_into_js()) {
-    delete req_id;
+    error_cb(req_id, stor, UV_EINVAL, envinst_sp);
     return;
   }
-
-  envinst_sp->custom_command_stor_map_lock_.lock();
-  auto it = envinst_sp->custom_command_stor_map_.find(*req_id);
-  if (it == envinst_sp->custom_command_stor_map_.end()) {
-    envinst_sp->custom_command_stor_map_lock_.unlock();
-    delete req_id;
-    return;
-  }
-
-  // A copy of CustomCommandStor is made in order to release the lock asap.
-  const CustomCommandStor stor(it->second);
-  envinst_sp->custom_command_stor_map_lock_.unlock();
 
   Isolate* isolate = envinst_sp->isolate();
   HandleScope handle_scope(isolate);
@@ -1742,7 +1745,7 @@ void EnvInst::custom_command_(SharedEnvInst envinst_sp, void* data) {
   Local<Value> argv[] = {
     v8::String::NewFromUtf8(
       isolate,
-      req_id->c_str(),
+      req_id.c_str(),
       v8::NewStringType::kNormal).ToLocalChecked(),
     v8::String::NewFromUtf8(
       isolate,
@@ -1758,23 +1761,10 @@ void EnvInst::custom_command_(SharedEnvInst envinst_sp, void* data) {
                                                        env->process_object(),
                                                        arraysize(argv),
                                                        argv).ToLocalChecked();
-  // delete from map if no custom command listener attached
   int r = ret->Int32Value(env->context()).ToChecked();
   if (r != 0) {
-    {
-      ns_mutex::scoped_lock lock(envinst_sp->custom_command_stor_map_lock_);
-      envinst_sp->custom_command_stor_map_.erase(*req_id);
-    }
-
-    stor.cb(*req_id,
-            stor.command,
-            r,
-            { false, std::string() },
-            { false, std::string() },
-            stor.data);
+    error_cb(req_id, stor, r, envinst_sp);
   }
-
-  delete req_id;
 }
 
 

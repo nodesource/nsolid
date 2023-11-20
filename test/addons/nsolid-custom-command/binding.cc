@@ -79,7 +79,7 @@ static void custom_command_cb(std::string req_id,
   fn->Call(context,
            Undefined(isolate),
            5,
-           argv).ToLocalChecked();
+           argv);
 
   cb_map_.erase(iter);
 }
@@ -103,19 +103,62 @@ static void CustomCommand(const FunctionCallbackInfo<Value>& args) {
   Local<String> value_s = args[2].As<String>();
   String::Utf8Value value(isolate, value_s);
 
-  Global<Function> cb(isolate, args[3].As<Function>());
+  int err = node::nsolid::CustomCommand(envinst_sp,
+                                        *req_id,
+                                        *command,
+                                        *value,
+                                        custom_command_cb);
+
+  if (err == 0) {
+    Global<Function> cb(isolate, args[3].As<Function>());
+    auto iter = cb_map_.emplace(*req_id, std::move(cb));
+    assert(iter.second);
+  }
+
+  args.GetReturnValue().Set(err);
+}
+
+static void CustomCommandThread(const FunctionCallbackInfo<Value>& args) {
+  assert(4 == args.Length());
+  assert(args[0]->IsNumber());
+  assert(args[1]->IsString());
+  assert(args[2]->IsString());
+  assert(args[3]->IsString());
+  Isolate* isolate = args.GetIsolate();
+  uint64_t thread_id = args[0].As<v8::Number>()->Value();
+  Local<String> req_id_s = args[1].As<String>();
+  String::Utf8Value req_id(isolate, req_id_s);
+  Local<String> command_s = args[2].As<String>();
+  String::Utf8Value command(isolate, command_s);
+  Local<String> value_s = args[3].As<String>();
+  String::Utf8Value value(isolate, value_s);
+
+  auto envinst_sp = node::nsolid::GetEnvInst(thread_id);
+
+  int err = node::nsolid::CustomCommand(envinst_sp,
+                                        *req_id,
+                                        *command,
+                                        *value,
+                                        custom_command_cb);
+  args.GetReturnValue().Set(err);
+}
+
+static void SetCustomCommandCb(const FunctionCallbackInfo<Value>& args) {
+  assert(2 == args.Length());
+  assert(args[0]->IsString());
+  assert(args[1]->IsFunction());
+  Isolate* isolate = args.GetIsolate();
+  Local<String> req_id_s = args[0].As<String>();
+  String::Utf8Value req_id(isolate, req_id_s);
+  Global<Function> cb(isolate, args[1].As<Function>());
   auto iter = cb_map_.emplace(*req_id, std::move(cb));
   assert(iter.second);
-
-  node::nsolid::CustomCommand(envinst_sp,
-                              *req_id,
-                              *command,
-                              *value,
-                              custom_command_cb);
 }
 
 NODE_MODULE_INIT(/* exports, module, context */) {
   NODE_SET_METHOD(exports, "customCommand", CustomCommand);
+  NODE_SET_METHOD(exports, "customCommandThread", CustomCommandThread);
+  NODE_SET_METHOD(exports, "setCustomCommandCb", SetCustomCommandCb);
   // While NODE_MODULE_INIT will run for every Worker, the first execution
   // won't run in parallel with another. So this won't cause a race condition.
   if (EnvInst::GetEnvLocalInst(context->GetIsolate())->thread_id() == 0)
