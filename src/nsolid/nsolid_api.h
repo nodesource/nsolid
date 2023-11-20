@@ -302,7 +302,8 @@ class EnvInst {
   static void close_nsolid_loader_(void* ptr);
   static void run_nsolid_loader_(nsuv::ns_timer* handle, Environment* env);
 
-  static void custom_command_(SharedEnvInst envinst_sp, void* data);
+  static void custom_command_(SharedEnvInst envinst_sp,
+                              const std::string req_id);
 
   void add_metric_datapoint_(MetricsStream::Type, double);
   void send_datapoint(MetricsStream::Type, double);

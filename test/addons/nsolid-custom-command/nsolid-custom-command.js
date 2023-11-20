@@ -7,7 +7,7 @@ const bindingPath = require.resolve(`./build/${common.buildType}/binding`);
 const binding = require(bindingPath);
 const nsolid = require('nsolid');
 const { internalBinding } = require('internal/test/binding');
-const { UV_EINVAL, UV_ENOENT } = internalBinding('uv');
+const { UV_EEXIST, UV_EINVAL, UV_ENOENT } = internalBinding('uv');
 
 const circularObj = {
   a: 1,
@@ -171,7 +171,7 @@ already returned`,
   });
 
   const requestId = `${nsolid.id}${++counter}`;
-  binding.customCommand(
+  assert.strictEqual(binding.customCommand(
     requestId,
     command,
     args,
@@ -215,7 +215,13 @@ already returned`,
 
       assert.ok(false);
     },
-  );
+  ), 0);
+
+  assert.strictEqual(binding.customCommand(requestId,
+                                           command,
+                                           args,
+                                           common.mustNotCall()),
+                     UV_EEXIST);
 }
 
 setTimeout(() => {
