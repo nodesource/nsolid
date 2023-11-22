@@ -1,37 +1,16 @@
-/*
-    Copyright (c) 2007-2018 Contributors as noted in the AUTHORS file
-
-    This file is part of libzmq, the ZeroMQ core engine in C++.
-
-    libzmq is free software; you can redistribute it and/or modify it under
-    the terms of the GNU Lesser General Public License (LGPL) as published
-    by the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
-
-    As a special exception, the Contributors give you permission to link
-    this library with independent modules to produce an executable,
-    regardless of the license terms of these independent modules, and to
-    copy and distribute the resulting executable under terms of your choice,
-    provided that you also meet, for each linked independent module, the
-    terms and conditions of the license of that module. An independent
-    module is a module which is not derived from or based on this library.
-    If you modify this library, you must extend this exception to your
-    version of the library.
-
-    libzmq is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-    License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #ifndef __ZMQ_SOCKET_POLLING_UTIL_HPP_INCLUDED__
 #define __ZMQ_SOCKET_POLLING_UTIL_HPP_INCLUDED__
 
 #include <stdlib.h>
 #include <vector>
+
+#if defined ZMQ_HAVE_WINDOWS
+#include <winsock.h>
+#else
+#include <sys/select.h>
+#endif
 
 #include "macros.hpp"
 #include "stdint.hpp"
@@ -46,7 +25,7 @@ template <typename T, size_t S> class fast_vector_t
     explicit fast_vector_t (const size_t nitems_)
     {
         if (nitems_ > S) {
-            _buf = static_cast<T *> (malloc (nitems_ * sizeof (T)));
+            _buf = new (std::nothrow) T[nitems_];
             //  TODO since this function is called by a client, we could return errno == ENOMEM here
             alloc_assert (_buf);
         } else {
@@ -59,7 +38,7 @@ template <typename T, size_t S> class fast_vector_t
     ~fast_vector_t ()
     {
         if (_buf != _static_buf)
-            free (_buf);
+            delete[] _buf;
     }
 
   private:
@@ -76,12 +55,13 @@ template <typename T, size_t S> class resizable_fast_vector_t
 
     void resize (const size_t nitems_)
     {
-        if (_dynamic_buf)
+        if (_dynamic_buf) {
             _dynamic_buf->resize (nitems_);
-        if (nitems_ > S) {
-            _dynamic_buf = new (std::nothrow) std::vector<T>;
+        } else if (nitems_ > S) {
+            _dynamic_buf = new (std::nothrow) std::vector<T> (nitems_);
             //  TODO since this function is called by a client, we could return errno == ENOMEM here
             alloc_assert (_dynamic_buf);
+            memcpy (&(*_dynamic_buf)[0], _static_buf, sizeof _static_buf);
         }
     }
 
@@ -107,11 +87,12 @@ typedef int timeout_t;
 
 timeout_t
 compute_timeout (bool first_pass_, long timeout_, uint64_t now_, uint64_t end_);
-
-#elif defined ZMQ_POLL_BASED_ON_SELECT
+#endif
+#if (!defined ZMQ_POLL_BASED_ON_POLL && defined ZMQ_POLL_BASED_ON_SELECT)      \
+  || defined ZMQ_HAVE_PPOLL
+#if defined ZMQ_HAVE_WINDOWS
 inline size_t valid_pollset_bytes (const fd_set &pollset_)
 {
-#if defined ZMQ_HAVE_WINDOWS
     // On Windows we don't need to copy the whole fd_set.
     // SOCKETS are continuous from the beginning of fd_array in fd_set.
     // We just need to copy fd_count elements of fd_array.
@@ -119,10 +100,14 @@ inline size_t valid_pollset_bytes (const fd_set &pollset_)
     return reinterpret_cast<const char *> (
              &pollset_.fd_array[pollset_.fd_count])
            - reinterpret_cast<const char *> (&pollset_);
-#else
-    return sizeof (fd_set);
-#endif
 }
+#else
+inline size_t valid_pollset_bytes (const fd_set & /*pollset_*/)
+{
+    return sizeof (fd_set);
+}
+#endif
+
 
 #if defined ZMQ_HAVE_WINDOWS
 // struct fd_set {

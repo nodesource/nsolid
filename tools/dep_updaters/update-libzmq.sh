@@ -64,8 +64,7 @@ for dir in *; do
   if [ "$dir" = "src" ] || \
      [ "$dir" = "include" ] || \
      [ "$dir" = "external" ] || \
-     [ "$dir" = "COPYING" ] || \
-     [ "$dir" = "COPYING.LESSER" ] || \
+     [ "$dir" = "LICENSE" ] || \
      [ "$dir" = "version.sh" ]; then
     continue
   fi
@@ -74,7 +73,7 @@ done
 find external -type d ! -name "external" ! -name "wepoll" -print0 | xargs -0 rm -r
 
 echo "Copying existing gyp files"
-cp "$DEPS_DIR/zmq/zmq.gyp*" "$WORKSPACE/zmq"
+cp "$DEPS_DIR"/zmq/zmq.gyp* "$WORKSPACE/zmq"
 
 echo "Copying existing platform.hpp file"
 cp "$DEPS_DIR/zmq/src/platform.hpp" "$WORKSPACE/zmq/src"

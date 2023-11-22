@@ -1,31 +1,4 @@
-/*
-Copyright (c) 2018 Contributors as noted in the AUTHORS file
-
-This file is part of libzmq, the ZeroMQ core engine in C++.
-
-libzmq is free software; you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License (LGPL) as published
-by the Free Software Foundation; either version 3 of the License, or
-(at your option) any later version.
-
-As a special exception, the Contributors give you permission to link
-this library with independent modules to produce an executable,
-regardless of the license terms of these independent modules, and to
-copy and distribute the resulting executable under terms of your choice,
-provided that you also meet, for each linked independent module, the
-terms and conditions of the license of that module. An independent
-module is a module which is not derived from or based on this library.
-If you modify this library, you must extend this exception to your
-version of the library.
-
-libzmq is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #ifndef __ZMQ_GENERIC_MTRIE_IMPL_HPP_INCLUDED__
 #define __ZMQ_GENERIC_MTRIE_IMPL_HPP_INCLUDED__
@@ -45,10 +18,7 @@ namespace zmq
 {
 template <typename T>
 generic_mtrie_t<T>::generic_mtrie_t () :
-    _pipes (0),
-    _min (0),
-    _count (0),
-    _live_nodes (0)
+    _pipes (0), _num_prefixes (0), _min (0), _count (0), _live_nodes (0)
 {
 }
 
@@ -147,6 +117,8 @@ bool generic_mtrie_t<T>::add (prefix_t prefix_, size_t size_, value_t *pipe_)
     if (!it->_pipes) {
         it->_pipes = new (std::nothrow) pipes_t;
         alloc_assert (it->_pipes);
+
+        _num_prefixes.add (1);
     }
     it->_pipes->insert (pipe_);
 
@@ -162,12 +134,12 @@ void generic_mtrie_t<T>::rm (value_t *pipe_,
                              Arg arg_,
                              bool call_on_uniq_)
 {
-    //  This used to be implemented as a non-tail recursive travesal of the trie,
+    //  This used to be implemented as a non-tail recursive traversal of the trie,
     //  which means remote clients controlled the depth of the recursion and the
     //  stack size.
     //  To simulate the non-tail recursion, with post-recursion changes depending on
     //  the result of the recursive call, a stack is used to re-visit the same node
-    //  and operate on it again after children have been visisted.
+    //  and operate on it again after children have been visited.
     //  A boolean is used to record whether the node had already been visited and to
     //  determine if the pre- or post- children visit actions have to be taken.
     //  In the case of a node with (N > 1) children, the node has to be re-visited
@@ -404,12 +376,12 @@ template <typename T>
 typename generic_mtrie_t<T>::rm_result
 generic_mtrie_t<T>::rm (prefix_t prefix_, size_t size_, value_t *pipe_)
 {
-    //  This used to be implemented as a non-tail recursive travesal of the trie,
+    //  This used to be implemented as a non-tail recursive traversal of the trie,
     //  which means remote clients controlled the depth of the recursion and the
     //  stack size.
     //  To simulate the non-tail recursion, with post-recursion changes depending on
     //  the result of the recursive call, a stack is used to re-visit the same node
-    //  and operate on it again after children have been visisted.
+    //  and operate on it again after children have been visited.
     //  A boolean is used to record whether the node had already been visited and to
     //  determine if the pre- or post- children visit actions have to be taken.
     rm_result ret = not_found;
@@ -536,6 +508,11 @@ generic_mtrie_t<T>::rm (prefix_t prefix_, size_t size_, value_t *pipe_)
                 }
             }
         }
+    }
+
+    if (ret == last_value_removed) {
+        zmq_assert (_num_prefixes.get () > 0);
+        _num_prefixes.sub (1);
     }
 
     return ret;

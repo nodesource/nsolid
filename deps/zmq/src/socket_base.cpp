@@ -1,31 +1,4 @@
-/*
-    Copyright (c) 2007-2016 Contributors as noted in the AUTHORS file
-
-    This file is part of libzmq, the ZeroMQ core engine in C++.
-
-    libzmq is free software; you can redistribute it and/or modify it under
-    the terms of the GNU Lesser General Public License (LGPL) as published
-    by the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
-
-    As a special exception, the Contributors give you permission to link
-    this library with independent modules to produce an executable,
-    regardless of the license terms of these independent modules, and to
-    copy and distribute the resulting executable under terms of your choice,
-    provided that you also meet, for each linked independent module, the
-    terms and conditions of the license of that module. An independent
-    module is a module which is not derived from or based on this library.
-    If you modify this library, you must extend this exception to your
-    version of the library.
-
-    libzmq is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-    License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #include "precompiled.hpp"
 #include <new>
@@ -460,6 +433,12 @@ int zmq::socket_base_t::getsockopt (int option_,
         return -1;
     }
 
+    //  First, check whether specific socket type overloads the option.
+    int rc = xgetsockopt (option_, optval_, optvallen_);
+    if (rc == 0 || errno != EINVAL) {
+        return rc;
+    }
+
     if (option_ == ZMQ_RCVMORE) {
         return do_getsockopt<int> (optval_, optvallen_, _rcvmore ? 1 : 0);
     }
@@ -804,16 +783,14 @@ int zmq::socket_base_t::connect_internal (const char *endpoint_uri_)
 
         // The total HWM for an inproc connection should be the sum of
         // the binder's HWM and the connector's HWM.
-        const int sndhwm = peer.socket == NULL
-                             ? options.sndhwm
-                             : options.sndhwm != 0 && peer.options.rcvhwm != 0
-                                 ? options.sndhwm + peer.options.rcvhwm
-                                 : 0;
-        const int rcvhwm = peer.socket == NULL
-                             ? options.rcvhwm
-                             : options.rcvhwm != 0 && peer.options.sndhwm != 0
-                                 ? options.rcvhwm + peer.options.sndhwm
-                                 : 0;
+        const int sndhwm = peer.socket == NULL ? options.sndhwm
+                           : options.sndhwm != 0 && peer.options.rcvhwm != 0
+                             ? options.sndhwm + peer.options.rcvhwm
+                             : 0;
+        const int rcvhwm = peer.socket == NULL ? options.rcvhwm
+                           : options.rcvhwm != 0 && peer.options.sndhwm != 0
+                             ? options.rcvhwm + peer.options.sndhwm
+                             : 0;
 
         //  Create a bi-directional pipe to connect the peers.
         object_t *parents[2] = {this, peer.socket == NULL ? this : peer.socket};
@@ -1500,14 +1477,16 @@ int zmq::socket_base_t::process_commands (int timeout_, bool throttle_)
     command_t cmd;
     int rc = _mailbox->recv (&cmd, timeout_);
 
+    if (rc != 0 && errno == EINTR)
+        return -1;
+
     //  Process all available commands.
-    while (rc == 0) {
-        cmd.destination->process_command (cmd);
+    while (rc == 0 || errno == EINTR) {
+        if (rc == 0) {
+            cmd.destination->process_command (cmd);
+        }
         rc = _mailbox->recv (&cmd, 0);
     }
-
-    if (errno == EINTR)
-        return -1;
 
     zmq_assert (errno == EAGAIN);
 
@@ -1616,6 +1595,12 @@ void zmq::socket_base_t::process_destroy ()
 }
 
 int zmq::socket_base_t::xsetsockopt (int, const void *, size_t)
+{
+    errno = EINVAL;
+    return -1;
+}
+
+int zmq::socket_base_t::xgetsockopt (int, void *, size_t *)
 {
     errno = EINVAL;
     return -1;

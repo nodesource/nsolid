@@ -1,31 +1,4 @@
-/*
-    Copyright (c) 2007-2016 Contributors as noted in the AUTHORS file
-
-    This file is part of libzmq, the ZeroMQ core engine in C++.
-
-    libzmq is free software; you can redistribute it and/or modify it under
-    the terms of the GNU Lesser General Public License (LGPL) as published
-    by the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
-
-    As a special exception, the Contributors give you permission to link
-    this library with independent modules to produce an executable,
-    regardless of the license terms of these independent modules, and to
-    copy and distribute the resulting executable under terms of your choice,
-    provided that you also meet, for each linked independent module, the
-    terms and conditions of the license of that module. An independent
-    module is a module which is not derived from or based on this library.
-    If you modify this library, you must extend this exception to your
-    version of the library.
-
-    libzmq is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-    License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #include "precompiled.hpp"
 #include <string.h>
@@ -255,6 +228,21 @@ int zmq::xpub_t::xsetsockopt (int option_,
     return 0;
 }
 
+int zmq::xpub_t::xgetsockopt (int option_, void *optval_, size_t *optvallen_)
+{
+    if (option_ == ZMQ_TOPICS_COUNT) {
+        // make sure to use a multi-thread safe function to avoid race conditions with I/O threads
+        // where subscriptions are processed:
+        return do_getsockopt<int> (optval_, optvallen_,
+                                   (int) _subscriptions.num_prefixes ());
+    }
+
+    // room for future options here
+
+    errno = EINVAL;
+    return -1;
+}
+
 static void stub (zmq::mtrie_t::prefix_t data_, size_t size_, void *arg_)
 {
     LIBZMQ_UNUSED (data_);
@@ -272,6 +260,12 @@ void zmq::xpub_t::xpipe_terminated (pipe_t *pipe_)
         //  care of by the manual call above. subscriptions is the real mtrie,
         //  so the pipe must be removed from there or it will be left over.
         _subscriptions.rm (pipe_, stub, static_cast<void *> (NULL), false);
+
+        // In case the pipe is currently set as last we must clear it to prevent
+        // subscriptions from being re-added.
+        if (pipe_ == _last_pipe) {
+            _last_pipe = NULL;
+        }
     } else {
         //  Remove the pipe from the trie. If there are topics that nobody
         //  is interested in anymore, send corresponding unsubscriptions
@@ -348,6 +342,12 @@ int zmq::xpub_t::xrecv (msg_t *msg_)
     if (_manual && !_pending_pipes.empty ()) {
         _last_pipe = _pending_pipes.front ();
         _pending_pipes.pop_front ();
+
+        // If the distributor doesn't know about this pipe it must have already
+        // been terminated and thus we can't allow manual subscriptions.
+        if (_last_pipe != NULL && !_dist.has_pipe (_last_pipe)) {
+            _last_pipe = NULL;
+        }
     }
 
     int rc = msg_->close ();

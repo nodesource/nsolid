@@ -1,31 +1,4 @@
-/*
-    Copyright (c) 2007-2016 Contributors as noted in the AUTHORS file
-
-    This file is part of libzmq, the ZeroMQ core engine in C++.
-
-    libzmq is free software; you can redistribute it and/or modify it under
-    the terms of the GNU Lesser General Public License (LGPL) as published
-    by the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
-
-    As a special exception, the Contributors give you permission to link
-    this library with independent modules to produce an executable,
-    regardless of the license terms of these independent modules, and to
-    copy and distribute the resulting executable under terms of your choice,
-    provided that you also meet, for each linked independent module, the
-    terms and conditions of the license of that module. An independent
-    module is a module which is not derived from or based on this library.
-    If you modify this library, you must extend this exception to your
-    version of the library.
-
-    libzmq is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-    License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #include "precompiled.hpp"
 #include "macros.hpp"
@@ -34,6 +7,10 @@
 
 #ifdef ZMQ_HAVE_WINDOWS
 #include <winnt.h>
+#endif
+
+#ifdef __MINGW32__
+#include "pthread.h"
 #endif
 
 bool zmq::thread_t::get_started () const
@@ -111,6 +88,8 @@ void zmq::thread_t::
     // not implemented
 }
 
+#ifdef _MSC_VER
+
 namespace
 {
 #pragma pack(push, 8)
@@ -124,22 +103,7 @@ struct thread_info_t
 #pragma pack(pop)
 }
 
-struct MY_EXCEPTION_REGISTRATION_RECORD
-{
-    typedef EXCEPTION_DISPOSITION (NTAPI *HandlerFunctionType) (
-      EXCEPTION_RECORD *, void *, CONTEXT *, void *);
-
-    MY_EXCEPTION_REGISTRATION_RECORD *Next;
-    HandlerFunctionType Handler;
-};
-
-static EXCEPTION_DISPOSITION NTAPI continue_execution (EXCEPTION_RECORD *rec,
-                                                       void *frame,
-                                                       CONTEXT *ctx,
-                                                       void *disp)
-{
-    return ExceptionContinueExecution;
-}
+#endif
 
 void zmq::thread_t::
   applyThreadName () // to be called in secondary thread context
@@ -147,28 +111,36 @@ void zmq::thread_t::
     if (!_name[0] || !IsDebuggerPresent ())
         return;
 
+#ifdef _MSC_VER
+
     thread_info_t thread_info;
     thread_info._type = 0x1000;
     thread_info._name = _name;
     thread_info._thread_id = -1;
     thread_info._flags = 0;
 
-    NT_TIB *tib = ((NT_TIB *) NtCurrentTeb ());
+    __try {
+        const DWORD MS_VC_EXCEPTION = 0x406D1388;
+        RaiseException (MS_VC_EXCEPTION, 0,
+                        sizeof (thread_info) / sizeof (ULONG_PTR),
+                        (ULONG_PTR *) &thread_info);
+    }
+    __except (EXCEPTION_CONTINUE_EXECUTION) {
+    }
 
-    MY_EXCEPTION_REGISTRATION_RECORD rec;
-    rec.Next = (MY_EXCEPTION_REGISTRATION_RECORD *) tib->ExceptionList;
-    rec.Handler = continue_execution;
+#elif defined(__MINGW32__)
 
-    // push our handler, raise, and finally pop our handler
-    tib->ExceptionList = (_EXCEPTION_REGISTRATION_RECORD *) &rec;
-    const DWORD MS_VC_EXCEPTION = 0x406D1388;
-    RaiseException (MS_VC_EXCEPTION, 0,
-                    sizeof (thread_info) / sizeof (ULONG_PTR),
-                    (ULONG_PTR *) &thread_info);
-    tib->ExceptionList =
-      (_EXCEPTION_REGISTRATION_RECORD
-         *) (((MY_EXCEPTION_REGISTRATION_RECORD *) tib->ExceptionList)->Next);
+    int rc = pthread_setname_np (pthread_self (), _name);
+    if (rc)
+        return;
+
+#else
+
+        // not implemented
+
+#endif
 }
+
 
 #elif defined ZMQ_HAVE_VXWORKS
 
@@ -280,7 +252,7 @@ void zmq::thread_t::stop ()
 
 bool zmq::thread_t::is_current_thread () const
 {
-    return bool(pthread_equal (pthread_self (), _descriptor));
+    return bool (pthread_equal (pthread_self (), _descriptor));
 }
 
 void zmq::thread_t::setSchedulingParameters (
@@ -320,14 +292,12 @@ void zmq::thread_t::
     bool use_nice_instead_priority =
       (policy != SCHED_FIFO) && (policy != SCHED_RR);
 
-    if (_thread_priority != ZMQ_THREAD_PRIORITY_DFLT) {
-        if (use_nice_instead_priority)
-            param.sched_priority =
-              0; // this is the only supported priority for most scheduling policies
-        else
-            param.sched_priority =
-              _thread_priority; // user should provide a value between 1 and 99
-    }
+    if (use_nice_instead_priority)
+        param.sched_priority =
+          0; // this is the only supported priority for most scheduling policies
+    else if (_thread_priority != ZMQ_THREAD_PRIORITY_DFLT)
+        param.sched_priority =
+          _thread_priority; // user should provide a value between 1 and 99
 
 #ifdef __NetBSD__
     if (policy == SCHED_OTHER)
@@ -346,7 +316,8 @@ void zmq::thread_t::
 
 #if !defined ZMQ_HAVE_VXWORKS
     if (use_nice_instead_priority
-        && _thread_priority != ZMQ_THREAD_PRIORITY_DFLT) {
+        && _thread_priority != ZMQ_THREAD_PRIORITY_DFLT
+        && _thread_priority > 0) {
         // assume the user wants to decrease the thread's nice value
         // i.e., increase the chance of this thread being scheduled: try setting that to
         // maximum priority.

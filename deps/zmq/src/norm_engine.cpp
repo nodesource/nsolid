@@ -6,8 +6,25 @@
 #if defined ZMQ_HAVE_NORM
 
 #include "norm_engine.hpp"
+#ifdef ZMQ_USE_NORM_SOCKET_WRAPPER
+#include "ip.hpp"
+#endif
+
 #include "session_base.hpp"
 #include "v2_protocol.hpp"
+
+
+#ifdef ZMQ_USE_NORM_SOCKET_WRAPPER
+
+struct norm_wrapper_thread_args_t
+{
+    NormDescriptor norm_descriptor;
+    SOCKET wrapper_write_fd;
+    NormInstanceHandle norm_instance_handle;
+};
+
+DWORD WINAPI normWrapperThread (LPVOID lpParam);
+#endif
 
 zmq::norm_engine_t::norm_engine_t (io_thread_t *parent_,
                                    const options_t &options_) :
@@ -114,14 +131,9 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
         return -1;
     }
     // There's many other useful NORM options that could be applied here
-    if (NormIsUnicastAddress (addr)) {
-        NormSetDefaultUnicastNack (norm_session, true);
-    } else {
+    if (!NormIsUnicastAddress (addr)) {
         // These only apply for multicast sessions
-        //NormSetTTL(norm_session, options.multicast_hops);  // ZMQ default is 1
-        NormSetTTL (
-          norm_session,
-          255); // since the ZMQ_MULTICAST_HOPS socket option isn't well-supported
+        NormSetTTL (norm_session, options.multicast_hops);
         NormSetRxPortReuse (
           norm_session,
           true); // port reuse doesn't work for non-connected unicast
@@ -133,13 +145,31 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
             NormSetMulticastInterface (norm_session, ifacePtr);
         }
     }
+    if (NormIsUnicastAddress (addr) || options.norm_unicast_nacks) {
+        NormSetDefaultUnicastNack (norm_session, true);
+    }
+    // Set TOS but check TOS ECN bit for CCE modes
+    if ((options.norm_mode == ZMQ_NORM_CCE
+         || options.norm_mode == ZMQ_NORM_CCE_ECNONLY)
+        && (options.tos % 4 == 0)) {
+        // ECN Capable Transport not set, so set it
+        NormSetTOS (norm_session, options.tos + 1);
+    } else if ((options.norm_mode == ZMQ_NORM_CCE
+                || options.norm_mode == ZMQ_NORM_CCE_ECNONLY)
+               && (options.tos % 4 == 3)) {
+        // Congestion Experienced is an invalid setting, remove one of the bits
+        NormSetTOS (norm_session, options.tos - 1);
+    } else {
+        NormSetTOS (norm_session, options.tos);
+    }
 
     if (recv) {
         // The alternative NORM_SYNC_CURRENT here would provide "instant"
         // receiver sync to the sender's _current_ message transmission.
         // NORM_SYNC_STREAM tries to get everything the sender has cached/buffered
         NormSetDefaultSyncPolicy (norm_session, NORM_SYNC_STREAM);
-        if (!NormStartReceiver (norm_session, 2 * 1024 * 1024)) {
+        if (!NormStartReceiver (
+              norm_session, (unsigned long) options.norm_buffer_size * 1024)) {
             // errno set by whatever failed
             int savedErrno = errno;
             NormDestroyInstance (norm_instance); // session gets closed, too
@@ -152,11 +182,22 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
     }
 
     if (send) {
+        // Handle invalid settings -- num_parity must be >= num_autoparity (which has a default of 0)
+        unsigned char numparity =
+          (options.norm_num_parity >= options.norm_num_autoparity
+             ? options.norm_num_parity
+             : options.norm_num_autoparity);
+        // Handle invalid settings -- block size must be > effective num_parity (which is <255)
+        unsigned char blocksize =
+          (options.norm_block_size > numparity ? options.norm_block_size
+                                               : numparity + 1);
         // Pick a random sender instance id (aka norm sender session id)
         NormSessionId instanceId = NormGetRandomSessionId ();
         // TBD - provide "options" for some NORM sender parameters
-        if (!NormStartSender (norm_session, instanceId, 2 * 1024 * 1024, 1400,
-                              16, 4)) {
+        if (!NormStartSender (norm_session, instanceId,
+                              (unsigned long) options.norm_buffer_size * 1024,
+                              options.norm_segment_size, blocksize,
+                              numparity)) {
             // errno set by whatever failed
             int savedErrno = errno;
             NormDestroyInstance (norm_instance); // session gets closed, too
@@ -165,12 +206,29 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
             errno = savedErrno;
             return -1;
         }
-        NormSetCongestionControl (norm_session, true);
+        // Handle NORM mode
+        if (options.norm_mode == ZMQ_NORM_FIXED) {
+            NormSetTxRate (norm_session, (double) options.rate * 1000);
+        } else {
+            NormSetCongestionControl (norm_session, true);
+            if (options.norm_mode != ZMQ_NORM_CC) {
+                NormSetEcnSupport (
+                  norm_session,
+                  ((options.norm_mode == ZMQ_NORM_CCE)
+                   || (options.norm_mode == ZMQ_NORM_CCE_ECNONLY)),
+                  options.norm_mode == ZMQ_NORM_CCE_ECNONLY,
+                  options.norm_mode == ZMQ_NORM_CCL);
+            }
+        }
+        if (options.norm_num_autoparity > 0) {
+            NormSetAutoParity (norm_session, options.norm_num_autoparity);
+        }
         norm_tx_ready = true;
         is_sender = true;
         if (NORM_OBJECT_INVALID
-            == (norm_tx_stream =
-                  NormStreamOpen (norm_session, 2 * 1024 * 1024))) {
+            == (norm_tx_stream = NormStreamOpen (
+                  norm_session,
+                  (unsigned long) options.norm_buffer_size * 1024))) {
             // errno set by whatever failed
             int savedErrno = errno;
             NormDestroyInstance (norm_instance); // session gets closed, too
@@ -179,6 +237,8 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
             errno = savedErrno;
             return -1;
         }
+        // NORM Stream options
+        NormStreamSetPushEnable (norm_tx_stream, options.norm_push_enable);
     }
 
     //NormSetMessageTrace(norm_session, true);
@@ -219,6 +279,20 @@ void zmq::norm_engine_t::shutdown ()
 void zmq::norm_engine_t::plug (io_thread_t *io_thread_,
                                session_base_t *session_)
 {
+#ifdef ZMQ_USE_NORM_SOCKET_WRAPPER
+    norm_wrapper_thread_args_t *threadArgs = new norm_wrapper_thread_args_t;
+    int rc = make_fdpair (&wrapper_read_fd, &threadArgs->wrapper_write_fd);
+    errno_assert (rc != -1);
+
+    threadArgs->norm_descriptor = NormGetDescriptor (norm_instance);
+    threadArgs->norm_instance_handle = norm_instance;
+    norm_descriptor_handle = add_fd (wrapper_read_fd);
+#else
+    fd_t normDescriptor = NormGetDescriptor (norm_instance);
+    norm_descriptor_handle = add_fd (normDescriptor);
+#endif
+    // Set POLLIN for notification of pending NormEvents
+    set_pollin (norm_descriptor_handle);
     // TBD - we may assign the NORM engine to an io_thread in the future???
     zmq_session = session_;
     if (is_sender)
@@ -226,20 +300,30 @@ void zmq::norm_engine_t::plug (io_thread_t *io_thread_,
     if (is_receiver)
         zmq_input_ready = true;
 
-    fd_t normDescriptor = NormGetDescriptor (norm_instance);
-    norm_descriptor_handle = add_fd (normDescriptor);
-    // Set POLLIN for notification of pending NormEvents
-    set_pollin (norm_descriptor_handle);
 
     if (is_sender)
         send_data ();
+
+#ifdef ZMQ_USE_NORM_SOCKET_WRAPPER
+    wrapper_thread_handle = CreateThread (NULL, 0, normWrapperThread,
+                                          threadArgs, 0, &wrapper_thread_id);
+#endif
 
 } // end zmq::norm_engine_t::init()
 
 void zmq::norm_engine_t::unplug ()
 {
     rm_fd (norm_descriptor_handle);
-
+#ifdef ZMQ_USE_NORM_SOCKET_WRAPPER
+    PostThreadMessage (wrapper_thread_id, WM_QUIT, (WPARAM) NULL,
+                       (LPARAM) NULL);
+    WaitForSingleObject (wrapper_thread_handle, INFINITE);
+    DWORD exitCode;
+    GetExitCodeThread (wrapper_thread_handle, &exitCode);
+    zmq_assert (exitCode != -1);
+    int rc = closesocket (wrapper_read_fd);
+    errno_assert (rc != -1);
+#endif
     zmq_session = NULL;
 } // end zmq::norm_engine_t::unplug()
 
@@ -329,11 +413,17 @@ void zmq::norm_engine_t::in_event ()
 {
     // This means a NormEvent is pending, so call NormGetNextEvent() and handle
     NormEvent event;
+#ifdef ZMQ_USE_NORM_SOCKET_WRAPPER
+    int rc = recv (wrapper_read_fd, reinterpret_cast<char *> (&event),
+                   sizeof (event), 0);
+    errno_assert (rc == sizeof (event));
+#else
     if (!NormGetNextEvent (norm_instance, &event)) {
         // NORM has died before we unplugged?!
         zmq_assert (false);
         return;
     }
+#endif
 
     switch (event.type) {
         case NORM_TX_QUEUE_VACANCY:
@@ -467,8 +557,7 @@ void zmq::norm_engine_t::recv_data (NormObjectHandle object)
                 char syncFlag;
                 unsigned int numBytes = 1;
                 if (!NormStreamRead (stream, &syncFlag, &numBytes)) {
-                    // broken stream (shouldn't happen after seek msg start?)
-                    zmq_assert (false);
+                    // broken stream (can happen on late-joining subscriber)
                     continue;
                 }
                 if (0 == numBytes) {
@@ -717,5 +806,61 @@ const zmq::endpoint_uri_pair_t &zmq::norm_engine_t::get_endpoint () const
 {
     return _empty_endpoint;
 }
+
+
+#ifdef ZMQ_USE_NORM_SOCKET_WRAPPER
+#include <iostream>
+DWORD WINAPI normWrapperThread (LPVOID lpParam)
+{
+    norm_wrapper_thread_args_t *norm_wrapper_thread_args =
+      (norm_wrapper_thread_args_t *) lpParam;
+    NormEvent message;
+    DWORD waitRc;
+    DWORD exitCode = 0;
+    int rc;
+
+    for (;;) {
+        // wait for norm event or message
+        waitRc = MsgWaitForMultipleObjectsEx (
+          1, &norm_wrapper_thread_args->norm_descriptor, INFINITE,
+          QS_ALLPOSTMESSAGE, 0);
+
+        // Check if norm event
+        if (waitRc == WAIT_OBJECT_0) {
+            // Process norm event
+            if (!NormGetNextEvent (
+                  norm_wrapper_thread_args->norm_instance_handle, &message)) {
+                exitCode = -1;
+                break;
+            }
+            rc =
+              send (norm_wrapper_thread_args->wrapper_write_fd,
+                    reinterpret_cast<char *> (&message), sizeof (message), 0);
+            errno_assert (rc != -1);
+            // Check if message
+        } else if (waitRc == WAIT_OBJECT_0 + 1) {
+            // Exit if WM_QUIT is received otherwise do nothing
+            MSG message;
+            GetMessage (&message, 0, 0, 0);
+            if (message.message == WM_QUIT) {
+                break;
+            } else {
+                // do nothing
+            }
+            // Otherwise an error occurred
+        } else {
+            exitCode = -1;
+            break;
+        }
+    }
+    // Free resources
+    rc = closesocket (norm_wrapper_thread_args->wrapper_write_fd);
+    free (norm_wrapper_thread_args);
+    errno_assert (rc != -1);
+
+    return exitCode;
+}
+
+#endif
 
 #endif // ZMQ_HAVE_NORM

@@ -1,31 +1,4 @@
-/*
-    Copyright (c) 2007-2016 Contributors as noted in the AUTHORS file
-
-    This file is part of libzmq, the ZeroMQ core engine in C++.
-
-    libzmq is free software; you can redistribute it and/or modify it under
-    the terms of the GNU Lesser General Public License (LGPL) as published
-    by the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
-
-    As a special exception, the Contributors give you permission to link
-    this library with independent modules to produce an executable,
-    regardless of the license terms of these independent modules, and to
-    copy and distribute the resulting executable under terms of your choice,
-    provided that you also meet, for each linked independent module, the
-    terms and conditions of the license of that module. An independent
-    module is a module which is not derived from or based on this library.
-    If you modify this library, you must extend this exception to your
-    version of the library.
-
-    libzmq is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-    License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #ifndef __ZMQ_WINDOWS_HPP_INCLUDED__
 #define __ZMQ_WINDOWS_HPP_INCLUDED__
@@ -90,11 +63,22 @@ static inline int poll (struct pollfd *pfd, unsigned long nfds, int timeout)
 #ifndef AI_NUMERICSERV
 #define AI_NUMERICSERV 0x0400
 #endif
-#endif
 
 //  In MSVC prior to v14, snprintf is not available
 //  The closest implementation is the _snprintf_s function
 #if defined(_MSC_VER) && _MSC_VER < 1900
 #define snprintf(buffer_, count_, format_, ...)                                \
     _snprintf_s (buffer_, count_, _TRUNCATE, format_, __VA_ARGS__)
+#endif
+
+//  Workaround missing struct sockaddr_un in afunix.h.
+//  Fix #3949.
+#if defined(ZMQ_HAVE_IPC) && !defined(ZMQ_HAVE_STRUCT_SOCKADDR_UN)
+struct sockaddr_un
+{
+    ADDRESS_FAMILY sun_family; /* AF_UNIX */
+    char sun_path[108];        /* pathname */
+};
+#endif
+
 #endif
