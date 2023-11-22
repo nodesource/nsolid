@@ -1,31 +1,4 @@
-/*
-    Copyright (c) 2007-2016 Contributors as noted in the AUTHORS file
-
-    This file is part of libzmq, the ZeroMQ core engine in C++.
-
-    libzmq is free software; you can redistribute it and/or modify it under
-    the terms of the GNU Lesser General Public License (LGPL) as published
-    by the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
-
-    As a special exception, the Contributors give you permission to link
-    this library with independent modules to produce an executable,
-    regardless of the license terms of these independent modules, and to
-    copy and distribute the resulting executable under terms of your choice,
-    provided that you also meet, for each linked independent module, the
-    terms and conditions of the license of that module. An independent
-    module is a module which is not derived from or based on this library.
-    If you modify this library, you must extend this exception to your
-    version of the library.
-
-    libzmq is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-    License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #include "precompiled.hpp"
 #include <string.h>
@@ -254,7 +227,18 @@ zmq::options_t::options_t () :
     hello_msg (),
     can_send_hello_msg (false),
     disconnect_msg (),
-    can_recv_disconnect_msg (false)
+    can_recv_disconnect_msg (false),
+    hiccup_msg (),
+    can_recv_hiccup_msg (false),
+    norm_mode (ZMQ_NORM_CC),
+    norm_unicast_nacks (false),
+    norm_buffer_size (2048),
+    norm_segment_size (1400),
+    norm_block_size (16),
+    norm_num_parity (4),
+    norm_num_autoparity (0),
+    norm_push_enable (false),
+    busy_poll (0)
 {
     memset (curve_public_key, 0, CURVE_KEYSIZE);
     memset (curve_secret_key, 0, CURVE_KEYSIZE);
@@ -802,6 +786,12 @@ int zmq::options_t::setsockopt (int option_,
             }
             break;
 
+        case ZMQ_BUSY_POLL:
+            if (is_int) {
+                busy_poll = value;
+                return 0;
+            }
+            break;
 #ifdef ZMQ_HAVE_WSS
         case ZMQ_WSS_KEY_PEM:
             // TODO: check if valid certificate
@@ -822,6 +812,58 @@ int zmq::options_t::setsockopt (int option_,
             return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
                                                      &wss_trust_system);
 #endif
+
+#ifdef ZMQ_HAVE_NORM
+        case ZMQ_NORM_MODE:
+            if (is_int && value >= 0 && value <= 4) {
+                norm_mode = value;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_UNICAST_NACK:
+            return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
+                                                     &norm_unicast_nacks);
+
+        case ZMQ_NORM_BUFFER_SIZE:
+            if (is_int && value > 0) {
+                norm_buffer_size = value;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_SEGMENT_SIZE:
+            if (is_int && value > 0) {
+                norm_segment_size = value;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_BLOCK_SIZE:
+            if (is_int && value > 0 && value <= 255) {
+                norm_block_size = value;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_NUM_PARITY:
+            if (is_int && value >= 0 && value < 255) {
+                norm_num_parity = value;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_NUM_AUTOPARITY:
+            if (is_int && value >= 0 && value < 255) {
+                norm_num_autoparity = value;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_PUSH:
+            return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
+                                                     &norm_push_enable);
+#endif //ZMQ_HAVE_NORM
 
         case ZMQ_HELLO_MSG:
             if (optvallen_ > 0) {
@@ -851,6 +893,18 @@ int zmq::options_t::setsockopt (int option_,
                 return 0;
             }
             break;
+
+        case ZMQ_HICCUP_MSG:
+            if (optvallen_ > 0) {
+                unsigned char *bytes = (unsigned char *) optval_;
+                hiccup_msg =
+                  std::vector<unsigned char> (bytes, bytes + optvallen_);
+            } else {
+                hiccup_msg = std::vector<unsigned char> ();
+            }
+
+            return 0;
+
 
 #endif
 
@@ -1285,6 +1339,71 @@ int zmq::options_t::getsockopt (int option_,
                 return 0;
             }
             break;
+
+        case ZMQ_BUSY_POLL:
+            if (is_int) {
+                *value = busy_poll;
+            }
+            break;
+
+#ifdef ZMQ_HAVE_NORM
+        case ZMQ_NORM_MODE:
+            if (is_int) {
+                *value = norm_mode;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_UNICAST_NACK:
+            if (is_int) {
+                *value = norm_unicast_nacks;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_BUFFER_SIZE:
+            if (is_int) {
+                *value = norm_buffer_size;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_SEGMENT_SIZE:
+            if (is_int) {
+                *value = norm_segment_size;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_BLOCK_SIZE:
+            if (is_int) {
+                *value = norm_block_size;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_NUM_PARITY:
+            if (is_int) {
+                *value = norm_num_parity;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_NUM_AUTOPARITY:
+            if (is_int) {
+                *value = norm_num_autoparity;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_PUSH:
+            if (is_int) {
+                *value = norm_push_enable;
+                return 0;
+            }
+            break;
+#endif //ZMQ_HAVE_NORM
+
 #endif
 
 

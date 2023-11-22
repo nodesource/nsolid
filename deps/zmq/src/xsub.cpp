@@ -1,31 +1,4 @@
-/*
-    Copyright (c) 2007-2016 Contributors as noted in the AUTHORS file
-
-    This file is part of libzmq, the ZeroMQ core engine in C++.
-
-    libzmq is free software; you can redistribute it and/or modify it under
-    the terms of the GNU Lesser General Public License (LGPL) as published
-    by the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
-
-    As a special exception, the Contributors give you permission to link
-    this library with independent modules to produce an executable,
-    regardless of the license terms of these independent modules, and to
-    copy and distribute the resulting executable under terms of your choice,
-    provided that you also meet, for each linked independent module, the
-    terms and conditions of the license of that module. An independent
-    module is a module which is not derived from or based on this library.
-    If you modify this library, you must extend this exception to your
-    version of the library.
-
-    libzmq is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-    License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #include "precompiled.hpp"
 #include <string.h>
@@ -36,6 +9,7 @@
 
 zmq::xsub_t::xsub_t (class ctx_t *parent_, uint32_t tid_, int sid_) :
     socket_base_t (parent_, tid_, sid_),
+    _verbose_unsubs (false),
     _has_message (false),
     _more_send (false),
     _more_recv (false),
@@ -110,6 +84,33 @@ int zmq::xsub_t::xsetsockopt (int option_,
         _only_first_subscribe = (*static_cast<const int *> (optval_) != 0);
         return 0;
     }
+#ifdef ZMQ_BUILD_DRAFT_API
+    else if (option_ == ZMQ_XSUB_VERBOSE_UNSUBSCRIBE) {
+        _verbose_unsubs = (*static_cast<const int *> (optval_) != 0);
+        return 0;
+    }
+#endif
+    errno = EINVAL;
+    return -1;
+}
+
+int zmq::xsub_t::xgetsockopt (int option_, void *optval_, size_t *optvallen_)
+{
+    if (option_ == ZMQ_TOPICS_COUNT) {
+        // make sure to use a multi-thread safe function to avoid race conditions with I/O threads
+        // where subscriptions are processed:
+#ifdef ZMQ_USE_RADIX_TREE
+        uint64_t num_subscriptions = _subscriptions.size ();
+#else
+        uint64_t num_subscriptions = _subscriptions.num_prefixes ();
+#endif
+
+        return do_getsockopt<int> (optval_, optvallen_,
+                                   (int) num_subscriptions);
+    }
+
+    // room for future options here
+
     errno = EINVAL;
     return -1;
 }
@@ -132,7 +133,7 @@ int zmq::xsub_t::xsend (msg_t *msg_)
     if (msg_->is_subscribe () || (size > 0 && *data == 1)) {
         //  Process subscribe message
         //  This used to filter out duplicate subscriptions,
-        //  however this is alread done on the XPUB side and
+        //  however this is already done on the XPUB side and
         //  doing it here as well breaks ZMQ_XPUB_VERBOSE
         //  when there are forwarding devices involved.
         if (!msg_->is_subscribe ()) {
@@ -150,7 +151,8 @@ int zmq::xsub_t::xsend (msg_t *msg_)
             size = size - 1;
         }
         _process_subscribe = true;
-        if (_subscriptions.rm (data, size))
+        const bool rm_result = _subscriptions.rm (data, size);
+        if (rm_result || _verbose_unsubs)
             return _dist.send_to_all (msg_);
     } else
         //  User message sent upstream to XPUB socket

@@ -28,7 +28,7 @@
 
 // Attributes of the file.
 // VS_FF_DEBUG        =  1 : File contains debugging information or is compiled with debugging features enabled.
-// VS_FF_PATCHED      =  4 : File has been modified and is not identical to the original shipping file of the
+// VS_FF_PATCHED      =  4 : File has been modified and is not identical to the original shipping file of the 
 //                           same version number.
 // VS_FF_PRERELEASE   =  2 : File is a development version, not a commercially released product.
 // VS_FF_PRIVATEBUILD =  8 : File was not built using standard release procedures.

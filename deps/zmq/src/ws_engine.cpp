@@ -1,31 +1,4 @@
-/*
-Copyright (c) 2007-2019 Contributors as noted in the AUTHORS file
-
-This file is part of libzmq, the ZeroMQ core engine in C++.
-
-libzmq is free software; you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License (LGPL) as published
-by the Free Software Foundation; either version 3 of the License, or
-(at your option) any later version.
-
-As a special exception, the Contributors give you permission to link
-this library with independent modules to produce an executable,
-regardless of the license terms of these independent modules, and to
-copy and distribute the resulting executable under terms of your choice,
-provided that you also meet, for each linked independent module, the
-terms and conditions of the license of that module. An independent
-module is a module which is not derived from or based on this library.
-If you modify this library, you must extend this exception to your
-version of the library.
-
-libzmq is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
-License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/* SPDX-License-Identifier: MPL-2.0 */
 
 #include "precompiled.hpp"
 
@@ -136,7 +109,7 @@ void zmq::ws_engine_t::start_ws_handshake ()
             protocol = "ZWS2.0/CURVE";
 #endif
         else {
-            // Avoid unitialized variable error breaking UWP build
+            // Avoid uninitialized variable error breaking UWP build
             protocol = "";
             assert (false);
         }
@@ -453,11 +426,20 @@ bool zmq::ws_engine_t::server_handshake ()
                     if (strcasecmp ("upgrade", _header_name) == 0)
                         _header_upgrade_websocket =
                           strcasecmp ("websocket", _header_value) == 0;
-                    else if (strcasecmp ("connection", _header_name) == 0)
-                        _header_connection_upgrade =
-                          strcasecmp ("upgrade", _header_value) == 0;
-                    else if (strcasecmp ("Sec-WebSocket-Key", _header_name)
-                             == 0)
+                    else if (strcasecmp ("connection", _header_name) == 0) {
+                        char *rest = NULL;
+                        char *element = strtok_r (_header_value, ",", &rest);
+                        while (element != NULL) {
+                            while (*element == ' ')
+                                element++;
+                            if (strcasecmp ("upgrade", element) == 0) {
+                                _header_connection_upgrade = true;
+                                break;
+                            }
+                            element = strtok_r (NULL, ",", &rest);
+                        }
+                    } else if (strcasecmp ("Sec-WebSocket-Key", _header_name)
+                               == 0)
                         strcpy_s (_websocket_key, _header_value);
                     else if (strcasecmp ("Sec-WebSocket-Protocol", _header_name)
                              == 0) {
@@ -465,7 +447,7 @@ bool zmq::ws_engine_t::server_handshake ()
                         // Sec-WebSocket-Protocol can appear multiple times or be a comma separated list
                         // if _websocket_protocol is already set we skip the check
                         if (_websocket_protocol[0] == '\0') {
-                            char *rest = 0;
+                            char *rest = NULL;
                             char *p = strtok_r (_header_value, ",", &rest);
                             while (p != NULL) {
                                 if (*p == ' ')
