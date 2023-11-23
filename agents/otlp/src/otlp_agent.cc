@@ -22,6 +22,7 @@ static const size_t kTraceIdSize             = 32;
 static const size_t kSpanIdSize              = 16;
 
 static std::atomic<bool> is_running_ = { false };
+nsuv::ns_rwlock exit_lock_;
 static resource::ResourceAttributes resource_attributes_;
 
 namespace node {
@@ -203,7 +204,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
 /*static*/ void OTLPAgent::config_agent_cb_(std::string config,
                                             OTLPAgent* agent) {
   // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
@@ -217,6 +218,11 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 
 /*static*/ void OTLPAgent::config_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_) {
+    return;
+  }
+
   json config_msg;
   while (agent->config_msg_q_.dequeue(config_msg)) {
     agent->config(config_msg);
@@ -225,7 +231,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 
 /*static*/ void OTLPAgent::env_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
@@ -249,7 +255,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 /*static*/ void OTLPAgent::on_thread_add_(SharedEnvInst envinst,
                                           OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
@@ -261,7 +267,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 /*static*/ void OTLPAgent::on_thread_remove_(SharedEnvInst envinst,
                                              OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
@@ -309,7 +315,7 @@ void OTLPAgent::do_stop() {
 void OTLPAgent::trace_hook_(Tracer* tracer,
                             const Tracer::SpanStor& stor,
                             OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
@@ -321,7 +327,7 @@ void OTLPAgent::trace_hook_(Tracer* tracer,
 
 void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
   // Don't exit until all the pending spans are sent
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
@@ -396,7 +402,7 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
 
 
 /*static*/void OTLPAgent::metrics_timer_cb_(nsuv::ns_timer*, OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
@@ -411,7 +417,7 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
 
 
 /*static*/void OTLPAgent::metrics_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
@@ -437,7 +443,7 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
 
 /*static*/void OTLPAgent::thr_metrics_cb_(ThreadMetrics* metrics,
                                           OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->exit_lock_);
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }

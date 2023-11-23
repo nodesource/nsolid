@@ -112,8 +112,6 @@ class OTLPAgent {
   uv_cond_t start_cond_;
   uv_mutex_t start_lock_;
 
-  nsuv::ns_rwlock exit_lock_;
-
   bool hooks_init_;
 
   nsuv::ns_async env_msg_;
