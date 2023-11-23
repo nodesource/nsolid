@@ -264,9 +264,13 @@ void StatsDUdp::write_cb_(nsuv::ns_udp_send* req, int status, StatsDUdp* udp) {
     struct sockaddr_storage ss;
     struct sockaddr* addr = reinterpret_cast<struct sockaddr*>(&ss);
     int len = sizeof(ss);
-    ASSERT_EQ(0, uv_udp_getpeername(req->handle(), addr, &len));
-    Debug("Error '%s' sending data to: %s.\n",
-          uv_err_name(status), addr_to_string(addr).c_str());
+    int r = uv_udp_getpeername(req->handle(), addr, &len);
+    if (r == 0) {
+      Debug("Error '%s' sending data to: %s.\n",
+            uv_err_name(status), addr_to_string(addr).c_str());
+    } else {
+      Debug("Error '%s' sending data to\n", uv_err_name(status));
+    }
   }
 
   udp_req_data_tup* req_data = req->get_data<udp_req_data_tup>();
