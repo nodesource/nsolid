@@ -20,6 +20,6 @@ const warnpath = tmpdir.resolve('warnings.txt');
 fork(warnmod, { env: { ...process.env, NODE_REDIRECT_WARNINGS: warnpath } })
   .on('exit', common.mustCall(() => {
     fs.readFile(warnpath, 'utf8', common.mustSucceed((data) => {
-      assert.match(data, /\(nsolid:\d+\) Warning: a bad practice warning/);
+      assert.match(data, /\(node:\d+\) Warning: a bad practice warning/);
     }));
   }));
