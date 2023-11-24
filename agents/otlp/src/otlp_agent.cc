@@ -6,6 +6,7 @@
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
+#include "opentelemetry/ext/http/client/curl/http_client_curl.h"
 #include "opentelemetry/trace/propagation/detail/hex.h"
 
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
@@ -14,6 +15,7 @@ using nlohmann::json;
 namespace nostd = OPENTELEMETRY_NAMESPACE::nostd;
 namespace sdk = OPENTELEMETRY_NAMESPACE::sdk;
 namespace exporter = OPENTELEMETRY_NAMESPACE::exporter;
+namespace ext = OPENTELEMETRY_NAMESPACE::ext;
 namespace trace = OPENTELEMETRY_NAMESPACE::trace;
 namespace resource = sdk::resource;
 namespace detail = trace::propagation::detail;
@@ -44,6 +46,15 @@ inline void DebugJSON(const char* str, const json& msg) {
 
 
 OTLPAgent* OTLPAgent::Inst() {
+  // Make sure the HttpCurlGlobalInitializer static instance is created before
+  // the OTLPAgent so it's destroyed after the OTLPAgent in __run_exit_handlers.
+  // This fixes an insidious crash which happened if between the
+  // HttpCurlGlobalInitializer and OTLPAgent destruction, a config update caused
+  // the metrics_exporter_ to be reset to a specific exporter. This caused the
+  // HttpCurlGlobalInitializer instance destructor to be called twice thus
+  // crashing.
+  auto initializer =
+    ext::http::client::curl::HttpCurlGlobalInitializer::GetInstance();
   static OTLPAgent agent;
   return &agent;
 }
