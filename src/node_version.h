@@ -44,7 +44,7 @@
 #endif
 
 #ifndef NODE_RELEASE
-#define NODE_RELEASE "nsolid"
+#define NODE_RELEASE "node"
 #endif
 
 #ifndef NODE_TAG
