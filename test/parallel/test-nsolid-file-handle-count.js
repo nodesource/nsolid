@@ -9,6 +9,9 @@ const fs = require('fs');
 const baseOpened = nsolid.metrics().fsHandlesOpenedCount;
 const baseClosed = nsolid.metrics().fsHandlesClosedCount;
 
+let oCntr = 0;
+let cCntr = 0;
+
 function getOpened() {
   return nsolid.metrics().fsHandlesOpenedCount - baseOpened;
 }
@@ -23,54 +26,52 @@ try {
   // It's meant to throw and the exception is to be ignored.
 }
 
-assert.strictEqual(getOpened(), 0);
-assert.strictEqual(getClosed(), 0);
+assert.strictEqual(getOpened(), oCntr);
+assert.strictEqual(getClosed(), cCntr);
 
 const fd = fs.openSync(__filename);
-assert.strictEqual(getOpened(), 1);
-assert.strictEqual(getClosed(), 0);
+assert.strictEqual(getOpened(), ++oCntr);
+assert.strictEqual(getClosed(), cCntr);
 
 fs.closeSync(fd);
-assert.strictEqual(getOpened(), 1);
-assert.strictEqual(getClosed(), 1);
+assert.strictEqual(getOpened(), oCntr);
+assert.strictEqual(getClosed(), ++cCntr);
 
-fs.open(__filename, common.mustCall((err, fd) => {
-  assert.ok(!err);
-  assert.strictEqual(getOpened(), 2);
-  assert.strictEqual(getClosed(), 1);
+fs.readFileSync(__filename);
+assert.strictEqual(getOpened(), ++oCntr);
+assert.strictEqual(getClosed(), ++cCntr);
 
-  fs.close(fd, common.mustCall((err) => {
+fs.readFile(__filename, () => {
+  assert.strictEqual(getOpened(), ++oCntr);
+  assert.strictEqual(getClosed(), ++cCntr);
+
+  fs.open(__filename, common.mustCall((err, fd) => {
     assert.ok(!err);
-    assert.strictEqual(getOpened(), 2);
-    assert.strictEqual(getClosed(), 2);
+    assert.strictEqual(getOpened(), ++oCntr);
+    assert.strictEqual(getClosed(), cCntr);
 
-    checkPromise().then(common.mustCall(() => {
-      openFileHandle();
-      setTimeout(() => {
-        // The FileHandle should be out-of-scope and no longer accessed now.
-        global.gc();
-        setImmediate(() => {
-          assert.strictEqual(getOpened(), 4);
-          assert.strictEqual(getClosed(), 4);
-        });
-      }, 100);
-    })).catch(common.mustNotCall());
+    fs.close(fd, common.mustCall((err) => {
+      assert.ok(!err);
+      assert.strictEqual(getOpened(), oCntr);
+      assert.strictEqual(getClosed(), ++cCntr);
+
+      checkPromise()
+        .then(common.mustCall(closePromiseFd))
+        .catch(common.mustNotCall());
+    }));
   }));
-}));
+});
 
 async function checkPromise() {
-  let fh = await fs.promises.open(__filename);
-  assert.strictEqual(getOpened(), 3);
-  assert.strictEqual(getClosed(), 2);
-  fh = await fh.close();
-  assert.strictEqual(fh, undefined);
-  assert.strictEqual(getOpened(), 3);
-  assert.strictEqual(getClosed(), 3);
+  const fh = await fs.promises.open(__filename);
+  assert.strictEqual(getOpened(), ++oCntr);
+  assert.strictEqual(getClosed(), cCntr);
+  return fh;
 }
 
-async function openFileHandle() {
-  const fh = await fs.promises.open(__filename);
-  console.log(fh);
-  assert.strictEqual(getOpened(), 4);
-  assert.strictEqual(getClosed(), 3);
+async function closePromiseFd(fh) {
+  fh = await fh.close();
+  assert.strictEqual(fh, undefined);
+  assert.strictEqual(getOpened(), oCntr);
+  assert.strictEqual(getClosed(), ++cCntr);
 }
