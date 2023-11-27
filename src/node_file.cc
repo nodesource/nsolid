@@ -1020,6 +1020,7 @@ void Close(const FunctionCallbackInfo<Value>& args) {
     FS_SYNC_TRACE_BEGIN(close);
     SyncCallAndThrowOnError(env, &req_wrap_sync, uv_fs_close, fd);
     FS_SYNC_TRACE_END(close);
+    env->envinst_->inc_fs_handles_closed();
   }
 }
 
@@ -2038,6 +2039,7 @@ static void Open(const FunctionCallbackInfo<Value>& args) {
     FS_SYNC_TRACE_END(open);
     if (is_uv_error(result)) return;
     env->AddUnmanagedFd(result);
+    env->envinst_->inc_fs_handles_opened();
     args.GetReturnValue().Set(result);
   }
 }
@@ -2079,6 +2081,7 @@ static void OpenFileHandle(const FunctionCallbackInfo<Value>& args) {
     }
     FileHandle* fd = FileHandle::New(binding_data, result);
     if (fd == nullptr) return;
+    env->envinst_->inc_fs_handles_opened();
     args.GetReturnValue().Set(fd->object());
   }
 }
