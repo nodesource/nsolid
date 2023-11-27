@@ -352,12 +352,6 @@ int SyncCall(Environment* env, v8::Local<v8::Value> ctx,
     ctx_obj->Set(context,
                  env->syscall_string(),
                  OneByteString(isolate, syscall)).Check();
-  } else {
-    if (strncmp(syscall, "open", 4) == 0) {
-      env->envinst_->inc_fs_handles_opened();
-    } else if (strncmp(syscall, "close", 5) == 0) {
-      env->envinst_->inc_fs_handles_closed();
-    }
   }
   return err;
 }
