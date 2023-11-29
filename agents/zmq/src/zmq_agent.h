@@ -356,10 +356,12 @@ class ZmqAgent {
   };
 
   struct EnvMetricsStor {
-    ThreadMetrics t_metrics;
+    SharedThreadMetrics t_metrics;
     bool fetching;
-    explicit EnvMetricsStor(SharedEnvInst envinst, bool f): t_metrics(envinst),
-                                                             fetching(f) {}
+    NSOLID_DELETE_DEFAULT_CONSTRUCTORS(EnvMetricsStor)
+    explicit EnvMetricsStor(SharedEnvInst envinst, bool f)
+      : t_metrics(ThreadMetrics::Create(envinst)),
+        fetching(f) {}
   };
 
   struct ZmqCommandError {
@@ -478,7 +480,7 @@ class ZmqAgent {
 
   static void update_state_msg_cb(nsuv::ns_async*, ZmqAgent*);
 
-  static void env_metrics_cb(ThreadMetrics*, ZmqAgent*);
+  static void env_metrics_cb(SharedThreadMetrics, ZmqAgent*);
 
   static void status_command_cb(SharedEnvInst, ZmqAgent*);
 
@@ -555,7 +557,7 @@ class ZmqAgent {
                                    const std::pair<bool, std::string>&,
                                    const std::pair<bool, std::string>&);
 
-  void got_env_metrics(ThreadMetrics* t_metrics);
+  void got_env_metrics(const ThreadMetrics::MetricsStor& stor);
 
   void got_heap_snapshot(int status,
                          const std::string& snaphost,
@@ -657,7 +659,7 @@ class ZmqAgent {
   ProcessMetrics proc_metrics_;
   uint64_t metrics_period_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ThreadMetrics*> metrics_msg_q_;
+  TSQueue<ThreadMetrics::MetricsStor> metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
   std::string cached_metrics_;
   std::set<std::string> pending_metrics_reqs_;

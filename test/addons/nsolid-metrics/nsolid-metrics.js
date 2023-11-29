@@ -25,6 +25,8 @@ if (!isMainThread) {
 
 process.on('beforeExit', mustCall(() => {
   assert.strictEqual(binding.getCbCntr(), wkr_count);
+  assert.strictEqual(binding.getCbCntrGone(), 0);
+  assert.strictEqual(binding.getCbCntrLambda(), wkr_count);
 }));
 
 const metrics = binding.getProcMetrics();
@@ -37,6 +39,8 @@ for (let i = 0; i < wkr_count; i++) {
   }));
   worker.on('online', mustCall(() => {
     assert.strictEqual(binding.getEnvMetrics(worker.threadId), 0);
+    assert.strictEqual(binding.getEnvMetricsLambda(worker.threadId), 0);
+    assert.strictEqual(binding.getEnvMetricsGone(worker.threadId), 0);
     worker.postMessage('exit');
   }));
 }

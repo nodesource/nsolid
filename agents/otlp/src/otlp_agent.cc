@@ -422,7 +422,7 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
   for (auto& item : agent->env_metrics_map_) {
     // Retrieve metrics from the Metrics API. Ignore any return error since
     // there's nothing to be done.
-    item.second.metrics_.Update(thr_metrics_cb_, agent);
+    item.second.metrics_->Update(thr_metrics_cb_, agent);
   }
 }
 
@@ -435,12 +435,11 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
 
   std::vector<std::pair<ThreadMetricsStor,
                         ThreadMetricsStor>> thr_metrics_vector;
-  ThreadMetrics* m;
-  while (agent->thr_metrics_msg_q_.dequeue(&m)) {
-    auto it = agent->env_metrics_map_.find(m->thread_id());
+  ThreadMetricsStor stor;
+  while (agent->thr_metrics_msg_q_.dequeue(stor)) {
+    auto it = agent->env_metrics_map_.find(stor.thread_id);
     if (it != agent->env_metrics_map_.end()) {
       auto& metrics = it->second;
-      ThreadMetricsStor stor = m->Get();
       thr_metrics_vector.emplace_back(stor, metrics.prev_);
       metrics.prev_ = stor;
     }
@@ -452,14 +451,14 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
 }
 
 
-/*static*/void OTLPAgent::thr_metrics_cb_(ThreadMetrics* metrics,
+/*static*/void OTLPAgent::thr_metrics_cb_(SharedThreadMetrics metrics,
                                           OTLPAgent* agent) {
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
   if (!is_running_) {
     return;
   }
 
-  agent->thr_metrics_msg_q_.enqueue(metrics);
+  agent->thr_metrics_msg_q_.enqueue(metrics->Get());
   ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
 }
 

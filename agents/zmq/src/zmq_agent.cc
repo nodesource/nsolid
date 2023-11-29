@@ -881,18 +881,17 @@ void ZmqAgent::got_trace(Tracer* tracer,
 }
 
 
-void ZmqAgent::got_env_metrics(ThreadMetrics* t_metrics) {
+void ZmqAgent::got_env_metrics(const ThreadMetrics::MetricsStor& stor) {
   ProcessMetrics::MetricsStor proc_stor;
 
-  auto iter = env_metrics_map_.find(t_metrics->thread_id());
+  auto iter = env_metrics_map_.find(stor.thread_id);
   if (iter != env_metrics_map_.end()) {
-    ASSERT_PTR_EQ(t_metrics, &iter->second.t_metrics);
     iter->second.fetching = false;
     // Store into the completed_env_metrics_ vector so we have easy access once
     // the metrics from all the threads are retrieved. Make a copy of
     // ThreadMetrics to make sure the metrics are still valid even if the
     // thread is gone.
-    completed_env_metrics_.push_back(t_metrics->Get());
+    completed_env_metrics_.push_back(stor);
   }
 
   bool done = true;
@@ -951,9 +950,9 @@ NSOLID_ENV_METRICS_STRINGS(V)
 
 
 void ZmqAgent::metrics_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
-  ThreadMetrics* metrics;
-  while (agent->metrics_msg_q_.dequeue(&metrics)) {
-    agent->got_env_metrics(metrics);
+  ThreadMetrics::MetricsStor stor;
+  while (agent->metrics_msg_q_.dequeue(stor)) {
+    agent->got_env_metrics(stor);
   }
 }
 
@@ -1641,19 +1640,19 @@ void ZmqAgent::metrics_timer_cb(nsuv::ns_timer*, ZmqAgent* agent) {
     stor.fetching = false;
     // Retrieve metrics from the Metrics API. Ignore any return error since
     // there's nothing to be done.
-    int r = stor.t_metrics.Update(env_metrics_cb, agent);
+    int r = stor.t_metrics->Update(env_metrics_cb, agent);
     if (r == 0)
       stor.fetching = true;
   }
 }
 
-void ZmqAgent::env_metrics_cb(ThreadMetrics* metrics, ZmqAgent* agent) {
+void ZmqAgent::env_metrics_cb(SharedThreadMetrics metrics, ZmqAgent* agent) {
   // Check if the agent is already delete or it's closing
   if (!is_running || agent->metrics_msg_.is_closing()) {
     return;
   }
 
-  agent->metrics_msg_q_.enqueue(metrics);
+  agent->metrics_msg_q_.enqueue(metrics->Get());
   ASSERT_EQ(0, agent->metrics_msg_.send());
 }
 

@@ -180,13 +180,12 @@ enum NSolidErr {
 #undef X
 };
 
-
-class ProcessMetrics;
 class ThreadMetrics;
 enum class CommandType;
 
 
 using SharedEnvInst = std::shared_ptr<EnvInst>;
+using SharedThreadMetrics = std::shared_ptr<ThreadMetrics>;
 using ns_error_tp = std::tuple<std::string, std::string>;
 
 /** @cond DONT_DOCUMENT */
@@ -601,9 +600,10 @@ class NODE_EXTERN ProcessMetrics {
  * @brief Class that allows to retrieve thread-specific metrics from a process.
  *
  */
-class NODE_EXTERN ThreadMetrics {
+class NODE_EXTERN ThreadMetrics :
+  public std::enable_shared_from_this<ThreadMetrics> {
  public:
-  using thread_metrics_proxy_sig = void(*)(ThreadMetrics*);
+  using thread_metrics_proxy_sig = void(*)(SharedThreadMetrics);
 
   /**
    * @brief struct to store thread metrics data.
@@ -625,22 +625,17 @@ class NODE_EXTERN ThreadMetrics {
   };
 
   /**
-   * @brief Construct a new Thread Metrics object
+   * @brief Create a SharedThreadMetrics instance
    *
-   * @param thread_id the id of the JS thread the metrics are going to be
-   * retrieved from.
+   * @param envinst SharedEnvInst of the thread to take the metrics from.
    */
-  explicit ThreadMetrics(SharedEnvInst envinst);
+  static SharedThreadMetrics Create(SharedEnvInst envinst);
+
   ThreadMetrics() = delete;
   ThreadMetrics(const ThreadMetrics&) = delete;
   ThreadMetrics& operator=(const ThreadMetrics&) = delete;
   ThreadMetrics(ThreadMetrics&&) = delete;
   ThreadMetrics& operator=(ThreadMetrics&&) = delete;
-  /**
-   * @brief Destroy the Thread Metrics object
-   *
-   */
-  ~ThreadMetrics();
 
   /**
    * @brief Returns the current N|Solid JS thread metrics in JSON format. The
@@ -664,7 +659,7 @@ class NODE_EXTERN ThreadMetrics {
    * called when the retrieval has completed.
    *
    * @param cb callback function with the following signature
-   * `void(*)(ThreadMetrics*, ...Data)`
+   * `void(*)(SharedThreadMetrics, ...Data)`.
    * @param data variable number of arguments to be propagated to the callback.
    * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
    * error value otherwise.
@@ -683,14 +678,17 @@ class NODE_EXTERN ThreadMetrics {
  private:
   friend class EnvInst;
 
+  explicit ThreadMetrics(SharedEnvInst envinst);
   explicit ThreadMetrics(uint64_t thread_id);
+  ~ThreadMetrics();
   int get_thread_metrics_();
+  void reset();
 
   template <typename G>
-  static void thread_metrics_proxy_(ThreadMetrics* tm);
+  static void thread_metrics_proxy_(SharedThreadMetrics tm_sp);
 
   uint64_t thread_id_ = 0xFFFFFFFFFFFFFFFF;
-  void* user_data_ = nullptr;
+  internal::user_data user_data_;
   thread_metrics_proxy_sig proxy_;
 
   std::atomic<bool> update_running_ = {false};
@@ -988,37 +986,31 @@ int ThreadMetrics::Update(Cb&& cb, Data&&... data) {
     return UV_EBUSY;
   }
 
-  // _1 - ThreadMetrics*
-  UserData* user_data = new (std::nothrow) UserData(
-      std::bind(std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
+  user_data_ = internal::user_data(
+    new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, std::forward<Data>(data)...)),
+    internal::delete_proxy_<UserData>);
 
-  if (user_data == nullptr) {
+  if (user_data_ == nullptr) {
     return UV_ENOMEM;
   }
 
-  user_data_ = user_data;
-  proxy_ = thread_metrics_proxy_<UserData>;
   stor_.thread_id = thread_id_;
+  proxy_ = thread_metrics_proxy_<UserData>;
 
   int er = get_thread_metrics_();
   if (er) {
-    user_data_ = nullptr;
-    proxy_ = nullptr;
-    delete user_data;
-    update_running_ = false;
+    reset();
   }
   return er;
 }
 
 
 template <typename G>
-void ThreadMetrics::thread_metrics_proxy_(ThreadMetrics* tm) {
-  G* g = static_cast<G*>(tm->user_data_);
-  tm->user_data_ = nullptr;
-  tm->proxy_ = nullptr;
-  tm->update_running_ = false;
-  (*g)(tm);
-  delete g;
+void ThreadMetrics::thread_metrics_proxy_(SharedThreadMetrics tm_sp) {
+  G* g = static_cast<G*>(tm_sp->user_data_.get());
+  tm_sp->reset();
+  (*g)(tm_sp);
 }
 
 
