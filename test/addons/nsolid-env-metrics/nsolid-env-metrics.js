@@ -21,6 +21,10 @@ if (!isMainThread) {
   return;
 }
 
+process.on('beforeExit', mustCall(() => {
+  assert.strictEqual(binding.getCbCntr(), 11);
+}));
+
 for (let i = 0; i < 10; i++) {
   const worker = new Worker(__filename, { argv: [process.pid] });
   worker.on('exit', (code) => {

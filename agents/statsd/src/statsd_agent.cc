@@ -465,9 +465,7 @@ void StatsDAgent::env_msg_cb(nsuv::ns_async*, StatsDAgent* agent) {
     bool creation = std::get<1>(tup);
     if (creation) {
       auto pair = agent->env_metrics_map_.emplace(
-        std::piecewise_construct,
-        std::forward_as_tuple(GetThreadId(envinst)),
-        std::forward_as_tuple(envinst));
+        GetThreadId(envinst), ThreadMetrics::Create(envinst));
       ASSERT(pair.second);
     } else {
       ASSERT_EQ(1, agent->env_metrics_map_.erase(GetThreadId(envinst)));
@@ -480,10 +478,8 @@ void StatsDAgent::shutdown_cb_(nsuv::ns_async*, StatsDAgent* agent) {
 }
 
 void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
-  ThreadMetrics* m;
-  while (agent->metrics_msg_q_.dequeue(&m)) {
-    uint64_t thread_id = m->thread_id();
-    ThreadMetrics::MetricsStor stor = m->Get();
+  ThreadMetrics::MetricsStor stor;
+  while (agent->metrics_msg_q_.dequeue(stor)) {
     json body = {
 #define V(Type, CName, JSName, MType) \
       { #JSName, stor.CName },
@@ -491,7 +487,7 @@ void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
 #undef V
     };
 
-    agent->send_metrics(body, thread_id, stor.thread_name.c_str());
+    agent->send_metrics(body, stor.thread_id, stor.thread_name.c_str());
   }
 }
 
@@ -734,10 +730,10 @@ void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
   for (auto it = agent->env_metrics_map_.begin();
        it != agent->env_metrics_map_.end();
        ++it) {
-    ThreadMetrics& e_metrics = std::get<1>(*it);
+    SharedThreadMetrics& e_metrics = std::get<1>(*it);
     // Retrieve metrics from the Metrics API. Ignore any return error since
     // there's nothing to be done.
-    e_metrics.Update(env_metrics_cb_, agent);
+    e_metrics->Update(env_metrics_cb_, agent);
   }
 
   // Get and send proc metrics
@@ -753,13 +749,14 @@ void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
   agent->send_metrics(body);
 }
 
-void StatsDAgent::env_metrics_cb_(ThreadMetrics* metrics, StatsDAgent* agent) {
+void StatsDAgent::env_metrics_cb_(SharedThreadMetrics metrics,
+                                  StatsDAgent* agent) {
   // Check if the agent is already closing
   if (agent->metrics_msg_.is_closing()) {
     return;
   }
 
-  agent->metrics_msg_q_.enqueue(metrics);
+  agent->metrics_msg_q_.enqueue(metrics->Get());
   ASSERT_EQ(0, agent->metrics_msg_.send());
 }
 

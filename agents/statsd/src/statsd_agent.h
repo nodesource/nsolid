@@ -204,7 +204,7 @@ class StatsDAgent {
 
   static void send_stats_msg_cb_(nsuv::ns_async*, StatsDAgent*);
 
-  static void env_metrics_cb_(ThreadMetrics*, StatsDAgent*);
+  static void env_metrics_cb_(SharedThreadMetrics, StatsDAgent*);
 
   static void status_command_cb_(SharedEnvInst, StatsDAgent*);
 
@@ -258,11 +258,11 @@ class StatsDAgent {
   nsuv::ns_timer retry_timer_;
 
   // For the Metrics API
-  std::map<uint64_t, ThreadMetrics> env_metrics_map_;
+  std::map<uint64_t, SharedThreadMetrics> env_metrics_map_;
   ProcessMetrics proc_metrics_;
   uint64_t metrics_period_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ThreadMetrics*> metrics_msg_q_;
+  TSQueue<ThreadMetrics::MetricsStor> metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
 
   // For the Configuration API

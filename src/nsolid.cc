@@ -260,7 +260,8 @@ int ProcessMetrics::Update() {
 
 
 ThreadMetrics::ThreadMetrics(SharedEnvInst envinst)
-    : thread_id_(envinst->thread_id()) {
+    : thread_id_(envinst->thread_id()),
+      user_data_(nullptr, nullptr) {
   CHECK_NOT_NULL(envinst.get());
   CHECK_EQ(uv_mutex_init(&stor_lock_), 0);
   stor_.thread_id = thread_id_;
@@ -275,11 +276,19 @@ ThreadMetrics::~ThreadMetrics() {
 
 
 ThreadMetrics::ThreadMetrics(uint64_t thread_id)
-    : thread_id_(thread_id) {
+    : thread_id_(thread_id),
+      user_data_(nullptr, nullptr) {
   CHECK_EQ(uv_mutex_init(&stor_lock_), 0);
   stor_.thread_id = thread_id_;
   stor_.prev_call_time_ = uv_hrtime();
   stor_.current_hrtime_ = stor_.prev_call_time_;
+}
+
+
+SharedThreadMetrics ThreadMetrics::Create(SharedEnvInst envinst) {
+  return SharedThreadMetrics(new ThreadMetrics(envinst), [](ThreadMetrics* tm) {
+    delete tm;
+  });
 }
 
 
@@ -342,23 +351,39 @@ int ThreadMetrics::Update(v8::Isolate* isolate) {
 
 int ThreadMetrics::get_thread_metrics_() {
   // Might need to fire myself for using nested lambdas.
-  void (*cb)(SharedEnvInst, ThreadMetrics*) =
+  auto cb = [](SharedEnvInst ei, std::weak_ptr<ThreadMetrics> wp) {
     // This runs from the worker thread.
-    [](SharedEnvInst ei, ThreadMetrics* tm) {
-      void (*ret_proxy)(ThreadMetrics*) =
-        [](ThreadMetrics* tm) {
-          tm->proxy_(tm);
-        };
-
-      uv_mutex_lock(&tm->stor_lock_);
-      ei->GetThreadMetrics(&tm->stor_);
-      uv_mutex_unlock(&tm->stor_lock_);
-
+    auto ret_proxy = [](std::weak_ptr<ThreadMetrics> wp) {
       // This runs from the NSolid thread.
-      QueueCallback(ret_proxy, tm);
+      SharedThreadMetrics tm_sp = wp.lock();
+      if (tm_sp == nullptr) {
+        return;
+      }
+
+      tm_sp->proxy_(tm_sp);
     };
 
-  return RunCommand(GetEnvInst(thread_id_), CommandType::Interrupt, cb, this);
+    SharedThreadMetrics tm_sp = wp.lock();
+    if (tm_sp == nullptr) {
+      return;
+    }
+
+    uv_mutex_lock(&tm_sp->stor_lock_);
+    ei->GetThreadMetrics(&tm_sp->stor_);
+    uv_mutex_unlock(&tm_sp->stor_lock_);
+
+    QueueCallback(ret_proxy, tm_sp);
+  };
+
+  std::weak_ptr<ThreadMetrics> wp = weak_from_this();
+  DCHECK(!wp.expired());
+  return RunCommand(GetEnvInst(thread_id_), CommandType::Interrupt, cb, wp);
+}
+
+
+void ThreadMetrics::reset() {
+  proxy_ = nullptr;
+  update_running_ = false;
 }
 
 

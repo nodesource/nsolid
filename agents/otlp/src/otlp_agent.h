@@ -28,10 +28,11 @@ namespace nsolid {
 namespace otlp {
 
 struct JSThreadMetrics {
-  ThreadMetrics metrics_;
+  SharedThreadMetrics metrics_;
   ThreadMetrics::MetricsStor prev_;
-  explicit JSThreadMetrics(SharedEnvInst envinst): metrics_(envinst),
-                                                    prev_() {}
+  explicit JSThreadMetrics(SharedEnvInst envinst)
+    : metrics_(ThreadMetrics::Create(envinst)),
+      prev_() {}
 };
 
 class OTLPAgent {
@@ -73,7 +74,7 @@ class OTLPAgent {
 
   static void metrics_msg_cb_(nsuv::ns_async*, OTLPAgent* agent);
 
-  static void thr_metrics_cb_(ThreadMetrics*, OTLPAgent*);
+  static void thr_metrics_cb_(SharedThreadMetrics, OTLPAgent*);
 
   void do_start();
 
@@ -132,7 +133,7 @@ class OTLPAgent {
   ProcessMetrics::MetricsStor proc_prev_stor_;
   std::map<uint64_t, JSThreadMetrics> env_metrics_map_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ThreadMetrics*> thr_metrics_msg_q_;
+  TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
   std::unique_ptr<MetricsExporter> metrics_exporter_;
 
