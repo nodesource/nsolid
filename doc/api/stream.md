@@ -2850,7 +2850,7 @@ const server = http.createServer((req, res) => {
 <!-- YAML
 added: v16.9.0
 changes:
-  - version: v20.10.0
+  - version: REPLACEME
     pr-url: https://github.com/nodejs/node/pull/50187
     description: Added support for stream class.
   - version:
