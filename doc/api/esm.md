@@ -7,6 +7,9 @@
 <!-- YAML
 added: v8.5.0
 changes:
+  - version: v20.10.0
+    pr-url: https://github.com/nodejs/node/pull/50140
+    description: Add experimental support for import attributes.
   - version: v20.0.0
     pr-url: https://github.com/nodejs/node/pull/44710
     description: Module customization hooks are executed off the main thread.
@@ -19,7 +22,7 @@ changes:
     - v17.1.0
     - v16.14.0
     pr-url: https://github.com/nodejs/node/pull/40250
-    description: Add support for import assertions.
+    description: Add experimental support for import assertions.
   - version:
     - v17.0.0
     - v16.12.0
@@ -106,10 +109,21 @@ provides interoperability between them and its original module format,
 
 Node.js has two module systems: [CommonJS][] modules and ECMAScript modules.
 
-Authors can tell Node.js to use the ECMAScript modules loader
-via the `.mjs` file extension, the `package.json` [`"type"`][] field, or the
-[`--input-type`][] flag. Outside of those cases, Node.js will use the CommonJS
-module loader. See [Determining module system][] for more details.
+Authors can tell Node.js to interpret JavaScript as an ES module via the `.mjs`
+file extension, the `package.json` [`"type"`][] field with a value `"module"`,
+the [`--input-type`][] flag with a value of `"module"`, or the
+[`--experimental-default-type`][] flag with a value of `"module"`. These are
+explicit markers of code being intended to run as an ES module.
+
+Inversely, authors can tell Node.js to interpret JavaScript as CommonJS via the
+`.cjs` file extension, the `package.json` [`"type"`][] field with a value
+`"commonjs"`, the [`--input-type`][] flag with a value of `"commonjs"`, or the
+[`--experimental-default-type`][] flag with a value of `"commonjs"`.
+
+When code lacks explicit markers for either module system, Node.js will inspect
+the source code of a module to look for ES module syntax. If such syntax is
+found, Node.js will run the code as an ES module; otherwise it will run the
+module as CommonJS. See [Determining module system][] for more details.
 
 <!-- Anchors to make sure old links find a target -->
 
@@ -202,7 +216,7 @@ added: v12.10.0
 
 ```js
 import 'data:text/javascript,console.log("hello!");';
-import _ from 'data:application/json,"world!"' assert { type: 'json' };
+import _ from 'data:application/json,"world!"' with { type: 'json' };
 ```
 
 `data:` URLs only resolve [bare specifiers][Terminology] for builtin modules
@@ -234,30 +248,40 @@ absolute URL strings.
 import fs from 'node:fs/promises';
 ```
 
-## Import assertions
+<a id="import-assertions"></a>
+
+## Import attributes
 
 <!-- YAML
 added:
   - v17.1.0
   - v16.14.0
+changes:
+  - version: v20.10.0
+    pr-url: https://github.com/nodejs/node/pull/50140
+    description: Switch from Import Assertions to Import Attributes.
 -->
 
-> Stability: 1 - Experimental
+> Stability: 1.1 - Active development
 
-The [Import Assertions proposal][] adds an inline syntax for module import
+> This feature was previously named "Import assertions", and using the `assert`
+> keyword instead of `with`. Any uses in code of the prior `assert` keyword
+> should be updated to use `with` instead.
+
+The [Import Attributes proposal][] adds an inline syntax for module import
 statements to pass on more information alongside the module specifier.
 
 ```js
-import fooData from './foo.json' assert { type: 'json' };
+import fooData from './foo.json' with { type: 'json' };
 
 const { default: barData } =
-  await import('./bar.json', { assert: { type: 'json' } });
+  await import('./bar.json', { with: { type: 'json' } });
 ```
 
-Node.js supports the following `type` values, for which the assertion is
+Node.js supports the following `type` values, for which the attribute is
 mandatory:
 
-| Assertion `type` | Needed for       |
+| Attribute `type` | Needed for       |
 | ---------------- | ---------------- |
 | `'json'`         | [JSON modules][] |
 
@@ -544,10 +568,10 @@ separate cache.
 JSON files can be referenced by `import`:
 
 ```js
-import packageConfig from './package.json' assert { type: 'json' };
+import packageConfig from './package.json' with { type: 'json' };
 ```
 
-The `assert { type: 'json' }` syntax is mandatory; see [Import Assertions][].
+The `with { type: 'json' }` syntax is mandatory; see [Import Attributes][].
 
 The imported JSON only exposes a `default` export. There is no support for named
 exports. A cache entry is created in the CommonJS cache to avoid duplication.
@@ -1005,14 +1029,33 @@ _isImports_, _conditions_)
 >    1. Return _"commonjs"_.
 > 4. If _url_ ends in _".json"_, then
 >    1. Return _"json"_.
-> 5. Let _packageURL_ be the result of **LOOKUP\_PACKAGE\_SCOPE**(_url_).
-> 6. Let _pjson_ be the result of **READ\_PACKAGE\_JSON**(_packageURL_).
-> 7. If _pjson?.type_ exists and is _"module"_, then
->    1. If _url_ ends in _".js"_, then
->       1. Return _"module"_.
->    2. Return **undefined**.
-> 8. Otherwise,
->    1. Return **undefined**.
+> 5. If `--experimental-wasm-modules` is enabled and _url_ ends in
+>    _".wasm"_, then
+>    1. Return _"wasm"_.
+> 6. Let _packageURL_ be the result of **LOOKUP\_PACKAGE\_SCOPE**(_url_).
+> 7. Let _pjson_ be the result of **READ\_PACKAGE\_JSON**(_packageURL_).
+> 8. Let _packageType_ be **null**.
+> 9. If _pjson?.type_ is _"module"_ or _"commonjs"_, then
+>    1. Set _packageType_ to _pjson.type_.
+> 10. If _url_ ends in _".js"_, then
+>     1. If _packageType_ is not **null**, then
+>        1. Return _packageType_.
+>     2. If `--experimental-detect-module` is enabled and the source of
+>        module contains static import or export syntax, then
+>        1. Return _"module"_.
+>     3. Return _"commonjs"_.
+> 11. If _url_ does not have any extension, then
+>     1. If _packageType_ is _"module"_ and `--experimental-wasm-modules` is
+>        enabled and the file at _url_ contains the header for a WebAssembly
+>        module, then
+>        1. Return _"wasm"_.
+>     2. If _packageType_ is not **null**, then
+>        1. Return _packageType_.
+>     3. If `--experimental-detect-module` is enabled and the source of
+>        module contains static import or export syntax, then
+>        1. Return _"module"_.
+>     4. Return _"commonjs"_.
+> 12. Return **undefined** (will throw during load phase).
 
 **LOOKUP\_PACKAGE\_SCOPE**(_url_)
 
@@ -1050,8 +1093,8 @@ resolution for ESM specifiers is [commonjs-extension-resolution-loader][].
 [Determining module system]: packages.md#determining-module-system
 [Dynamic `import()`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import
 [ES Module Integration Proposal for WebAssembly]: https://github.com/webassembly/esm-integration
-[Import Assertions]: #import-assertions
-[Import Assertions proposal]: https://github.com/tc39/proposal-import-assertions
+[Import Attributes]: #import-attributes
+[Import Attributes proposal]: https://github.com/tc39/proposal-import-attributes
 [JSON modules]: #json-modules
 [Module customization hooks]: module.md#customization-hooks
 [Node.js Module Resolution And Loading Algorithm]: #resolution-algorithm-specification
@@ -1059,6 +1102,7 @@ resolution for ESM specifiers is [commonjs-extension-resolution-loader][].
 [URL]: https://url.spec.whatwg.org/
 [`"exports"`]: packages.md#exports
 [`"type"`]: packages.md#type
+[`--experimental-default-type`]: cli.md#--experimental-default-typetype
 [`--input-type`]: cli.md#--input-typetype
 [`data:` URLs]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs
 [`export`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
