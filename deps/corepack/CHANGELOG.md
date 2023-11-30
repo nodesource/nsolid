@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.22.0](https://github.com/nodejs/corepack/compare/v0.21.0...v0.22.0) (2023-10-21)
+
+
+### Features
+
+* allow fallback to application/json for custom registries ([#314](https://github.com/nodejs/corepack/issues/314)) ([92f8e71](https://github.com/nodejs/corepack/commit/92f8e71f8c97c44f404ce9b7df8787a4292e6830))
+* update package manager versions ([#318](https://github.com/nodejs/corepack/issues/318)) ([0bd2577](https://github.com/nodejs/corepack/commit/0bd2577bb4c6c3a5a33ecdb3b6ca2ff244c54f28))
+
+## [0.21.0](https://github.com/nodejs/corepack/compare/v0.20.0...v0.21.0) (2023-10-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove support for Node.js 16.x
+
+### Features
+
+* update package manager versions ([#297](https://github.com/nodejs/corepack/issues/297)) ([503e135](https://github.com/nodejs/corepack/commit/503e135878935cc881ebd94b48d5eca94ec4c27b))
+
+
+### Miscellaneous Chores
+
+* update supported Node.js versions ([#309](https://github.com/nodejs/corepack/issues/309)) ([787e24d](https://github.com/nodejs/corepack/commit/787e24df609513702eafcd8c6a5f03544d7d45cc))
+
 ## [0.20.0](https://github.com/nodejs/corepack/compare/v0.19.0...v0.20.0) (2023-08-29)
 
 
