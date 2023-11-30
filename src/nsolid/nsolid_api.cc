@@ -301,7 +301,10 @@ void EnvInst::SetNodeStartupTime(const char* name, uint64_t ts) {
 std::string EnvInst::GetOnBlockedBody() {
   DCHECK(utils::are_threads_equal(creation_thread(), uv_thread_self()));
   uv_metrics_t metrics;
-  auto SharedEnvInst = GetCurrent(isolate_);
+  SharedEnvInst envinst = GetCurrent(isolate_);
+  if (envinst == nullptr) {
+    return "";
+  }
 
   HandleScope scope(isolate_);
   Local<StackTrace> stack =
@@ -316,7 +319,7 @@ std::string EnvInst::GetOnBlockedBody() {
   std::string body_string = "{";
   // TODO(trevnorris): REMOVE provider_times so libuv don't need to use the
   // floating patch.
-  uv_metrics_info(SharedEnvInst->event_loop(), &metrics);
+  uv_metrics_info(envinst->event_loop(), &metrics);
   uint64_t exit_time = metrics.loop_count == 0 ?
     env()->time_origin() : provider_times().second;
 
@@ -401,12 +404,14 @@ SharedEnvInst EnvInst::GetInst(uint64_t thread_id) {
 
 
 SharedEnvInst EnvInst::GetCurrent(Isolate* isolate) {
-  return Environment::GetCurrent(isolate)->envinst_;
+  Environment* env = Environment::GetCurrent(isolate);
+  return env == nullptr ? nullptr : env->envinst_;
 }
 
 
 SharedEnvInst EnvInst::GetCurrent(Local<Context> context) {
-  return Environment::GetCurrent(context)->envinst_;
+  Environment* env = Environment::GetCurrent(context);
+  return env == nullptr ? nullptr : env->envinst_;
 }
 
 
@@ -984,6 +989,22 @@ void EnvList::RemoveEnv(Environment* env) {
     stor.cb(envinst_sp, stor.data.get());
   });
 
+  // Cleanup the RunCommand queues just to be sure no dangling SharedEnvInst
+  // references are left after the Environment is gone and the EnvInst instance
+  // can be deleted.
+  EnvInst::CmdQueueStor stor;
+  while (envinst_sp->eloop_cmds_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
+  while (envinst_sp->interrupt_cb_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
+  while (envinst_sp->interrupt_only_cb_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
   // Don't allow execution to continue in case a RunCommand() is running in
   // another thread since they might need access to Environment specific
   // resources (like the Isolate) that won't be valid after this returns.
@@ -1556,8 +1577,7 @@ void EnvList::gen_ptiles_cb_(ns_timer*) {
 }
 
 
-void EnvList::promise_tracking_(const EnvInst& envinst, bool track) {
-  SharedEnvInst envinst_sp = EnvInst::GetInst(envinst.thread_id());
+void EnvList::promise_tracking_(SharedEnvInst envinst_sp, bool track) {
   Environment* env = envinst_sp->env();
   if (env->nsolid_track_promises_fn().IsEmpty() ||
       !envinst_sp->can_call_into_js()) {
@@ -1580,12 +1600,12 @@ void EnvList::promise_tracking_(const EnvInst& envinst, bool track) {
 
 
 void EnvList::enable_promise_tracking_(SharedEnvInst envinst_sp, void*) {
-  EnvList::promise_tracking_(*envinst_sp.get(), true);
+  EnvList::promise_tracking_(envinst_sp, true);
 }
 
 
 void EnvList::disable_promise_tracking_(SharedEnvInst envinst_sp, void*) {
-  EnvList::promise_tracking_(*envinst_sp.get(), false);
+  EnvList::promise_tracking_(envinst_sp, false);
 }
 
 
@@ -2496,7 +2516,7 @@ static void GetOnBlockedBody(const FunctionCallbackInfo<Value>& args) {
 static void SetupArrayBufferExports(Isolate* isolate,
                                     Local<Object> target,
                                     Local<Context> context,
-                                    std::shared_ptr<EnvInst> envinst_sp) {
+                                    SharedEnvInst envinst_sp) {
   std::unique_ptr<BackingStore> bs =
     ArrayBuffer::NewBackingStore(envinst_sp->count_fields,
                                  EnvInst::kFieldCount * sizeof(double),

@@ -2451,6 +2451,7 @@ void Isolate::PrintCurrentStackTrace(std::ostream& out) {
   for (int i = 0; i < frames->length(); ++i) {
     Handle<CallSiteInfo> frame(CallSiteInfo::cast(frames->get(i)), this);
     SerializeCallSiteInfo(this, frame, &builder);
+    if (i != frames->length() - 1) builder.AppendCharacter('\n');
   }
 
   Handle<String> stack_trace = builder.Finish().ToHandleChecked();
@@ -5156,7 +5157,8 @@ MaybeHandle<FixedArray> Isolate::GetImportAssertionsFromArgument(
 
   // The parser shouldn't have allowed the second argument to import() if
   // the flag wasn't enabled.
-  DCHECK(v8_flags.harmony_import_assertions);
+  DCHECK(v8_flags.harmony_import_assertions ||
+         v8_flags.harmony_import_attributes);
 
   if (!import_assertions_argument->IsJSReceiver()) {
     this->Throw(
@@ -5166,18 +5168,35 @@ MaybeHandle<FixedArray> Isolate::GetImportAssertionsFromArgument(
 
   Handle<JSReceiver> import_assertions_argument_receiver =
       Handle<JSReceiver>::cast(import_assertions_argument);
-  Handle<Name> key = factory()->assert_string();
 
   Handle<Object> import_assertions_object;
-  if (!JSReceiver::GetProperty(this, import_assertions_argument_receiver, key)
-           .ToHandle(&import_assertions_object)) {
-    // This can happen if the property has a getter function that throws
-    // an error.
-    return MaybeHandle<FixedArray>();
+
+  if (v8_flags.harmony_import_attributes) {
+    Handle<Name> with_key = factory()->with_string();
+    if (!JSReceiver::GetProperty(this, import_assertions_argument_receiver,
+                                 with_key)
+             .ToHandle(&import_assertions_object)) {
+      // This can happen if the property has a getter function that throws
+      // an error.
+      return MaybeHandle<FixedArray>();
+    }
   }
 
-  // If there is no 'assert' option in the options bag, it's not an error. Just
-  // do the import() as if no assertions were provided.
+  if (v8_flags.harmony_import_assertions &&
+      (!v8_flags.harmony_import_attributes ||
+       import_assertions_object->IsUndefined())) {
+    Handle<Name> assert_key = factory()->assert_string();
+    if (!JSReceiver::GetProperty(this, import_assertions_argument_receiver,
+                                 assert_key)
+             .ToHandle(&import_assertions_object)) {
+      // This can happen if the property has a getter function that throws
+      // an error.
+      return MaybeHandle<FixedArray>();
+    }
+  }
+
+  // If there is no 'with' or 'assert' option in the options bag, it's not an
+  // error. Just do the import() as if no assertions were provided.
   if (import_assertions_object->IsUndefined()) return import_assertions_array;
 
   if (!import_assertions_object->IsJSReceiver()) {
@@ -5199,6 +5218,8 @@ MaybeHandle<FixedArray> Isolate::GetImportAssertionsFromArgument(
     return MaybeHandle<FixedArray>();
   }
 
+  bool has_non_string_attribute = false;
+
   // The assertions will be passed to the host in the form: [key1,
   // value1, key2, value2, ...].
   constexpr size_t kAssertionEntrySizeForDynamicImport = 2;
@@ -5207,8 +5228,8 @@ MaybeHandle<FixedArray> Isolate::GetImportAssertionsFromArgument(
   for (int i = 0; i < assertion_keys->length(); i++) {
     Handle<String> assertion_key(String::cast(assertion_keys->get(i)), this);
     Handle<Object> assertion_value;
-    if (!JSReceiver::GetProperty(this, import_assertions_object_receiver,
-                                 assertion_key)
+    if (!Object::GetPropertyOrElement(this, import_assertions_object_receiver,
+                                      assertion_key)
              .ToHandle(&assertion_value)) {
       // This can happen if the property has a getter function that throws
       // an error.
@@ -5216,15 +5237,19 @@ MaybeHandle<FixedArray> Isolate::GetImportAssertionsFromArgument(
     }
 
     if (!assertion_value->IsString()) {
-      this->Throw(*factory()->NewTypeError(
-          MessageTemplate::kNonStringImportAssertionValue));
-      return MaybeHandle<FixedArray>();
+      has_non_string_attribute = true;
     }
 
     import_assertions_array->set((i * kAssertionEntrySizeForDynamicImport),
                                  *assertion_key);
     import_assertions_array->set((i * kAssertionEntrySizeForDynamicImport) + 1,
                                  *assertion_value);
+  }
+
+  if (has_non_string_attribute) {
+    this->Throw(*factory()->NewTypeError(
+        MessageTemplate::kNonStringImportAssertionValue));
+    return MaybeHandle<FixedArray>();
   }
 
   return import_assertions_array;

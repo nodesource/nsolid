@@ -352,14 +352,40 @@ int SyncCall(Environment* env, v8::Local<v8::Value> ctx,
     ctx_obj->Set(context,
                  env->syscall_string(),
                  OneByteString(isolate, syscall)).Check();
-  } else {
-    if (strncmp(syscall, "open", 4) == 0) {
-      env->envinst_->inc_fs_handles_opened();
-    } else if (strncmp(syscall, "close", 5) == 0) {
-      env->envinst_->inc_fs_handles_closed();
-    }
   }
   return err;
+}
+
+// Similar to SyncCall but throws immediately if there is an error.
+template <typename Predicate, typename Func, typename... Args>
+int SyncCallAndThrowIf(Predicate should_throw,
+                       Environment* env,
+                       FSReqWrapSync* req_wrap,
+                       Func fn,
+                       Args... args) {
+  env->PrintSyncTrace();
+  int result = fn(nullptr, &(req_wrap->req), args..., nullptr);
+  if (should_throw(result)) {
+    env->ThrowUVException(result,
+                          req_wrap->syscall_p,
+                          nullptr,
+                          req_wrap->path_p,
+                          req_wrap->dest_p);
+  }
+  return result;
+}
+
+constexpr bool is_uv_error(int result) {
+  return result < 0;
+}
+
+// Similar to SyncCall but throws immediately if there is an error.
+template <typename Func, typename... Args>
+int SyncCallAndThrowOnError(Environment* env,
+                            FSReqWrapSync* req_wrap,
+                            Func fn,
+                            Args... args) {
+  return SyncCallAndThrowIf(is_uv_error, env, req_wrap, fn, args...);
 }
 
 }  // namespace fs
