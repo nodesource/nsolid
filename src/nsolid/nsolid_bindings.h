@@ -10,9 +10,9 @@ namespace nsolid {
 class BindingData : public SnapshotableObject {
  public:
   SERIALIZABLE_OBJECT_METHODS()
-  static constexpr FastStringKey type_name{"node::scarab::BindingData"};
+  static constexpr FastStringKey type_name{"node::nsolid::BindingData"};
   static constexpr EmbedderObjectType type_int =
-      EmbedderObjectType::k_scarab_binding_data;
+      EmbedderObjectType::k_nsolid_binding_data;
 
   BindingData(Realm* realm, v8::Local<v8::Object> object);
 
