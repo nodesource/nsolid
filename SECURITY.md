@@ -36,6 +36,12 @@ Here is the security disclosure policy for N|Solid
   may be coordinated to time the announcement with the release. Some NodeSource
   customers may be invited to be a part of the embargo and review team.
 
+## Assessing experimental features reports
+
+Experimental features are eligible to reports as any other stable feature of
+Node.js. They will also be susceptible to receiving the same severity score
+as any other stable feature.
+
 ## Receiving security updates
 
 Security notifications will be distributed via <https://nodesource.com/blog/>
