@@ -1,6 +1,8 @@
 #ifndef SRC_NSOLID_NSOLID_UTIL_H_
 #define SRC_NSOLID_NSOLID_UTIL_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
+
 #include <algorithm>
 #include <array>
 #include <chrono> // NOLINT [build/c++11]
@@ -191,9 +193,10 @@ class ring_buffer {
   std::vector<double> buffer_;
 };
 
-
 }  // namespace utils
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_NSOLID_UTIL_H_

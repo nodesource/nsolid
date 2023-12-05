@@ -1,6 +1,8 @@
 #ifndef SRC_NSOLID_NSOLID_API_H_
 #define SRC_NSOLID_NSOLID_API_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
+
 #include <atomic>
 #include <functional>
 #include <list>
@@ -911,5 +913,7 @@ inline uv_loop_t* EnvList::thread_loop() {
 
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_NSOLID_API_H_

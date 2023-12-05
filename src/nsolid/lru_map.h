@@ -1,6 +1,8 @@
 #ifndef SRC_NSOLID_LRU_MAP_H_
 #define SRC_NSOLID_LRU_MAP_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
+
 #include <cassert>
 #include <deque>
 #include <functional>
@@ -122,8 +124,9 @@ class LRUMap {
   cb_proxy_sig proxy_;
 };
 
-
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_LRU_MAP_H_

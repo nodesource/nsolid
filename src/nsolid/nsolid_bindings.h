@@ -1,6 +1,7 @@
 #ifndef SRC_NSOLID_NSOLID_BINDINGS_H_
 #define SRC_NSOLID_NSOLID_BINDINGS_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #include "node_snapshotable.h"
 
@@ -72,9 +73,9 @@ class BindingData : public SnapshotableObject {
   static v8::CFunction fast_push_span_data_uint64_;
 };
 
-
-
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_NSOLID_BINDINGS_H_
