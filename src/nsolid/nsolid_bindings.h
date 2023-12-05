@@ -9,18 +9,16 @@ namespace nsolid {
 
 class BindingData : public SnapshotableObject {
  public:
-  SERIALIZABLE_OBJECT_METHODS()
-  static constexpr FastStringKey type_name{"node::scarab::BindingData"};
-  static constexpr EmbedderObjectType type_int =
-      EmbedderObjectType::k_scarab_binding_data;
-
   BindingData(Realm* realm, v8::Local<v8::Object> object);
 
   using InternalFieldInfo = InternalFieldInfoBase;
 
+  SERIALIZABLE_OBJECT_METHODS()
+  SET_BINDING_ID(nsolid_binding_data)
+
   SET_NO_MEMORY_INFO()
-  SET_MEMORY_INFO_NAME(BindingData)
   SET_SELF_SIZE(BindingData)
+  SET_MEMORY_INFO_NAME(BindingData)
 
   static void SlowPushServerBucket(
       const v8::FunctionCallbackInfo<v8::Value>& args);

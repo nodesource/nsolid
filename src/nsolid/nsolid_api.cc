@@ -106,6 +106,8 @@ EnvInst::EnvInst(Environment* env)
 
   er = eloop_cmds_msg_.init(event_loop_, run_event_loop_cmds_, this);
   CHECK_EQ(er, 0);
+  er = interrupt_msg_.init(event_loop_, run_interrupt_msg_, this);
+  CHECK_EQ(er, 0);
   er = metrics_handle_.init(event_loop_);
   CHECK_EQ(er, 0);
   er = info_lock_.init(true);
@@ -118,8 +120,12 @@ EnvInst::EnvInst(Environment* env)
   CHECK_EQ(er, 0);
 
   eloop_cmds_msg_.unref();
+  interrupt_msg_.unref();
   metrics_handle_.unref();
   env->RegisterHandleCleanup(eloop_cmds_msg_.base_handle(),
+                             handle_cleanup_cb_,
+                             nullptr);
+  env->RegisterHandleCleanup(interrupt_msg_.base_handle(),
                              handle_cleanup_cb_,
                              nullptr);
   env->RegisterHandleCleanup(metrics_handle_.base_handle(),
@@ -151,9 +157,11 @@ int EnvInst::RunCommand(SharedEnvInst envinst_sp,
 
   if (type == CommandType::Interrupt) {
     EnvInst::CmdQueueStor cmd_stor = { envinst_sp, cb, data };
+    // Send it off to both locations. The first to run will retrieve the data
+    // from the queue.
     envinst_sp->interrupt_cb_q_.enqueue(std::move(cmd_stor));
-    node::RequestInterrupt(envinst_sp->env(), run_interrupt_, nullptr);
-    return 0;
+    envinst_sp->isolate()->RequestInterrupt(run_interrupt_, nullptr);
+    return envinst_sp->interrupt_msg_.send();
   }
 
   if (type == CommandType::InterruptOnly) {
@@ -293,7 +301,10 @@ void EnvInst::SetNodeStartupTime(const char* name, uint64_t ts) {
 std::string EnvInst::GetOnBlockedBody() {
   DCHECK(utils::are_threads_equal(creation_thread(), uv_thread_self()));
   uv_metrics_t metrics;
-  auto SharedEnvInst = GetCurrent(isolate_);
+  SharedEnvInst envinst = GetCurrent(isolate_);
+  if (envinst == nullptr) {
+    return "";
+  }
 
   HandleScope scope(isolate_);
   Local<StackTrace> stack =
@@ -308,7 +319,7 @@ std::string EnvInst::GetOnBlockedBody() {
   std::string body_string = "{";
   // TODO(trevnorris): REMOVE provider_times so libuv don't need to use the
   // floating patch.
-  uv_metrics_info(SharedEnvInst->event_loop(), &metrics);
+  uv_metrics_info(envinst->event_loop(), &metrics);
   uint64_t exit_time = metrics.loop_count == 0 ?
     performance::timeOrigin : provider_times().second;
 
@@ -393,12 +404,14 @@ SharedEnvInst EnvInst::GetInst(uint64_t thread_id) {
 
 
 SharedEnvInst EnvInst::GetCurrent(Isolate* isolate) {
-  return Environment::GetCurrent(isolate)->envinst_;
+  Environment* env = Environment::GetCurrent(isolate);
+  return env == nullptr ? nullptr : env->envinst_;
 }
 
 
 SharedEnvInst EnvInst::GetCurrent(Local<Context> context) {
-  return Environment::GetCurrent(context)->envinst_;
+  Environment* env = Environment::GetCurrent(context);
+  return env == nullptr ? nullptr : env->envinst_;
 }
 
 
@@ -452,14 +465,26 @@ void EnvInst::run_event_loop_cmds_(ns_async*, EnvInst* envinst) {
 
 void EnvInst::run_interrupt_msg_(ns_async*, EnvInst* envinst) {
   CmdQueueStor stor;
+  // Need to disable access to JS from here, but first need to make sure the
+  // Isolate still exists before trying to disable JS access.
+  if (envinst->env() != nullptr) {
+    Isolate::DisallowJavascriptExecutionScope scope(
+        envinst->isolate(),
+        Isolate::DisallowJavascriptExecutionScope::CRASH_ON_FAILURE);
+    while (envinst->interrupt_cb_q_.dequeue(stor)) {
+      stor.cb(stor.envinst_sp, stor.data);
+    }
+    return;
+  }
+
   while (envinst->interrupt_cb_q_.dequeue(stor)) {
     stor.cb(stor.envinst_sp, stor.data);
   }
 }
 
 
-void EnvInst::run_interrupt_(void*) {
-  SharedEnvInst envinst_sp = GetCurrent(Isolate::GetCurrent());
+void EnvInst::run_interrupt_(Isolate* isolate, void*) {
+  SharedEnvInst envinst_sp = GetCurrent(isolate);
   if (!envinst_sp) {
     return;
   }
@@ -936,6 +961,10 @@ void EnvList::RemoveEnv(Environment* env) {
     CHECK(it != env_map_.end());
     CHECK_EQ(envinst_sp, it->second);
 #endif
+    // Remove the main thread id if the main thread is being removed.
+    if (main_thread_id_ == env->thread_id()) {
+      main_thread_id_ = 0xFFFFFFFFFFFFFFFF;
+    }
     env_map_.erase(env->thread_id());
   }
 
@@ -949,9 +978,6 @@ void EnvList::RemoveEnv(Environment* env) {
   envinst_sp->env()->isolate()->RemoveGCEpilogueCallback(
       EnvInst::v8_gc_epilogue_cb_, envinst_sp.get());
 
-  // Remove the instance from env
-  env->envinst_.reset();
-
   // End any pending spans and notify the user.
   if (env->is_main_thread()) {
     tracer_.endPendingSpans();
@@ -963,6 +989,22 @@ void EnvList::RemoveEnv(Environment* env) {
     stor.cb(envinst_sp, stor.data.get());
   });
 
+  // Cleanup the RunCommand queues just to be sure no dangling SharedEnvInst
+  // references are left after the Environment is gone and the EnvInst instance
+  // can be deleted.
+  EnvInst::CmdQueueStor stor;
+  while (envinst_sp->eloop_cmds_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
+  while (envinst_sp->interrupt_cb_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
+  while (envinst_sp->interrupt_only_cb_q_.dequeue(stor)) {
+    stor.cb(stor.envinst_sp, stor.data);
+  }
+
   // Don't allow execution to continue in case a RunCommand() is running in
   // another thread since they might need access to Environment specific
   // resources (like the Isolate) that won't be valid after this returns.
@@ -973,6 +1015,9 @@ void EnvList::RemoveEnv(Environment* env) {
   // and only accessed from another thread if the env still exists and has been
   // Scope locked.
   envinst_sp->env_.store(nullptr, std::memory_order_relaxed);
+
+  // Remove the instance from env
+  env->envinst_.reset();
 }
 
 
@@ -1533,8 +1578,7 @@ void EnvList::gen_ptiles_cb_(ns_timer*) {
 }
 
 
-void EnvList::promise_tracking_(const EnvInst& envinst, bool track) {
-  SharedEnvInst envinst_sp = EnvInst::GetInst(envinst.thread_id());
+void EnvList::promise_tracking_(SharedEnvInst envinst_sp, bool track) {
   Environment* env = envinst_sp->env();
   if (env->nsolid_track_promises_fn().IsEmpty() ||
       !envinst_sp->can_call_into_js()) {
@@ -1557,12 +1601,12 @@ void EnvList::promise_tracking_(const EnvInst& envinst, bool track) {
 
 
 void EnvList::enable_promise_tracking_(SharedEnvInst envinst_sp, void*) {
-  EnvList::promise_tracking_(*envinst_sp.get(), true);
+  EnvList::promise_tracking_(envinst_sp, true);
 }
 
 
 void EnvList::disable_promise_tracking_(SharedEnvInst envinst_sp, void*) {
-  EnvList::promise_tracking_(*envinst_sp.get(), false);
+  EnvList::promise_tracking_(envinst_sp, false);
 }
 
 
@@ -2473,7 +2517,7 @@ static void GetOnBlockedBody(const FunctionCallbackInfo<Value>& args) {
 static void SetupArrayBufferExports(Isolate* isolate,
                                     Local<Object> target,
                                     Local<Context> context,
-                                    std::shared_ptr<EnvInst> envinst_sp) {
+                                    SharedEnvInst envinst_sp) {
   std::unique_ptr<BackingStore> bs =
     ArrayBuffer::NewBackingStore(envinst_sp->count_fields,
                                  EnvInst::kFieldCount * sizeof(double),

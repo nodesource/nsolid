@@ -282,7 +282,7 @@ class EnvInst {
 
   static void run_event_loop_cmds_(nsuv::ns_async*, EnvInst*);
   static void run_interrupt_msg_(nsuv::ns_async*, EnvInst*);
-  static void run_interrupt_(void* arg);
+  static void run_interrupt_(v8::Isolate* isolate, void* arg);
   static void run_interrupt_only_(v8::Isolate* isolate, void* arg);
   static void handle_cleanup_cb_(Environment* env,
                                  uv_handle_t* handle,
@@ -320,6 +320,7 @@ class EnvInst {
   uint64_t thread_id_ = UINT64_MAX;
   uv_thread_t creation_thread_;
   bool is_main_thread_;
+  nsuv::ns_async interrupt_msg_;
   // This is what's used to queue commands that run on the Worker's event loop.
   nsuv::ns_async eloop_cmds_msg_;
   TSQueue<CmdQueueStor> eloop_cmds_q_;
@@ -593,7 +594,7 @@ class EnvList {
   static void blocked_loop_timer_cb_(nsuv::ns_timer*);
   static void gen_ptiles_cb_(nsuv::ns_timer*);
   static void raw_metrics_timer_cb_(nsuv::ns_timer*);
-  static void promise_tracking_(const EnvInst& envinst, bool track);
+  static void promise_tracking_(SharedEnvInst envinst_sp, bool track);
   static void enable_promise_tracking_(SharedEnvInst envinst_sp, void*);
   static void disable_promise_tracking_(SharedEnvInst envinst_sp, void*);
   static void update_has_metrics_stream_hooks(SharedEnvInst, bool has_metrics);
@@ -614,7 +615,7 @@ class EnvList {
   nsuv::ns_mutex map_lock_;
   // A map of all Environments in the process.
   std::map<uint64_t, SharedEnvInst> env_map_;
-  uint64_t main_thread_id_ = 0xFFFFFFFFFFFFFFFF;
+  std::atomic<uint64_t> main_thread_id_ = {0xFFFFFFFFFFFFFFFF};
   // Lock EnvList while all command queues are being processed. This is to
   // prevent ~EnvList from running while processing all commands.
   nsuv::ns_mutex command_lock_;

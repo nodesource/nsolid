@@ -989,8 +989,12 @@ int ThreadMetrics::Update(Cb&& cb, Data&&... data) {
   }
 
   // _1 - ThreadMetrics*
-  UserData* user_data = new UserData(
+  UserData* user_data = new (std::nothrow) UserData(
       std::bind(std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
+
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
 
   user_data_ = user_data;
   proxy_ = thread_metrics_proxy_<UserData>;
@@ -1032,8 +1036,13 @@ MetricsStream* MetricsStream::CreateInstance(uint32_t flags,
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
   // _1 - MetricsStream* metrics_stream
   // _2 - const metrics_stream_bucket& bucket
-  UserData* user_data = new UserData(std::bind(
-    std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+  UserData* user_data = new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+
+  if (user_data == nullptr) {
+    return nullptr;
+  }
+
   stream->DoSetup(flags,
                   metrics_stream_proxy_<UserData>,
                   internal::delete_proxy_<UserData>,
@@ -1062,8 +1071,13 @@ Tracer* Tracer::CreateInstance(uint32_t flags, Cb&& cb, Data&&... data) {
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
   // _1 - Tracer*
   // _2 - const SpanStor&
-  UserData* user_data = new UserData(std::bind(
-    std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+  UserData* user_data = new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+
+  if (user_data == nullptr) {
+    return nullptr;
+  }
+
   tracer->DoSetup(flags,
                   trace_proxy_<UserData>,
                   internal::delete_proxy_<UserData>,
@@ -1092,16 +1106,22 @@ int CpuProfiler::TakeProfile(SharedEnvInst envinst,
 
   // _1 - int status
   // _2 - std::string json
-  std::unique_ptr<UserData> user_data = std::make_unique<UserData>(std::bind(
-        std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+  UserData* user_data = new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
 
   int er = get_cpu_profile_(envinst,
                             duration,
-                            user_data.get(),
+                            user_data,
                             cpu_profiler_proxy_<UserData>,
                             internal::delete_proxy_<UserData>);
-  if (!er)
-    user_data.release();
+  if (er) {
+    delete user_data;
+  }
+
   return er;
 }
 
@@ -1126,16 +1146,23 @@ int Snapshot::TakeSnapshot(SharedEnvInst envinst,
 
   // _1 - int status
   // _2 - std::string json
-  std::unique_ptr<UserData> user_data = std::make_unique<UserData>(std::bind(
-        std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+  UserData* user_data = new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
 
   int er = get_snapshot_(envinst,
                          redacted,
-                         user_data.get(),
+                         user_data,
                          snapshot_proxy_<UserData>,
                          internal::delete_proxy_<UserData>);
-  if (!er)
-    user_data.release();
+
+  if (er) {
+    delete user_data;
+  }
+
   return er;
 }
 
@@ -1151,14 +1178,20 @@ int QueueCallback(Cb&& cb, Data&&... data) {
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), std::forward<Data>(data)...));
 
-  std::unique_ptr<UserData> user_data = std::make_unique<UserData>(std::bind(
-        std::forward<Cb>(cb), std::forward<Data>(data)...));
+  UserData* user_data = new (std::nothrow)
+      UserData(std::bind(std::forward<Cb>(cb), std::forward<Data>(data)...));
 
-  int er = internal::queue_callback_(
-      user_data.get(),
-      internal::queue_callback_proxy_<UserData>);
-  if (!er)
-    user_data.release();
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
+
+  int er = internal::queue_callback_(user_data,
+                                     internal::queue_callback_proxy_<UserData>);
+
+  if (er) {
+    delete user_data;
+  }
+
   return er;
 }
 
@@ -1168,15 +1201,20 @@ int QueueCallback(uint64_t timeout, Cb&& cb, Data&&... data) {
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), std::forward<Data>(data)...));
 
-  std::unique_ptr<UserData> user_data = std::make_unique<UserData>(std::bind(
-        std::forward<Cb>(cb), std::forward<Data>(data)...));
+  UserData* user_data = new (std::nothrow)
+      UserData(std::bind(std::forward<Cb>(cb), std::forward<Data>(data)...));
+
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
 
   int er = internal::queue_callback_(
-      timeout,
-      user_data.get(),
-      internal::queue_callback_proxy_<UserData>);
-  if (!er)
-    user_data.release();
+      timeout, user_data, internal::queue_callback_proxy_<UserData>);
+
+  if (er) {
+    delete user_data;
+  }
+
   return er;
 }
 
@@ -1191,17 +1229,20 @@ int RunCommand(SharedEnvInst envinst,
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
   // _1 - SharedEnvInst
-  std::unique_ptr<UserData> user_data = std::make_unique<UserData>(std::bind(
-        std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
+  UserData* user_data = new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
+
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
 
   int er = internal::run_command_(
-      envinst,
-      type,
-      user_data.get(),
-      internal::run_command_proxy_<UserData>);
+      envinst, type, user_data, internal::run_command_proxy_<UserData>);
 
-  if (!er)
-    user_data.release();
+  if (er) {
+    delete user_data;
+  }
+
   return 0;
 }
 
@@ -1223,17 +1264,24 @@ int CustomCommand(SharedEnvInst envinst,
   // _3 - int status
   // _4 - std::pair<bool, std::string> error
   // _5 - std::pair<bool, std::string> value
-  std::unique_ptr<UserData> user_data = std::make_unique<UserData>(std::bind(
-        std::forward<Cb>(cb), _1, _2, _3, _4, _5, std::forward<Data>(data)...));
-  int er = internal::custom_command_(
-      envinst,
-      req_id,
-      command,
-      args,
-      user_data.get(),
-      internal::custom_command_proxy_<UserData>);
-  if (!er)
-    user_data.release();
+  UserData* user_data = new (std::nothrow) UserData(std::bind(
+      std::forward<Cb>(cb), _1, _2, _3, _4, _5, std::forward<Data>(data)...));
+
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
+
+  int er = internal::custom_command_(envinst,
+                                     req_id,
+                                     command,
+                                     args,
+                                     user_data,
+                                     internal::custom_command_proxy_<UserData>);
+
+  if (er) {
+    delete user_data;
+  }
+
   return er;
 }
 
@@ -1247,15 +1295,21 @@ int AtExitHook(Cb&& cb, Data&&... data) {
 
   // _1 - bool on_signal
   // _2 - bool profile_stopped
-  std::unique_ptr<UserData> user_data = std::make_unique<UserData>(std::bind(
-        std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+  UserData* user_data = new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
-  int er = internal::at_exit_hook_(
-      user_data.get(),
-      internal::at_exit_hook_proxy_<UserData>,
-      internal::delete_proxy_<UserData>);
-  if (!er)
-    user_data.release();
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
+
+  int er = internal::at_exit_hook_(user_data,
+                                   internal::at_exit_hook_proxy_<UserData>,
+                                   internal::delete_proxy_<UserData>);
+
+  if (er) {
+    delete user_data;
+  }
+
   return er;
 }
 
@@ -1271,6 +1325,7 @@ int OnBlockedLoopHook(uint64_t threshold, Cb&& cb, Data&&... data) {
   // _2 - std::string info
   UserData* user_data = new (std::nothrow) UserData(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+
   if (user_data == nullptr) {
     return UV_ENOMEM;
   }

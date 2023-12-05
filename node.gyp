@@ -34,6 +34,8 @@
     'node_lib_target_name%': 'libnsolid',
     'node_intermediate_lib_type%': 'static_library',
     'node_builtin_modules_path%': '',
+    'linked_module_files': [
+    ],
     # We list the deps/ files out instead of globbing them in js2c.py since we
     # only include a subset of all the files under these directories.
     # The lengths of their file names combined should not exceed the
@@ -41,6 +43,7 @@
     # See https://docs.microsoft.com/en-us/troubleshoot/windows-client/shell-experience/command-line-string-limitation
     'library_files': [
       '<@(node_library_files)',
+      '<@(linked_module_files)',
     ],
     'agents_files': [
       'agents/statsd/lib/nsolid.js',
@@ -620,12 +623,14 @@
         'agents/zmq/src/zmq_endpoint.h',
         'agents/zmq/src/zmq_errors.h',
         'src/aliased_buffer.h',
+        'src/aliased_buffer-inl.h',
         'src/aliased_struct.h',
         'src/aliased_struct-inl.h',
         'src/async_wrap.h',
         'src/async_wrap-inl.h',
         'src/base_object.h',
         'src/base_object-inl.h',
+        'src/base_object_types.h',
         'src/base64.h',
         'src/base64-inl.h',
         'src/callback_queue.h',
@@ -1025,6 +1030,7 @@
             'config.gypi',
             '<@(agents_files)',
             '<@(deps_files)',
+            '<@(linked_module_files)',
           ],
         },
       ],

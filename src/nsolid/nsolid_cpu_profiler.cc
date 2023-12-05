@@ -1,11 +1,51 @@
-#include <nsolid/nsolid_output_stream.h>
-#include "env-inl.h"
 #include "nsolid_cpu_profiler.h"
+#include "asserts-cpp/asserts.h"
+#include "nsolid/nsolid_api.h"
+#include "nsolid/nsolid_output_stream.h"
+#include "v8-profiler.h"
 
 namespace node {
 namespace nsolid {
 
 std::atomic<bool> NSolidCpuProfiler::is_running = { false };
+
+CpuProfilerStor::CpuProfilerStor(uint64_t thread_id,
+                                 uint64_t timeout,
+                                 const std::string& title,
+                                 void* data,
+                                 CpuProfiler::cpu_profiler_proxy_sig proxy,
+                                 internal::deleter_sig deleter)
+    : thread_id_(thread_id),
+      timeout_(timeout),
+      title_(title),
+      profiler_(nullptr),
+      profile_(nullptr),
+      proxy_(proxy),
+      data_(data, deleter) {}
+
+CpuProfilerStor::~CpuProfilerStor() {
+  // Don't try to access the profile if the Isolate it comes from is gone
+  SharedEnvInst envinst = GetEnvInst(thread_id_);
+  if (!envinst) {
+    return;
+  }
+
+  // Keep the Isolate alive while diposing the profiler and profile
+  EnvInst::Scope scp(envinst);
+  if (!scp.Success()) {
+    return;
+  }
+
+  if (profile_) {
+    profile_->Delete();
+    profile_ = nullptr;
+  }
+
+  if (profiler_) {
+    profiler_->Dispose();
+    profiler_ = nullptr;
+  }
+}
 
 NSolidCpuProfiler::NSolidCpuProfiler(): dummy_stub_(nullptr, nullptr) {
   is_running = true;
@@ -48,7 +88,8 @@ int NSolidCpuProfiler::TakeCpuProfile(SharedEnvInst envinst,
   auto pair = cpu_profiler_map_.emplace(
     std::piecewise_construct,
     std::forward_as_tuple(thread_id),
-    std::forward_as_tuple(duration,
+    std::forward_as_tuple(thread_id,
+                          duration,
                           utils::generate_unique_id(),
                           data,
                           cb,
@@ -156,9 +197,6 @@ void NSolidCpuProfiler::run_cpuprofiler_(SharedEnvInst envinst_sp) {
     return;
   }
 
-  // Assign v8::CpuProfiler and std::string profile_title to stor.
-  stor.profiler_ = profiler;
-
   v8::Local<v8::String> profile_title = v8::String::NewFromUtf8(
     isolate,
     stor.title_.c_str(),
@@ -176,6 +214,9 @@ void NSolidCpuProfiler::run_cpuprofiler_(SharedEnvInst envinst_sp) {
     // Cleanup eveything.
     profiler->Dispose();
     nsprofiler->cpu_profiler_map_.erase(it);
+  } else {
+    // Assign v8::CpuProfiler to stor.
+    stor.profiler_ = profiler;
   }
 }
 
@@ -210,18 +251,10 @@ void NSolidCpuProfiler::stop_cpuprofiler_(uint64_t thread_id) {
 
 void NSolidCpuProfiler::stop_cb_cpuprofiler_(SharedEnvInst envinst_sp) {
   NSolidCpuProfiler* nsprofiler = NSolidCpuProfiler::Inst();
-
-  v8::Isolate* isolate = envinst_sp->isolate();
-
-  // At this point, maybe v8 already cleaned up our handles, if that happened,
-  // it won't we able to crate local handles without a handle scope.
-  //
-  // It's the better to make sure we have a HandleScope.
-  // DO NOT REMOVE, OTHERWISE V8 WILL CRASH.
-  v8::HandleScope handle_scope(isolate);
+  uint64_t thread_id = envinst_sp->thread_id();
 
   nsuv::ns_mutex::scoped_lock lock(&nsprofiler->blocked_cpu_profilers_);
-  auto it = nsprofiler->cpu_profiler_map_.find(envinst_sp->thread_id());
+  auto it = nsprofiler->cpu_profiler_map_.find(thread_id);
 
   // Not active profilers running.
   if (it == nsprofiler->cpu_profiler_map_.end()) {
@@ -231,6 +264,8 @@ void NSolidCpuProfiler::stop_cb_cpuprofiler_(SharedEnvInst envinst_sp) {
   auto& stor = it->second;
   ASSERT_NOT_NULL(stor.profiler_);
 
+  v8::Isolate* isolate = envinst_sp->isolate();
+  v8::HandleScope handle_scope(isolate);
   v8::Local<v8::String> profile_title = v8::String::NewFromUtf8(
       isolate,
       stor.title_.c_str(),
@@ -238,13 +273,12 @@ void NSolidCpuProfiler::stop_cb_cpuprofiler_(SharedEnvInst envinst_sp) {
   v8::CpuProfile* profile = stor.profiler_->StopProfiling(profile_title);
   int er;
   if (profile == nullptr) {
-    er = QueueCallback(NSolidCpuProfiler::cpuprofile_failed_,
-                       envinst_sp->thread_id());
+    er = QueueCallback(NSolidCpuProfiler::cpuprofile_failed_, thread_id);
   } else {
     // We can parse the Cpu profiler on nsolid thread.
     er = QueueCallback(NSolidCpuProfiler::serialize_cpuprofile_,
                        profile,
-                       envinst_sp->thread_id());
+                       thread_id);
   }
 
   if (er) {
@@ -259,9 +293,7 @@ void NSolidCpuProfiler::stop_cb_cpuprofiler_(SharedEnvInst envinst_sp) {
   }
 
   // Assign the generated profile to tuple.
-  if (profile) {
-    stor.profile_ = profile;
-  }
+  stor.profile_ = profile;
 }
 
 
@@ -287,7 +319,7 @@ void NSolidCpuProfiler::cpuprofile_failed_(uint64_t thread_id) {
   // Cleanup of the v8 structures (Profiler and Profile) should be done from the
   // v8 thread.
   int er = RunCommand(GetEnvInst(thread_id),
-                      CommandType::EventLoop,
+                      CommandType::Interrupt,
                       NSolidCpuProfiler::cleanup_profile_);
   if (er) {
     // Nothing to do here really, just get rid of the warning.
@@ -302,7 +334,6 @@ void NSolidCpuProfiler::stream_cb_(std::string profileChunk, uint64_t* tid) {
   }
 
   uint64_t thread_id = *tid;
-
   NSolidCpuProfiler* nsprofiler = NSolidCpuProfiler::Inst();
   nsuv::ns_mutex::scoped_lock lock(&nsprofiler->blocked_cpu_profilers_);
   auto it = nsprofiler->cpu_profiler_map_.find(thread_id);
@@ -319,11 +350,9 @@ void NSolidCpuProfiler::stream_cb_(std::string profileChunk, uint64_t* tid) {
     // Cleanup of the v8 structures (Profiler and Profile) should be done from
     // the v8 thread.
     int er = RunCommand(GetEnvInst(thread_id),
-                        CommandType::EventLoop,
+                        CommandType::Interrupt,
                         NSolidCpuProfiler::cleanup_profile_);
     if (er) {
-      // Nothing to do here really, just get rid of the warning.
-      delete tid;
       // Delete the reference of the profiler on this thread.
       nsprofiler->cpu_profiler_map_.erase(it);
     }
@@ -335,6 +364,18 @@ void NSolidCpuProfiler::serialize_cpuprofile_(v8::CpuProfile* profile,
                                               uint64_t thread_id) {
   // Check if the profiler is already deleted
   if (!is_running) {
+    return;
+  }
+
+  // Don't try to access the profile if the Isolate it comes from is gone
+  SharedEnvInst envinst = GetEnvInst(thread_id);
+  if (!envinst) {
+    return;
+  }
+
+  // Keep the Isolate alive while serializing the CpuProfile
+  EnvInst::Scope scp(envinst);
+  if (!scp.Success()) {
     return;
   }
 
