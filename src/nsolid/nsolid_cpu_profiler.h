@@ -1,6 +1,8 @@
 #ifndef SRC_NSOLID_NSOLID_CPU_PROFILER_H_
 #define SRC_NSOLID_NSOLID_CPU_PROFILER_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
+
 #include <map>
 #include "nsolid.h"
 #include "nsolid/nsolid_util.h"
@@ -87,5 +89,7 @@ class NSolidCpuProfiler {
 
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_NSOLID_CPU_PROFILER_H_
