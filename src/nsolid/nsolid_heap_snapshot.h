@@ -1,6 +1,8 @@
 #ifndef SRC_NSOLID_NSOLID_HEAP_SNAPSHOT_H_
 #define SRC_NSOLID_NSOLID_HEAP_SNAPSHOT_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
+
 #include <v8.h>
 #include <v8-profiler.h>
 #include <nsolid/nsolid_api.h>
@@ -49,5 +51,7 @@ class NSolidHeapSnapshot {
 
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_NSOLID_HEAP_SNAPSHOT_H_

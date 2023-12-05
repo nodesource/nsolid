@@ -1,6 +1,8 @@
 #ifndef SRC_NSOLID_NSOLID_TRACE_H_
 #define SRC_NSOLID_NSOLID_TRACE_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
+
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -225,5 +227,7 @@ const Type& SpanPropBase::val() const {
 }  // namespace tracing
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_NSOLID_TRACE_H_

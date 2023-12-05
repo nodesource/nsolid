@@ -1,6 +1,8 @@
 #ifndef SRC_NSOLID_SPINLOCK_H_
 #define SRC_NSOLID_SPINLOCK_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
+
 #include <atomic>
 
 namespace node {
@@ -41,5 +43,7 @@ class Spinlock {
 
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_SPINLOCK_H_

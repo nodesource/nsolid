@@ -1,6 +1,8 @@
 #ifndef SRC_NSOLID_THREAD_SAFE_H_
 #define SRC_NSOLID_THREAD_SAFE_H_
 
+#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
+
 #include "spinlock.h"
 #include "../../deps/nsuv/include/nsuv-inl.h"
 
@@ -194,5 +196,7 @@ struct TSList<DataType*> {
 }  // namespace node
 
 #undef NSOLID_WUR
+
+#endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #endif  // SRC_NSOLID_THREAD_SAFE_H_
