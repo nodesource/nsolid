@@ -239,7 +239,7 @@ Error [ERR_TEST_FAILURE]: thrown from subtest sync throw fail
   failureType: 'testCodeFailure',
   cause: Error: callback failure
       *
-      at process.processImmediate (node:internal/timers:476:21),
+      at process.processImmediate (node:internal/timers:478:21),
   code: 'ERR_TEST_FAILURE'
 }
 		</failure>
@@ -302,7 +302,7 @@ Error [ERR_TEST_FAILURE]: thrown from callback async throw
   failureType: 'uncaughtException',
   cause: Error: thrown from callback async throw
       *
-      at process.processImmediate (node:internal/timers:476:21),
+      at process.processImmediate (node:internal/timers:478:21),
   code: 'ERR_TEST_FAILURE'
 }
 		</failure>
@@ -402,7 +402,7 @@ Error [ERR_TEST_FAILURE]: foo
   cause: Error: foo
       *
       *
-      at process.processTimers (node:internal/timers:512:7),
+      at process.processTimers (node:internal/timers:514:7),
   code: 'ERR_TEST_FAILURE'
 }
 		</failure>
@@ -415,7 +415,7 @@ Error [ERR_TEST_FAILURE]: bar
   cause: Error: bar
       *
       *
-      at process.processTimers (node:internal/timers:512:7),
+      at process.processTimers (node:internal/timers:514:7),
   code: 'ERR_TEST_FAILURE'
 }
 		</failure>
