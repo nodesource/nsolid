@@ -1,0 +1,27 @@
+# N|Solid Changelog
+
+## 2023-12-07, Version 5.0.1 'Hydrogen'
+
+### Commits
+
+* \[[`4576d9acbf`](https://github.com/nodesource/nsolid/commit/4576d9acbf)] - **src**: NODE\_RELEASE should be node (Santiago Gimeno) [#36](https://github.com/nodesource/nsolid/pull/36)
+* \[[`55a2d6cf08`](https://github.com/nodesource/nsolid/commit/55a2d6cf08)] - **agents**: fix crash in HttpCurlGlobalInitializer (Santiago Gimeno) [#34](https://github.com/nodesource/nsolid/pull/34)
+* \[[`dfe9838d37`](https://github.com/nodesource/nsolid/commit/dfe9838d37)] - **agents**: fix crash in StatsDAgent (Santiago Gimeno) [#32](https://github.com/nodesource/nsolid/pull/32)
+* \[[`6c6d4cb8a6`](https://github.com/nodesource/nsolid/commit/6c6d4cb8a6)] - **agents**: fix OTLPAgent race conditions on cleanup (Santiago Gimeno) [#30](https://github.com/nodesource/nsolid/pull/30)
+* \[[`37270971bb`](https://github.com/nodesource/nsolid/commit/37270971bb)] - **src**: change name from scarab (Trevor Norris)
+* \[[`81a55f5541`](https://github.com/nodesource/nsolid/commit/81a55f5541)] - **src**: migrate cpu profile changes from iron (Trevor Norris)
+* \[[`846637d211`](https://github.com/nodesource/nsolid/commit/846637d211)] - **src**: fix SetupArrayBufferExports() declaration (Santiago Gimeno) [#25](https://github.com/nodesource/nsolid/pull/25)
+* \[[`2dbb8269ab`](https://github.com/nodesource/nsolid/commit/2dbb8269ab)] - **src**: cleanup the RunCommand queues on RemoveEnv (Santiago Gimeno) [#25](https://github.com/nodesource/nsolid/pull/25)
+* \[[`5ab8629387`](https://github.com/nodesource/nsolid/commit/5ab8629387)] - **src**: fix EnvInst::GetCurrent() (Santiago Gimeno) [#25](https://github.com/nodesource/nsolid/pull/25)
+* \[[`2d187ff46c`](https://github.com/nodesource/nsolid/commit/2d187ff46c)] - **src**: change EnvList::promise\_tracking\_() signature (Santiago Gimeno) [#25](https://github.com/nodesource/nsolid/pull/25)
+* \[[`797d115e96`](https://github.com/nodesource/nsolid/commit/797d115e96)] - **src**: fix NODE\_RELEASE\_URLBASE (Santiago Gimeno) [#27](https://github.com/nodesource/nsolid/pull/27)
+* \[[`4c9e5171ec`](https://github.com/nodesource/nsolid/commit/4c9e5171ec)] - **src**: clear envinst\_ after env (Trevor Norris) [#24](https://github.com/nodesource/nsolid/pull/24)
+* \[[`fd37d37f9d`](https://github.com/nodesource/nsolid/commit/fd37d37f9d)] - **src**: use own RequestInterrupt implementation (Trevor Norris) [#24](https://github.com/nodesource/nsolid/pull/24)
+* \[[`62b4e6c716`](https://github.com/nodesource/nsolid/commit/62b4e6c716)] - **src**: reset main\_thread\_id\_ when it is removed (Trevor Norris) [#24](https://github.com/nodesource/nsolid/pull/24)
+* \[[`150b53af0c`](https://github.com/nodesource/nsolid/commit/150b53af0c)] - **src**: make main\_thread\_id\_ atomic (Trevor Norris) [#24](https://github.com/nodesource/nsolid/pull/24)
+* \[[`6a61cff4a9`](https://github.com/nodesource/nsolid/commit/6a61cff4a9)] - **agents**: fix profile/snapshot messages body format (Santiago Gimeno) [#23](https://github.com/nodesource/nsolid/pull/23)
+* \[[`40931c47c2`](https://github.com/nodesource/nsolid/commit/40931c47c2)] - **src**: move CpuProfilerStor impl to cc file (Santiago Gimeno) [#18](https://github.com/nodesource/nsolid/pull/18)
+* \[[`ac7b0a0dae`](https://github.com/nodesource/nsolid/commit/ac7b0a0dae)] - **src**: handle bad allocation errors (Santiago Gimeno) [#20](https://github.com/nodesource/nsolid/pull/20)
+* \[[`b5bf6e32b8`](https://github.com/nodesource/nsolid/commit/b5bf6e32b8)] - **agents**: fixup log in ZmqAgent (Santiago Gimeno) [#22](https://github.com/nodesource/nsolid/pull/22)
+* \[[`f4303aaf2d`](https://github.com/nodesource/nsolid/commit/f4303aaf2d)] - **agents**: remove ASSERT that can be ignored (Trevor Norris) [#13](https://github.com/nodesource/nsolid/pull/13)
+* \[[`f18c40ba0e`](https://github.com/nodesource/nsolid/commit/f18c40ba0e)] - **src**: don't allow parallel calls to Update() (Trevor Norris) [#13](https://github.com/nodesource/nsolid/pull/13)
