@@ -128,7 +128,7 @@ const char MSG_6[] = "{"
   ",\"command\":\"exit\""
   ",\"exit_code\":%d"
   ",\"version\":%d"
-  ",\"error\":{\"message\":\"%s\",\"stack\":\"%s\",\"code\":%d}"
+  ",\"error\":{\"message\":%s,\"stack\":%s,\"code\":%d}"
 "}";
 
 const char MSG_7[] = "{"
@@ -144,7 +144,7 @@ const char MSG_8[] = "{"
   ",\"command\":\"exit\""
   ",\"exit_code\":%d"
   ",\"version\":%d"
-  ",\"error\":{\"message\":\"%s\",\"stack\":\"%s\",\"code\":%d}"
+  ",\"error\":{\"message\":%s,\"stack\":%s,\"code\":%d}"
   ",\"profile\":%s"
 "}";
 
@@ -1843,6 +1843,9 @@ void ZmqAgent::send_exit() {
                    last_main_profile_.c_str());
     }
   } else {
+    // Use nlohmann::json to properly escape the error message and stack.
+    nlohmann::json jmsg(std::get<0>(*error));
+    nlohmann::json jstack(std::get<1>(*error));
     if (last_main_profile_.empty()) {
       r = snprintf(msg_buf_,
                    msg_size_,
@@ -1850,8 +1853,8 @@ void ZmqAgent::send_exit() {
                    agent_id_.c_str(),
                    exit_code,
                    version_,
-                   std::get<0>(*error).c_str(),
-                   std::get<1>(*error).c_str(),
+                   jmsg.dump().c_str(),
+                   jstack.dump().c_str(),
                    500);
     } else {
       r = snprintf(msg_buf_,
@@ -1860,8 +1863,8 @@ void ZmqAgent::send_exit() {
                    agent_id_.c_str(),
                    exit_code,
                    version_,
-                   std::get<0>(*error).c_str(),
-                   std::get<1>(*error).c_str(),
+                   jmsg.dump().c_str(),
+                   jstack.dump().c_str(),
                    500,
                    last_main_profile_.c_str());
     }
