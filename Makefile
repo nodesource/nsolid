@@ -204,6 +204,7 @@ clean: ## Remove build artifacts.
 	$(RM) test.tap
 	$(MAKE) testclean
 	$(MAKE) test-addons-clean
+	$(MAKE) test-agents-prereqs-clean
 	$(MAKE) bench-addons-clean
 
 .PHONY: testclean
@@ -304,7 +305,7 @@ v8:
 		tools/make-v8.sh $(V8_ARCH).$(BUILDTYPE_LOWER) $(V8_BUILD_OPTIONS)
 
 .PHONY: jstest
-jstest: build-addons build-js-native-api-tests build-node-api-tests ## Runs addon tests and JS tests
+jstest: build-addons build-js-native-api-tests build-node-api-tests test-agents-prereqs ## Runs addon tests and JS tests
 	NSOLID_DELAY_INIT="" \
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) --mode=$(BUILDTYPE_LOWER) \
 		$(TEST_CI_ARGS) \
@@ -547,7 +548,7 @@ test-ci-js: | clear-stalled
 .PHONY: test-ci
 # Related CI jobs: most CI tests, excluding node-test-commit-arm-fanned
 test-ci: LOGLEVEL := info
-test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tests build-node-api-tests doc-only
+test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tests build-node-api-tests doc-only test-agents-prereqs
 	out/Release/cctest --gtest_output=xml:out/junit/cctest.xml
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) -p tap --logfile test.tap \
 		--mode=$(BUILDTYPE_LOWER) --flaky-tests=$(FLAKY_TESTS) \
@@ -1598,6 +1599,14 @@ test-with-console:
 	$(MAKE) jstest
 	$(MAKE) tooltest
 
+.PHONY: test-agents-prereqs
+test-agents-prereqs:
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 zmq-zap --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm run build:libzmq --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
+
+.PHONY: test-agents-prereqs-clean
+test-agents-prereqs-clean:
+	$(RM) -r test/common/nsolid-zmq-agent/node_modules
 
 HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 1 || echo 0)
 

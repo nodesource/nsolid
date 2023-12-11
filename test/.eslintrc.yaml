@@ -76,6 +76,8 @@ globals:
 
 overrides:
   - files:
+      - agents/*.js
+      - agents/*.mjs
       - es-module/*.js
       - es-module/*.mjs
       - parallel/*.js
