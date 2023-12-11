@@ -10,6 +10,7 @@ using v8::Isolate;
 using v8::JSON;
 using v8::Local;
 using v8::NewStringType;
+using v8::Number;
 using v8::Object;
 using v8::String;
 using v8::Value;
@@ -60,7 +61,7 @@ static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   Local<Context> context = isolate->GetCurrentContext();
   uint64_t thread_id = ThreadId(context);
-  int timeout = args[0]->ToInt32(context).ToLocalChecked()->Value();
+  uint64_t timeout = args[0].As<Number>()->Value();
   json message = {
     { "args", {
       { "metadata", {

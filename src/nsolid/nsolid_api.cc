@@ -323,7 +323,9 @@ std::string EnvInst::GetOnBlockedBody() {
   uint64_t exit_time = metrics.loop_count == 0 ?
     performance::timeOrigin : provider_times().second;
 
-  body_string += "\"blocked_for\":";
+  body_string += "\"threadId\":";
+  body_string += std::to_string(thread_id_);
+  body_string += ",\"blocked_for\":";
   body_string += std::to_string((uv_hrtime() - exit_time) / MICROS_PER_SEC);
   body_string += ",\"loop_id\":";
   body_string += std::to_string(metrics.loop_count);
