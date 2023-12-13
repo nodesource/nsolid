@@ -7,9 +7,7 @@ const { fork, spawn } = require('node:child_process');
 const { after, afterEach, before, describe, it } = require('node:test');
 const {
   AgentBus,
-  AssetLocker,
   ZmqAgentBus,
-  ZmqServer
 } = require('nsolid-connector');
 
 const SIGTERM = 15;
@@ -25,7 +23,6 @@ const config = {
 };
 
 function checkExitData(data, expected) {
-  console.log(data);
   assert.strictEqual(data.exit_code, expected.exit_code);
   assert.strictEqual(data.error, expected.error);
 }
@@ -56,7 +53,7 @@ function bootstrapSequence(done, next) {
         break;
         case 4:
           assert.strictEqual(eventType, 'agent-metrics');
-          done();
+          done(null, agentId);
         break;
         default:
           next(eventType, agentId, data);
@@ -65,25 +62,16 @@ function bootstrapSequence(done, next) {
   });
 }
 
-describe('basic boostrap', () => {
+describe('basic boostrap and exit', () => {
   before(async () => {
     this.bootstrapSequence = bootstrapSequence.bind(this);
-    this.server = new ZmqServer(config);
-    this.zmqAgentBus = new ZmqAgentBus(config, this.server);
+    this.zmqAgentBus = new ZmqAgentBus(config);
     this.agentBus = new AgentBus(this.zmqAgentBus);
     return new Promise((resolve) => {
-      this.server.start(
-        this.zmqAgentBus._handleCommand.bind(this.zmqAgentBus),
-        this.zmqAgentBus._handleMessage.bind(this.zmqAgentBus),
-        this.zmqAgentBus._handleBulkMessage.bind(this.zmqAgentBus),
-        (err) => {
-          if (err) {
-            throw err;
-          }
-          console.log('zmq nsolid agent server started');
-          resolve();
-        }
-      );
+      this.zmqAgentBus.start(common.mustSucceed(() => {
+        console.log('zmq nsolid agent server started');
+        resolve();
+      }));
     });
   });
 
@@ -102,7 +90,8 @@ describe('basic boostrap', () => {
 
     const child = spawn(process.execPath, { env: { NSOLID_COMMAND: 9001 } });
     child.on('exit', common.mustCall((code, signal) => {
-      console.log(code, signal);
+      assert.strictEqual(code, null);
+      assert.strictEqual(signal, 'SIGTERM');
     }));
   });
 
@@ -125,7 +114,8 @@ describe('basic boostrap', () => {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc']
     });
     child.on('exit', common.mustCall((code, signal) => {
-      console.log(code, signal);
+      assert.strictEqual(code, 0);
+      assert.strictEqual(signal, null);
     }));
   });
 
@@ -147,7 +137,8 @@ describe('basic boostrap', () => {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc']
     });
     child.on('exit', common.mustCall((code, signal) => {
-      console.log(code, signal);
+      assert.strictEqual(code, 1);
+      assert.strictEqual(signal, null);
     }));
   });
 
@@ -172,7 +163,54 @@ describe('basic boostrap', () => {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc']
     });
     child.on('exit', common.mustCall((code, signal) => {
-      console.log(code, signal);
+      assert.strictEqual(code, 1);
+      assert.strictEqual(signal, null);
+    }));
+  });
+
+  afterEach(() => {
+    this.agentBus.unsubscribeAll();
+  });
+
+  after(() => {
+    this.agentBus.shutdown();
+  });
+});
+
+describe('cpu profiling', () => {
+  before(async () => {
+    this.bootstrapSequence = bootstrapSequence.bind(this);
+    this.zmqAgentBus = new ZmqAgentBus(config);
+    this.agentBus = new AgentBus(this.zmqAgentBus);
+    return new Promise((resolve) => {
+      this.zmqAgentBus.start(common.mustSucceed(() => {
+        console.log('zmq nsolid agent server started');
+        resolve();
+      }));
+    });
+  });
+
+  it('should work if agent is killed with signal', (t, done) => {
+    try {
+      this.bootstrapSequence(common.mustSucceed((agentId) => {
+        this.agentBus.agentProfileStart(agentId);
+      }), (eventType, agentId, data) => {
+        console.log(eventType, agentId, data);
+        assert.strictEqual(eventType, 'agent-exit');
+        checkExitData(data, { exit_code: SIGTERM, error: null });
+        done();
+      });
+    } catch (err) {
+      done(err);
+    }
+
+    const child = spawn(process.execPath, 
+                        { env: { NSOLID_COMMAND: 9001,
+                                 NODE_DEBUG_NATIVE: 'nsolid_zmq_agent' },
+                          stdio: ['inherit', 'inherit', 'inherit', 'ipc']});
+    child.on('exit', common.mustCall((code, signal) => {
+      assert.strictEqual(code, null);
+      assert.strictEqual(signal, 'SIGTERM');
     }));
   });
 
