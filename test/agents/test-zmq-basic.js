@@ -88,7 +88,6 @@ describe('basic boostrap', () => {
   });
 
   it('should work if agent is killed with signal', (t, done) => {
-    let id;
     try {
       this.bootstrapSequence(() => {
         child.kill();
@@ -100,43 +99,6 @@ describe('basic boostrap', () => {
     } catch (err) {
       done(err);
     }
-    // this.agentBus.eventTypes.forEach(eventType => {
-    //   this.agentBus.subscribe(eventType, (agentId, data) => {
-    //     console.log(`[${events}] ${eventType}, ${agentId}`);
-    //     if (!id) {
-    //       id = agentId;
-    //     } else {
-    //       assert.strictEqual(id, agentId);
-    //     }
-
-    //     try {
-    //       switch (++events) {
-    //         case 1:
-    //           assert.strictEqual(eventType, 'agent-connected');
-    //         break;
-    //         case 2:
-    //           assert.strictEqual(eventType, 'agent-info');
-    //           // parse info data
-    //         break;
-    //         case 3:
-    //           assert.strictEqual(eventType, 'agent-packages');
-    //           // parse packages data
-    //         break;
-    //         case 4:
-    //           assert.strictEqual(eventType, 'agent-metrics');
-    //           // parse metrics data
-    //           child.kill();
-    //         break;
-    //         case 5:
-    //           assert.strictEqual(eventType, 'agent-exit');
-    //           checkExitData(data, { exit_code: SIGTERM, error: null });
-    //           done();
-    //       }
-    //     } catch (err) {
-    //       done(err);
-    //     }
-    //   });
-    // });
 
     const child = spawn(process.execPath, { env: { NSOLID_COMMAND: 9001 } });
     child.on('exit', common.mustCall((code, signal) => {
@@ -144,158 +106,75 @@ describe('basic boostrap', () => {
     }));
   });
 
-  // it('should work if agent exits gracefully without error', (t, done) => {
-  //   let events = 0;
-  //   let id;
-  //   this.agentBus.eventTypes.forEach(eventType => {
-  //     this.agentBus.subscribe(eventType, (agentId, data) => {
-  //       console.log(`[${events}] ${eventType}, ${agentId}`);
-  //       if (!id) {
-  //         id = agentId;
-  //       } else {
-  //         assert.strictEqual(id, agentId);
-  //       }
+  it('should work if agent exits gracefully without error', (t, done) => {
+    try {
+      this.bootstrapSequence(() => {
+        child.send({ type: 'shutdown', code: 0 });
+      }, (eventType, agentId, data) => {
+        assert.strictEqual(eventType, 'agent-exit');
+        checkExitData(data, { exit_code: 0, error: null });
+        done();
+      });
+    } catch (err) {
+      done(err);
+    }
 
-  //       try {
-  //         switch (++events) {
-  //           case 1:
-  //             assert.strictEqual(eventType, 'agent-connected');
-  //           break;
-  //           case 2:
-  //             assert.strictEqual(eventType, 'agent-info');
-  //             // parse info data
-  //           break;
-  //           case 3:
-  //             assert.strictEqual(eventType, 'agent-packages');
-  //             // parse packages data
-  //           break;
-  //           case 4:
-  //             assert.strictEqual(eventType, 'agent-metrics');
-  //             // parse metrics data
-  //             child.send({ type: 'shutdown', code: 0 });
-  //           break;
-  //           case 5:
-  //             assert.strictEqual(eventType, 'agent-exit');
-  //             checkExitData(data, { exit_code: 0, error: null });
-  //             done();
-  //         }
-  //       } catch (err) {
-  //         done(err);
-  //       }
-  //     });
-  //   });
 
-  //   const child = fork(fixtures.path('nsolid-start.js'), [], {
-  //     env: { NSOLID_COMMAND: 9001 },
-  //     stdio: ['pipe', 'pipe', 'pipe', 'ipc']
-  //   });
-  //   child.on('exit', common.mustCall((code, signal) => {
-  //     console.log(code, signal);
-  //   }));
-  // });
+    const child = fork(fixtures.path('nsolid-start.js'), [], {
+      env: { NSOLID_COMMAND: 9001 },
+      stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+    });
+    child.on('exit', common.mustCall((code, signal) => {
+      console.log(code, signal);
+    }));
+  });
 
-  // it('should work if agent exits gracefully with error code', (t, done) => {
-  //   let events = 0;
-  //   let id;
-  //   this.agentBus.eventTypes.forEach(eventType => {
-  //     this.agentBus.subscribe(eventType, (agentId, data) => {
-  //       console.log(`[${events}] ${eventType}, ${agentId}`);
-  //       if (!id) {
-  //         id = agentId;
-  //       } else {
-  //         assert.strictEqual(id, agentId);
-  //       }
+  it('should work if agent exits gracefully with error code', (t, done) => {
+    try {
+      this.bootstrapSequence(() => {
+        child.send({ type: 'shutdown', code: 1 });
+      }, (eventType, agentId, data) => {
+        assert.strictEqual(eventType, 'agent-exit');
+        checkExitData(data, { exit_code: 1, error: null });
+        done();
+      });
+    } catch (err) {
+      done(err);
+    }
 
-  //       try {
-  //         switch (++events) {
-  //           case 1:
-  //             assert.strictEqual(eventType, 'agent-connected');
-  //           break;
-  //           case 2:
-  //             assert.strictEqual(eventType, 'agent-info');
-  //             // parse info data
-  //           break;
-  //           case 3:
-  //             assert.strictEqual(eventType, 'agent-packages');
-  //             // parse packages data
-  //           break;
-  //           case 4:
-  //             assert.strictEqual(eventType, 'agent-metrics');
-  //             // parse metrics data
-  //             child.send({ type: 'shutdown', code: 1 });
-  //           break;
-  //           case 5:
-  //             assert.strictEqual(eventType, 'agent-exit');
-  //             checkExitData(data, { exit_code: 1, error: null });
-  //             done();
-  //         }
-  //       } catch (err) {
-  //         done(err);
-  //       }
-  //     });
-  //   });
+    const child = fork(fixtures.path('nsolid-start.js'), [], {
+      env: { NSOLID_COMMAND: 9001 },
+      stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+    });
+    child.on('exit', common.mustCall((code, signal) => {
+      console.log(code, signal);
+    }));
+  });
 
-  //   const child = fork(fixtures.path('nsolid-start.js'), [], {
-  //     env: { NSOLID_COMMAND: 9001 },
-  //     stdio: ['pipe', 'pipe', 'pipe', 'ipc']
-  //   });
-  //   child.on('exit', common.mustCall((code, signal) => {
-  //     console.log(code, signal);
-  //   }));
-  // });
+  it('should work if agent exits with exception', (t, done) => {
+    try {
+      this.bootstrapSequence(() => {
+        child.send({ type: 'shutdown', error: true });
+      }, (eventType, agentId, data) => {
+        assert.strictEqual(eventType, 'agent-exit');
+        assert.strictEqual(data.exit_code, 1);
+        assert.strictEqual(data.error.code, 500);
+        assert.strictEqual(data.error.message, 'Uncaught Error: error');
+        assert.ok(data.error.stack);
+        done();
+      });
+    } catch (err) {
+      done(err);
+    }
 
-  // it('should work if agent exits with exception', (t, done) => {
-  //   let events = 0;
-  //   let id;
-  //   this.agentBus.eventTypes.forEach(eventType => {
-  //     this.agentBus.subscribe(eventType, (agentId, data) => {
-  //       console.log(`[${events}] ${eventType}, ${agentId}`);
-  //       if (!id) {
-  //         id = agentId;
-  //       } else {
-  //         assert.strictEqual(id, agentId);
-  //       }
-
-  //       try {
-  //         switch (++events) {
-  //           case 1:
-  //             assert.strictEqual(eventType, 'agent-connected');
-  //           break;
-  //           case 2:
-  //             assert.strictEqual(eventType, 'agent-info');
-  //             // parse info data
-  //           break;
-  //           case 3:
-  //             assert.strictEqual(eventType, 'agent-packages');
-  //             // parse packages data
-  //           break;
-  //           case 4:
-  //             assert.strictEqual(eventType, 'agent-metrics');
-  //             // parse metrics data
-  //             child.send({ type: 'shutdown', error: true });
-  //           break;
-  //           case 5:
-  //             assert.strictEqual(eventType, 'agent-exit');
-  //             assert.strictEqual(data.exit_code, 1);
-  //             assert.strictEqual(data.error.code, 500);
-  //             assert.strictEqual(data.error.message, 'Uncaught Error: error');
-  //             assert.ok(data.error.stack);
-  //             done();
-  //         }
-  //       } catch (err) {
-  //         done(err);
-  //       }
-  //     });
-  //   });
-
-  //   const child = fork(fixtures.path('nsolid-start.js'), [], {
-  //     env: { NSOLID_COMMAND: 9001 },
-  //     stdio: ['pipe', 'pipe', 'pipe', 'ipc']
-  //   });
-  //   child.on('exit', common.mustCall((code, signal) => {
-  //     console.log(code, signal);
-  //   }));
-  // });
+    const child = fork(fixtures.path('nsolid-start.js'), [], {
+      env: { NSOLID_COMMAND: 9001 },
+      stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+    });
+    child.on('exit', common.mustCall((code, signal) => {
+      console.log(code, signal);
+    }));
+  });
 
   afterEach(() => {
     this.agentBus.unsubscribeAll();
