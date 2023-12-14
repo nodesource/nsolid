@@ -483,6 +483,26 @@ int CpuProfiler::get_cpu_profile_(SharedEnvInst envinst,
                                                    deleter);
 }
 
+int Snapshot::start_tracking_heap_objects_(SharedEnvInst envinst,
+                                           bool redacted,
+                                           bool trackAllocations,
+                                           uint64_t duration,
+                                           void* data,
+                                           snapshot_proxy_sig proxy,
+                                           internal::deleter_sig deleter) {
+  if (envinst == nullptr)
+    return UV_ESRCH;
+
+  return NSolidHeapSnapshot::Inst()->StartTrackingHeapObjects(
+      envinst, redacted, trackAllocations, duration, data, proxy, deleter);
+}
+
+int Snapshot::StopTrackingHeapObjects(SharedEnvInst envinst) {
+  if (envinst == nullptr)
+    return UV_ESRCH;
+
+  return NSolidHeapSnapshot::Inst()->StopTrackingHeapObjects(envinst);
+}
 
 int Snapshot::get_snapshot_(SharedEnvInst envinst,
                             bool redacted,

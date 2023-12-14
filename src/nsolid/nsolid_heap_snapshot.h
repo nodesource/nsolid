@@ -19,6 +19,7 @@ class NSolidHeapSnapshot {
  public:
   struct HeapSnapshotStor {
     bool redacted;
+    bool is_tracking_heapobjects_;
     Snapshot::snapshot_proxy_sig cb;
     internal::user_data data;
   };
@@ -34,10 +35,31 @@ class NSolidHeapSnapshot {
                       Snapshot::snapshot_proxy_sig proxy,
                       internal::deleter_sig deleter);
 
+  int StartTrackingHeapObjects(SharedEnvInst envinst,
+                               bool redacted,
+                               bool trackAllocations,
+                               uint64_t duration,
+                               void* data,
+                               Snapshot::snapshot_proxy_sig proxy,
+                               internal::deleter_sig deleter);
+
+  int StopTrackingHeapObjects(SharedEnvInst envinst);
+
  private:
   NSolidHeapSnapshot();
 
+  static void start_tracking_heapobjects(SharedEnvInst envinst,
+                                         bool trackAllocations,
+                                         uint64_t duration,
+                                         NSolidHeapSnapshot*);
+
+  static void stop_tracking_heap_objects(SharedEnvInst envinst_sp,
+                                         NSolidHeapSnapshot*);
+
   static void take_snapshot(SharedEnvInst envinst_sp, NSolidHeapSnapshot*);
+
+  static void take_snapshot_timer(SharedEnvInst envinst_sp,
+                                  NSolidHeapSnapshot*);
 
   static void snapshot_cb(uint64_t thread_id,
                           int status,
