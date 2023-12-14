@@ -954,6 +954,7 @@ class NODE_EXTERN Snapshot {
    * concurrent snapshot per thread can be taken.
    *
    * @param envinst SharedEnvInst of thread to take the snapshot from.
+   * @param redacted to get redacted strings in the heap snapshot.
    * @param cb callback function with the following signature:
    * `cb(int status, std::string snapshot, ...Data)`. It will be called from the
    * NSolid thread.
@@ -967,7 +968,50 @@ class NODE_EXTERN Snapshot {
                           Cb&& cb,
                           Data&&... data);
 
+  /**
+   * @brief activates the heap profiler tracking objects from a specific JS
+   * thread.
+   *
+   * @param envinst SharedEnvInst of thread to take the snapshot from.
+   * @param redacted to get redacted strings in the heap snapshot.
+   * @param trackAllLocations record stack traces of allocations, set this as
+   * as true will add a significant overhead.
+   * @param duration duration in milliseconds of the heap profiler after which
+   * the heap snapshot will be returned in the callback.
+   * @param data variable number of arguments to be propagated to the callback.
+   * @param cb callback function with the following signature:
+   * `cb(int status, std::string snapshot, ...Data)`. It will be called from the
+   * NSolid thread.
+   * @param data variable number of arguments to be propagated to the callback.
+   * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
+   * error value otherwise.
+   */
+  template <typename Cb, typename... Data>
+  static int StartTrackingHeapObjects(SharedEnvInst envinst,
+                                      bool redacted,
+                                      bool trackAllocations,
+                                      uint64_t duration,
+                                      Cb&& cb,
+                                      Data&&... data);
+
+  /**
+   * @brief same as TakeSnapshot but stops tracking heap objects in the heap
+   * profiler.
+   *
+   * @param envinst SharedEnvInst of thread to take the snapshot from.
+   * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
+   * error value otherwise.
+   */
+  static int StopTrackingHeapObjects(SharedEnvInst envinst);
+
  private:
+  static int start_tracking_heap_objects_(SharedEnvInst envinst,
+                                          bool redacted,
+                                          bool trackAllocations,
+                                          uint64_t duration,
+                                          internal::user_data data,
+                                          snapshot_proxy_sig proxy);
+
   static int get_snapshot_(SharedEnvInst envinst,
                            bool redacted,
                            void* data,
@@ -1133,6 +1177,36 @@ void CpuProfiler::cpu_profiler_proxy_(int status,
   (*static_cast<G*>(data))(status, json);
 }
 
+template <typename Cb, typename... Data>
+int Snapshot::StartTrackingHeapObjects(SharedEnvInst envinst,
+                                       bool redacted,
+                                       bool trackAllocations,
+                                       uint64_t duration,
+                                       Cb&& cb,
+                                       Data&&... data) {
+  if (envinst == nullptr) {
+    return UV_ESRCH;
+  }
+
+  // NOLINTNEXTLINE(build/namespaces)
+  using namespace std::placeholders;
+  using UserData = decltype(std::bind(
+      std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+
+  auto user_data = internal::user_data(new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...)),
+                        internal::delete_proxy_<UserData>);
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
+
+  return start_tracking_heap_objects_(envinst,
+                                      redacted,
+                                      trackAllocations,
+                                      duration,
+                                      std::move(user_data),
+                                      snapshot_proxy_<UserData>);
+}
 
 template <typename Cb, typename... Data>
 int Snapshot::TakeSnapshot(SharedEnvInst envinst,
