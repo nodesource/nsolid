@@ -2149,7 +2149,7 @@ void BindingData::FastPushSpanDataUint64(v8::Local<v8::Object> receiver,
                                          uint32_t trace_id,
                                          uint32_t type,
                                          uint64_t val) {
-  PushSpanDataDoubleImpl(FromJSObject<BindingData>(receiver),
+  PushSpanDataUint64Impl(FromJSObject<BindingData>(receiver),
                          trace_id,
                          type,
                          val);
