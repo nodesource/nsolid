@@ -810,9 +810,8 @@ void CpuProfileJSONSerializer::SerializeCallFrame(
   writer_->AddNumber(node->GetColumnNumber() - 1);
   writer_->AddString(",\"scriptId\":");
   writer_->AddNumber(node->GetScriptId());
-  writer_->AddString(",\"url\":\"");
-  writer_->AddString(node->GetScriptResourceNameStr());
-  writer_->AddCharacter('"');
+  writer_->AddString(",\"url\":");
+  writer_->EscapeAndAddString(node->GetScriptResourceNameStr());
 }
 
 void CpuProfileJSONSerializer::SerializeChildren(const v8::CpuProfileNode* node,
