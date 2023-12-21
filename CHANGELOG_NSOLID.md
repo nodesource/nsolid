@@ -1,5 +1,18 @@
 # N|Solid Changelog
 
+<!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
+
+## 2023-12-21, Version 5.0.2 'Hydrogen'
+
+* \[[`ef78d06fc7`](https://github.com/nodesource/nsolid/commit/ef78d06fc7)] - **src**: fix FastPushSpanDataUint64 (Santiago Gimeno) [nodesource/nsolid#49](https://github.com/nodesource/nsolid/pull/49)
+* \[[`7486d48441`](https://github.com/nodesource/nsolid/commit/7486d48441)] - **src**: make nsolid::ThreadMetrics safer (Santiago Gimeno) [nodesource/nsolid#37](https://github.com/nodesource/nsolid/pull/37)
+* \[[`9b60b164cf`](https://github.com/nodesource/nsolid/commit/9b60b164cf)] - **src**: improve nsolid::CustomCommand() (Santiago Gimeno) [nodesource/nsolid#44](https://github.com/nodesource/nsolid/pull/44)
+* \[[`a340c360de`](https://github.com/nodesource/nsolid/commit/a340c360de)] - **agents**: fix exit message format (Santiago Gimeno) [nodesource/nsolid#45](https://github.com/nodesource/nsolid/pull/45)
+* \[[`b631e1240d`](https://github.com/nodesource/nsolid/commit/b631e1240d)] - **src**: guard nsolid headers with NODE\_WANT\_INTERNALS (Santiago Gimeno) [nodesource/nsolid#43](https://github.com/nodesource/nsolid/pull/43)
+* \[[`c77d28efaf`](https://github.com/nodesource/nsolid/commit/c77d28efaf)] - **src**: add fast api for some push methods (Santiago Gimeno) [nodesource/nsolid#19](https://github.com/nodesource/nsolid/pull/19)
+* \[[`8a1fd89490`](https://github.com/nodesource/nsolid/commit/8a1fd89490)] - **agents**: use main\_thread\_id instead of 0 (Santiago Gimeno) [nodesource/nsolid#21](https://github.com/nodesource/nsolid/pull/21)
+* \[[`8ea74d5752`](https://github.com/nodesource/nsolid/commit/8ea74d5752)] - **deps**: update libzmq to 4.3.5 (Santiago Gimeno) [nodesource/nsolid#28](https://github.com/nodesource/nsolid/pull/28)
+
 ## 2023-12-07, Version 5.0.1 'Hydrogen'
 
 ### Commits
