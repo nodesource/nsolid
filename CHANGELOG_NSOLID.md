@@ -1,5 +1,19 @@
 # N|Solid Changelog
 
+<!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
+
+## 2023-12-21, Version 20.10.0-nsolid-v5.0.2 'Iron'
+
+* \[[`50c9d55ef9`](https://github.com/nodesource/nsolid/commit/50c9d55ef9)] - 2023-12-21, N|Solid v5.0.2 Iron Release (Trevor Norris)
+* \[[`ffdbc83643`](https://github.com/nodesource/nsolid/commit/ffdbc83643)] - **src**: fix FastPushSpanDataUint64 (Santiago Gimeno) [nodesource/nsolid#49](https://github.com/nodesource/nsolid/pull/49)
+* \[[`a218600db1`](https://github.com/nodesource/nsolid/commit/a218600db1)] - **src**: make nsolid::ThreadMetrics safer (Santiago Gimeno) [nodesource/nsolid#37](https://github.com/nodesource/nsolid/pull/37)
+* \[[`fccddd88c4`](https://github.com/nodesource/nsolid/commit/fccddd88c4)] - **src**: improve nsolid::CustomCommand() (Santiago Gimeno) [nodesource/nsolid#44](https://github.com/nodesource/nsolid/pull/44)
+* \[[`c0ed8e749f`](https://github.com/nodesource/nsolid/commit/c0ed8e749f)] - **agents**: fix exit message format (Santiago Gimeno) [nodesource/nsolid#45](https://github.com/nodesource/nsolid/pull/45)
+* \[[`367fe4c6d3`](https://github.com/nodesource/nsolid/commit/367fe4c6d3)] - **src**: guard nsolid headers with NODE\_WANT\_INTERNALS (Santiago Gimeno) [nodesource/nsolid#43](https://github.com/nodesource/nsolid/pull/43)
+* \[[`5208abb3f7`](https://github.com/nodesource/nsolid/commit/5208abb3f7)] - **src**: add fast api for some push methods (Santiago Gimeno) [nodesource/nsolid#19](https://github.com/nodesource/nsolid/pull/19)
+* \[[`b6bcb9de39`](https://github.com/nodesource/nsolid/commit/b6bcb9de39)] - **agents**: use main\_thread\_id instead of 0 (Santiago Gimeno) [nodesource/nsolid#21](https://github.com/nodesource/nsolid/pull/21)
+* \[[`48fd60f72e`](https://github.com/nodesource/nsolid/commit/48fd60f72e)] - **deps**: update libzmq to 4.3.5 (Santiago Gimeno) [nodesource/nsolid#28](https://github.com/nodesource/nsolid/pull/28)
+
 ## 2023-12-07, Version 20.10.0-nsolid-v5.0.1 'Iron'
 
 ### Commits
