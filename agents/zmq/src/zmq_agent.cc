@@ -228,7 +228,8 @@ const char PONG[] = "{\"pong\":true}";
   V(kDataNegotiated, "data_negotiated")                                        \
   V(kBulkNegotiated, "bulk_negotiated")                                        \
   V(kExit, "exit")                                                             \
-  V(kProfile, "profile")
+  V(kProfile, "profile")                                                       \
+  V(kSnapshot, "snapshot")
 
 #define V(type, str)                                                           \
   static const char type[] = str;
@@ -1279,7 +1280,7 @@ void ZmqAgent::got_heap_snapshot(int status,
   if (status < 0) {
     pending_heap_snapshot_data_map_.erase(it);
     // Send error message back
-    send_error_response(req_id, "snapshot", status);
+    send_error_response(req_id, kSnapshot, status);
 
     return;
   }
@@ -1298,7 +1299,7 @@ void ZmqAgent::got_heap_snapshot(int status,
              MSG_3,
              agent_id_.c_str(),
              req_id.c_str(),
-             "snapshot",
+             kSnapshot,
              uv_now(&loop_) - std::get<uint64_t>(tup),
              met.dump().c_str(),
              complete ? "true" : "false",
@@ -1325,25 +1326,25 @@ int ZmqAgent::generate_snapshot(const json& message,
   }
 
   if (disable_snapshots == true) {
-    return send_error_response(req_id, "snapshot", UV_EINVAL);
+    return send_error_response(req_id, kSnapshot, UV_EINVAL);
   }
 
   auto it = message.find("args");
-  if (it == message.end()) {
-    return send_error_response(req_id, "snapshot", UV_EINVAL);
-  } else {
-    json args = *it;
-    it = args.find(kThreadId);
-    if (it == args.end()) {
-      return send_error_response(req_id, "snapshot", UV_EINVAL);
-    }
+  if (it == message.end() || !it->is_object()) {
+    return send_error_response(req_id, kSnapshot, UV_EINVAL);
+  }
 
-    thread_id = *it;
+  json args = *it;
+  it = args.find(kThreadId);
+  if (it == args.end() || !it->is_number_unsigned()) {
+    return send_error_response(req_id, kSnapshot, UV_EINVAL);
+  }
 
-    it = args.find(kMetadata);
-    if (it != args.end()) {
-      metadata = *it;
-    }
+  thread_id = *it;
+
+  it = args.find(kMetadata);
+  if (it != args.end()) {
+    metadata = *it;
   }
 
   auto tup =
@@ -1351,13 +1352,17 @@ int ZmqAgent::generate_snapshot(const json& message,
                                                                    req_id,
                                                                    thread_id);
   if (tup == nullptr) {
-    return send_error_response(req_id, "snapshot", UV_ENOMEM);
+    return send_error_response(req_id, kSnapshot, UV_ENOMEM);
   }
 
   bool redact = false;
   conf_it = config_.find("redactSnapshots");
   if (conf_it != config_.end()) {
-    redact = *conf_it;
+    if (conf_it->is_boolean()) {
+      redact = *conf_it;
+    } else {
+      return send_error_response(req_id, kSnapshot, UV_EINVAL);
+    }
   }
 
   ret = Snapshot::TakeSnapshot(GetEnvInst(thread_id),
@@ -1367,11 +1372,11 @@ int ZmqAgent::generate_snapshot(const json& message,
 
   if (ret != 0) {
     delete tup;
-    return send_error_response(req_id, "snapshot", ret);
+    return send_error_response(req_id, kSnapshot, ret);
   }
 
   // send snapshot command reponse thru data channel
-  int r = send_command_message("snapshot", req_id.c_str(), nullptr);
+  int r = send_command_message(kSnapshot, req_id.c_str(), nullptr);
   if (r < 0) {
     return r;
   }
@@ -1582,7 +1587,7 @@ int ZmqAgent::command_message(const json& message) {
     return reconfigure(message, req_id);
   }
 
-  if (type == "snapshot") {
+  if (type == kSnapshot) {
     return generate_snapshot(message, req_id);
   }
 
@@ -1673,7 +1678,11 @@ ZmqAgent::ZmqCommandError ZmqAgent::create_command_error(
   switch (err) {
     case UV_EEXIST:
       cmd_error.code = 409;
-      cmd_error.message = "Profile already in progress";
+      if (command == kProfile) {
+        cmd_error.message = "Profile already in progress";
+      } else {
+        cmd_error.message = "Snapshot already in progress";
+      }
     break;
     case UV_EINVAL:
       cmd_error.code = 422;
@@ -2253,20 +2262,20 @@ int ZmqAgent::start_profiling(const json& message,
   }
 
   auto it = message.find("args");
-  if (it == message.end()) {
+  if (it == message.end() || !it->is_object()) {
     return send_error_response(req_id, kProfile, UV_EINVAL);
   }
 
   json args = *it;
   it = args.find(kThreadId);
-  if (it == args.end()) {
+  if (it == args.end() || !it->is_number_unsigned()) {
     return send_error_response(req_id, kProfile, UV_EINVAL);
   }
 
   thread_id = *it;
 
   it = args.find(kDuration);
-  if (it == args.end()) {
+  if (it == args.end() || !it->is_number_unsigned()) {
     return send_error_response(req_id, kProfile, UV_EINVAL);
   }
 
