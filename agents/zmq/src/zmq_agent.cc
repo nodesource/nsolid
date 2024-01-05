@@ -1431,6 +1431,10 @@ int ZmqAgent::config(const json& config) {
     }
   }
 
+  if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
+    setup_blocked_loop_hooks();
+  }
+
   // Return early if command handle is not to be configured
   if (command_handle_ == nullptr) {
     return 0;
@@ -1454,12 +1458,9 @@ int ZmqAgent::config(const json& config) {
     }
   }
 
-  if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
-    setup_blocked_loop_hooks();
-  }
-
   // Configure tracing flags
-  if (utils::find_any_fields_in_diff(diff, { "/tracingEnabled",
+  if (tracer_ == nullptr ||
+      utils::find_any_fields_in_diff(diff, { "/tracingEnabled",
                                              "/tracingModulesBlacklist" })) {
     auto it = config_.find("tracingEnabled");
     if (it != config_.end()) {
