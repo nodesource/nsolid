@@ -92,9 +92,9 @@ declare namespace InternalFSBinding {
   function fstat(fd: number, useBigint: boolean, req: FSReqCallback<Float64Array | BigUint64Array>): void;
   function fstat(fd: number, useBigint: true, req: FSReqCallback<BigUint64Array>): void;
   function fstat(fd: number, useBigint: false, req: FSReqCallback<Float64Array>): void;
-  function fstat(fd: number, useBigint: boolean, req: undefined, ctx: FSSyncContext): Float64Array | BigUint64Array;
-  function fstat(fd: number, useBigint: true, req: undefined, ctx: FSSyncContext): BigUint64Array;
-  function fstat(fd: number, useBigint: false, req: undefined, ctx: FSSyncContext): Float64Array;
+  function fstat(fd: number, useBigint: boolean, req: undefined, shouldNotThrow: boolean): Float64Array | BigUint64Array;
+  function fstat(fd: number, useBigint: true, req: undefined, shouldNotThrow: boolean): BigUint64Array;
+  function fstat(fd: number, useBigint: false, req: undefined, shouldNotThrow: boolean): Float64Array;
   function fstat(fd: number, useBigint: boolean, usePromises: typeof kUsePromises): Promise<Float64Array | BigUint64Array>;
   function fstat(fd: number, useBigint: true, usePromises: typeof kUsePromises): Promise<BigUint64Array>;
   function fstat(fd: number, useBigint: false, usePromises: typeof kUsePromises): Promise<Float64Array>;
@@ -127,9 +127,9 @@ declare namespace InternalFSBinding {
   function lstat(path: StringOrBuffer, useBigint: boolean, req: FSReqCallback<Float64Array | BigUint64Array>): void;
   function lstat(path: StringOrBuffer, useBigint: true, req: FSReqCallback<BigUint64Array>): void;
   function lstat(path: StringOrBuffer, useBigint: false, req: FSReqCallback<Float64Array>): void;
-  function lstat(path: StringOrBuffer, useBigint: boolean, req: undefined, ctx: FSSyncContext): Float64Array | BigUint64Array;
-  function lstat(path: StringOrBuffer, useBigint: true, req: undefined, ctx: FSSyncContext): BigUint64Array;
-  function lstat(path: StringOrBuffer, useBigint: false, req: undefined, ctx: FSSyncContext): Float64Array;
+  function lstat(path: StringOrBuffer, useBigint: boolean, req: undefined, throwIfNoEntry: boolean): Float64Array | BigUint64Array;
+  function lstat(path: StringOrBuffer, useBigint: true, req: undefined, throwIfNoEntry: boolean): BigUint64Array;
+  function lstat(path: StringOrBuffer, useBigint: false, req: undefined, throwIfNoEntry: boolean): Float64Array;
   function lstat(path: StringOrBuffer, useBigint: boolean, usePromises: typeof kUsePromises): Promise<Float64Array | BigUint64Array>;
   function lstat(path: StringOrBuffer, useBigint: true, usePromises: typeof kUsePromises): Promise<BigUint64Array>;
   function lstat(path: StringOrBuffer, useBigint: false, usePromises: typeof kUsePromises): Promise<Float64Array>;
@@ -192,7 +192,7 @@ declare namespace InternalFSBinding {
   function rename(oldPath: string, newPath: string): void;
 
   function rmdir(path: string, req: FSReqCallback): void;
-  function rmdir(path: string, req: undefined, ctx: FSSyncContext): void;
+  function rmdir(path: string): void;
   function rmdir(path: string, usePromises: typeof kUsePromises): Promise<void>;
 
   function stat(path: StringOrBuffer, useBigint: boolean, req: FSReqCallback<Float64Array | BigUint64Array>): void;
@@ -231,6 +231,9 @@ declare namespace InternalFSBinding {
   function writeString(fd: number, value: string, pos: unknown, encoding: unknown, usePromises: typeof kUsePromises): Promise<number>;
 
   function getFormatOfExtensionlessFile(url: string): ConstantsBinding['fs'];
+
+  function writeFileUtf8(path: string, data: string, flag: number, mode: number): void;
+  function writeFileUtf8(fd: number, data: string, flag: number, mode: number): void;
 }
 
 export interface FsBinding {
