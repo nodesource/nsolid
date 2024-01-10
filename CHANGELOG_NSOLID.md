@@ -2,7 +2,17 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-01-09, Version 20.11.0-nsolid-v5.0.3 'Iron'
+
+### Commits
+
+* \[[`0cfd6845c4`](https://github.com/nodesource/nsolid/commit/0cfd6845c4)] - **lib**: scan for scoped packages (Trevor Norris) [nodesource/nsolid#62](https://github.com/nodesource/nsolid/pull/62)
+* \[[`ccc7e9132e`](https://github.com/nodesource/nsolid/commit/ccc7e9132e)] - **deps**: escape strings in v8::CpuProfile::Serialize (Santiago Gimeno) [nodesource/nsolid#60](https://github.com/nodesource/nsolid/pull/60)
+* \[[`4d144d99fc`](https://github.com/nodesource/nsolid/commit/4d144d99fc)] - **agents**: apply the correct config on zmq with SaaS (Santiago Gimeno) [nodesource/nsolid#59](https://github.com/nodesource/nsolid/pull/59)
+
 ## 2023-12-21, Version 20.10.0-nsolid-v5.0.2 'Iron'
+
+### Commits
 
 * \[[`50c9d55ef9`](https://github.com/nodesource/nsolid/commit/50c9d55ef9)] - 2023-12-21, N|Solid v5.0.2 Iron Release (Trevor Norris)
 * \[[`ffdbc83643`](https://github.com/nodesource/nsolid/commit/ffdbc83643)] - **src**: fix FastPushSpanDataUint64 (Santiago Gimeno) [nodesource/nsolid#49](https://github.com/nodesource/nsolid/pull/49)
