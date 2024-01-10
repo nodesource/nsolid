@@ -15,6 +15,8 @@ using CFunctionCallbackWithOneByteString =
 using CFunctionCallback = void (*)(v8::Local<v8::Value> receiver);
 using CFunctionCallbackReturnDouble =
     double (*)(v8::Local<v8::Object> receiver);
+using CFunctionCallbackValueReturnDouble =
+    double (*)(v8::Local<v8::Value> receiver);
 using CFunctionCallbackWithInt64 = void (*)(v8::Local<v8::Object> receiver,
                                             int64_t);
 using CFunctionCallbackWithBool = void (*)(v8::Local<v8::Object> receiver,
@@ -44,6 +46,7 @@ class ExternalReferenceRegistry {
   V(CFunctionCallback)                                                         \
   V(CFunctionCallbackWithOneByteString)                                        \
   V(CFunctionCallbackReturnDouble)                                             \
+  V(CFunctionCallbackValueReturnDouble)                                        \
   V(CFunctionCallbackWithInt64)                                                \
   V(CFunctionCallbackWithBool)                                                 \
   V(CFunctionCallbackWithString)                                               \

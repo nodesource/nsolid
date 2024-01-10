@@ -315,6 +315,8 @@ void SetIsolateMiscHandlers(v8::Isolate* isolate, const IsolateSettings& s) {
 
 void SetIsolateUpForNode(v8::Isolate* isolate,
                          const IsolateSettings& settings) {
+  Isolate::Scope isolate_scope(isolate);
+
   SetIsolateErrorHandlers(isolate, settings);
   SetIsolateMiscHandlers(isolate, settings);
 }
@@ -356,6 +358,9 @@ Isolate* NewIsolate(Isolate::CreateParams* params,
 
   SetIsolateCreateParamsForNode(params);
   Isolate::Initialize(isolate, *params);
+
+  Isolate::Scope isolate_scope(isolate);
+
   if (snapshot_data == nullptr) {
     // If in deserialize mode, delay until after the deserialization is
     // complete.
@@ -430,6 +435,8 @@ Environment* CreateEnvironment(
     ThreadId thread_id,
     std::unique_ptr<InspectorParentHandle> inspector_parent_handle) {
   Isolate* isolate = isolate_data->isolate();
+
+  Isolate::Scope isolate_scope(isolate);
   HandleScope handle_scope(isolate);
 
   const bool use_snapshot = context.IsEmpty();
