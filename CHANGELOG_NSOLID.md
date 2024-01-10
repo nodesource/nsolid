@@ -2,7 +2,17 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-01-09, Version 5.0.3 'Hydrogen'
+
+### Commits
+
+* \[[`097073a3a4`](https://github.com/nodesource/nsolid/commit/097073a3a4)] - **lib**: scan for scoped packages (Trevor Norris) [nodesource/nsolid#62](https://github.com/nodesource/nsolid/pull/62)
+* \[[`369a84a70e`](https://github.com/nodesource/nsolid/commit/369a84a70e)] - **deps**: escape strings in v8::CpuProfile::Serialize (Santiago Gimeno) [nodesource/nsolid#60](https://github.com/nodesource/nsolid/pull/60)
+* \[[`eb91535734`](https://github.com/nodesource/nsolid/commit/eb91535734)] - **agents**: apply the correct config on zmq with SaaS (Santiago Gimeno) [nodesource/nsolid#59](https://github.com/nodesource/nsolid/pull/59)
+
 ## 2023-12-21, Version 5.0.2 'Hydrogen'
+
+### Commits
 
 * \[[`ef78d06fc7`](https://github.com/nodesource/nsolid/commit/ef78d06fc7)] - **src**: fix FastPushSpanDataUint64 (Santiago Gimeno) [nodesource/nsolid#49](https://github.com/nodesource/nsolid/pull/49)
 * \[[`7486d48441`](https://github.com/nodesource/nsolid/commit/7486d48441)] - **src**: make nsolid::ThreadMetrics safer (Santiago Gimeno) [nodesource/nsolid#37](https://github.com/nodesource/nsolid/pull/37)
