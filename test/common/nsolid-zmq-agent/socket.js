@@ -25,7 +25,9 @@ class ZMQBindSocket {
     this.socket = zmq.socket(params.type);
 
     this.socket.monitor(500, 0);
-    this.socket.setsockopt(zmq.ZMQ_SNDHWM, params.hwm);
+    if (params.hwm) {
+      this.socket.setsockopt(zmq.ZMQ_SNDHWM, params.hwm);
+    }
     this.socket.setsockopt(zmq.ZMQ_IPV6, 1);
     this.socket.setsockopt(zmq.ZMQ_BACKLOG, 2048);
 
@@ -35,8 +37,10 @@ class ZMQBindSocket {
       this.socket.setsockopt(zmq.ZMQ_XPUB_VERBOSE, 1);
     }
 
-    this.socket.curve_server = 1;
-    this.socket.curve_secretkey = params.privateKey;
+    if (params.privateKey) {
+      this.socket.curve_server = 1;
+      this.socket.curve_secretkey = params.privateKey;
+    }
 
     this.socket.on('bind', () => {
       debuglog(`${this.type} socket bound to ${this.bindUrl}`);

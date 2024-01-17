@@ -4,6 +4,7 @@ const { randomUUID } = require('node:crypto');
 const util = require('node:util');
 const debuglog = util.debuglog('test');
 const EventEmitter = require('events').EventEmitter;
+const base85 = require('base85');
 const ZmqServer = require('./server');
 
 const defaultProfileSettings = {
@@ -183,12 +184,13 @@ class ZmqAgentBus extends EventEmitter {
       this._handleCommand.bind(this),
       this._handleMessage.bind(this),
       this._handleBulkMessage.bind(this),
+      this._handleZapAuth.bind(this),
       cb,
     );
   }
 
-  shutdown() {
-    this.server.shutdown();
+  shutdown(cb) {
+    this.server.shutdown(cb);
   }
 
   // ****************
@@ -207,6 +209,24 @@ class ZmqAgentBus extends EventEmitter {
     // Emit agent-connected event (soon)
     setImmediate(() => this.emit('agent-connected', agentId));
   }
+
+  _handleZapAuth(version, reqId, domain, address, identity, mechanism, credentials) {
+    const clientKey = base85.encode(credentials);
+    if (mechanism.toString() !== 'CURVE') {
+      this._unauthorize(version, reqId);
+      debuglog(`[zap] ${clientKey} unauthorized: wrong mechanism '${mechanism}'`);
+      return;
+    }
+
+    if (this.server.clientKeyPair.public === clientKey) {
+      this._authorize(version, reqId);
+      debuglog(`[zap] ${clientKey} authorized`);
+    } else {
+      this._unauthorize(version, reqId);
+      debuglog(`[zap] ${clientKey} unauthorized`);
+    }
+  }
+
 
   _handleCommand(message) {
     const isSub = message[0];
@@ -311,6 +331,31 @@ class ZmqAgentBus extends EventEmitter {
     }
     this.server.command.socket.send(messageTuple);
   }
+
+  _authorize(version, reqId) {
+    this.server.zap.socket.send([
+      version,
+      reqId,
+      Buffer.from('200', 'utf8'),
+      Buffer.from('OK', 'utf8'),
+      Buffer.alloc(0),
+      Buffer.alloc(0),
+    ]);
+    this.emit('agent-authorized');
+  }
+
+  _unauthorize(version, reqId) {
+    this.server.zap.socket.send([
+      version,
+      reqId,
+      Buffer.from('400', 'utf8'),
+      Buffer.alloc(0),
+      Buffer.alloc(0),
+      Buffer.alloc(0),
+    ]);
+    this.emit('agent-unauthorized');
+  }
+
 
   /**
    * Send a command to an N|Solid Agent over ZeroMQ.

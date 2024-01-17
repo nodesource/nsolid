@@ -646,7 +646,7 @@ rd /s /q test\common\nsolid-zmq-agent\node_modules test\common\nsolid-otlp-agent
 :: installing the modules
 setlocal
 set npm_config_nodedir=%~dp0
-%npm_exe% install zeromq@5 zmq-zap --prefix "%~dp0test\common\nsolid-zmq-agent" --no-save --no-package-lock
+%npm_exe% install zeromq@5 base85 --prefix "%~dp0test\common\nsolid-zmq-agent" --no-save --no-package-lock
 %npm_exe% run build:libzmq --prefix "%~dp0test\common\nsolid-zmq-agent\node_modules\zeromq"
 %npm_exe% install @opentelemetry/otlp-proto-exporter-base --prefix "%~dp0test\common\nsolid-otlp-agent" --no-save --no-package-lock
 if errorlevel 1 exit /b 1

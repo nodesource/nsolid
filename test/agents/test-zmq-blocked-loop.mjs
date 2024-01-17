@@ -215,13 +215,17 @@ const config = {
 };
 
 
-const playground = new TestPlayground(config);
-await playground.startServer();
+for (const saas of [false, true]) {
+  config.saas = saas;
+  const label = saas ? 'saas' : 'local';
+  const playground = new TestPlayground(config);
+  await playground.startServer();
 
-for (const { name, test } of tests) {
-  console.log(`blocked loop generation ${name}`);
-  await test(playground);
-  await playground.stopClient();
+  for (const { name, test } of tests) {
+    console.log(`[${label}] blocked loop generation ${name}`);
+    await test(playground);
+    await playground.stopClient();
+  }
+
+  await playground.stopServer();
 }
-
-playground.stopServer();
