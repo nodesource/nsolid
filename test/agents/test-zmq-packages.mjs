@@ -2,12 +2,6 @@ import { mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 
-function assertIncludes(actualValues, expectedValues) {
-  for (const expectedValue of expectedValues) {
-    assert.ok(actualValues.includes(expectedValue));
-  }
-}
-
 // Data has this format:
 // {
 //   agentId: 'd0cd9326d8bc07009f7bb5e9aa123b001ce85c56',
@@ -17,69 +11,120 @@ function assertIncludes(actualValues, expectedValues) {
 //   duration: 0,
 //   interval: 3000,
 //   version: 4,
-//   body: {
-//     packages: [
-//       {
-//         path: '/path/to/nsolid/test/common/nsolid-zmq-agent/node_modules/debug',
-//         name: 'debug',
-//         version: '3.1.0',
-//         main: './src/index.js',
-//         dependencies: [ '../ms' ],
-//         required: false
-//       },
-//       {
-//         path: '/path/to/nsolid/test/common/nsolid-zmq-agent/node_modules/ms',
-//         name: 'ms',
-//         version: '2.0.0',
-//         main: './index',
-//         dependencies: [],
-//         required: false
-//       },
-//       {
-//         path: '/path/to/nsolid/test/common/nsolid-zmq-agent/node_modules/nan',
-//         name: 'nan',
-//         version: '2.17.0',
-//         main: 'include_dirs.js',
-//         dependencies: [],
-//         required: false
-//       },
-//       {
-//         path: '/path/to/nsolid/test/common/nsolid-zmq-agent/node_modules/node-gyp-build',
-//         name: 'node-gyp-build',
-//         version: '4.7.1',
-//         main: 'index.js',
-//         dependencies: [],
-//         required: false
-//       },
-//       {
-//         path: '/path/to/nsolid/test/common/nsolid-zmq-agent/node_modules/z85',
-//         name: 'z85',
-//         version: '0.0.2',
-//         main: 'index.js',
-//         dependencies: [],
-//         required: false
-//       },
-//       {
-//         path: '/path/to/nsolid/test/common/nsolid-zmq-agent/node_modules/zeromq',
-//         name: 'zeromq',
-//         version: '5.3.1',
-//         main: 'index',
-//         dependencies: [ '../nan', '../node-gyp-build' ],
-//         required: false
-//       },
-//       {
-//         path: '/path/to/nsolid/test/common/nsolid-zmq-agent/node_modules/zmq-zap',
-//         name: 'zmq-zap',
-//         version: '0.0.3',
-//         main: 'index.js',
-//         dependencies: [ '../z85', '../debug' ],
-//         required: false
-//       }
-//     ]
-//   },
+// body: {
+//   packages: [
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/base64-js',
+//       name: 'base64-js',
+//       version: '1.5.1',
+//       main: 'index.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/base85',
+//       name: 'base85',
+//       version: '3.1.0',
+//       main: 'lib/base85.js',
+//       dependencies: [ '../buffer', '../ip-address', '../underscore' ],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/buffer',
+//       name: 'buffer',
+//       version: '6.0.3',
+//       main: 'index.js',
+//       dependencies: [ '../base64-js', '../ieee754' ],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/ieee754',
+//       name: 'ieee754',
+//       version: '1.2.1',
+//       main: 'index.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/ip-address',
+//       name: 'ip-address',
+//       version: '5.9.4',
+//       main: 'ip-address.js',
+//       dependencies: [ '../jsbn', '../lodash', '../sprintf-js' ],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/jsbn',
+//       name: 'jsbn',
+//       version: '1.1.0',
+//       main: 'index.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/lodash',
+//       name: 'lodash',
+//       version: '4.17.21',
+//       main: 'lodash.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/nan',
+//       name: 'nan',
+//       version: '2.17.0',
+//       main: 'include_dirs.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/node-gyp-build',
+//       name: 'node-gyp-build',
+//       version: '4.8.0',
+//       main: 'index.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/sprintf-js',
+//       name: 'sprintf-js',
+//       version: '1.1.2',
+//       main: 'src/sprintf.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/underscore',
+//       name: 'underscore',
+//       version: '1.13.6',
+//       main: 'underscore-umd.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/zeromq',
+//       name: 'zeromq',
+//       version: '5.3.1',
+//       main: 'index',
+//       dependencies: [ '../nan', '../node-gyp-build' ],
+//       required: false
+//     }
+//   ]
+// },
 //   time: 1704736859511,
 //   timeNS: '1704736859511473832'
 // }
+
+const expectedPackageNames = [
+  'base64-js', 'base85', 'buffer', 'ieee754', 'ip-address', 'jsbn', 'lodash',
+  'nan', 'node-gyp-build', 'sprintf-js', 'underscore', 'zeromq',
+];
+
+const expectedPackagesMajorVersions = ['1', '3', '6', '1', '5', '1', '4', '2', '4', '1', '1', '5'];
+const expectedPackagesMains = [
+  'index.js', 'lib/base85.js', 'index.js', 'index.js', 'ip-address.js', 'index.js', 'lodash.js',
+  'include_dirs.js', 'index.js', 'src/sprintf.js', 'underscore-umd.js', 'index',
+];
 
 function checkPackagesData(packages, requestId, agentId) {
   assert.strictEqual(packages.requestId, requestId);
@@ -106,14 +151,35 @@ function checkPackagesData(packages, requestId, agentId) {
     assert.strictEqual(pkg.required, false);
   }
 
+  assert.ok(packages.body.packages.length <= expectedPackageNames.length);
+  if (packages.body.packages.length < expectedPackageNames.length) {
+    return false;
+  }
+
   const packagesNames = packages.body.packages.map((pkg) => pkg.name);
-  assertIncludes(packagesNames, ['debug', 'ms', 'nan', 'node-gyp-build', 'z85', 'zeromq', 'zmq-zap']);
+  assertIncludes(packagesNames, expectedPackageNames);
 
   const packagesMajorVersions = packages.body.packages.map((pkg) => pkg.version.split('.')[0]);
-  assertIncludes(packagesMajorVersions, ['3', '2', '2', '4', '0', '5', '0']);
+  assertIncludes(packagesMajorVersions, expectedPackagesMajorVersions);
 
   const packagesMains = packages.body.packages.map((pkg) => pkg.main);
-  assertIncludes(packagesMains, ['./src/index.js', './index', 'include_dirs.js', 'index.js', 'index']);
+  assertIncludes(packagesMains, expectedPackagesMains);
+
+  return true;
+}
+
+function assertIncludes(actualValues, expectedValues) {
+  for (const expectedValue of expectedValues) {
+    assert.ok(actualValues.includes(expectedValue));
+  }
+}
+
+async function agentPackagesRequest(playground, agentId) {
+  return new Promise((resolve) => {
+    const requestId = playground.zmqAgentBus.agentPackagesRequest(agentId, mustSucceed((packages) => {
+      resolve({ requestId, packages });
+    }));
+  });
 }
 
 const tests = [];
@@ -122,11 +188,16 @@ tests.push({
   name: 'should provide default values correctly',
   test: async (playground) => {
     return new Promise((resolve) => {
-      playground.bootstrap(mustSucceed((agentId) => {
-        const requestId = playground.zmqAgentBus.agentPackagesRequest(agentId, mustSucceed((packages) => {
-          checkPackagesData(packages, requestId, agentId);
-          resolve();
-        }));
+      playground.bootstrap(mustSucceed(async (agentId) => {
+        // Call agentPackagesRequest until checkPackagesData returns true
+        let packages;
+        let requestId;
+        do {
+          const data = await agentPackagesRequest(playground, agentId);
+          packages = data.packages;
+          requestId = data.requestId;
+        } while (checkPackagesData(packages, requestId, agentId) === false);
+        resolve();
       }));
     });
   }
@@ -142,13 +213,17 @@ const config = {
 };
 
 
-const playground = new TestPlayground(config);
-await playground.startServer();
+for (const saas of [false, true]) {
+  config.saas = saas;
+  const label = saas ? 'saas' : 'local';
+  const playground = new TestPlayground(config);
+  await playground.startServer();
 
-for (const { name, test } of tests) {
-  console.log(`packages command ${name}`);
-  await test(playground);
-  await playground.stopClient();
+  for (const { name, test } of tests) {
+    console.log(`[${label}] packages command ${name}`);
+    await test(playground);
+    await playground.stopClient();
+  }
+
+  await playground.stopServer();
 }
-
-playground.stopServer();

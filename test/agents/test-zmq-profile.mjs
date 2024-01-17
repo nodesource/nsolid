@@ -34,15 +34,6 @@ function checkProfileData(requestId, options, agentId, data, complete, onExit = 
   assert.strictEqual(data.bulkId, requestId);
 }
 
-function checkExitSequence(eventType, data, requestId, options, agentId) {
-  assert.ok(eventType === 'asset-received' || eventType === 'agent-exit');
-  if (eventType === 'asset-received') {
-    checkProfileData(requestId, options, agentId, data, true, true);
-  } else {
-    checkExitData(data, { exit_code: 0, error: null });
-  }
-}
-
 const tests = [];
 
 tests.push({
@@ -293,34 +284,61 @@ tests.push({
   test: async (playground) => {
     return new Promise((resolve) => {
       let events = 0;
+      let profile = '';
       let requestId;
       const options = {
         duration: 1000,
         threadId: 0,
       };
 
-      playground.bootstrap(mustSucceed(async (agentId) => {
+      let gotExit = false;
+      let gotProfile = false;
+      let processExited = false;
+
+      playground.bootstrap(mustSucceed((agentId) => {
         requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
-        const exit = await playground.client.shutdown(0);
-        assert.ok(exit);
-        assert.strictEqual(exit.code, 0);
-        assert.strictEqual(exit.signal, null);
-        resolve();
+        setTimeout(async () => {
+          const exit = await playground.client.shutdown(0);
+          assert.ok(exit);
+          assert.strictEqual(exit.code, 0);
+          assert.strictEqual(exit.signal, null);
+          if (gotProfile && gotExit) {
+            resolve();
+          } else {
+            processExited = true;
+          }
+        }, 100);
       }), (eventType, agentId, data) => {
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            checkProfileData(requestId, options, agentId, data.metadata, false, true);
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            checkProfileData(requestId, options, agentId, data.metadata, true, true);
-            break;
-          case 3:
-            checkExitSequence(eventType, data, requestId, options, agentId);
-            break;
-          case 4:
-            checkExitSequence(eventType, data, requestId, options, agentId);
+        console.dir(data, { depth: null });
+        if (eventType === 'agent-exit') {
+          assert.strictEqual(gotExit, false);
+          checkExitData(data, { exit_code: 0, error: null });
+          gotExit = true;
+          if (gotProfile && processExited) {
+            resolve();
+          }
+        } else {
+          switch (++events) {
+            case 1:
+              assert.strictEqual(eventType, 'asset-data-packet');
+              if (data.packet.length > 0) {
+                checkProfileData(requestId, options, agentId, data.metadata, false, true);
+                profile += data.packet;
+                --events;
+              } else {
+                checkProfileData(requestId, options, agentId, data.metadata, true, true);
+              }
+              break;
+            case 2:
+              assert.strictEqual(gotProfile, false);
+              assert.strictEqual(eventType, 'asset-received');
+              checkProfileData(requestId, options, agentId, data, true, true);
+              JSON.parse(profile);
+              gotProfile = true;
+              if (gotExit && processExited) {
+                resolve();
+              }
+          }
         }
       });
     });
@@ -338,13 +356,17 @@ const config = {
 };
 
 
-const playground = new TestPlayground(config);
-await playground.startServer();
+for (const saas of [false, true]) {
+  config.saas = saas;
+  const label = saas ? 'saas' : 'local';
+  const playground = new TestPlayground(config);
+  await playground.startServer();
 
-for (const { name, test } of tests) {
-  console.log(`cpu profiling ${name}`);
-  await test(playground);
-  await playground.stopClient();
+  for (const { name, test } of tests) {
+    console.log(`[${label}] profile command ${name}`);
+    await test(playground);
+    await playground.stopClient();
+  }
+
+  await playground.stopServer();
 }
-
-playground.stopServer();

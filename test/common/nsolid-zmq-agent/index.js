@@ -18,18 +18,16 @@ const BootstrapState = {
   GOTMETRICS: 1 << 2,
 };
 
-const State = {
-  INIT: 0,
-  CONNECTED: 1,
-};
-
 const defaultForkOpts = {
   env: {
     NSOLID_COMMAND: 9001,
+    NODE_DEBUG: process.env.NODE_DEBUG,
     NODE_DEBUG_NATIVE: process.env.NODE_DEBUG_NATIVE,
   },
   stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
 };
+
+const defaultSaasToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaalocalhost:9001';
 
 const eventTypes = [
   'agent-connected',
@@ -45,6 +43,8 @@ const eventTypes = [
   'asset-received',
   'asset-data-packet',
   'agent-error',
+  'agent-authorized',
+  'agent-unauthorized',
 ];
 
 class TestClient {
@@ -54,6 +54,10 @@ class TestClient {
     Object.keys(options).forEach((key) => {
       opts[key] = { ...opts[key], ...options[key] };
     });
+    if (opts.env.NSOLID_SAAS) {
+      delete opts.env.NSOLID_COMMAND;
+    }
+
     this.#child = fork(path.join(__dirname, 'client.js') + '', args, opts);
     this.#child.on('exit', (code, signal) => {
       console.log(`child process exited with code ${code} and signal ${signal}`);
@@ -203,11 +207,11 @@ class TestClient {
 
 class TestPlayground {
   client;
-  #state;
+  #config;
   #bootstrapState;
   constructor(config) {
     this.zmqAgentBus = new ZmqAgentBus(config);
-    this.#state = State.INIT;
+    this.#config = config;
     this.#bootstrapState = BootstrapState.INIT;
     this.client = null;
   }
@@ -221,8 +225,13 @@ class TestPlayground {
     });
   }
 
-  stopServer() {
-    this.zmqAgentBus.shutdown();
+  async stopServer() {
+    return new Promise((resolve) => {
+      this.zmqAgentBus.shutdown((err) => {
+        assert.ifError(err);
+        resolve();
+      });
+    });
   }
 
   bootstrap(options, done, next) {
@@ -235,23 +244,32 @@ class TestPlayground {
     options = options || {};
 
     let id;
-    let events = 0;
+    let events = this.#config.saas ? -1 : 0;
+    let authCount = 0;
     eventTypes.forEach((eventType) => {
       this.zmqAgentBus.on(eventType, (agentId, data) => {
         console.log(`[${events}] ${eventType}, ${agentId}`);
         try {
           if (!id) {
             id = agentId;
-          } else {
+          } else if (eventType !== 'agent-authorized') {
             assert.strictEqual(id, agentId);
           }
 
           switch (++events) {
+            case 0:
+              assert.strictEqual(eventType, 'agent-authorized');
+              ++authCount;
+              break;
             case 1:
               assert.strictEqual(eventType, 'agent-connected');
-              this.#state = State.CONNECTED;
               break;
             case 2:
+              if (this.#config.saas && eventType === 'agent-authorized') {
+                --events;
+                ++authCount;
+              }
+
               this.#checkInitialSequence(eventType, data);
               // The runtime may send metrics before the initial sequence is sent.
               if (eventType === 'agent-metrics') {
@@ -268,6 +286,10 @@ class TestPlayground {
               done(null, agentId);
               break;
             default:
+              if (this.#config.saas) {
+                // There should be 3 auth events, one per channel.
+                assert.strictEqual(authCount, 3);
+              }
               if (next)
                 next(eventType, agentId, data);
           }
@@ -281,6 +303,11 @@ class TestPlayground {
     assert.ok(!this.#clientAlive());
     const opts = { ...options.opts };
     opts.env = { NSOLID_PUBKEY: this.zmqAgentBus.server.keyPair.public, ...opts.env };
+    if (this.#config.saas) {
+      opts.env.NSOLID_SAAS = defaultSaasToken;
+      opts.env.NSOLID_AUTH_URL = `http://localhost:${this.zmqAgentBus.server.authServer.address().port}`;
+    }
+
     this.client = new TestClient(options.args, opts);
   }
 
