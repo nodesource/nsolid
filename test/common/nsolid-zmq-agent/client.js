@@ -111,6 +111,17 @@ if (isMainThread) {
     } else if (msg.type === 'startupTimes') {
       process.recordStartupTime(msg.name);
       process.send(msg);
+    } else if (msg.type === 'threadName') {
+      if (threadId === msg.threadId) {
+        nsolid.setThreadName(msg.name);
+        process.send(msg);
+      } else {
+        const worker = workers.get(msg.threadId);
+        worker.once('message', (msg) => {
+          process.send(msg);
+        });
+        worker.postMessage(msg);
+      }
     } else if (msg.type === 'trace') {
       if (threadId === msg.threadId) {
         handleTrace(msg);
@@ -137,6 +148,10 @@ if (isMainThread) {
     switch (msg.type) {
       case 'block':
         blockFor(msg.duration);
+        break;
+      case 'threadName':
+        nsolid.setThreadName(msg.name);
+        parentPort.postMessage(msg);
         break;
       case 'trace':
         handleTrace(msg);

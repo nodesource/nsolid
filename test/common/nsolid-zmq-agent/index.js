@@ -143,8 +143,23 @@ class TestClient {
     return new Promise((resolve) => {
       if (this.#child) {
         this.#child.send({ type: 'startupTimes', name });
-        this.#child.on('message', common.mustCall((msg) => {
+        this.#child.once('message', common.mustCall((msg) => {
           if (msg.type === 'startupTimes' && msg.name === name) {
+            resolve(true);
+          }
+        }));
+      } else {
+        resolve(false);
+      }
+    });
+  }
+
+  async threadName(threadId, name) {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'threadName', threadId, name });
+        this.#child.once('message', common.mustCall((msg) => {
+          if (msg.type === 'threadName' && msg.threadId === threadId) {
             resolve(true);
           }
         }));
@@ -170,7 +185,7 @@ class TestClient {
     return new Promise((resolve) => {
       if (this.#child) {
         this.#child.send({ type: 'workers' });
-        this.#child.on('message', common.mustCall((msg) => {
+        this.#child.once('message', common.mustCall((msg) => {
           if (msg.type === 'workers') {
             resolve(msg.ids);
           }

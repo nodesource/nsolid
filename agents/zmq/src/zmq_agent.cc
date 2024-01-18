@@ -171,7 +171,7 @@ const char PROCESS_METRICS_MSG[] = "{"
   NSOLID_PROCESS_METRICS_DOUBLE(V)
 #undef V
 #define V(Type, CName, JSName, MType) \
-  ",\""#JSName"\":\"%s\""
+  ",\""#JSName"\":%s"
   NSOLID_PROCESS_METRICS_STRINGS(V)
 #undef V
   "}";
@@ -190,7 +190,7 @@ const char THREAD_METRICS_MSG[] = "{"
   NSOLID_ENV_METRICS_DOUBLE(V)
 #undef V
 #define V(Type, CName, JSName, MType) \
-  ",\""#JSName"\":\"%s\""
+  ",\""#JSName"\":%s"
   NSOLID_ENV_METRICS_STRINGS(V)
 #undef V
   "}";
@@ -917,7 +917,7 @@ void ZmqAgent::got_env_metrics(const ThreadMetrics::MetricsStor& stor) {
 NSOLID_PROCESS_METRICS_NUMBERS(V)
 #undef V
 #define V(Type, CName, JSName, MType) \
-            , proc_stor.CName.c_str()
+            , json(proc_stor.CName).dump().c_str()
 NSOLID_PROCESS_METRICS_STRINGS(V)
 #undef V
 );
@@ -935,7 +935,7 @@ NSOLID_PROCESS_METRICS_STRINGS(V)
 NSOLID_ENV_METRICS_NUMBERS(V)
 #undef V
 #define V(Type, CName, JSName, MType) \
-            , it->CName.c_str()
+            , json(it->CName.c_str()).dump().c_str()
 NSOLID_ENV_METRICS_STRINGS(V)
 #undef V
 );
