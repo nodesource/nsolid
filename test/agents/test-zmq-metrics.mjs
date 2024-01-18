@@ -1,6 +1,7 @@
 // Flags: --expose-internals
 import { mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { threadId } from 'node:worker_threads';
 import validators from 'internal/validators';
 import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 
@@ -219,6 +220,7 @@ function checkThreadMetrics(threadMetrics) {
 
 
 function checkMetricsData(metrics, requestId, agentId, threads) {
+  console.dir(metrics, { depth: null });
   assert.strictEqual(metrics.requestId, requestId);
   assert.strictEqual(metrics.agentId, agentId);
   assert.strictEqual(metrics.command, 'metrics');
@@ -248,13 +250,21 @@ tests.push({
   name: 'should provide the correct values with only the main thread',
   test: async (playground) => {
     return new Promise((resolve) => {
-      playground.bootstrap(mustSucceed(async (agentId) => {
+      const opts = {
+        opts: { env: { NSOLID_INTERVAL: 100 } }
+      };
+      playground.bootstrap(opts, mustSucceed(async (agentId) => {
         const workers = await playground.client.workers();
         assert.strictEqual(workers.length, 0);
-        const requestId = playground.zmqAgentBus.agentMetricsRequest(agentId, mustSucceed((metrics) => {
-          checkMetricsData(metrics, requestId, agentId, [ 0, ...workers]);
-          resolve();
-        }));
+        // Check that threadName is correctly set and encoded
+        assert.ok(await playground.client.threadName(threadId, 'abc\\'));
+        setTimeout(() => {
+          const requestId = playground.zmqAgentBus.agentMetricsRequest(agentId, mustSucceed((metrics) => {
+            checkMetricsData(metrics, requestId, agentId, [ 0, ...workers ]);
+            assert.strictEqual(metrics.body.threadMetrics[0].threadName, 'abc\\');
+            resolve();
+          }));
+        }, 200);
       }));
     });
   }
@@ -272,9 +282,16 @@ tests.push({
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
         const workers = await playground.client.workers();
         assert.strictEqual(workers.length, 2);
+        // Check that threadName is correctly set and encoded
+        assert.ok(await playground.client.threadName(workers[0], 'abc\\'));
         setTimeout(() => {
           const requestId = playground.zmqAgentBus.agentMetricsRequest(agentId, mustSucceed((metrics) => {
-            checkMetricsData(metrics, requestId, agentId, [ 0, ...workers]);
+            checkMetricsData(metrics, requestId, agentId, [ 0, ...workers ]);
+            // Get the threadMetric element from thread with id workers[0]
+            const threadMetrics = metrics.body.threadMetrics.find((threadMetric) => {
+              return threadMetric.threadId === workers[0];
+            });
+            assert.strictEqual(threadMetrics.threadName, 'abc\\');
             resolve();
           }));
         }, 400);
