@@ -31,8 +31,8 @@ checkTracesOnExit(binding, expectedTraces);
 // Stub cares to force an error so we can test DNS error code path.
 cares.ChannelWrap.prototype.queryA = () => UV_EPERM;
 
-setupNSolid(common.mustCall(() => {
-  assert.rejects(
+setupNSolid(common.mustCall(async () => {
+  await assert.rejects(
     dnsPromises.resolve('example.org'),
     {
       code: 'EPERM',
