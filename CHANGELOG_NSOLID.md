@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-10-24, Version 5.0.4 'Hydrogen'
+
+### Commits
+
+* \[[`e9006c5d90`](https://github.com/nodesource/nsolid/commit/e9006c5d90)] - **agents**: all string metrics in zmq must be escaped (Santiago Gimeno) [nodesource/nsolid#65](https://github.com/nodesource/nsolid/pull/65)
+* \[[`b4464e3827`](https://github.com/nodesource/nsolid/commit/b4464e3827)] - **test**: initial batch of zmq agent tests (Santiago Gimeno) [nodesource/nsolid#58](https://github.com/nodesource/nsolid/pull/58)
+
 ## 2024-01-09, Version 5.0.3 'Hydrogen'
 
 ### Commits
