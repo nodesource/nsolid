@@ -1326,6 +1326,7 @@
         'test/cctest/test_report.cc',
         'test/cctest/test_json_utils.cc',
         'test/cctest/test_nsolid_lru_map.cc',
+        'test/cctest/test_nsolid_ring_buffer.cc',
         'test/cctest/test_nsolid_thread_safe.cc',
         'test/cctest/test_sockaddr.cc',
         'test/cctest/test_traced_value.cc',

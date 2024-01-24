@@ -193,6 +193,67 @@ class ring_buffer {
   std::vector<double> buffer_;
 };
 
+template <typename T>
+class RingBuffer {
+ public:
+  NSOLID_DELETE_DEFAULT_CONSTRUCTORS(RingBuffer)
+  explicit RingBuffer(size_t s)
+      : capacity_(s),
+        size_(0),
+        head_(0),
+        tail_(0) {
+    buffer_ = new T[s];
+  }
+
+  ~RingBuffer() {
+    delete[] buffer_;
+  }
+
+  bool empty() const {
+    return size_ == 0;
+  }
+
+  // Make sure to check empty() first otherwise an invalid value will be
+  // returned.
+  T& front() {
+    return buffer_[head_];
+  }
+
+  void pop() {
+    if (empty())
+      return;
+    head_ = (head_ + 1) % capacity_;
+    size_--;
+  }
+
+  void push(T& value) {
+    buffer_[tail_] = value;
+    tail_ = (tail_ + 1) % capacity_;
+
+    if (size_ == capacity_)
+      head_ = (head_ + 1) % capacity_;
+    else
+      size_++;
+  }
+
+  void push(T&& value) {
+    buffer_[tail_] = value;
+    tail_ = (tail_ + 1) % capacity_;
+
+    if (size_ == capacity_)
+      head_ = (head_ + 1) % capacity_;
+    else
+      size_++;
+  }
+
+ private:
+  T* buffer_;
+  const size_t capacity_;
+  size_t size_;
+  size_t head_;
+  size_t tail_;
+};
+
 }  // namespace utils
 }  // namespace nsolid
 }  // namespace node
