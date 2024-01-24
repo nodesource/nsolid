@@ -583,7 +583,7 @@ class ZmqAgent {
                            const char* request_id,
                            const char* body);
 
-  int send_data_msg(const std::string& msg) const;
+  int send_data_msg(const char* buf, size_t len);
 
   void send_exit();
 
@@ -646,6 +646,7 @@ class ZmqAgent {
   ZmqContext context_;
   std::unique_ptr<ZmqCommandHandle> command_handle_;
   std::unique_ptr<ZmqDataHandle> data_handle_;
+  utils::RingBuffer<std::string> data_ring_buffer_;
   std::unique_ptr<ZmqBulkHandle> bulk_handle_;
   int version_;
   nsuv::ns_timer invalid_key_timer_;

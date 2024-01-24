@@ -444,6 +444,7 @@
       'test/cctest/http_server_fixture.h',
       'test/cctest/test_agents_zmq_http_client.cc',
       'test/cctest/test_nsolid_lru_map.cc',
+      'test/cctest/test_nsolid_ring_buffer.cc',
       'test/cctest/test_nsolid_thread_safe.cc',
     ],
     'node_cctest_openssl_sources': [

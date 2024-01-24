@@ -64,6 +64,7 @@ inline void DebugEvent(uint16_t event, const ZmqHandle& handle) {
   }
 }
 
+const int MAX_DATA_BUFFER_SIZE = 100;
 const int MAX_AUTH_RETRIES = 20;
 const char* kNSOLID_AUTH_URL = "NSOLID_AUTH_URL";
 const char* NSOLID_AUTH_URL =
@@ -652,6 +653,7 @@ ZmqAgent::ZmqAgent()
       context_(),
       command_handle_(nullptr),
       data_handle_(nullptr),
+      data_ring_buffer_(MAX_DATA_BUFFER_SIZE),
       bulk_handle_(nullptr),
       version_(4),
       proc_metrics_(),
@@ -1091,11 +1093,6 @@ int ZmqAgent::config_sockets(const json& sockets) {
 int ZmqAgent::send_command_message(const char* command,
                                    const char* request_id,
                                    const char* body) {
-  if (data_handle_ == nullptr) {
-    // Don't send command as no data_handle
-    return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE, command);
-  }
-
   const char* real_body = body ? (strlen(body) ? body : "\"\"") : "null";
   auto recorded = create_recorded(system_clock::now());
   int r;
@@ -1136,36 +1133,52 @@ int ZmqAgent::send_command_message(const char* command,
     return send_command_message(command, request_id, body);
   }
 
-  r = data_handle_->send(msg_buf_, r);
-  if (r == -1) {
-    return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_MESSAGE,
-                         zmq_strerror(zmq_errno()),
-                         zmq_errno(),
-                         command,
-                         msg_buf_,
-                         data_handle_->endpoint().to_string().c_str());
+  r = send_data_msg(msg_buf_, r);
+  if (r < 0) {
+    switch (r) {
+      case zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE:
+        return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE,
+                             command);
+      default:
+        return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_MESSAGE,
+                             zmq_strerror(r),
+                             r,
+                             command,
+                             request_id,
+                             body);
+    }
   }
 
   return r;
 }
 
-int ZmqAgent::send_data_msg(const std::string& msg) const {
+int ZmqAgent::send_data_msg(const char* buf, size_t len) {
+  int r = 0;
   if (data_handle_ == nullptr) {
-    // Don't send command as no data_handle
-    return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE,
-                         msg.c_str());
+    r = zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE;
+    goto push_msg;
   }
 
-  int r = data_handle_->send(msg);
+  while (!data_ring_buffer_.empty()) {
+    std::string& msg = data_ring_buffer_.front();
+    r = data_handle_->send(msg.c_str(), msg.size());
+    if (r == -1) {
+      goto push_msg;
+    }
+
+    data_ring_buffer_.pop();
+  }
+
+  r = data_handle_->send(buf, len);
   if (r == -1) {
-    return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_MESSAGE,
-                         zmq_strerror(zmq_errno()),
-                         zmq_errno(),
-                         "",
-                         msg.c_str(),
-                         data_handle_->endpoint().to_string().c_str());
+    goto push_msg;
+  } else {
+    return r;
   }
 
+push_msg:
+
+  data_ring_buffer_.push(std::string(buf, len));
   return r;
 }
 
@@ -1717,11 +1730,6 @@ ZmqAgent::ZmqCommandError ZmqAgent::create_command_error(
 
 void ZmqAgent::send_error_message(const std::string& msg,
                                   uint32_t code) {
-  if (data_handle_ == nullptr) {
-    // Don't send as no data_handle
-    return;
-  }
-
   auto recorded = create_recorded(system_clock::now());
   int r = snprintf(msg_buf_,
                    msg_size_,
@@ -1752,7 +1760,7 @@ void ZmqAgent::send_error_message(const std::string& msg,
 
   ASSERT_LT(r, msg_size_);
 
-  r = data_handle_->send(msg_buf_, r);
+  r = send_data_msg(msg_buf_, r);
   if (r == -1) {
     return;
   }
@@ -1761,12 +1769,6 @@ void ZmqAgent::send_error_message(const std::string& msg,
 int ZmqAgent::send_error_command_message(const std::string& req_id,
                                          const std::string& command,
                                          const ZmqCommandError& err) {
-  if (data_handle_ == nullptr) {
-    // Don't send command as no data_handle
-    return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE,
-                         command.c_str());
-  }
-
   auto recorded = create_recorded(system_clock::now());
   int r = snprintf(msg_buf_,
                    msg_size_,
@@ -1801,14 +1803,20 @@ int ZmqAgent::send_error_command_message(const std::string& req_id,
 
   ASSERT_LT(r, msg_size_);
 
-  r = data_handle_->send(msg_buf_, r);
-  if (r == -1) {
-    return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_MESSAGE,
-                         zmq_strerror(zmq_errno()),
-                         zmq_errno(),
-                         command,
-                         msg_buf_,
-                         data_handle_->endpoint().to_string().c_str());
+  r = send_data_msg(msg_buf_, r);
+  if (r < 0) {
+    switch (r) {
+      case zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE:
+        return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE,
+                             command);
+      default:
+        return PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_MESSAGE,
+                             zmq_strerror(zmq_errno()),
+                             zmq_errno(),
+                             command,
+                             msg_buf_,
+                             data_handle_->endpoint().to_string().c_str());
+    }
   }
 
   return r;
@@ -1824,12 +1832,6 @@ int ZmqAgent::send_error_response(const std::string& req_id,
 }
 
 void ZmqAgent::send_exit() {
-  if (data_handle_ == nullptr) {
-    // Don't send command as no data_handle
-    PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE, kExit);
-    return;
-  }
-
   auto* error = GetExitError();
   int exit_code = GetExitCode();
 
@@ -1887,14 +1889,20 @@ void ZmqAgent::send_exit() {
     return send_exit();
   }
 
-  r = data_handle_->send(msg_buf_, r);
-  if (r == -1) {
-    PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_MESSAGE,
-                  zmq_strerror(zmq_errno()),
-                  zmq_errno(),
-                  kExit,
-                  msg_buf_,
-                  data_handle_->endpoint().to_string().c_str());
+  r = send_data_msg(msg_buf_, r);
+  if (r < 0) {
+    switch (r) {
+      case zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE:
+        PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_NO_DATA_HANDLE, kExit);
+      break;
+      default:
+        PrintZmqError(zmq::ZMQ_ERROR_SEND_COMMAND_MESSAGE,
+                      zmq_strerror(zmq_errno()),
+                      zmq_errno(),
+                      kExit,
+                      msg_buf_,
+                      data_handle_->endpoint().to_string().c_str());
+    }
   }
 }
 
