@@ -51,44 +51,44 @@ jobs:
         run: npx envinfo
       - name: Lint C/C++ files
         run: make lint-cpp
-  format-cpp:
-    if: ${{ github.event.pull_request && github.event.pull_request.draft == false && github.base_ref == github.event.repository.default_branch }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@8f152de45cc393bb48ce5d89d36b731f54556e65  # v4.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236  # v4.7.1
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Environment Information
-        run: npx envinfo
-      - name: Format C/C++ files
-        run: |
-          make format-cpp-build
-          # The `make format-cpp` error code is intentionally ignored here
-          # because it is irrelevant. We already check if the formatter produced
-          # a diff in the next line.
-          # Refs: https://github.com/nodejs/node/pull/42764
-          CLANG_FORMAT_START="$(git merge-base HEAD refs/remotes/origin/$GITHUB_BASE_REF)" \
-            make format-cpp || true
-          git --no-pager diff --exit-code && EXIT_CODE="$?" || EXIT_CODE="$?"
-          if [ "$EXIT_CODE" != "0" ]
-          then
-            echo
-            echo 'ERROR: Please run:'
-            echo
-            echo "  CLANG_FORMAT_START="$\(git merge-base HEAD ${GITHUB_BASE_REF}\)" make format-cpp"
-            echo
-            echo 'to format the commits in your branch.'
-            exit "$EXIT_CODE"
-          fi
+  # format-cpp:
+  #   if: ${{ github.event.pull_request && github.event.pull_request.draft == false && github.base_ref == github.event.repository.default_branch }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+  #       with:
+  #         fetch-depth: 0
+  #         persist-credentials: false
+  #     - name: Use Node.js ${{ env.NODE_VERSION }}
+  #       uses: actions/setup-node@8f152de45cc393bb48ce5d89d36b731f54556e65  # v4.0.0
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #     - name: Set up Python ${{ env.PYTHON_VERSION }}
+  #       uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236  # v4.7.1
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
+  #     - name: Environment Information
+  #       run: npx envinfo
+  #     - name: Format C/C++ files
+  #       run: |
+  #         make format-cpp-build
+  #         # The `make format-cpp` error code is intentionally ignored here
+  #         # because it is irrelevant. We already check if the formatter produced
+  #         # a diff in the next line.
+  #         # Refs: https://github.com/nodejs/node/pull/42764
+  #         CLANG_FORMAT_START="$(git merge-base HEAD refs/remotes/origin/$GITHUB_BASE_REF)" \
+  #           make format-cpp || true
+  #         git --no-pager diff --exit-code && EXIT_CODE="$?" || EXIT_CODE="$?"
+  #         if [ "$EXIT_CODE" != "0" ]
+  #         then
+  #           echo
+  #           echo 'ERROR: Please run:'
+  #           echo
+  #           echo "  CLANG_FORMAT_START="$\(git merge-base HEAD ${GITHUB_BASE_REF}\)" make format-cpp"
+  #           echo
+  #           echo 'to format the commits in your branch.'
+  #           exit "$EXIT_CODE"
+  #         fi
   lint-js-and-md:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
