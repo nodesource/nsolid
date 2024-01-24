@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-01-24, Version 20.11.0-nsolid-v5.0.4 'Iron'
+
+### Commits
+
+* \[[`13c420ecf2`](https://github.com/nodesource/nsolid/commit/13c420ecf2)] - **agents**: all string metrics in zmq must be escaped (Santiago Gimeno) [nodesource/nsolid#65](https://github.com/nodesource/nsolid/pull/65)
+* \[[`b56d2cb651`](https://github.com/nodesource/nsolid/commit/b56d2cb651)] - **test**: initial batch of zmq agent tests (Santiago Gimeno) [nodesource/nsolid#58](https://github.com/nodesource/nsolid/pull/58)
+
 ## 2024-01-09, Version 20.11.0-nsolid-v5.0.3 'Iron'
 
 ### Commits
