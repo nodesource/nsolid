@@ -40,7 +40,7 @@ const expectedTraces = [
 
 checkTracesOnExit(binding, expectedTraces);
 
-setupNSolid(common.mustCall(() => {
+setupNSolid(common.mustCall(async () => {
   dnsPromises.lookupService('127.0.0.1', 22).then(common.mustCall((result) => {
     assert.strictEqual(result.service, 'ssh');
     assert.strictEqual(typeof result.hostname, 'string');
@@ -49,7 +49,7 @@ setupNSolid(common.mustCall(() => {
 
   // Use an IP from the RFC 5737 test range to cause an error.
   // Refs: https://tools.ietf.org/html/rfc5737
-  assert.rejects(
+  await assert.rejects(
     () => dnsPromises.lookupService('192.0.2.1', 22),
     { code: /^(?:ENOTFOUND|EAI_AGAIN)$/ },
   );
