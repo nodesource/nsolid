@@ -2933,11 +2933,12 @@ int ZmqBulkHandle::do_send() {
     return UV_ENOENT;
   }
 
+  const std::string& envelope = std::get<0>(*it);
   // First, send the envelope
   while (r == -1) {
     r = zmq_send(socket_->handle(),
-                 std::get<0>(*it).c_str(),
-                 std::get<0>(*it).length(),
+                 envelope.c_str(),
+                 envelope.length(),
                  ZMQ_SNDMORE | ZMQ_DONTWAIT);
     if (r == -1) {
       if (zmq_errno() == EINTR) {
@@ -2949,11 +2950,14 @@ int ZmqBulkHandle::do_send() {
     }
   }
 
+  Debug("[bulk] Sent Envelope: '%s'. Res: %d\n", envelope.c_str(), r);
   r = -1;
+
+  const std::string& payload = std::get<1>(*it);
   while (r == -1) {
     r = zmq_send(socket_->handle(),
-                 std::get<1>(*it).c_str(),
-                 std::get<1>(*it).length(),
+                 payload.c_str(),
+                 payload.length(),
                  ZMQ_DONTWAIT);
     if (r == -1) {
       if (zmq_errno() == EINTR) {
@@ -2965,6 +2969,7 @@ int ZmqBulkHandle::do_send() {
     }
   }
 
+  Debug("[bulk] Sent Payload: '%ld'. Res: %d\n", payload.length(), r);
   data_buffer_.erase(it);
   return r;
 }
