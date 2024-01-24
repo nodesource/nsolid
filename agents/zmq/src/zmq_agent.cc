@@ -2205,13 +2205,6 @@ std::string ZmqAgent::got_cpu_profile(int status,
     last_main_profile_ = req_id;
   }
 
-  // Don't continue with the exit procedure until all profiles have finished.
-  if (exiting_ && pending_cpu_profile_data_map_.empty()) {
-    uv_mutex_lock(&stop_lock_);
-    uv_cond_signal(&stop_cond_);
-    uv_mutex_unlock(&stop_lock_);
-  }
-
   // get start_ts and metadata from pending_cpu_profile_data_map_
   if (status < 0) {
     // Send error message back
@@ -2244,6 +2237,13 @@ std::string ZmqAgent::got_cpu_profile(int status,
              thread_id,
              version_);
     bulk_handle_->send(msg_buf_, profile);
+  }
+
+  // Don't continue with the exit procedure until all profiles have finished.
+  if (exiting_ && pending_cpu_profile_data_map_.empty()) {
+    uv_mutex_lock(&stop_lock_);
+    uv_cond_signal(&stop_cond_);
+    uv_mutex_unlock(&stop_lock_);
   }
 
   return req_id;
