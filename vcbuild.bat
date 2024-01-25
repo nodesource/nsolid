@@ -372,7 +372,7 @@ if "%target%" == "Clean" goto exit
 rd %config%
 if errorlevel 1 echo "Old build output exists at 'out\%config%'. Please remove." & exit /B
 :: Use /J because /D (symlink) requires special permissions.
-if EXIST out\%config% mklink /J %config% out\%config%
+if EXIST out\%config% mklink /J %config% out\%config%&&copy /Y out\%config%\nsolid.lib out\%config%\node.lib> nul
 if errorlevel 1 echo "Could not create junction to 'out\%config%'." & exit /B
 
 :sign
