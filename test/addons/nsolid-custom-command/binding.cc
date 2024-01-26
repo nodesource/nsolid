@@ -1,9 +1,10 @@
 #include <node.h>
 #include <util-inl.h>
 #include <v8.h>
-#include <nsolid/nsolid_api.h>
+#include <nsolid.h>
 
 #include <assert.h>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -22,9 +23,6 @@ using v8::String;
 using v8::Undefined;
 using v8::Value;
 
-using node::nsolid::EnvInst;
-using node::nsolid::EnvList;
-
 std::map<std::string, Global<Function>> cb_map_;
 
 template <class TypeName>
@@ -33,14 +31,6 @@ static inline Local<TypeName> PersistentToLocalStrong(
   assert(!persistent.IsWeak());
   return *reinterpret_cast<Local<TypeName>*>(
       const_cast<PersistentBase<TypeName>*>(&persistent));
-}
-
-// While node::AtExit can run for any Environment, we only have this set to run
-// on the Environment of the main thread. So by this point the env_map_size
-// should equal 0.
-static void at_exit(void*) {
-  cb_map_.clear();
-  assert(EnvList::Inst()->env_map_size() == 1);
 }
 
 static void custom_command_cb(std::string req_id,
@@ -94,7 +84,7 @@ static void CustomCommand(const FunctionCallbackInfo<Value>& args) {
   assert(args[3]->IsFunction());
   Isolate* isolate = args.GetIsolate();
   Local<Context> context = isolate->GetCurrentContext();
-  auto envinst_sp = EnvInst::GetCurrent(context);
+  node::nsolid::SharedEnvInst envinst_sp = node::nsolid::GetLocalEnvInst(context);
 
   Local<String> req_id_s = args[0].As<String>();
   String::Utf8Value req_id(isolate, req_id_s);
@@ -159,8 +149,4 @@ NODE_MODULE_INIT(/* exports, module, context */) {
   NODE_SET_METHOD(exports, "customCommand", CustomCommand);
   NODE_SET_METHOD(exports, "customCommandThread", CustomCommandThread);
   NODE_SET_METHOD(exports, "setCustomCommandCb", SetCustomCommandCb);
-  // While NODE_MODULE_INIT will run for every Worker, the first execution
-  // won't run in parallel with another. So this won't cause a race condition.
-  if (EnvInst::GetEnvLocalInst(context->GetIsolate())->thread_id() == 0)
-    node::AtExit(node::GetCurrentEnvironment(context), at_exit, nullptr);
 }
