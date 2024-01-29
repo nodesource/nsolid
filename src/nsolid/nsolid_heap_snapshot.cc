@@ -97,7 +97,11 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&snapshotter->in_progress_heap_snapshots_);
   auto it = snapshotter->threads_running_snapshots_.find(thread_id);
-  ASSERT(it != snapshotter->threads_running_snapshots_.end());
+  if (it == snapshotter->threads_running_snapshots_.end()) {
+    // This might happen if snapshot_cb is called before RemoveEnv. Just return;
+    return;
+  }
+
   HeapSnapshotStor& stor = it->second;
   // If this condition is reached. This was called by EnvList::RemoveEnv.
   // It wants to stop any pending snapshot w/ tracking heap object.
