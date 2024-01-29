@@ -487,14 +487,10 @@ int Snapshot::start_tracking_heap_objects_(SharedEnvInst envinst,
                                            bool redacted,
                                            bool trackAllocations,
                                            uint64_t duration,
-                                           void* data,
-                                           snapshot_proxy_sig proxy,
-                                           internal::deleter_sig deleter) {
-  if (envinst == nullptr)
-    return UV_ESRCH;
-
+                                           internal::user_data data,
+                                           snapshot_proxy_sig proxy) {
   return NSolidHeapSnapshot::Inst()->StartTrackingHeapObjects(
-      envinst, redacted, trackAllocations, duration, data, proxy, deleter);
+      envinst, redacted, trackAllocations, duration, std::move(data), proxy);
 }
 
 int Snapshot::StopTrackingHeapObjects(SharedEnvInst envinst) {

@@ -39,9 +39,8 @@ class NSolidHeapSnapshot {
                                bool redacted,
                                bool trackAllocations,
                                uint64_t duration,
-                               void* data,
-                               Snapshot::snapshot_proxy_sig proxy,
-                               internal::deleter_sig deleter);
+                               internal::user_data data,
+                               Snapshot::snapshot_proxy_sig proxy);
 
   int StopTrackingHeapObjects(SharedEnvInst envinst);
 

@@ -1003,9 +1003,8 @@ class NODE_EXTERN Snapshot {
                                           bool redacted,
                                           bool trackAllocations,
                                           uint64_t duration,
-                                          void* data,
-                                          snapshot_proxy_sig proxy,
-                                          internal::deleter_sig deleter);
+                                          internal::user_data data,
+                                          snapshot_proxy_sig proxy);
 
   static int get_snapshot_(SharedEnvInst envinst,
                            bool redacted,
@@ -1185,32 +1184,28 @@ int Snapshot::StartTrackingHeapObjects(SharedEnvInst envinst,
                                        uint64_t duration,
                                        Cb&& cb,
                                        Data&&... data) {
+  if (envinst == nullptr) {
+    return UV_ESRCH;
+  }
+
   // NOLINTNEXTLINE(build/namespaces)
   using namespace std::placeholders;
   using UserData = decltype(std::bind(
       std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
-  // _1 - int status
-  // _2 - std::string json
-  UserData* user_data = new (std::nothrow) UserData(
-      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
-
+  auto user_data = internal::user_data(new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...)),
+                        internal::delete_proxy_<UserData>);
   if (user_data == nullptr) {
     return UV_ENOMEM;
   }
 
-  int er = start_tracking_heap_objects_(envinst,
-                                        redacted,
-                                        trackAllocations,
-                                        duration,
-                                        user_data,
-                                        snapshot_proxy_<UserData>,
-                                        internal::delete_proxy_<UserData>);
-  if (er) {
-    delete user_data;
-  }
-
-  return er;
+  return start_tracking_heap_objects_(envinst,
+                                      redacted,
+                                      trackAllocations,
+                                      duration,
+                                      std::move(user_data),
+                                      snapshot_proxy_<UserData>);
 }
 
 template <typename Cb, typename... Data>

@@ -19,33 +19,28 @@ int NSolidHeapSnapshot::StartTrackingHeapObjects(
     bool redacted,
     bool trackAllocations,
     uint64_t duration,
-    void* data,
-    Snapshot::snapshot_proxy_sig proxy,
-    internal::deleter_sig deleter) {
+    internal::user_data data,
+    Snapshot::snapshot_proxy_sig proxy) {
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
   // We can not trigger this command if there is already a snapshot in progress
-  auto it = threads_running_snapshots_.find(thread_id);
-  if (it != threads_running_snapshots_.end()) {
+  auto it = threads_running_snapshots_.emplace(
+        thread_id,
+        HeapSnapshotStor{ redacted, true, proxy, std::move(data) });
+  if (it.second == false) {
     return UV_EEXIST;
   }
-
   int status = RunCommand(envinst,
                           CommandType::Interrupt,
                           start_tracking_heapobjects,
                           trackAllocations,
                           duration,
                           this);
-
   // Consider this as taking a heap snapshot in the thread
-  if (status == 0) {
+  if (status != 0) {
     // Now we are tracking heap objects in this thread
-    threads_running_snapshots_.emplace(
-        thread_id,
-        HeapSnapshotStor{
-            redacted, true, proxy, internal::user_data(data, deleter)});
+    threads_running_snapshots_.erase(it.first);
   }
-
   return status;
 }
 
