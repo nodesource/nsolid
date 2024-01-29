@@ -246,7 +246,7 @@ NODE_EXTERN int custom_command_(SharedEnvInst,
                                 std::string,
                                 void*,
                                 custom_command_proxy_sig);
-int at_exit_hook_(void*, at_exit_hook_proxy_sig, deleter_sig);
+NODE_EXTERN int at_exit_hook_(void*, at_exit_hook_proxy_sig, deleter_sig);
 NODE_EXTERN void on_block_loop_hook_(uint64_t,
                                      void*,
                                      on_block_loop_hook_proxy_sig,
