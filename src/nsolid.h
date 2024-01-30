@@ -237,9 +237,11 @@ template <typename G>
 void delete_proxy_(void* g);
 
 
-int queue_callback_(void*, queue_callback_proxy_sig);
-int queue_callback_(uint64_t, void*, queue_callback_proxy_sig);
-int run_command_(SharedEnvInst, CommandType, void*, run_command_proxy_sig);
+NODE_EXTERN int queue_callback_(void*, queue_callback_proxy_sig);
+NODE_EXTERN int queue_callback_(uint64_t, void*, queue_callback_proxy_sig);
+NODE_EXTERN int run_command_(SharedEnvInst,
+                             CommandType, void*,
+                             run_command_proxy_sig);
 NODE_EXTERN int custom_command_(SharedEnvInst,
                                 std::string,
                                 std::string,
@@ -257,8 +259,12 @@ NODE_EXTERN void on_unblock_loop_hook_(void*,
 NODE_EXTERN void on_configuration_hook_(void*,
                                         on_configuration_hook_proxy_sig,
                                         deleter_sig);
-NODE_EXTERN void thread_added_hook_(void*, thread_added_hook_proxy_sig, deleter_sig);
-NODE_EXTERN void thread_removed_hook_(void*, thread_removed_hook_proxy_sig, deleter_sig);
+NODE_EXTERN void thread_added_hook_(void*,
+                                    thread_added_hook_proxy_sig,
+                                    deleter_sig);
+NODE_EXTERN void thread_removed_hook_(void*,
+                                      thread_removed_hook_proxy_sig,
+                                      deleter_sig);
 
 }  // namespace internal
 

@@ -3,6 +3,8 @@
 
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
+#define NSOLID_EXTERN_PRIVATE NODE_EXTERN
+
 #include <atomic>
 #include <functional>
 #include <list>
@@ -25,6 +27,7 @@
 // We can export it via ADDONS_PREREQS in the Makefile and link against it with
 // our native module builds that depend on it
 #include "nlohmann/json.hpp"
+
 
 namespace node {
 namespace nsolid {
@@ -53,7 +56,7 @@ class EnvList;
 
 
 template <typename DataType>
-class DispatchQueue {
+NSOLID_EXTERN_PRIVATE class DispatchQueue {
  public:
   using dispatch_queue_cb = void(*)(std::queue<DataType>&&);
 
@@ -462,7 +465,7 @@ class EnvList {
   };
 
   // Return the one true instance.
-  static EnvList* Inst();
+  NSOLID_EXTERN_PRIVATE static EnvList* Inst();
 
   // This call is thread-safe.
   std::string AgentId();
