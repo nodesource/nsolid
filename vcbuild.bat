@@ -646,8 +646,8 @@ rd /s /q test\common\nsolid-zmq-agent\node_modules
 :: installing the modules
 setlocal
 set npm_config_nodedir=%~dp0
-"%npm_exe%" install zeromq@5 base85 --prefix "%~dp0test\common\nsolid-zmq-agent" --no-save --no-package-lock
-"%npm_exe%" run build:libzmq --prefix "%~dp0test\common\nsolid-zmq-agent\node_modules\zeromq"
+%npm_exe% install zeromq@5 base85 --prefix "%~dp0test\common\nsolid-zmq-agent" --no-save --no-package-lock
+%npm_exe% run build:libzmq --prefix "%~dp0test\common\nsolid-zmq-agent\node_modules\zeromq"
 if errorlevel 1 exit /b 1
 endlocal
 goto run-tests
