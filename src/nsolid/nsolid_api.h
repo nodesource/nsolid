@@ -56,7 +56,7 @@ class EnvList;
 
 
 template <typename DataType>
-NSOLID_EXTERN_PRIVATE class DispatchQueue {
+class DispatchQueue {
  public:
   using dispatch_queue_cb = void(*)(std::queue<DataType>&&);
 
@@ -496,8 +496,8 @@ class EnvList {
 
   // Queue callbacks to run on the EnvList thread without reference to a
   // specific EnvInst instance.
-  int QueueCallback(q_cb_sig cb, void* data);
-  int QueueCallback(q_cb_sig cb, uint64_t timeout, void* data);
+  NSOLID_EXTERN_PRIVATE int QueueCallback(q_cb_sig cb, void* data);
+  NSOLID_EXTERN_PRIVATE int QueueCallback(q_cb_sig cb, uint64_t timeout, void* data);
 
   // These should only be called from node threads.
   void AddEnv(Environment* env);
