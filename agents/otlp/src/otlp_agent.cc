@@ -230,7 +230,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 /*static*/ void OTLPAgent::config_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
+  if (!is_running_) {
     return;
   }
 
@@ -243,7 +243,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 /*static*/ void OTLPAgent::env_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
+  if (!is_running_) {
     return;
   }
 
@@ -258,7 +258,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
         std::forward_as_tuple(envinst));
       ASSERT(pair.second);
     } else {
-      ASSERT_EQ(1, agent->env_metrics_map_.erase(GetThreadId(envinst)));
+      agent->env_metrics_map_.erase(GetThreadId(envinst));
     }
   }
 }
@@ -339,7 +339,7 @@ void OTLPAgent::trace_hook_(Tracer* tracer,
 void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
   // Don't exit until all the pending spans are sent
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
+  if (!is_running_) {
     return;
   }
 

@@ -375,6 +375,7 @@ if (process.argv[2] === 'child') {
       env.NSOLID_OTLP_CONFIG = JSON.stringify(config.otlpConfig);
     }
 
+    console.log(process.execPath, [ __filename, 'child', i ], { env });
     const cp = spawn(process.execPath, [ __filename, 'child', i ], { env });
     cp.on('exit', common.mustCall((code, signal) => {
       assert.strictEqual(code, 0);
