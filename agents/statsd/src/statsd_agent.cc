@@ -318,12 +318,6 @@ StatsDAgent::StatsDAgent(): hooks_init_(false),
 
 StatsDAgent::~StatsDAgent() {
   int r;
-
-  {
-    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
-    is_running_ = false;
-  }
-
   ASSERT_EQ(0, stop());
   uv_mutex_destroy(&start_lock_);
   uv_cond_destroy(&start_cond_);
@@ -332,6 +326,12 @@ StatsDAgent::~StatsDAgent() {
   // this happens. Wait until the StatsD thread exists.
   while ((r = uv_loop_close(&loop_)) != 0) {
     ASSERT_EQ(r, UV_EBUSY);
+    uv_run(&loop_, UV_RUN_ONCE);
+  }
+
+  {
+    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
+    is_running_ = false;
   }
 }
 
@@ -353,7 +353,6 @@ int StatsDAgent::start() {
 
     uv_mutex_unlock(&start_lock_);
   }
-
   return r;
 }
 
@@ -397,22 +396,16 @@ int StatsDAgent::stop() {
     if (utils::are_threads_equal(thread_.base(), uv_thread_self())) {
       do_stop();
     } else {
-      // Check shutdown_ status before using it otherwise it could crash on
-      // Windows. See: https://github.com/libuv/libuv/issues/3622
-      if (!shutdown_.is_closing()) {
-        ASSERT_EQ(0, shutdown_.send());
-      }
-
+      ASSERT_EQ(0, shutdown_.send());
       ASSERT_EQ(0, thread_.join());
     }
-
-    status(Unconfigured);
   }
 
   return r;
 }
 
 void StatsDAgent::do_stop() {
+  status(Unconfigured);
   tcp_.reset(nullptr);
   udp_.reset(nullptr);
   send_stats_msg_.close();
@@ -534,27 +527,25 @@ void StatsDAgent::config_agent_cb(std::string config, StatsDAgent* agent) {
 }
 
 void StatsDAgent::config_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
+  json config_msg;
+  // Check if the agent is already deleted or if it's closing
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+  if (!is_running_) {
     return;
   }
 
-  json config_msg;
   while (agent->config_msg_q_.dequeue(config_msg)) {
-    if (!is_running_|| agent->update_state_msg_.is_closing()) {
-      break;
-    }
-
     agent->config(config_msg);
-    ASSERT_EQ(0, agent->update_state_msg_.send());
+    if (agent->status_ != Unconfigured) {
+      ASSERT_EQ(0, agent->update_state_msg_.send());
+    }
   }
 }
 
 void StatsDAgent::update_state_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
   // Check if the agent is already delete or if it's closing
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+  if (!is_running_) {
     return;
   }
 

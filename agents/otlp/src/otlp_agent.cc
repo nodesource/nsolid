@@ -77,14 +77,13 @@ OTLPAgent::OTLPAgent(): ready_(false),
 
 
 OTLPAgent::~OTLPAgent() {
-  {
-    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
-    is_running_ = false;
-  }
   ASSERT_EQ(0, stop());
   uv_mutex_destroy(&start_lock_);
   uv_cond_destroy(&start_cond_);
   ASSERT_EQ(0, uv_loop_close(&loop_));
+
+  nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
+  is_running_ = false;
 }
 
 
@@ -312,6 +311,7 @@ void OTLPAgent::do_start() {
 
 
 void OTLPAgent::do_stop() {
+  ready_ = false;
   shutdown_.close();
   env_msg_.close();
   span_msg_.close();
@@ -319,7 +319,6 @@ void OTLPAgent::do_stop() {
   metrics_timer_.close();
   config_msg_.close();
   metrics_exporter_.reset(nullptr);
-  ready_ = false;
 }
 
 
