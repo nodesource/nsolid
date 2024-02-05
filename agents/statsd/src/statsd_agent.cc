@@ -317,7 +317,14 @@ StatsDAgent::StatsDAgent(): hooks_init_(false),
 }
 
 StatsDAgent::~StatsDAgent() {
+  fprintf(stderr, "[%ld] StatsDAgent::~StatsDAgent (1)\n", gettid());
   int r;
+  {
+    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
+    is_running_ = false;
+  }
+
+  fprintf(stderr, "[%ld] StatsDAgent::~StatsDAgent (2)\n", gettid());
   ASSERT_EQ(0, stop());
   uv_mutex_destroy(&start_lock_);
   uv_cond_destroy(&start_cond_);
@@ -328,16 +335,14 @@ StatsDAgent::~StatsDAgent() {
     ASSERT_EQ(r, UV_EBUSY);
     uv_run(&loop_, UV_RUN_ONCE);
   }
-
-  {
-    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
-    is_running_ = false;
-  }
+  fprintf(stderr, "[%ld] StatsDAgent::~StatsDAgent (3)\n", gettid());
 }
 
 int StatsDAgent::start() {
+  fprintf(stderr, "[%ld] StatsDAgent::start (1)\n", gettid());
   int r = 0;
   if (status_ == Unconfigured) {
+  fprintf(stderr, "[%ld] StatsDAgent::start (2)\n", gettid());
     // This method is not thread-safe and it's supposed to be called only from
     // the NSolid thread, so it's safe to use this lock after having checked
     // the status_ variable as there won't be any concurrent calls.
@@ -352,11 +357,14 @@ int StatsDAgent::start() {
     }
 
     uv_mutex_unlock(&start_lock_);
+    fprintf(stderr, "[%ld] StatsDAgent::start (3)\n", gettid());
   }
+  fprintf(stderr, "[%ld] StatsDAgent::start (4)\n", gettid());
   return r;
 }
 
 void StatsDAgent::do_start() {
+  fprintf(stderr, "[%ld] StatsDAgent::do_start (1)\n", gettid());
   uv_mutex_lock(&start_lock_);
 
   ASSERT_EQ(0, shutdown_.init(&loop_, shutdown_cb_, this));
@@ -385,26 +393,33 @@ void StatsDAgent::do_start() {
   status(Initializing);
   uv_cond_signal(&start_cond_);
   uv_mutex_unlock(&start_lock_);
+  fprintf(stderr, "[%ld] StatsDAgent::do_start (2)\n", gettid());
 }
 
 // This method can only be called:
 // 1) From the StatsDAgent thread when disabling the agent via configuration.
 // 2) From the main JS thread on exit as this is a static Singleton.
 int StatsDAgent::stop() {
+  fprintf(stderr, "[%ld] StatsDAgent::stop (1)\n", gettid());
   int r = 0;
   if (status_ != Unconfigured) {
+    fprintf(stderr, "[%ld] StatsDAgent::stop (2)\n", gettid());
     if (utils::are_threads_equal(thread_.base(), uv_thread_self())) {
+      fprintf(stderr, "[%ld] StatsDAgent::stop (3)\n", gettid());
       do_stop();
     } else {
+      fprintf(stderr, "[%ld] StatsDAgent::stop (4)\n", gettid());
       ASSERT_EQ(0, shutdown_.send());
       ASSERT_EQ(0, thread_.join());
     }
   }
 
+  fprintf(stderr, "[%ld] StatsDAgent::stop (5)\n", gettid());
   return r;
 }
 
 void StatsDAgent::do_stop() {
+  fprintf(stderr, "[%ld] StatsDAgent::do_stop (1)\n", gettid());
   status(Unconfigured);
   tcp_.reset(nullptr);
   udp_.reset(nullptr);
@@ -417,6 +432,7 @@ void StatsDAgent::do_stop() {
   metrics_timer_.close();
   retry_timer_.close();
   env_metrics_map_.clear();
+  fprintf(stderr, "[%ld] StatsDAgent::do_stop (2)\n", gettid());
 }
 
 void StatsDAgent::run_(nsuv::ns_thread*, StatsDAgent* agent) {
@@ -482,12 +498,6 @@ void StatsDAgent::env_msg_cb(nsuv::ns_async*, StatsDAgent* agent) {
 }
 
 void StatsDAgent::shutdown_cb_(nsuv::ns_async*, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
-    return;
-  }
-
   agent->do_stop();
 }
 
@@ -624,7 +634,7 @@ int StatsDAgent::config_handles() {
       // print some kind of error here
       Debug("Invalid endpoint: '%s'. Stopping the agent\n", statsd.c_str());
       config_ = default_agent_config;
-      return stop();
+      return UV_EINVAL;
     }
 
     ASSERT_EQ(0, retry_timer_.stop());
@@ -639,7 +649,7 @@ int StatsDAgent::config_handles() {
   } else {
     Debug("No statsd configuration. Stopping the agent\n");
     config_ = default_agent_config;
-    return stop();
+    return UV_EINVAL;
   }
 }
 
@@ -716,6 +726,7 @@ void StatsDAgent::config_tags() {
 int StatsDAgent::config(const json& config) {
   int ret;
 
+  fprintf(stderr, "[%ld] StatsDAgent::config (1)\n", gettid());
   json old_config = config_;
   config_ = config;
   json diff = json::diff(old_config, config_);
