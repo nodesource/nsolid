@@ -22,7 +22,7 @@ set "CI_NATIVE_SUITES=%NATIVE_SUITES% benchmark"
 set "CI_JS_SUITES=%JS_SUITES% pummel"
 set CI_DOC=doctool
 @rem Same as the test-ci target in Makefile
-set "common_test_suites=%JS_SUITES% %NATIVE_SUITES%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1"
+set "common_test_suites=%JS_SUITES% %NATIVE_SUITES%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1&set test-agents-prereqs=1"
 
 @rem Process arguments.
 set config=Release
@@ -58,6 +58,7 @@ set dll=
 set enable_static=
 set build_js_native_api_tests=
 set build_node_api_tests=
+set test-agents-prereqs=
 set test_node_inspect=
 set test_check_deopts=
 set v8_test_options=
@@ -97,10 +98,11 @@ if /i "%1"=="ltcg"          set ltcg=1&goto arg-ok
 if /i "%1"=="licensertf"    set licensertf=1&goto arg-ok
 if /i "%1"=="test"          set test_args=%test_args% %common_test_suites%&set lint_cpp=1&set lint_js=1&set lint_md=1&goto arg-ok
 if /i "%1"=="test-ci-native" set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_NATIVE_SUITES% %CI_DOC%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1&set cctest_args=%cctest_args% --gtest_output=xml:cctest.junit.xml&goto arg-ok
-if /i "%1"=="test-ci-js"    set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_JS_SUITES%&set no_cctest=1&goto arg-ok
+if /i "%1"=="test-ci-js"    set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_JS_SUITES%&set no_cctest=1&set test-agents-prereqs=1&goto arg-ok
 if /i "%1"=="build-addons"   set build_addons=1&goto arg-ok
 if /i "%1"=="build-js-native-api-tests"   set build_js_native_api_tests=1&goto arg-ok
 if /i "%1"=="build-node-api-tests"   set build_node_api_tests=1&goto arg-ok
+if /i "%1"=="test-agents-prereqs"   set test-agents-prereqs=1&goto arg-ok
 if /i "%1"=="test-addons"   set test_args=%test_args% addons&set build_addons=1&goto arg-ok
 if /i "%1"=="test-doc"      set test_args=%test_args% %CI_DOC%&set doc=1&&set lint_js=1&set lint_md=1&goto arg-ok
 if /i "%1"=="test-js-native-api"   set test_args=%test_args% js-native-api&set build_js_native_api_tests=1&goto arg-ok
@@ -370,7 +372,7 @@ if "%target%" == "Clean" goto exit
 rd %config%
 if errorlevel 1 echo "Old build output exists at 'out\%config%'. Please remove." & exit /B
 :: Use /J because /D (symlink) requires special permissions.
-if EXIST out\%config% mklink /J %config% out\%config%
+if EXIST out\%config% mklink /J %config% out\%config%&&copy /Y out\%config%\nsolid.lib out\%config%\node.lib> nul
 if errorlevel 1 echo "Could not create junction to 'out\%config%'." & exit /B
 
 :sign
@@ -614,10 +616,10 @@ endlocal
 goto build-node-api-tests
 
 :build-node-api-tests
-if not defined build_node_api_tests goto run-tests
+if not defined build_node_api_tests goto test-agents-prereqs
 if not exist "%node_exe%" (
   echo Failed to find nsolid.exe
-  goto run-tests
+  goto test-agents-prereqs
 )
 echo Building node-api
 :: clear
@@ -628,6 +630,24 @@ for /d %%F in (test\node-api\??_*) do (
 setlocal
 set npm_config_nodedir=%~dp0
 "%node_exe%" "%~dp0tools\build-addons.mjs" "%~dp0deps\npm\node_modules\node-gyp\bin\node-gyp.js" "%~dp0test\node-api"
+if errorlevel 1 exit /b 1
+endlocal
+goto test-agents-prereqs
+
+:test-agents-prereqs
+if not defined test-agents-prereqs goto run-tests
+if not exist "%node_exe%" (
+  echo Failed to find nsolid.exe
+  goto run-tests
+)
+echo Installing agents test prereqs
+:: clear
+rd /s /q test\common\nsolid-zmq-agent\node_modules
+:: installing the modules
+setlocal
+set npm_config_nodedir=%~dp0
+%npm_exe% install zeromq@5 zmq-zap --prefix "%~dp0test\common\nsolid-zmq-agent" --no-save --no-package-lock
+%npm_exe% run build:libzmq --prefix "%~dp0test\common\nsolid-zmq-agent\node_modules\zeromq"
 if errorlevel 1 exit /b 1
 endlocal
 goto run-tests
