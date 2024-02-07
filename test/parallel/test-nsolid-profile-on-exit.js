@@ -15,13 +15,19 @@ if (process.argv[2] === 'child') {
   });
 
   setTimeout(() => {
-    nsolid.profile(common.mustSucceed(() => {
-      process.kill(process.pid, 'SIGTERM');
-    }));
+    nsolid.profile(common.mustSucceed(() => {}));
+    process.send('ready');
   }, 100);
 } else {
-  const child = cp.spawn(process.execPath, [ __filename, 'child' ]);
+  const child = cp.spawn(process.execPath,
+                         [ __filename, 'child' ],
+                         { stdio: ['ipc', 'pipe', 'pipe'] });
   child.on('exit', common.mustCall((code, signal) => {
     assert.strictEqual(signal, 'SIGTERM');
+  }));
+
+  child.on('message', common.mustCall((message) => {
+    assert.strictEqual(message, 'ready');
+    child.kill('SIGTERM');
   }));
 }
