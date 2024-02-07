@@ -180,7 +180,7 @@ class StatsDAgent {
 
   void operator delete(void*) = delete;
 
-  static std::atomic<bool> is_running;
+  static std::atomic<bool> is_running_;
 
   static const std::vector<std::string> metrics_fields;
 

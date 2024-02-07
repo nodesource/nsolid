@@ -12,6 +12,8 @@
 
 #define UDP_PACKET_MAX_BYTES 1400
 
+static const char def_bucket[] = "nsolid.${env}.${app}.${hostname}.${shortId}";
+
 namespace node {
 namespace nsolid {
 namespace statsd {
@@ -19,6 +21,8 @@ namespace statsd {
 using nlohmann::json;
 using string_vector = std::vector<std::string>;
 using udp_req_data_tup = std::tuple<string_vector*, bool>;
+
+static nsuv::ns_rwlock exit_lock_;
 
 template <typename... Args>
 inline void Debug(Args&&... args) {
@@ -287,7 +291,7 @@ void StatsDUdp::write_cb_(nsuv::ns_udp_send* req, int status, StatsDUdp* udp) {
 const string_vector StatsDAgent::metrics_fields = { "/interval",
                                                     "/pauseMetrics" };
 
-std::atomic<bool> StatsDAgent::is_running = { false };
+std::atomic<bool> StatsDAgent::is_running_ = { false };
 
 StatsDAgent* StatsDAgent::Inst() {
   static StatsDAgent agent;
@@ -310,11 +314,17 @@ StatsDAgent::StatsDAgent(): hooks_init_(false),
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
   ASSERT_EQ(0, bucket_lock_.init(true));
   ASSERT_EQ(0, tags_lock_.init(true));
-  is_running = true;
+  ASSERT_EQ(0, exit_lock_.init(true));
+  is_running_ = true;
 }
 
 StatsDAgent::~StatsDAgent() {
   int r;
+  {
+    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
+    is_running_ = false;
+  }
+
   ASSERT_EQ(0, stop());
   uv_mutex_destroy(&start_lock_);
   uv_cond_destroy(&start_cond_);
@@ -323,8 +333,8 @@ StatsDAgent::~StatsDAgent() {
   // this happens. Wait until the StatsD thread exists.
   while ((r = uv_loop_close(&loop_)) != 0) {
     ASSERT_EQ(r, UV_EBUSY);
+    uv_run(&loop_, UV_RUN_ONCE);
   }
-  is_running = false;
 }
 
 int StatsDAgent::start() {
@@ -336,7 +346,6 @@ int StatsDAgent::start() {
     uv_mutex_lock(&start_lock_);
     // Before launching the StatsD thread, make sure there's no alive thread.
     r = thread_.join();
-    ASSERT(r == 0 || r == UV_ESRCH);
     r = thread_.create(run_, this);
     if (r == 0) {
       while (status_ == Unconfigured) {
@@ -346,7 +355,6 @@ int StatsDAgent::start() {
 
     uv_mutex_unlock(&start_lock_);
   }
-
   return r;
 }
 
@@ -390,22 +398,16 @@ int StatsDAgent::stop() {
     if (utils::are_threads_equal(thread_.base(), uv_thread_self())) {
       do_stop();
     } else {
-      // Check shutdown_ status before using it otherwise it could crash on
-      // Windows. See: https://github.com/libuv/libuv/issues/3622
-      if (!shutdown_.is_closing()) {
-        ASSERT_EQ(0, shutdown_.send());
-      }
-
+      ASSERT_EQ(0, shutdown_.send());
       ASSERT_EQ(0, thread_.join());
     }
-
-    status(Unconfigured);
   }
 
   return r;
 }
 
 void StatsDAgent::do_stop() {
+  status(Unconfigured);
   tcp_.reset(nullptr);
   udp_.reset(nullptr);
   send_stats_msg_.close();
@@ -429,7 +431,8 @@ void StatsDAgent::run_(nsuv::ns_thread*, StatsDAgent* agent) {
 void StatsDAgent::env_creation_cb(SharedEnvInst envinst,
                                   StatsDAgent* agent) {
   // Check if the agent is already delete or if it's closing
-  if (!is_running || agent->env_msg_.is_closing()) {
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
     return;
   }
 
@@ -440,7 +443,8 @@ void StatsDAgent::env_creation_cb(SharedEnvInst envinst,
 void StatsDAgent::env_deletion_cb(SharedEnvInst envinst,
                                   StatsDAgent* agent) {
   // Check if the agent is already delete or if it's closing
-  if (!is_running || agent->env_msg_.is_closing()) {
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
     return;
   }
 
@@ -459,6 +463,12 @@ void StatsDAgent::env_deletion_cb(SharedEnvInst envinst,
 }
 
 void StatsDAgent::env_msg_cb(nsuv::ns_async*, StatsDAgent* agent) {
+  // Check if the agent is already delete or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
+    return;
+  }
+
   std::tuple<SharedEnvInst, bool> tup;
   while (agent->env_msg_q_.dequeue(tup)) {
     SharedEnvInst envinst = std::get<0>(tup);
@@ -478,6 +488,12 @@ void StatsDAgent::shutdown_cb_(nsuv::ns_async*, StatsDAgent* agent) {
 }
 
 void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
+  // Check if the agent is already delete or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
+    return;
+  }
+
   ThreadMetrics::MetricsStor stor;
   while (agent->metrics_msg_q_.dequeue(stor)) {
     json body = {
@@ -494,7 +510,8 @@ void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
 // Callback to be registered in nsolid API
 void StatsDAgent::config_agent_cb(std::string config, StatsDAgent* agent) {
   // Check if the agent is already delete or if it's closing
-  if (!is_running || agent->config_msg_.is_closing()) {
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
     return;
   }
 
@@ -507,21 +524,37 @@ void StatsDAgent::config_agent_cb(std::string config, StatsDAgent* agent) {
 
 void StatsDAgent::config_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
   json config_msg;
-  while (agent->config_msg_q_.dequeue(config_msg)) {
-    if (!is_running || agent->update_state_msg_.is_closing()) {
-      break;
-    }
+  // Check if the agent is already deleted or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_) {
+    return;
+  }
 
+  while (agent->config_msg_q_.dequeue(config_msg)) {
     agent->config(config_msg);
-    ASSERT_EQ(0, agent->update_state_msg_.send());
+    if (agent->status_ != Unconfigured) {
+      ASSERT_EQ(0, agent->update_state_msg_.send());
+    }
   }
 }
 
 void StatsDAgent::update_state_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
+  // Check if the agent is already delete or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_) {
+    return;
+  }
+
   agent->update_state();
 }
 
 void StatsDAgent::send_stats_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
+  // Check if the agent is already delete or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
+    return;
+  }
+
   string_vector sv;
   while (agent->send_stats_msg_q_.dequeue(sv)) {
     if (agent->tcp_) {
@@ -587,7 +620,7 @@ int StatsDAgent::config_handles() {
       // print some kind of error here
       Debug("Invalid endpoint: '%s'. Stopping the agent\n", statsd.c_str());
       config_ = default_agent_config;
-      return stop();
+      return UV_EINVAL;
     }
 
     ASSERT_EQ(0, retry_timer_.stop());
@@ -602,7 +635,7 @@ int StatsDAgent::config_handles() {
   } else {
     Debug("No statsd configuration. Stopping the agent\n");
     config_ = default_agent_config;
-    return stop();
+    return UV_EINVAL;
   }
 }
 
@@ -653,8 +686,6 @@ std::string StatsDAgent::calculate_tags(const std::string& tpl) const {
 }
 
 void StatsDAgent::config_bucket() {
-  static const std::string def_bucket =
-    "nsolid.${env}.${app}.${hostname}.${shortId}";
   auto it = config_.find("statsdBucket");
   {
     nsuv::ns_mutex::scoped_lock lock(&bucket_lock_);
@@ -724,6 +755,12 @@ int StatsDAgent::config(const json& config) {
 }
 
 void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
+  // Check if the agent is already delete or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
+    return;
+  }
+
   ProcessMetrics::MetricsStor proc_stor;
 
   // Retrieve metrics from every thread
@@ -751,8 +788,9 @@ void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
 
 void StatsDAgent::env_metrics_cb_(SharedThreadMetrics metrics,
                                   StatsDAgent* agent) {
-  // Check if the agent is already closing
-  if (agent->metrics_msg_.is_closing()) {
+  // Check if the agent is already delete or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
     return;
   }
 
@@ -826,6 +864,12 @@ void StatsDAgent::setup_udp() {
 }
 
 void StatsDAgent::status_command_cb_(SharedEnvInst, StatsDAgent* agent) {
+  // Check if the agent is already delete or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
+    return;
+  }
+
   agent->status_cb_(agent->status());
 }
 
@@ -855,6 +899,12 @@ StatsDAgent::Status StatsDAgent::calculate_status() const {
 }
 
 void StatsDAgent::retry_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
+  // Check if the agent is already delete or if it's closing
+  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+  if (!is_running_ || agent->status_ == Unconfigured) {
+    return;
+  }
+
   ASSERT_NOT_NULL(agent->endpoint_.get());
   if (agent->endpoint_->protocol() == "tcp") {
     agent->setup_tcp();
