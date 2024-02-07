@@ -6,7 +6,6 @@
 #include <assert.h>
 #include <atomic>
 
-using node::nsolid::EnvInst;
 using node::nsolid::EnvList;
 using CommandType = node::nsolid::CommandType;
 
@@ -29,7 +28,6 @@ struct TmpStor {
 };
 
 static void at_exit(void*) {
-  assert(EnvList::Inst()->env_map_size() == 1);
   assert(init_cntr == 1);
   assert(run_cntr == cb_cntr);
   assert(run_cntr == cb_void_cntr);
@@ -73,7 +71,7 @@ static void RunEventLoop(const FunctionCallbackInfo<Value>& args) {
   uint32_t thread_id = args[0]->Uint32Value(ctx).FromJust();
   auto* ts = new TmpStor();
   ts->self_ptr = ts;
-  node::nsolid::SharedEnvInst envinst = EnvInst::GetInst(thread_id);
+  node::nsolid::SharedEnvInst envinst = node::nsolid::GetEnvInst(thread_id);
   assert(0 == node::nsolid::RunCommand(envinst, EventLoop, cmd_fn, ts));
   assert(0 == node::nsolid::RunCommand(envinst, EventLoop, cmd_void_fn));
   run_cntr++;
@@ -83,7 +81,8 @@ NODE_MODULE_INIT(/* exports, module, context */) {
   NODE_SET_METHOD(exports, "runEventLoop", RunEventLoop);
   // While NODE_MODULE_INIT will run for every Worker, the first execution
   // won't run in parallel with another. So this won't cause a race condition.
-  if (EnvInst::GetCurrent(context)->thread_id() == 0) {
+  node::nsolid::SharedEnvInst envinst = node::nsolid::GetLocalEnvInst(context);
+  if (node::nsolid::IsMainThread(envinst)) {
     init_cntr++;
     node::AtExit(node::GetCurrentEnvironment(context), at_exit, nullptr);
   }

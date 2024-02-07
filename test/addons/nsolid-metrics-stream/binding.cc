@@ -3,7 +3,7 @@
 #include <util-inl.h>
 #include <v8.h>
 #include <nsolid.h>
-#include <nsolid/nsolid_api.h>
+#include "../../../deps/nsuv/include/nsuv-inl.h"
 
 #include <assert.h>
 #include <map>
@@ -26,7 +26,7 @@ using v8::Uint32;
 using v8::Value;
 
 using node::nsolid::MetricsStream;
-using node::nsolid::EnvInst;
+using node::nsolid::SharedEnvInst;
 using metrics_stream_bucket = MetricsStream::metrics_stream_bucket;
 
 
@@ -51,10 +51,10 @@ static inline Local<TypeName> PersistentToLocalStrong(
 static void at_exit(void*) {
   v8::Isolate* isolate = v8::Isolate::TryGetCurrent();
   if (isolate) {
-    EnvInst* envinst = EnvInst::GetEnvLocalInst(isolate);
+    SharedEnvInst envinst = node::nsolid::GetLocalEnvInst(isolate);
     {
       nsuv::ns_mutex::scoped_lock lock(map_mutex_);
-      auto iter = cb_map_.find(envinst->thread_id());
+      auto iter = cb_map_.find(node::nsolid::GetThreadId(envinst));
       if (iter != cb_map_.end()) {
         cb_map_.erase(iter);
       }
@@ -71,14 +71,13 @@ static void got_metrics_stream_js_thread(node::nsolid::SharedEnvInst,
   HandleScope handle_scope(isolate);
   Local<Context> context = isolate->GetCurrentContext();
   Context::Scope context_scope(context);
+  node::Environment* env = node::GetCurrentEnvironment(context);
   Local<Function> fn;
   {
     nsuv::ns_mutex::scoped_lock lock(map_mutex_);
     auto iter = cb_map_.find(thread_id);
     assert(iter != cb_map_.end());
-    EnvInst::Scope scp(envinst);
-    assert(scp.Success());
-    if (!envinst->can_call_into_js()) {
+    if (!env->can_call_into_js()) {
       cb_map_.erase(iter);
       return;
     }

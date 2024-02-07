@@ -3,6 +3,8 @@
 
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
+#define NSOLID_EXTERN_PRIVATE NODE_EXTERN
+
 #include <atomic>
 #include <functional>
 #include <list>
@@ -25,6 +27,7 @@
 // We can export it via ADDONS_PREREQS in the Makefile and link against it with
 // our native module builds that depend on it
 #include "nlohmann/json.hpp"
+
 
 namespace node {
 namespace nsolid {
@@ -462,7 +465,7 @@ class EnvList {
   };
 
   // Return the one true instance.
-  static EnvList* Inst();
+  NSOLID_EXTERN_PRIVATE static EnvList* Inst();
 
   // This call is thread-safe.
   std::string AgentId();
@@ -493,8 +496,10 @@ class EnvList {
 
   // Queue callbacks to run on the EnvList thread without reference to a
   // specific EnvInst instance.
-  int QueueCallback(q_cb_sig cb, void* data);
-  int QueueCallback(q_cb_sig cb, uint64_t timeout, void* data);
+  NSOLID_EXTERN_PRIVATE int QueueCallback(q_cb_sig cb, void* data);
+  NSOLID_EXTERN_PRIVATE int QueueCallback(q_cb_sig cb,
+                                          uint64_t timeout,
+                                          void* data);
 
   // These should only be called from node threads.
   void AddEnv(Environment* env);
