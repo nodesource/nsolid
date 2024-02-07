@@ -1603,10 +1603,12 @@ test-with-console:
 test-agents-prereqs:
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 zmq-zap --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm run build:libzmq --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install @opentelemetry/otlp-proto-exporter-base --prefix test/common/nsolid-otlp-agent --no-save --no-package-lock
 
 .PHONY: test-agents-prereqs-clean
 test-agents-prereqs-clean:
 	$(RM) -r test/common/nsolid-zmq-agent/node_modules
+	$(RM) -r test/common/nsolid-otlp-agent/node_modules
 
 HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 1 || echo 0)
 
