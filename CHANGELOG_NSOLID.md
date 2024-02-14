@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-02-14, Version 20.11.1-nsolid-v5.0.5 'Iron'
+
+### Commits
+
+* \[[`61e88a12f0`](https://github.com/nodesource/nsolid/commit/61e88a12f0)] - Merge tag 'v20.11.1' into node-v20.11.1-nsolid-v5.0.5-release (Trevor Norris)
+
 ## 2024-01-24, Version 20.11.0-nsolid-v5.0.4 'Iron'
 
 ### Commits
