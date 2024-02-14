@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-02-14, Version 5.0.5 'Hydrogen'
+
+### Commits
+
+* \[[`a3f1b383c5`](https://github.com/nodesource/nsolid/commit/a3f1b383c5)] - Merge tag 'v18.19.1' into node-v18.19.1-nsolid-v5.0.5-release (Trevor Norris)
+
 ## 2024-10-24, Version 5.0.4 'Hydrogen'
 
 ### Commits
