@@ -151,12 +151,19 @@ static int get_cpu_usage(uint64_t* fields, uv_rusage_t* ru = nullptr) {
 ProcessMetrics::ProcessMetrics() : cpu_prev_time_(uv_hrtime()) {
   int er = get_cpu_usage(cpu_prev_);
   CHECK_EQ(er, 0);
+  CHECK_EQ(uv_mutex_init(&stor_lock_), 0);
+}
+
+
+ProcessMetrics::~ProcessMetrics() {
+  uv_mutex_destroy(&stor_lock_);
 }
 
 
 std::string ProcessMetrics::toJSON() {
   std::string metrics_string;
 
+  uv_mutex_lock(&stor_lock_);
   metrics_string += "{";
 #define V(Type, CName, JSName, MType)                                          \
   metrics_string += "\"" #JSName "\":";                                        \
@@ -173,13 +180,17 @@ std::string ProcessMetrics::toJSON() {
   metrics_string += "\"cpu\":";
   metrics_string += std::to_string(stor_.cpu_percent);
   metrics_string += "}";
+  uv_mutex_unlock(&stor_lock_);
 
   return metrics_string;
 }
 
 
 ProcessMetrics::MetricsStor ProcessMetrics::Get() {
-  return stor_;
+  uv_mutex_lock(&stor_lock_);
+  auto stor = stor_;
+  uv_mutex_unlock(&stor_lock_);
+  return stor;
 }
 
 
@@ -223,6 +234,7 @@ int ProcessMetrics::Update() {
   cpu_percent[1] = (cpu[1] - cpu_prev_[1]) * 100.0 * 1000.0 / elapsed;
   cpu_percent[2] = (cpu[2] - cpu_prev_[2]) * 100.0 * 1000.0 / elapsed;
 
+  uv_mutex_lock(&stor_lock_);
   stor_.title = title_buf;
   stor_.user = pwd.username;
   stor_.timestamp = duration_cast<milliseconds>(
@@ -249,6 +261,7 @@ int ProcessMetrics::Update() {
   stor_.cpu_system_percent = cpu_percent[1];
   stor_.cpu_percent = cpu_percent[2];
   stor_.cpu = stor_.cpu_percent;
+  uv_mutex_unlock(&stor_lock_);
 
   cpu_prev_[0] = cpu[0];
   cpu_prev_[1] = cpu[1];
