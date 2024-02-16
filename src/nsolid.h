@@ -561,7 +561,7 @@ class NODE_EXTERN ProcessMetrics {
    * @brief Destroy the Process Metrics object
    *
    */
-  ~ProcessMetrics() = default;
+  ~ProcessMetrics();
 
   /**
    * @brief struct to store process metrics data.
@@ -598,6 +598,7 @@ class NODE_EXTERN ProcessMetrics {
   int Update();
 
  private:
+  uv_mutex_t stor_lock_;
   MetricsStor stor_;
   uint64_t cpu_prev_[3];
   uint64_t cpu_prev_time_;
