@@ -226,7 +226,7 @@ class RingBuffer {
     size_--;
   }
 
-  void push(T& value) {
+  void push(const T& value) {
     buffer_[tail_] = value;
     tail_ = (tail_ + 1) % capacity_;
 
