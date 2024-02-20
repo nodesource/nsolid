@@ -427,8 +427,10 @@ int StatsDAgent::stop() {
 }
 
 void StatsDAgent::do_stop() {
-  status(Unconfigured);
-  tcp_.reset(nullptr);
+  {
+    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
+    status(Unconfigured);
+  }
   if (tcp_) {
     tcp_->close_and_delete();
     tcp_ = nullptr;
