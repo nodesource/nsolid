@@ -444,7 +444,6 @@ void StatsDAgent::do_stop() {
   shutdown_.close();
   metrics_timer_.close();
   retry_timer_.close();
-  env_metrics_map_.clear();
 }
 
 void StatsDAgent::run_(nsuv::ns_thread*, StatsDAgent* agent) {
