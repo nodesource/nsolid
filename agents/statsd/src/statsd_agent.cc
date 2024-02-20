@@ -881,6 +881,7 @@ void StatsDAgent::setup_tcp() {
   if (tcp_) {
     tcp_->close_and_delete();
   }
+  addr_index_ = 0;
   tcp_ = new StatsDTcp(&loop_, &update_state_msg_);
   auto* ss = &endpoint_->addresses()[addr_index_];
   auto* addr = reinterpret_cast<const struct sockaddr*>(ss);
@@ -890,6 +891,7 @@ void StatsDAgent::setup_tcp() {
 void StatsDAgent::setup_udp() {
   udp_.reset(nullptr);
   udp_.reset(new StatsDUdp(&loop_, &update_state_msg_));
+  addr_index_ = 0;
   auto* ss = &endpoint_->addresses()[addr_index_];
   auto* addr = reinterpret_cast<const struct sockaddr*>(ss);
   if (udp_->connect(addr) != 0) {
