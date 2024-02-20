@@ -1056,7 +1056,8 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
       otlp::OTLPAgent::Inst()->start();
     }
 
-    if (config.find("statsd") != config.end()) {
+    it = config.find("statsd");
+    if (it != config.end() && !it->is_null()) {
       statsd::StatsDAgent::Inst()->start();
     }
 
