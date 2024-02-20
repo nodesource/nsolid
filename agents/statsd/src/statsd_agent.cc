@@ -396,6 +396,8 @@ void StatsDAgent::do_start() {
 
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
+  status(Initializing);
+
   if (hooks_init_ == false) {
     ASSERT_EQ(0, OnConfigurationHook(config_agent_cb, this));
     ASSERT_EQ(0, ThreadAddedHook(env_creation_cb, this));
@@ -403,7 +405,6 @@ void StatsDAgent::do_start() {
     hooks_init_ = true;
   }
 
-  status(Initializing);
   uv_cond_signal(&start_cond_);
   uv_mutex_unlock(&start_lock_);
 }
