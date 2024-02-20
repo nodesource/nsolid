@@ -46,7 +46,7 @@ class StatsDTcp {
 
   StatsDTcp(uv_loop_t*, nsuv::ns_async*);
 
-  ~StatsDTcp();
+  void close_and_delete();
 
   void connect(const struct sockaddr* addr);
 
@@ -67,9 +67,19 @@ class StatsDTcp {
   }
 
  private:
+  enum InternalState {
+    kWriting = 1 << 0,
+    kConnecting = 1 << 1,
+    kClosing = 1 << 2
+  };
+
   static void connect_cb_(nsuv::ns_connect<nsuv::ns_tcp>*, int, StatsDTcp*);
 
   static void write_cb_(nsuv::ns_write<nsuv::ns_tcp>*, int, StatsDTcp*);
+
+  inline void do_delete() { delete this; }
+
+  ~StatsDTcp();
 
   nsuv::ns_tcp* tcp_;
   nsuv::ns_connect<nsuv::ns_tcp> connect_req_;
@@ -78,6 +88,7 @@ class StatsDTcp {
   Status status_;
   std::string addr_str_;
   nsuv::ns_mutex addr_str_lock_;
+  int internal_state_;
 };
 
 class StatsDUdp {
@@ -251,7 +262,7 @@ class StatsDAgent {
   nsuv::ns_async env_msg_;
   TSQueue<std::tuple<SharedEnvInst, bool>> env_msg_q_;
 
-  std::unique_ptr<StatsDTcp> tcp_;
+  StatsDTcp* tcp_;
   std::unique_ptr<StatsDUdp> udp_;
   std::unique_ptr<StatsDEndpoint> endpoint_;
   size_t addr_index_;
