@@ -43,7 +43,8 @@ StatsDTcp::StatsDTcp(uv_loop_t* loop,
                      nsuv::ns_async* update_state_msg)
   : tcp_(new nsuv::ns_tcp()),
     update_state_msg_(update_state_msg),
-    status_(Initial) {
+    status_(Initial),
+    internal_state_(0) {
   ASSERT_EQ(0, tcp_->init(loop));
   ASSERT_EQ(0, addr_str_lock_.init());
   write_req_.set_data(nullptr);
@@ -51,7 +52,16 @@ StatsDTcp::StatsDTcp(uv_loop_t* loop,
 
 StatsDTcp::~StatsDTcp() {
   addr_str_lock_.destroy();
+}
+
+void StatsDTcp::close_and_delete() {
   tcp_->close_and_delete();
+  if (internal_state_ == 0) {
+    delete this;
+    return;
+  }
+
+  internal_state_ |= kClosing;
 }
 
 void StatsDTcp::connect(const struct sockaddr* addr) {
@@ -62,6 +72,7 @@ void StatsDTcp::connect(const struct sockaddr* addr) {
   if (r == 0) {
     addr_str(addr_to_string(addr));
     status(Connecting);
+    internal_state_ |= kConnecting;
   } else {
 #ifdef DEBUG
     // connection error. Try w/ the next address
@@ -112,7 +123,9 @@ int StatsDTcp::write(const string_vector& messages) {
 void StatsDTcp::connect_cb_(nsuv::ns_connect<nsuv::ns_tcp>* req,
                             int status,
                             StatsDTcp* tcp) {
-  if (tcp->tcp_ == nullptr) {
+  tcp->internal_state_ &= ~kConnecting;
+  if (tcp->internal_state_ & kClosing) {
+    tcp->do_delete();
     return;
   }
 
@@ -138,6 +151,12 @@ void StatsDTcp::write_cb_(nsuv::ns_write<nsuv::ns_tcp>* req,
   ASSERT_NOT_NULL(sv);
   delete sv;
   delete req;
+
+  tcp->internal_state_ &= ~kWriting;
+  if (tcp->internal_state_ & kClosing) {
+    tcp->do_delete();
+    return;
+  }
 
   if (status < 0) {
     tcp->addr_str("");
@@ -409,6 +428,10 @@ int StatsDAgent::stop() {
 void StatsDAgent::do_stop() {
   status(Unconfigured);
   tcp_.reset(nullptr);
+  if (tcp_) {
+    tcp_->close_and_delete();
+    tcp_ = nullptr;
+  }
   udp_.reset(nullptr);
   send_stats_msg_.close();
   update_state_msg_.close();
@@ -609,7 +632,11 @@ int StatsDAgent::setup_metrics_timer(uint64_t period) {
 }
 
 int StatsDAgent::config_handles() {
-  tcp_.reset(nullptr);
+  if (tcp_) {
+    tcp_->close_and_delete();
+    tcp_ = nullptr;
+  }
+
   udp_.reset(nullptr);
   auto it = config_.find("statsd");
   if (it != config_.end()) {
@@ -841,8 +868,10 @@ int StatsDAgent::send_metrics(const json& metrics,
 }
 
 void StatsDAgent::setup_tcp() {
-  tcp_.reset(nullptr);
-  tcp_.reset(new StatsDTcp(&loop_, &update_state_msg_));
+  if (tcp_) {
+    tcp_->close_and_delete();
+  }
+  tcp_ = new StatsDTcp(&loop_, &update_state_msg_);
   auto* ss = &endpoint_->addresses()[addr_index_];
   auto* addr = reinterpret_cast<const struct sockaddr*>(ss);
   tcp_->connect(addr);
