@@ -549,18 +549,25 @@ void StatsDAgent::config_agent_cb(std::string config, StatsDAgent* agent) {
 }
 
 void StatsDAgent::config_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
+  int r = 0;
   json config_msg;
   // Check if the agent is already deleted or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_) {
-    return;
+  {
+    nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+    if (!is_running_) {
+      return;
+    }
+
+    while (agent->config_msg_q_.dequeue(config_msg)) {
+      r = agent->config(config_msg);
+      if (agent->status_ != Unconfigured) {
+        ASSERT_EQ(0, agent->update_state_msg_.send());
+      }
+    }
   }
 
-  while (agent->config_msg_q_.dequeue(config_msg)) {
-    agent->config(config_msg);
-    if (agent->status_ != Unconfigured) {
-      ASSERT_EQ(0, agent->update_state_msg_.send());
-    }
+  if (r != 0) {
+    agent->do_stop();
   }
 }
 
