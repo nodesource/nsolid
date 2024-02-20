@@ -907,7 +907,7 @@ void StatsDAgent::setup_udp() {
 void StatsDAgent::status_command_cb_(SharedEnvInst, StatsDAgent* agent) {
   // Check if the agent is already delete or if it's closing
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+  if (!is_running_) {
     return;
   }
 
