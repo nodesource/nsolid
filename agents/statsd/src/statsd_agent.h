@@ -134,6 +134,8 @@ class StatsDAgent {
 #undef X
   };
 
+  static std::atomic<bool> is_running_;
+
   static StatsDAgent* Inst();
 
   int setup_metrics_timer(uint64_t period);
@@ -190,8 +192,6 @@ class StatsDAgent {
   ~StatsDAgent();
 
   void operator delete(void*) = delete;
-
-  static std::atomic<bool> is_running_;
 
   static const std::vector<std::string> metrics_fields;
 
