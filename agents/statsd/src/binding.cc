@@ -152,7 +152,7 @@ static void RegisterStatusCb(const FunctionCallbackInfo<Value>& args) {
         status.c_str(),
         NewStringType::kNormal).ToLocalChecked();
 
-      cb->Call(context, Undefined(isolate), 1, &argv).ToLocalChecked();
+      USE(cb->Call(context, Undefined(isolate), 1, &argv));
     }));
 
   ASSERT_NOT_NULL(status_cb_pair_);
