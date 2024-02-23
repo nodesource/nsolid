@@ -1410,8 +1410,6 @@ void EnvList::process_callbacks_(ns_async*, EnvList* envlist) {
     // than the timeout time, then call the callback immediately.
     if (timeout < 0) {
       to_stor->timer_cb(nullptr, to_stor);
-      delete to_stor;
-      to_stor = nullptr;
       continue;
     }
     // Here we create the timeout and set it using the delta in time as a
