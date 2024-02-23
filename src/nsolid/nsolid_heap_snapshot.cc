@@ -217,7 +217,9 @@ void NSolidHeapSnapshot::take_snapshot(SharedEnvInst envinst,
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&snapshotter->in_progress_heap_snapshots_);
   auto it = snapshotter->threads_running_snapshots_.find(thread_id);
-  ASSERT(it != snapshotter->threads_running_snapshots_.end());
+  if (it == snapshotter->threads_running_snapshots_.end()) {
+    return;
+  }
 
   HeapSnapshotStor& stor = it->second;
   if (snapshot == nullptr) {
