@@ -199,28 +199,31 @@ const char SPAN_MSG[] = "{"
 const char PONG[] = "{\"pong\":true}";
 
 #define ZMQ_JSON_STRINGS(V)                                                    \
-  V(kRequestId, "requestId")                                                   \
-  V(kCommand, "command")                                                       \
-  V(kDuration, "duration")                                                     \
-  V(kVersion, "version")                                                       \
-  V(kThreadId, "threadId")                                                     \
-  V(kPackages, "packages")                                                     \
-  V(kMessage, "message")                                                       \
+  V(kBulkNegotiated, "bulk_negotiated")                                        \
   V(kCode, "code")                                                             \
+  V(kCommand, "command")                                                       \
+  V(kDataNegotiated, "data_negotiated")                                        \
+  V(kDuration, "duration")                                                     \
+  V(kExit, "exit")                                                             \
+  V(kHeapProfile, "heap_profile")                                              \
+  V(kInterval, "interval")                                                     \
+  V(kMessage, "message")                                                       \
   V(kMetadata, "metadata")                                                     \
   V(kMetrics, "metrics")                                                       \
-  V(kInterval, "interval")                                                     \
-  V(kDataNegotiated, "data_negotiated")                                        \
-  V(kBulkNegotiated, "bulk_negotiated")                                        \
-  V(kExit, "exit")                                                             \
+  V(kPackages, "packages")                                                     \
   V(kProfile, "profile")                                                       \
   V(kReconfigure, "reconfigure")                                               \
-  V(kSnapshot, "snapshot")
+  V(kRequestId, "requestId")                                                   \
+  V(kSnapshot, "snapshot")                                                     \
+  V(kTrackAllocations, "trackAllocations")                                     \
+  V(kThreadId, "threadId")                                                     \
+  V(kVersion, "version")
 
 #define V(type, str)                                                           \
   static const char type[] = str;
   ZMQ_JSON_STRINGS(V)
 #undef V
+
 
 ZmqContext::ZmqContext() {
   context_ = zmq_ctx_new();
@@ -1550,6 +1553,10 @@ int ZmqAgent::command_message(const json& message) {
     }
   }
 
+  if (type == kHeapProfile) {
+    return start_heap_profiling(message, req_id);
+  }
+
   if (type == "info") {
     return send_info(req_id.c_str());
   }
@@ -1676,7 +1683,7 @@ ZmqAgent::ZmqCommandError ZmqAgent::create_command_error(
   switch (err) {
     case UV_EEXIST:
       cmd_error.code = 409;
-      if (command == kProfile) {
+      if (command == kProfile || command == kHeapProfile) {
         cmd_error.message = "Profile already in progress";
       } else {
         cmd_error.message = "Snapshot already in progress";
@@ -2146,6 +2153,21 @@ void ZmqAgent::check_exit_on_profile() {
   }
 }
 
+void ZmqAgent::heap_profile_cb(int status,
+                               std::string profile,
+                               uint64_t thread_id,
+                               ZmqAgent* agent) {
+  if (!is_running || agent->profile_msg_.is_closing()) {
+    return;
+  }
+
+  agent->profile_msg_q_.enqueue(
+    ProfileQStor { kHeapProf, status, profile, thread_id });
+
+  ASSERT_EQ(0, agent->profile_msg_.send());
+}
+
+
 void ZmqAgent::cpu_profile_cb(int status,
                               std::string profile,
                               uint64_t thread_id,
@@ -2164,6 +2186,9 @@ void ZmqAgent::profile_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
   ProfileQStor stor;
   while (agent->profile_msg_q_.dequeue(stor)) {
     switch (stor.type) {
+      case kHeapProf:
+        agent->got_prof<HeapProfilePolicy>(stor);
+      break;
       case kCpu:
         agent->got_prof<CPUProfilePolicy>(stor);
       break;
@@ -2232,7 +2257,6 @@ void ZmqAgent::do_got_prof(const ProfileQStor& stor,
   check_exit_on_profile();
 }
 
-
 int ZmqAgent::do_start_prof(const nlohmann::json& message,
                             const std::string& req_id,
                             ProfileType type,
@@ -2277,7 +2301,7 @@ int ZmqAgent::do_start_prof(const nlohmann::json& message,
   }
 
   ProfileStor stor{ req_id, std::move(metadata), uv_now(&loop_) };
-  int err = start_profiling(thread_id, duration, metadata, stor, this);
+  int err = start_profiling(thread_id, duration, args, stor, this);
   if (err != 0) {
     return send_error_response(req_id, cmd, err);
   }
@@ -2302,11 +2326,22 @@ int ZmqAgent::start_profiling(const json& message,
   return start_prof<CPUProfilePolicy>(message, req_id);
 }
 
+int ZmqAgent::start_heap_profiling(const json& message,
+                                   const std::string& req_id) {
+  return start_prof<HeapProfilePolicy>(message, req_id);
+}
 
 int ZmqAgent::stop_profiling(uint64_t thread_id) {
   // This method is only called from the JS thread the profile it's stopping is
   // running so the sync StopProfileSync method can be safely called.
   return CpuProfiler::StopProfileSync(GetEnvInst(thread_id));
+}
+
+int ZmqAgent::stop_heap_profiling(uint64_t thread_id) {
+  // This method is only called from the JS thread the profile it's stopping is
+  // running so the sync StopTrackingHeapObjectsSync method can be safely
+  // called.
+  return Snapshot::StopTrackingHeapObjectsSync(GetEnvInst(thread_id));
 }
 
 void ZmqAgent::status_command_cb(SharedEnvInst, ZmqAgent* agent) {
@@ -2636,7 +2671,7 @@ void ZmqAgent::resize_msg_buffer(int size) {
 
 int ZmqAgent::CPUProfilePolicy::start_profiling(uint64_t thread_id,
                                                 uint64_t duration,
-                                                const nlohmann::json& metadata,
+                                                const nlohmann::json& args,
                                                 ProfileStor& stor,
                                                 ZmqAgent* agent) {
   return CpuProfiler::TakeProfile(GetEnvInst(thread_id),
@@ -2644,6 +2679,34 @@ int ZmqAgent::CPUProfilePolicy::start_profiling(uint64_t thread_id,
                                   cpu_profile_cb,
                                   thread_id,
                                   agent);
+}
+
+int ZmqAgent::HeapProfilePolicy::start_profiling(uint64_t thread_id,
+                                                 uint64_t duration,
+                                                 const nlohmann::json& args,
+                                                 ProfileStor& stor,
+                                                 ZmqAgent* agent) {
+  auto it = args.find(kTrackAllocations);
+  if (it == args.end() || !it->is_boolean()) {
+    return UV_EINVAL;
+  }
+
+  stor.trackAllocations = *it;
+  bool redacted = false;
+  auto conf_it = agent->config_.find("redactSnapshots");
+  if (conf_it != agent->config_.end()) {
+    if (conf_it->is_boolean()) {
+      redacted = *conf_it;
+    }
+  }
+
+  return Snapshot::StartTrackingHeapObjects(GetEnvInst(thread_id),
+                                            redacted,
+                                            stor.trackAllocations,
+                                            duration,
+                                            heap_profile_cb,
+                                            thread_id,
+                                            agent);
 }
 
 ZmqCommandHandleRes ZmqCommandHandle::create(ZmqAgent& agent,

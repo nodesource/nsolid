@@ -15,6 +15,15 @@ const defaultProfileSettings = {
   },
 };
 
+const defaultHeapProfileSettings = {
+  duration: 5000, // milliseconds
+  trackAllocations: false,
+  threadId: 0,
+  metadata: {
+    reason: 'unspecified',
+  },
+};
+
 const defaultSnapshotSettings = {
   threadId: 0,
   metadata: {
@@ -152,6 +161,19 @@ class ZmqAgentBus extends EventEmitter {
     const args = profileSettings === null ? profileSettings : { ...defaultProfileSettings, ...profileSettings };
     const requestId = this._sendCB({ id: id, command: 'profile', args }, callback);
     debuglog('ZmqAgentBus:agentProfileStart', requestId);
+    return requestId;
+  }
+
+  /**
+   * Send heap_profile start to a connected agent
+   * @param {agentId} id the Agent id
+   * @param {object} profileSettings profile profile command settings object
+   * @returns {string} requestId
+   */
+  agentHeapProfileStart(id, profileSettings, callback) {
+    const args = profileSettings === null ? profileSettings : { ...defaultHeapProfileSettings, ...profileSettings };
+    const requestId = this._sendCB({ id: id, command: 'heap_profile', args }, callback);
+    debuglog('ZmqAgentBus:agentHeapProfileStart', requestId);
     return requestId;
   }
 

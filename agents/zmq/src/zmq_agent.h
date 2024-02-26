@@ -432,6 +432,12 @@ class ZmqAgent {
 
   const std::string& saas() const { return saas_; }
 
+  int start_heap_profiling(
+    const nlohmann::json& message,
+    const std::string& req_id = utils::generate_unique_id());
+
+  int stop_heap_profiling(uint64_t thread_id);
+
   int start_profiling(
     const nlohmann::json& message,
     const std::string& req_id = utils::generate_unique_id());
@@ -458,7 +464,7 @@ class ZmqAgent {
  private:
   enum ProfileType {
     kCpu = 0,
-    // kHeapProf,
+    kHeapProf,
     // kHeapSampling
     kNumberOfProfileTypes
   };
@@ -467,6 +473,7 @@ class ZmqAgent {
     std::string req_id;
     json metadata;
     uint64_t timestamp;
+    bool trackAllocations = false;
   };
 
   using StartProfiling = int (*)(uint64_t,
@@ -532,6 +539,11 @@ class ZmqAgent {
                              ZmqAgent* agent);
 
   static void profile_msg_cb(nsuv::ns_async*, ZmqAgent*);
+
+  static void heap_profile_cb(int status,
+                              std::string profile,
+                              uint64_t thread_id,
+                              ZmqAgent* agent);
 
   static void heap_snapshot_cb(int,
                                std::string,
@@ -779,6 +791,19 @@ class ZmqAgent {
     static constexpr const char* cmd = "profile";
     static constexpr const char* stop_cmd = "profile_stop";
     static constexpr ProfileType Type = ProfileType::kCpu;
+  };
+
+  class HeapProfilePolicy {
+   public:
+    static int start_profiling(uint64_t thread_id,
+                               uint64_t duration,
+                               const nlohmann::json& metadata,
+                               ProfileStor& stor,  // NOLINT(runtime/references)
+                               ZmqAgent* agent);
+
+    static constexpr const char* cmd = "heap_profile";
+    static constexpr const char* stop_cmd = "heap_profile_stop";
+    static constexpr ProfileType Type = ProfileType::kHeapProf;
   };
 };
 
