@@ -346,7 +346,10 @@ class ZmqBulkHandle : public ZmqHandle {
 // - It receives commands from the console to execute specific actions such as
 //   generating cpu profiles or heap snapshots and sends them back to the
 //   console, dynamically change the configuration of the agent/runtime, etc.
+
 class ZmqAgent {
+  struct ProfileQStor;
+
  public:
   enum Status {
 #define X(type, str)                                                          \
@@ -433,6 +436,11 @@ class ZmqAgent {
     const nlohmann::json& message,
     const std::string& req_id = utils::generate_unique_id());
 
+  template <typename Policy>
+  void got_prof(const ProfileQStor& stor);
+
+  bool pending_profiles() const;
+
   int stop_profiling(uint64_t thread_id);
 
   uv_loop_t* loop() { return &loop_; }
@@ -448,6 +456,40 @@ class ZmqAgent {
   bool profile_on_exit() { return profile_on_exit_.load(); }
 
  private:
+  enum ProfileType {
+    kCpu = 0,
+    // kHeapProf,
+    // kHeapSampling
+    kNumberOfProfileTypes
+  };
+
+  struct ProfileStor {
+    std::string req_id;
+    json metadata;
+    uint64_t timestamp;
+  };
+
+  using StartProfiling = int (*)(uint64_t,
+                                 uint64_t,
+                                 const nlohmann::json&,
+                                 ProfileStor&,
+                                 ZmqAgent*);
+
+  using ProfileStorMap = std::map<uint64_t, ProfileStor>;
+
+  struct ProfileState {
+    ProfileStorMap pending_profiles_map;
+    std::atomic<unsigned int> nr_profiles = 0;
+    std::string last_main_profile;
+  };
+
+  struct ProfileQStor {
+    ProfileType type;
+    int status;
+    std::string profile;
+    uint64_t thread_id;
+  };
+
   ZmqAgent();
 
   ~ZmqAgent();
@@ -484,11 +526,12 @@ class ZmqAgent {
 
   static void status_command_cb(SharedEnvInst, ZmqAgent*);
 
-  static void cpu_profile_cb(int,
-                             std::string,
-                             std::tuple<ZmqAgent*, uint64_t>*);
+  static void cpu_profile_cb(int status,
+                             std::string profile,
+                             uint64_t thread_id,
+                             ZmqAgent* agent);
 
-  static void cpu_profile_msg_cb(nsuv::ns_async*, ZmqAgent*);
+  static void profile_msg_cb(nsuv::ns_async*, ZmqAgent*);
 
   static void heap_snapshot_cb(int,
                                std::string,
@@ -541,15 +584,29 @@ class ZmqAgent {
 
   void auth();
 
+  void check_exit_on_profile();
+
   int config_message(const nlohmann::json& config);
 
   int config_sockets(const nlohmann::json& config);
 
   int command_message(const nlohmann::json& message);
 
-  std::string got_cpu_profile(int status,
-                              const std::string& profile,
-                              uint64_t thread_id);
+  template <typename Policy>
+  int start_prof(
+    const nlohmann::json& message,
+    const std::string& req_id = utils::generate_unique_id());
+
+  int do_start_prof(const nlohmann::json& message,
+                    const std::string& req_id,
+                    ProfileType type,
+                    const char* cmd,
+                    StartProfiling start_profiling);
+
+  void do_got_prof(const ProfileQStor& stor,
+                   ProfileType type,
+                   const char* cmd,
+                   const char* stop_cmd);
 
   void got_custom_command_response(const std::string&,
                                    const std::string&,
@@ -674,14 +731,11 @@ class ZmqAgent {
   std::atomic<Status> status_;
   nsuv::ns_async update_state_msg_;
 
-  // Cpu Profiling
-  nsuv::ns_async cpu_profile_msg_;
-  TSQueue<std::tuple<int, std::string, uint64_t>> cpu_profile_msg_q_;
-  std::map<uint64_t, std::tuple<std::string, nlohmann::json, uint64_t>>
-    pending_cpu_profile_data_map_;
-  std::string last_main_profile_;
+  // Profiling
+  nsuv::ns_async profile_msg_;
+  TSQueue<ProfileQStor> profile_msg_q_;
+  ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;
-  std::atomic<unsigned int> nr_profiles_;
 
   // Heap Snapshot
   nsuv::ns_async heap_snapshot_msg_;
@@ -713,7 +767,36 @@ class ZmqAgent {
 
   // For status testing
   void(*status_cb_)(const std::string&);
+
+  class CPUProfilePolicy {
+   public:
+    static int start_profiling(uint64_t thread_id,
+                               uint64_t duration,
+                               const nlohmann::json& metadata,
+                               ProfileStor& stor,  // NOLINT(runtime/references)
+                               ZmqAgent* agent);
+
+    static constexpr const char* cmd = "profile";
+    static constexpr const char* stop_cmd = "profile_stop";
+    static constexpr ProfileType Type = ProfileType::kCpu;
+  };
 };
+
+
+template <typename Policy>
+int ZmqAgent::start_prof(const nlohmann::json& message,
+                         const std::string& req_id) {
+  return do_start_prof(message,
+                       req_id,
+                       Policy::Type,
+                       Policy::cmd,
+                       Policy::start_profiling);
+}
+
+template <typename Policy>
+void ZmqAgent::got_prof(const ProfileQStor& stor) {
+  do_got_prof(stor, Policy::Type, Policy::cmd, Policy::stop_cmd);
+}
 
 }  // namespace nsolid
 }  // namespace node

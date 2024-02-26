@@ -130,26 +130,10 @@ const char MSG_6[] = "{"
   ",\"exit_code\":%d"
   ",\"version\":%d"
   ",\"error\":{\"message\":%s,\"stack\":%s,\"code\":%d}"
-"}";
-
-const char MSG_7[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"command\":\"exit\""
-  ",\"exit_code\":%d"
-  ",\"version\":%d"
-  ",\"error\":null"
-"}";
-
-const char MSG_8[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"command\":\"exit\""
-  ",\"exit_code\":%d"
-  ",\"version\":%d"
-  ",\"error\":{\"message\":%s,\"stack\":%s,\"code\":%d}"
   ",\"profile\":%s"
 "}";
 
-const char MSG_9[] = "{"
+const char MSG_7[] = "{"
   "\"agentId\":\"%s\""
   ",\"command\":\"exit\""
   ",\"exit_code\":%d"
@@ -660,7 +644,6 @@ ZmqAgent::ZmqAgent()
       config_(default_agent_config),
       status_(Unconfigured),
       profile_on_exit_(false),
-      nr_profiles_(0),
       trace_flags_(0),
       status_cb_(nullptr) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
@@ -724,7 +707,7 @@ void ZmqAgent::do_start() {
 
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
-  ASSERT_EQ(0, cpu_profile_msg_.init(&loop_, cpu_profile_msg_cb, this));
+  ASSERT_EQ(0, profile_msg_.init(&loop_, profile_msg_cb, this));
 
   ASSERT_EQ(0, heap_snapshot_msg_.init(&loop_, heap_snapshot_msg_cb, this));
 
@@ -756,7 +739,7 @@ int ZmqAgent::stop(bool profile_stopped) {
     if (profile_stopped) {
       // Wait here until the are no remaining profiles to be completed
       uv_mutex_lock(&stop_lock_);
-      while (nr_profiles_ > 0) {
+      while (pending_profiles()) {
         uv_cond_wait(&stop_cond_, &stop_lock_);
       }
 
@@ -794,7 +777,7 @@ void ZmqAgent::do_stop() {
   env_msg_.close();
   shutdown_.close();
   metrics_timer_.close();
-  cpu_profile_msg_.close();
+  profile_msg_.close();
   heap_snapshot_msg_.close();
   blocked_loop_msg_.close();
   custom_command_msg_.close();
@@ -1836,50 +1819,31 @@ void ZmqAgent::send_exit() {
   int exit_code = GetExitCode();
 
   int r;
-
+  ProfileState& cpu_profile_state = profile_state_[kCpu];
+  const char* profile = cpu_profile_state.last_main_profile.empty() ?
+                        "null" : cpu_profile_state.last_main_profile.c_str();
   if (error == nullptr) {
-    if (last_main_profile_.empty()) {
-      r = snprintf(msg_buf_,
-                   msg_size_,
-                   MSG_7,
-                   agent_id_.c_str(),
-                   exit_code,
-                   version_);
-    } else {
-      r = snprintf(msg_buf_,
-                   msg_size_,
-                   MSG_9,
-                   agent_id_.c_str(),
-                   exit_code,
-                   version_,
-                   last_main_profile_.c_str());
-    }
+    r = snprintf(msg_buf_,
+                 msg_size_,
+                 MSG_7,
+                 agent_id_.c_str(),
+                 exit_code,
+                 version_,
+                 profile);
   } else {
     // Use nlohmann::json to properly escape the error message and stack.
     nlohmann::json jmsg(std::get<0>(*error));
     nlohmann::json jstack(std::get<1>(*error));
-    if (last_main_profile_.empty()) {
-      r = snprintf(msg_buf_,
-                   msg_size_,
-                   MSG_6,
-                   agent_id_.c_str(),
-                   exit_code,
-                   version_,
-                   jmsg.dump().c_str(),
-                   jstack.dump().c_str(),
-                   500);
-    } else {
-      r = snprintf(msg_buf_,
-                   msg_size_,
-                   MSG_8,
-                   agent_id_.c_str(),
-                   exit_code,
-                   version_,
-                   jmsg.dump().c_str(),
-                   jstack.dump().c_str(),
-                   500,
-                   last_main_profile_.c_str());
-    }
+    r = snprintf(msg_buf_,
+                 msg_size_,
+                 MSG_6,
+                 agent_id_.c_str(),
+                 exit_code,
+                 version_,
+                 jmsg.dump().c_str(),
+                 jstack.dump().c_str(),
+                 500,
+                 profile);
   }
 
   ASSERT_GT(r, 0);
@@ -2162,134 +2126,143 @@ void ZmqAgent::got_spans(const std::vector<Tracer::SpanStor>& spans) {
   send_command_message("tracing", nullptr, spans_str.c_str());
 }
 
+bool ZmqAgent::pending_profiles() const {
+  // Check if there are any pending profiles on every profile_state_ by checking
+  // the nr_profiles field of each
+  for (const auto& p : profile_state_) {
+    if (p.nr_profiles > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void ZmqAgent::check_exit_on_profile() {
+  if (exiting_ && pending_profiles() == false) {
+    uv_mutex_lock(&stop_lock_);
+    uv_cond_signal(&stop_cond_);
+    uv_mutex_unlock(&stop_lock_);
+  }
+}
+
 void ZmqAgent::cpu_profile_cb(int status,
                               std::string profile,
-                              std::tuple<ZmqAgent*, uint64_t>* tup) {
-  ZmqAgent* agent = std::get<ZmqAgent*>(*tup);
-  // Check if the agent is already closing
-  if (agent->cpu_profile_msg_.is_closing()) {
-    delete tup;
+                              uint64_t thread_id,
+                              ZmqAgent* agent) {
+  if (!is_running || agent->profile_msg_.is_closing()) {
     return;
   }
 
-  agent->cpu_profile_msg_q_.enqueue({
-    status,
-    profile,
-    std::move(std::get<uint64_t>(*tup))
-  });
+  agent->profile_msg_q_.enqueue(
+    ProfileQStor { kCpu, status, profile, thread_id });
 
-  ASSERT_EQ(0, agent->cpu_profile_msg_.send());
-  // The tuple must be deleted once the stream is done.
-  if (profile.length() == 0) {
-    delete tup;
+  ASSERT_EQ(0, agent->profile_msg_.send());
+}
+
+void ZmqAgent::profile_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
+  ProfileQStor stor;
+  while (agent->profile_msg_q_.dequeue(stor)) {
+    switch (stor.type) {
+      case kCpu:
+        agent->got_prof<CPUProfilePolicy>(stor);
+      break;
+      default:
+        ASSERT(false);
+    }
   }
 }
 
-void ZmqAgent::cpu_profile_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
-  std::tuple<int, std::string, uint64_t> tup;
-  while (agent->cpu_profile_msg_q_.dequeue(tup)) {
-    agent->got_cpu_profile(std::get<0>(tup),
-                           std::get<1>(tup),
-                           std::get<2>(tup));
-  }
-}
-
-std::string ZmqAgent::got_cpu_profile(int status,
-                                      const std::string& profile,
-                                      uint64_t thread_id) {
-  bool profileStreamComplete = profile.length() == 0;
-  // get and remove associated data from pending_cpu_profile_data_map_
-  auto it = pending_cpu_profile_data_map_.find(thread_id);
-  ASSERT(it != pending_cpu_profile_data_map_.end());
-  auto tup = it->second;
+void ZmqAgent::do_got_prof(const ProfileQStor& stor,
+                           ProfileType type,
+                           const char* cmd,
+                           const char* stop_cmd) {
+  bool profileStreamComplete = stor.profile.length() == 0;
+  ProfileState& profile_state = profile_state_[type];
+  // get and remove associated data from pending_profiles_map
+  auto it = profile_state.pending_profiles_map.find(stor.thread_id);
+  ASSERT(it != profile_state.pending_profiles_map.end());
+  ProfileStor prof_stor = it->second;
   if (profileStreamComplete) {
-    pending_cpu_profile_data_map_.erase(it);
-    nr_profiles_--;
+    profile_state.pending_profiles_map.erase(it);
+    profile_state.nr_profiles--;
   }
-  const std::string& req_id = std::get<std::string>(tup);
 
-  if (profile_on_exit_ && thread_id == 0) {
+  if (profile_on_exit_ && stor.thread_id == 0) {
     // Store the req_id of the main thread profile
-    last_main_profile_ = req_id;
+    profile_state.last_main_profile = prof_stor.req_id;
   }
 
-  // get start_ts and metadata from pending_cpu_profile_data_map_
-  if (status < 0) {
+  // get start_ts and metadata from pending_profiles_map
+  if (stor.status < 0) {
     // Send error message back
-    send_error_response(req_id, kProfile, status);
-    return req_id;
+    send_error_response(prof_stor.req_id, cmd, stor.status);
+    return;
   }
 
   // send profile_stop command reponse thru data channel
   // only if the profile is complete
   if (profileStreamComplete) {
-    int r = send_command_message("profile_stop", req_id.c_str(), nullptr);
+    int r = send_command_message(stop_cmd,
+                                 prof_stor.req_id.c_str(),
+                                 nullptr);
     if (r < 0) {
-      return req_id;
+      return;
     }
   }
 
   // send profile chunks thru the bulk channel
   if (bulk_handle_) {
     uv_update_time(&loop_);
-    auto met = std::get<nlohmann::json>(tup);
     snprintf(msg_buf_,
              msg_size_,
              MSG_3,
              agent_id_.c_str(),
-             req_id.c_str(),
-             kProfile,
-             uv_now(&loop_) - std::get<uint64_t>(tup),
-             met.dump().c_str(),
+             prof_stor.req_id.c_str(),
+             cmd,
+             uv_now(&loop_) - prof_stor.timestamp,
+             prof_stor.metadata.dump().c_str(),
              profileStreamComplete ? "true" : "false",
-             thread_id,
+             stor.thread_id,
              version_);
-    bulk_handle_->send(msg_buf_, profile);
+    bulk_handle_->send(msg_buf_, stor.profile);
   }
 
   // Don't continue with the exit procedure until all profiles have finished.
-  if (exiting_ && pending_cpu_profile_data_map_.empty()) {
-    uv_mutex_lock(&stop_lock_);
-    uv_cond_signal(&stop_cond_);
-    uv_mutex_unlock(&stop_lock_);
-  }
-
-  return req_id;
+  check_exit_on_profile();
 }
 
-int ZmqAgent::start_profiling(const json& message,
-                              const std::string& req_id) {
-  uint64_t thread_id = 0;
 
+int ZmqAgent::do_start_prof(const nlohmann::json& message,
+                            const std::string& req_id,
+                            ProfileType type,
+                            const char* cmd,
+                            StartProfiling start_profiling) {
   if (!data_handle_) {
     // Don't send error message back as there's actually no connection
-    return UV_ENOTCONN;
-  }
-
-  if (pending_cpu_profile_data_map_.find(thread_id) !=
-      pending_cpu_profile_data_map_.end()) {
-    return send_error_response(req_id, kProfile, UV_EEXIST);
+    return send_error_response(req_id, cmd, UV_ENOTCONN);
   }
 
   auto it = message.find("args");
   if (it == message.end() || !it->is_object()) {
-    return send_error_response(req_id, kProfile, UV_EINVAL);
+    return send_error_response(req_id, cmd, UV_EINVAL);
   }
 
   json args = *it;
   it = args.find(kThreadId);
   if (it == args.end() || !it->is_number_unsigned()) {
-    return send_error_response(req_id, kProfile, UV_EINVAL);
+    return send_error_response(req_id, cmd, UV_EINVAL);
   }
 
-  thread_id = *it;
+  uint64_t thread_id = *it;
 
   it = args.find(kDuration);
   if (it == args.end() || !it->is_number_unsigned()) {
-    return send_error_response(req_id, kProfile, UV_EINVAL);
+    return send_error_response(req_id, cmd, UV_EINVAL);
   }
 
-  uint64_t duration = *it;
+  uint64_t  duration = *it;
+
   it = args.find(kMetadata);
 
   json metadata;
@@ -2297,35 +2270,36 @@ int ZmqAgent::start_profiling(const json& message,
     metadata = *it;
   }
 
-  auto tup = new (std::nothrow) std::tuple<ZmqAgent*, uint64_t>(this,
-                                                                thread_id);
-  if (tup == nullptr) {
-    return send_error_response(req_id, kProfile, UV_ENOMEM);
+  ProfileState& profile_state = profile_state_[type];
+  if (profile_state.pending_profiles_map.find(thread_id) !=
+      profile_state.pending_profiles_map.end()) {
+    return send_error_response(req_id, cmd, UV_EEXIST);
   }
 
-  int err = CpuProfiler::TakeProfile(GetEnvInst(thread_id),
-                                     duration,
-                                     cpu_profile_cb,
-                                     tup);
-
+  ProfileStor stor{ req_id, std::move(metadata), uv_now(&loop_) };
+  int err = start_profiling(thread_id, duration, metadata, stor, this);
   if (err != 0) {
-    delete tup;
-    return send_error_response(req_id, kProfile, err);
+    return send_error_response(req_id, cmd, err);
   }
 
   // send profile command reponse thru data channel
-  err = send_command_message(kProfile, req_id.c_str(), nullptr);
+  err = send_command_message(cmd, req_id.c_str(), nullptr);
   if (err < 0) {
     return err;
   }
 
   uv_update_time(&loop_);
-  auto iter = pending_cpu_profile_data_map_.emplace(
-    thread_id, std::make_tuple(req_id, std::move(metadata), uv_now(&loop_)));
+  auto iter = profile_state.pending_profiles_map.emplace(thread_id,
+                                                         std::move(stor));
   ASSERT_NE(iter.second, false);
-  nr_profiles_++;
+  profile_state.nr_profiles++;
 
   return 0;
+}
+
+int ZmqAgent::start_profiling(const json& message,
+                              const std::string& req_id) {
+  return start_prof<CPUProfilePolicy>(message, req_id);
 }
 
 
@@ -2658,6 +2632,18 @@ void ZmqAgent::resize_msg_buffer(int size) {
   msg_up_.reset(new char[size + 1]);
   msg_buf_ = msg_up_.get();
   msg_size_ = size + 1;
+}
+
+int ZmqAgent::CPUProfilePolicy::start_profiling(uint64_t thread_id,
+                                                uint64_t duration,
+                                                const nlohmann::json& metadata,
+                                                ProfileStor& stor,
+                                                ZmqAgent* agent) {
+  return CpuProfiler::TakeProfile(GetEnvInst(thread_id),
+                                  duration,
+                                  cpu_profile_cb,
+                                  thread_id,
+                                  agent);
 }
 
 ZmqCommandHandleRes ZmqCommandHandle::create(ZmqAgent& agent,
