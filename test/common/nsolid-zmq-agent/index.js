@@ -24,7 +24,6 @@ const defaultForkOpts = {
     NODE_DEBUG: process.env.NODE_DEBUG,
     NODE_DEBUG_NATIVE: process.env.NODE_DEBUG_NATIVE,
   },
-  stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
 };
 
 const defaultSaasToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaalocalhost:9001';
