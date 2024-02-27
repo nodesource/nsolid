@@ -37,6 +37,12 @@ er = binding.startTrackingHeapObjects(threadId, false, false, 10000);
 assert.strictEqual(er, 0);
 er = binding.stopTrackingHeapObjects(threadId);
 assert.strictEqual(er, 0);
+
+// Test the sync stop api.
+er = binding.startTrackingHeapObjects(threadId, false, false, 10000);
+assert.strictEqual(er, 0);
+er = binding.stopTrackingHeapObjectsSync(threadId);
+assert.strictEqual(er, 0);
 setTimeout(() => {
   // Check error codes for invalid calls.
   er = binding.startTrackingHeapObjects(threadId, false, false, 10000);

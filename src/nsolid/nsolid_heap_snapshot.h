@@ -46,6 +46,8 @@ class NSolidHeapSnapshot {
 
   int StopTrackingHeapObjects(SharedEnvInst envinst);
 
+  int StopTrackingHeapObjectsSync(SharedEnvInst envinst);
+
  private:
   NSolidHeapSnapshot();
 

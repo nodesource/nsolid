@@ -538,6 +538,13 @@ int Snapshot::StopTrackingHeapObjects(SharedEnvInst envinst) {
   return NSolidHeapSnapshot::Inst()->StopTrackingHeapObjects(envinst);
 }
 
+int Snapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
+  if (envinst == nullptr)
+    return UV_ESRCH;
+
+  return NSolidHeapSnapshot::Inst()->StopTrackingHeapObjectsSync(envinst);
+}
+
 int Snapshot::get_snapshot_(SharedEnvInst envinst,
                             bool redacted,
                             void* data,
