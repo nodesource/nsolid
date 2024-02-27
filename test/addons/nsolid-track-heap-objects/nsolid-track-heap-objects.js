@@ -44,7 +44,7 @@ setTimeout(() => {
   er = binding.startTrackingHeapObjects(threadId, false, false, 10);
   assert.strictEqual(er, UV_EEXIST);
 
-  er = binding.stopTrackingHeapObjects(threadId);
+  er = binding.stopTrackingHeapObjectsSync(threadId);
   assert.strictEqual(er, 0);
   setTimeout(() => {
     er = binding.stopTrackingHeapObjects(threadId);

@@ -64,6 +64,19 @@ static void StopTrackingHeapObjects(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(ret);
 }
 
+static void StopTrackingHeapObjectsSync(
+    const FunctionCallbackInfo<Value>& args) {
+  v8::HandleScope handle_scope(args.GetIsolate());
+  // thread_id
+  assert(args[0]->IsUint32());
+
+  uint64_t thread_id = args[0].As<Number>()->Value();
+
+  int ret = node::nsolid::Snapshot::StopTrackingHeapObjectsSync(
+      node::nsolid::GetEnvInst(thread_id));
+  args.GetReturnValue().Set(ret);
+}
+
 static void at_exit_cb() {
   for (const auto& pair : snapshots) {
     assert(pair.second.size() > 0);
@@ -74,6 +87,8 @@ NODE_MODULE_INIT(/* exports, module, context */) {
   NODE_SET_METHOD(
       exports, "startTrackingHeapObjects", StartTrackingHeapObjectsBinding);
   NODE_SET_METHOD(exports, "stopTrackingHeapObjects", StopTrackingHeapObjects);
+  NODE_SET_METHOD(
+      exports, "stopTrackingHeapObjectsSync", StopTrackingHeapObjectsSync);
   node::nsolid::SharedEnvInst envinst = node::nsolid::GetLocalEnvInst(context);
   if (node::nsolid::IsMainThread(envinst)) {
     atexit(at_exit_cb);
