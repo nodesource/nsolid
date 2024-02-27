@@ -91,60 +91,7 @@ int NSolidHeapSnapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
   if (it == threads_running_snapshots_.end())
     return UV_ENOENT;
 
-  HeapSnapshotStor& stor = it->second;
-  // If this condition is reached. This was called by EnvList::RemoveEnv.
-  // It wants to stop any pending snapshot w/ tracking heap object.
-  if (!stor.is_tracking_heapobjects_) {
-    // If no pending trackers, just do nothing
-    // There are not peding snapshots with trackers
-    return UV_ENOENT;
-  }
-
-  v8::Isolate* isolate = envinst->isolate();
-
-  v8::HeapProfiler* profiler = isolate->GetHeapProfiler();
-  ASSERT_NOT_NULL(profiler);
-
-  v8::HandleScope scope(isolate);
-
-  const v8::HeapSnapshot* snapshot = profiler->TakeHeapSnapshot();
-  if (snapshot == nullptr) {
-    stor.cb(heap_profiler::HEAP_SNAPSHOT_FAILURE,
-            std::string(),
-            stor.data.get());
-  } else {
-    std::string snapshot_str;
-    DataOutputStream<uint64_t, v8::HeapSnapshot> stream(&snapshot_str,
-                                                        snapshot,
-                                                        &thread_id);
-
-    if (stor.redacted) {
-      const v8::RedactedHeapSnapshot snapshot_redact(snapshot);
-      snapshot_redact.Serialize(&stream);
-    } else {
-      snapshot->Serialize(&stream);
-    }
-
-    ASSERT_EQ(stor.is_tracking_heapobjects_, true);
-    profiler->StopTrackingHeapObjects();
-    stor.is_tracking_heapobjects_ = false;
-
-
-    // At this point, the snapshot is fully serialized
-    stor.cb(0, snapshot_str.c_str(), stor.data.get());
-    // Tell ZMQ that the snapshot is done
-    stor.cb(0, std::string(), stor.data.get());
-
-    // Don't leak the snapshot string
-    snapshot_str.clear();
-
-    // Work around a deficiency in the API. The HeapSnapshot object is const
-    // but we cannot call HeapProfiler::DeleteAllHeapSnapshots() because that
-    // invalidates _all_ snapshots, including those created by other tools.
-    const_cast<v8::HeapSnapshot*>(snapshot)->Delete();
-  }
-  // Delete the snapshot from the map
-  threads_running_snapshots_.erase(it);
+  stop_tracking_heap_objects(envinst, this);
   return 0;
 }
 
