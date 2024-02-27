@@ -12,6 +12,11 @@ NSolidHeapSnapshot::NSolidHeapSnapshot() {
   ASSERT_EQ(0, in_progress_heap_snapshots_.init(true));
 }
 
+NSolidHeapSnapshot::~NSolidHeapSnapshot() {
+  nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
+  threads_running_snapshots_.clear();
+}
+
 int NSolidHeapSnapshot::StartTrackingHeapObjects(
     SharedEnvInst envinst,
     bool redacted,
@@ -21,18 +26,22 @@ int NSolidHeapSnapshot::StartTrackingHeapObjects(
     Snapshot::snapshot_proxy_sig proxy) {
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
+  uint64_t profile_id = in_progress_timers_.fetch_add(
+      1, std::memory_order_relaxed);
   // We can not trigger this command if there is already a snapshot in progress
   auto it = threads_running_snapshots_.emplace(
         thread_id,
-        HeapSnapshotStor{ redacted, true, proxy, std::move(data) });
+        HeapSnapshotStor{ redacted, true, profile_id, proxy, std::move(data) });
   if (it.second == false) {
     return UV_EEXIST;
   }
+
   int status = RunCommand(envinst,
                           CommandType::Interrupt,
                           start_tracking_heapobjects,
                           trackAllocations,
                           duration,
+                          profile_id,
                           this);
   if (status != 0) {
     // Now we are tracking heap objects in this thread
@@ -53,6 +62,10 @@ int NSolidHeapSnapshot::GetHeapSnapshot(SharedEnvInst envinst,
     return UV_EEXIST;
   }
 
+  uint64_t profile_id = in_progress_timers_.fetch_add(
+      1,
+      std::memory_order_relaxed);
+
   int status = RunCommand(envinst,
                           CommandType::Interrupt,
                           take_snapshot,
@@ -62,7 +75,11 @@ int NSolidHeapSnapshot::GetHeapSnapshot(SharedEnvInst envinst,
     threads_running_snapshots_.emplace(
         thread_id,
         HeapSnapshotStor{
-            redacted, false, proxy, internal::user_data(data, deleter)});
+            redacted,
+            false,
+            profile_id,
+            proxy,
+            internal::user_data(data, deleter)});
   }
 
   return status;
@@ -83,16 +100,13 @@ int NSolidHeapSnapshot::StopTrackingHeapObjects(SharedEnvInst envinst) {
   return er;
 }
 
-void NSolidHeapSnapshot::stop_tracking_heap_objects(
-    SharedEnvInst envinst,
-    NSolidHeapSnapshot* snapshotter) {
+int NSolidHeapSnapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
   uint64_t thread_id = envinst->thread_id();
-  nsuv::ns_mutex::scoped_lock lock(&snapshotter->in_progress_heap_snapshots_);
-  auto it = snapshotter->threads_running_snapshots_.find(thread_id);
-  if (it == snapshotter->threads_running_snapshots_.end()) {
-    // This might happen if snapshot_cb is called before RemoveEnv. Just return;
-    return;
-  }
+  nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
+  auto it = threads_running_snapshots_.find(thread_id);
+  // Make sure there is a snapshot running
+  if (it == threads_running_snapshots_.end())
+    return UV_ENOENT;
 
   HeapSnapshotStor& stor = it->second;
   // If this condition is reached. This was called by EnvList::RemoveEnv.
@@ -100,7 +114,7 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
   if (!stor.is_tracking_heapobjects_) {
     // If no pending trackers, just do nothing
     // There are not peding snapshots with trackers
-    return;
+    return UV_ENOENT;
   }
 
   v8::Isolate* isolate = envinst->isolate();
@@ -138,22 +152,77 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
     // Tell ZMQ that the snapshot is done
     stor.cb(0, std::string(), stor.data.get());
 
-    // Don't leak the snapshot string
-    snapshot_str.clear();
-
     // Work around a deficiency in the API. The HeapSnapshot object is const
     // but we cannot call HeapProfiler::DeleteAllHeapSnapshots() because that
     // invalidates _all_ snapshots, including those created by other tools.
     const_cast<v8::HeapSnapshot*>(snapshot)->Delete();
   }
   // Delete the snapshot from the map
-  snapshotter->threads_running_snapshots_.erase(it);
+  threads_running_snapshots_.erase(it);
+  return 0;
+}
+
+void NSolidHeapSnapshot::stop_tracking_heap_objects(
+    SharedEnvInst envinst,
+    NSolidHeapSnapshot* snapshotter) {
+  uint64_t thread_id = envinst->thread_id();
+  nsuv::ns_mutex::scoped_lock lock(&snapshotter->in_progress_heap_snapshots_);
+  auto it = snapshotter->threads_running_snapshots_.find(thread_id);
+  if (it == snapshotter->threads_running_snapshots_.end()) {
+    // This might happen if snapshot_cb is called before RemoveEnv. Just return;
+    return;
+  }
+
+  HeapSnapshotStor& stor = it->second;
+  // If this condition is reached. This was called by EnvList::RemoveEnv.
+  // It wants to stop any pending snapshot w/ tracking heap object.
+  if (!stor.is_tracking_heapobjects_) {
+    // If no pending trackers, just do nothing
+    // There are not peding snapshots with trackers
+    return;
+  }
+
+  v8::Isolate* isolate = envinst->isolate();
+
+  v8::HeapProfiler* profiler = isolate->GetHeapProfiler();
+  ASSERT_NOT_NULL(profiler);
+
+  v8::HandleScope scope(isolate);
+
+  const v8::HeapSnapshot* snapshot = profiler->TakeHeapSnapshot();
+  if (snapshot == nullptr) {
+    stor.cb(heap_profiler::HEAP_SNAPSHOT_FAILURE,
+            std::string(),
+            stor.data.get());
+  } else {
+    DataOutputStream<uint64_t, v8::HeapSnapshot> stream(
+      [](std::string snapshot_str, uint64_t* tid) {
+      QueueCallback(snapshot_cb, *tid, 0, snapshot_str);
+    }, snapshot, &thread_id);
+
+    if (stor.redacted) {
+      const v8::RedactedHeapSnapshot snapshot_redact(snapshot);
+      snapshot_redact.Serialize(&stream);
+    } else {
+      snapshot->Serialize(&stream);
+    }
+
+    ASSERT_EQ(stor.is_tracking_heapobjects_, true);
+    profiler->StopTrackingHeapObjects();
+    stor.is_tracking_heapobjects_ = false;
+
+    // Work around a deficiency in the API. The HeapSnapshot object is const
+    // but we cannot call HeapProfiler::DeleteAllHeapSnapshots() because that
+    // invalidates _all_ snapshots, including those created by other tools.
+    const_cast<v8::HeapSnapshot*>(snapshot)->Delete();
+  }
 }
 
 void NSolidHeapSnapshot::start_tracking_heapobjects(
     SharedEnvInst envinst,
     bool trackAllocations,
     uint64_t duration,
+    uint64_t profile_id,
     NSolidHeapSnapshot* snapshotter) {
   uint64_t thread_id = envinst->thread_id();
 
@@ -168,7 +237,11 @@ void NSolidHeapSnapshot::start_tracking_heapobjects(
       trackAllocations);
   if (duration > 0) {
     // Schedule a timer to take the snapshot
-    int er = QueueCallback(duration, take_snapshot_timer, envinst, snapshotter);
+    int er = QueueCallback(duration,
+                           take_snapshot_timer,
+                           envinst,
+                           profile_id,
+                           snapshotter);
 
     if (er) {
       // In case the the thread is already gone, the cpu profile will be stopped
@@ -178,6 +251,7 @@ void NSolidHeapSnapshot::start_tracking_heapobjects(
 }
 
 void NSolidHeapSnapshot::take_snapshot_timer(SharedEnvInst envinst,
+                                             uint64_t profile_id,
                                              NSolidHeapSnapshot* snapshotter) {
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&snapshotter->in_progress_heap_snapshots_);
@@ -187,6 +261,11 @@ void NSolidHeapSnapshot::take_snapshot_timer(SharedEnvInst envinst,
     return;
 
   HeapSnapshotStor& stor = it->second;
+  if (stor.snapshot_id != profile_id) {
+    // The snapshot was stopped before the timer was triggered
+    return;
+  }
+
   ASSERT_EQ(stor.is_tracking_heapobjects_, true);
 
   // Give control back to the V8 thread

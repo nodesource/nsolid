@@ -7,6 +7,7 @@
 #include <v8-profiler.h>
 #include <nsolid/nsolid_api.h>
 #include <nsolid/nsolid_output_stream.h>
+#include <atomic>
 #include <new>
 #include <set>
 #include <tuple>
@@ -22,6 +23,7 @@ class NSolidHeapSnapshot {
   struct HeapSnapshotStor {
     bool redacted;
     bool is_tracking_heapobjects_;
+    uint64_t snapshot_id;
     Snapshot::snapshot_proxy_sig cb;
     internal::user_data data;
   };
@@ -29,7 +31,6 @@ class NSolidHeapSnapshot {
   NSOLID_DELETE_UNUSED_CONSTRUCTORS(NSolidHeapSnapshot)
 
   static NSolidHeapSnapshot* Inst();
-  ~NSolidHeapSnapshot() = default;
 
   int GetHeapSnapshot(SharedEnvInst envinst,
                       bool redacted,
@@ -46,12 +47,16 @@ class NSolidHeapSnapshot {
 
   int StopTrackingHeapObjects(SharedEnvInst envinst);
 
+  int StopTrackingHeapObjectsSync(SharedEnvInst envinst);
+
  private:
   NSolidHeapSnapshot();
+  ~NSolidHeapSnapshot();
 
   static void start_tracking_heapobjects(SharedEnvInst envinst,
                                          bool trackAllocations,
                                          uint64_t duration,
+                                         uint64_t profile_id,
                                          NSolidHeapSnapshot*);
 
   static void stop_tracking_heap_objects(SharedEnvInst envinst_sp,
@@ -60,6 +65,7 @@ class NSolidHeapSnapshot {
   static void take_snapshot(SharedEnvInst envinst_sp, NSolidHeapSnapshot*);
 
   static void take_snapshot_timer(SharedEnvInst envinst_sp,
+                                  uint64_t profile_id,
                                   NSolidHeapSnapshot*);
 
   static void snapshot_cb(uint64_t thread_id,
@@ -68,6 +74,7 @@ class NSolidHeapSnapshot {
 
   std::map<uint64_t, HeapSnapshotStor> threads_running_snapshots_;
   nsuv::ns_mutex in_progress_heap_snapshots_;
+  std::atomic<uint64_t> in_progress_timers_{0};
 };
 
 }  // namespace nsolid

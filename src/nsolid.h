@@ -1005,6 +1005,16 @@ class NODE_EXTERN Snapshot {
    */
   static int StopTrackingHeapObjects(SharedEnvInst envinst);
 
+  /**
+   * @brief same as TakeSnapshot but stops tracking heap objects in the heap
+   * profiler synchronously.
+   *
+   * @param envinst SharedEnvInst of thread to take the snapshot from.
+   * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
+   * error value otherwise.
+   */
+  static int StopTrackingHeapObjectsSync(SharedEnvInst envinst);
+
  private:
   static int start_tracking_heap_objects_(SharedEnvInst envinst,
                                           bool redacted,
