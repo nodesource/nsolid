@@ -3601,6 +3601,18 @@ Error when trying to respond to a custom command more than once.
 
 Out of memory error when handling a custom command.
 
+<a id="ERR_NSOLID_HEAP_PROFILE_START"></a>
+
+### `ERR_NSOLID_HEAP_PROFILE_START`
+
+Error when trying to start taking a heap profile with the JS API.
+
+<a id="ERR_NSOLID_HEAP_PROFILE_STOP"></a>
+
+### `ERR_NSOLID_HEAP_PROFILE_STOP`
+
+Error when trying to stop a heap profile being taken with the JS API.
+
 <a id="ERR_NSOLID_HEAP_SNAPSHOT"></a>
 
 ### `ERR_NSOLID_HEAP_SNAPSHOT`

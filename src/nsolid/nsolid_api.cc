@@ -54,6 +54,8 @@ using v8::JSON;
 using v8::Local;
 using v8::Message;
 using v8::Name;
+using v8::NewStringType;
+using v8::Null;
 using v8::Number;
 using v8::Object;
 using v8::StackFrame;
@@ -1750,15 +1752,15 @@ void EnvInst::custom_command_(SharedEnvInst envinst_sp,
     v8::String::NewFromUtf8(
       isolate,
       req_id.c_str(),
-      v8::NewStringType::kNormal).ToLocalChecked(),
+      NewStringType::kNormal).ToLocalChecked(),
     v8::String::NewFromUtf8(
       isolate,
       stor.command.c_str(),
-      v8::NewStringType::kNormal).ToLocalChecked(),
+      NewStringType::kNormal).ToLocalChecked(),
     v8::String::NewFromUtf8(
       isolate,
       stor.args.c_str(),
-      v8::NewStringType::kNormal).ToLocalChecked()
+      NewStringType::kNormal).ToLocalChecked()
   };
 
   Local<Value> ret = env->nsolid_on_command_fn()->Call(env->context(),
@@ -2361,7 +2363,7 @@ static void GetStartupTimes(const FunctionCallbackInfo<Value>& args) {
   Local<String> ms_str =
     String::NewFromUtf8(isolate,
                         ms.c_str(),
-                        v8::NewStringType::kNormal).ToLocalChecked();
+                        NewStringType::kNormal).ToLocalChecked();
   args.GetReturnValue().Set(ms_str);
 }
 
@@ -2426,7 +2428,7 @@ static void getThreadName(const FunctionCallbackInfo<Value>& args) {
     String::NewFromUtf8(
         isolate,
         EnvInst::GetEnvLocalInst(isolate)->GetThreadName().c_str(),
-        v8::NewStringType::kNormal).ToLocalChecked());
+        NewStringType::kNormal).ToLocalChecked());
 }
 
 
@@ -2476,6 +2478,103 @@ static void GetTraceId(const FunctionCallbackInfo<Value>& args) {
   EnvList* envlist = EnvList::Inst();
   envlist->popTraceId(trace_id);
   args.GetReturnValue().Set(OneByteString(args.GetIsolate(), trace_id.c_str()));
+}
+
+
+static void heapprofile_js_cb(SharedEnvInst envinst_sp,
+                              int status,
+                              std::string profile,
+                              std::shared_ptr<v8::Global<Function>> cb) {
+  Environment* env = envinst_sp->env();
+  bool last = status != 0 || profile.empty();
+  if (last) {
+    env->add_refs(-1);
+  }
+
+  if (!envinst_sp->can_call_into_js()) {
+    // If we can't call into JS do nothing, the isolate is actually shutting
+    // down.
+    return;
+  }
+
+  Isolate* isolate = envinst_sp->isolate();
+  HandleScope handle_scope(isolate);
+  Context::Scope context_scope(env->context());
+
+  Local<Value> argv[] = {
+    Integer::New(isolate, status),
+    last ? Local<Value>::Cast(Null(isolate)) :
+           Local<Value>::Cast(
+              String::NewFromUtf8(isolate,
+                                  profile.c_str(),
+                                  NewStringType::kNormal).ToLocalChecked())
+  };
+
+  Local<Function> fn = cb->Get(isolate);
+  USE(fn->Call(env->context(), Undefined(isolate), arraysize(argv), argv));
+}
+
+
+static void heapprofile_cb(int status,
+                           std::string profile,
+                           SharedEnvInst envinst_sp,
+                           std::shared_ptr<v8::Global<Function>> cb) {
+  bool last = status != 0 || profile.empty();
+  int ret = nsolid::RunCommand(envinst_sp,
+                               CommandType::EventLoop,
+                               heapprofile_js_cb,
+                               status,
+                               profile,
+                               last ? std::move(cb) : cb);
+  if (ret != 0) {
+    envinst_sp->env()->add_refs(-1);
+  }
+}
+
+
+static void HeapProfile(const FunctionCallbackInfo<Value>& args) {
+  CHECK(args[0]->IsNumber());  // thread_id
+  CHECK(args[1]->IsNumber());  // duration
+  CHECK(args[2]->IsBoolean());  // track_allocations
+  CHECK(args[3]->IsBoolean());  // redacted
+  CHECK(args[4]->IsFunction());  // stream cb
+  uint64_t thread_id = args[0].As<Number>()->Value();
+  uint64_t duration = args[1].As<Number>()->Value();
+  bool track_allocations = args[2].As<v8::Boolean>()->Value();
+  bool redacted = args[3].As<v8::Boolean>()->Value();
+  SharedEnvInst envinst = EnvInst::GetInst(thread_id);
+  Isolate* isolate = args.GetIsolate();
+  v8::Global<Function> cb(isolate, args[4].As<Function>());
+  std::shared_ptr<v8::Global<Function>> cb_ptr(
+    new v8::Global<Function>(std::move(cb)),
+    [](v8::Global<Function>* ptr) {
+      ptr->Reset();
+      delete ptr;
+    });
+
+  SharedEnvInst current_envinst = EnvInst::GetCurrent(isolate);
+  int ret = Snapshot::StartTrackingHeapObjects(envinst,
+                                               redacted,
+                                               track_allocations,
+                                               duration,
+                                               heapprofile_cb,
+                                               current_envinst,
+                                               std::move(cb_ptr));
+  if (ret == 0) {
+    // Add a reference to the current environment to prevent the loop from
+    // exiting.
+    current_envinst->env()->add_refs(1);
+  }
+
+  args.GetReturnValue().Set(ret);
+}
+
+static void HeapProfileEnd(const FunctionCallbackInfo<Value>& args) {
+  CHECK(args[0]->IsNumber());  // thread_id
+  uint64_t thread_id = args[0].As<Number>()->Value();
+  SharedEnvInst envinst = EnvInst::GetInst(thread_id);
+  int ret = Snapshot::StopTrackingHeapObjects(envinst);
+  args.GetReturnValue().Set(ret);
 }
 
 
@@ -2682,6 +2781,8 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "setTrackPromisesFn", SetTrackPromisesFn);
   SetMethod(context, target, "getSpanId", GetSpanId);
   SetMethod(context, target, "getTraceId", GetTraceId);
+  SetMethod(context, target, "heapProfile", HeapProfile);
+  SetMethod(context, target, "heapProfileEnd", HeapProfileEnd);
 
   SetMethod(context, target, "_getOnBlockedBody", GetOnBlockedBody);
   SetMethod(context, target, "_setupArrayBuffers", SetupArrayBuffers);
@@ -2807,6 +2908,8 @@ void BindingData::RegisterExternalReferences(
   registry->Register(SetTrackPromisesFn);
   registry->Register(GetSpanId);
   registry->Register(GetTraceId);
+  registry->Register(HeapProfile);
+  registry->Register(HeapProfileEnd);
   registry->Register(GetOnBlockedBody);
   registry->Register(SetupArrayBuffers);
 }

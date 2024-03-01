@@ -82,6 +82,36 @@ static void EndCPUProfile(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(ZmqAgent::Inst()->stop_profiling(thread_id));
 }
 
+static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
+  ASSERT_EQ(2 , args.Length());
+  ASSERT(args[0]->IsNumber());
+  ASSERT(args[1]->IsBoolean());
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint64_t thread_id = ThreadId(context);
+  uint64_t timeout = args[0].As<Number>()->Value();
+  bool track_allocations = args[1]->BooleanValue(isolate);
+  json message = {
+    { "args", {
+      { "metadata", {
+        { "reason", "Agent API" }
+      }},
+      { "duration", timeout },
+      { "threadId", thread_id },
+      { "trackAllocations", track_allocations }
+    }}
+  };
+
+  args.GetReturnValue().Set(ZmqAgent::Inst()->start_heap_profiling(message));
+}
+
+static void EndHeapProfile(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint64_t thread_id = ThreadId(context);
+  args.GetReturnValue().Set(ZmqAgent::Inst()->stop_heap_profiling(thread_id));
+}
+
 static void Start(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(ZmqAgent::Inst()->start());
 }
@@ -95,6 +125,8 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(Snapshot);
   registry->Register(StartCPUProfile);
   registry->Register(EndCPUProfile);
+  registry->Register(StartHeapProfile);
+  registry->Register(EndHeapProfile);
   registry->Register(Config);
   registry->Register(Start);
   registry->Register(Stop);
@@ -108,6 +140,8 @@ void InitZmqAgent(Local<Object> exports,
   NODE_SET_METHOD(exports, "snapshot", Snapshot);
   NODE_SET_METHOD(exports, "profile", StartCPUProfile);
   NODE_SET_METHOD(exports, "profileEnd", EndCPUProfile);
+  NODE_SET_METHOD(exports, "heapProfile", StartHeapProfile);
+  NODE_SET_METHOD(exports, "heapProfileEnd", EndHeapProfile);
   if (!node::nsolid::IsMainThread(node::nsolid::GetLocalEnvInst(context))) {
     return;
   }
