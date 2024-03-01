@@ -34,8 +34,9 @@ static const nlohmann::json default_agent_config = {
   { "pauseMetrics", false }
 };
 
-class StatsDTcp {
- public:
+
+class StatsDConnection {
+public:
   enum Status {
     Initial,
     Connecting,
@@ -44,24 +45,49 @@ class StatsDTcp {
     Disconnected
   };
 
+  virtual ~StatsDConnection() {}
+
+  // Connect to the specified address
+  virtual void connect(const struct sockaddr* addr) = 0;
+
+  // Return the connection status as an enum
+  virtual Status status() const = 0;
+
+  // Write messages to the connection
+  virtual int write(const std::vector<std::string>& messages) = 0;
+
+  // Get the address as a string
+  virtual std::string addr_str() const = 0;
+
+  // Set the address from a string
+  virtual void addr_str(const std::string& addr) = 0;
+
+  // Disconnect the connection
+  virtual void disconnect() = 0;
+};
+
+
+class StatsDTcp : public StatsDConnection {
+ public:
+
   StatsDTcp(uv_loop_t*, nsuv::ns_async*);
 
   void close_and_delete();
 
-  void connect(const struct sockaddr* addr);
+  void connect(const struct sockaddr* addr) override;
 
-  Status status() const { return status_; }
+  Status status() const override { return status_; }
 
-  void status(const Status& status);
+  void status(const Status& status) override;
 
-  int write(const std::vector<std::string>& messages);
+  int write(const std::vector<std::string>& messages) override;
 
-  const std::string addr_str() {
+  const std::string addr_str() override {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
     return addr_str_;
   }
 
-  void addr_str(const std::string& addr) {
+  void addr_str(const std::string& addr) override {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
     addr_str_ = addr;
   }
@@ -91,26 +117,22 @@ class StatsDTcp {
   int internal_state_;
 };
 
-class StatsDUdp {
+class StatsDUdp : public StatsDConnection {
  public:
   StatsDUdp(uv_loop_t*, nsuv::ns_async*);
 
   ~StatsDUdp();
 
-  int connect(const struct sockaddr* addr);
+  int connect(const struct sockaddr* addr) override;
 
-  bool connected() const { return connected_; }
+  int write(const std::vector<std::string>& messages) override;
 
-  void connected(bool conn);
-
-  int write(const std::vector<std::string>& messages);
-
-  const std::string addr_str() {
+  const std::string addr_str() override {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
     return addr_str_;
   }
 
-  void addr_str(const std::string& addr) {
+  void addr_str(const std::string& addr) override {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
     addr_str_ = addr;
   }
@@ -120,7 +142,7 @@ class StatsDUdp {
 
   nsuv::ns_udp* udp_;
   nsuv::ns_async* update_state_msg_;
-  bool connected_;
+  Status status_;
   std::string addr_str_;
   nsuv::ns_mutex addr_str_lock_;
 };
@@ -264,6 +286,7 @@ class StatsDAgent {
 
   StatsDTcp* tcp_;
   std::unique_ptr<StatsDUdp> udp_;
+  std::unique_ptr<StatsDConnection> connection_;
   std::unique_ptr<StatsDEndpoint> endpoint_;
   size_t addr_index_;
   nsuv::ns_timer retry_timer_;
