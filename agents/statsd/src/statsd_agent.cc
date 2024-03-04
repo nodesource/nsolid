@@ -22,8 +22,6 @@ using nlohmann::json;
 using string_vector = std::vector<std::string>;
 using udp_req_data_tup = std::tuple<string_vector*, bool>;
 
-static nsuv::ns_rwlock exit_lock_;
-
 template <typename... Args>
 inline void Debug(Args&&... args) {
   per_process::Debug(DebugCategory::NSOLID_STATSD_AGENT,
@@ -307,14 +305,11 @@ void StatsDUdp::write_cb_(nsuv::ns_udp_send* req, int status, StatsDUdp* udp) {
   delete req;
 }
 
-const string_vector StatsDAgent::metrics_fields = { "/interval",
-                                                    "/pauseMetrics" };
-
-std::atomic<bool> StatsDAgent::is_running_ = { false };
-
-StatsDAgent* StatsDAgent::Inst() {
-  static StatsDAgent agent;
-  return &agent;
+SharedStatsDAgent StatsDAgent::Inst() {
+  static SharedStatsDAgent agent(new StatsDAgent(), [](StatsDAgent* agent) {
+    delete agent;
+  });
+  return agent;
 }
 
 StatsDAgent::StatsDAgent(): hooks_init_(false),
@@ -333,17 +328,11 @@ StatsDAgent::StatsDAgent(): hooks_init_(false),
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
   ASSERT_EQ(0, bucket_lock_.init(true));
   ASSERT_EQ(0, tags_lock_.init(true));
-  ASSERT_EQ(0, exit_lock_.init(true));
-  is_running_ = true;
+  ASSERT_EQ(0, stop_lock_.init(true));
 }
 
 StatsDAgent::~StatsDAgent() {
   int r;
-  {
-    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
-    is_running_ = false;
-  }
-
   ASSERT_EQ(0, stop());
   uv_mutex_destroy(&start_lock_);
   uv_cond_destroy(&start_cond_);
@@ -363,9 +352,7 @@ int StatsDAgent::start() {
     // the NSolid thread, so it's safe to use this lock after having checked
     // the status_ variable as there won't be any concurrent calls.
     uv_mutex_lock(&start_lock_);
-    // Before launching the StatsD thread, make sure there's no alive thread.
-    r = thread_.join();
-    r = thread_.create(run_, this);
+    r = thread_.create(run_, weak_from_this());
     if (r == 0) {
       while (status_ == Unconfigured) {
         uv_cond_wait(&start_cond_, &start_lock_);
@@ -380,28 +367,32 @@ int StatsDAgent::start() {
 void StatsDAgent::do_start() {
   uv_mutex_lock(&start_lock_);
 
-  ASSERT_EQ(0, shutdown_.init(&loop_, shutdown_cb_, this));
+  ASSERT_EQ(0, shutdown_.init(&loop_, shutdown_cb_, weak_from_this()));
 
-  ASSERT_EQ(0, env_msg_.init(&loop_, env_msg_cb, this));
+  ASSERT_EQ(0, env_msg_.init(&loop_, env_msg_cb, weak_from_this()));
 
   ASSERT_EQ(0, retry_timer_.init(&loop_));
 
-  ASSERT_EQ(0, metrics_msg_.init(&loop_, metrics_msg_cb_, this));
+  ASSERT_EQ(0, metrics_msg_.init(&loop_, metrics_msg_cb_, weak_from_this()));
 
-  ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, this));
+  ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, weak_from_this()));
 
-  ASSERT_EQ(0, update_state_msg_.init(&loop_, update_state_msg_cb_, this));
+  ASSERT_EQ(0, update_state_msg_.init(&loop_,
+                                      update_state_msg_cb_,
+                                      weak_from_this()));
 
-  ASSERT_EQ(0, send_stats_msg_.init(&loop_, send_stats_msg_cb_, this));
+  ASSERT_EQ(0, send_stats_msg_.init(&loop_,
+                                    send_stats_msg_cb_,
+                                    weak_from_this()));
 
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
   status(Initializing);
 
   if (hooks_init_ == false) {
-    ASSERT_EQ(0, OnConfigurationHook(config_agent_cb, this));
-    ASSERT_EQ(0, ThreadAddedHook(env_creation_cb, this));
-    ASSERT_EQ(0, ThreadRemovedHook(env_deletion_cb, this));
+    ASSERT_EQ(0, OnConfigurationHook(config_agent_cb, weak_from_this()));
+    ASSERT_EQ(0, ThreadAddedHook(env_creation_cb, weak_from_this()));
+    ASSERT_EQ(0, ThreadRemovedHook(env_deletion_cb, weak_from_this()));
     hooks_init_ = true;
   }
 
@@ -428,7 +419,7 @@ int StatsDAgent::stop() {
 
 void StatsDAgent::do_stop() {
   {
-    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
+    nsuv::ns_rwlock::scoped_wrlock lock(stop_lock_);
     status(Unconfigured);
   }
   if (tcp_) {
@@ -446,7 +437,12 @@ void StatsDAgent::do_stop() {
   retry_timer_.close();
 }
 
-void StatsDAgent::run_(nsuv::ns_thread*, StatsDAgent* agent) {
+void StatsDAgent::run_(nsuv::ns_thread*, WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
   agent->do_start();
   do {
     ASSERT_EQ(0, uv_run(&agent->loop_, UV_RUN_DEFAULT));
@@ -454,10 +450,15 @@ void StatsDAgent::run_(nsuv::ns_thread*, StatsDAgent* agent) {
 }
 
 void StatsDAgent::env_creation_cb(SharedEnvInst envinst,
-                                  StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+                                  WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -466,10 +467,15 @@ void StatsDAgent::env_creation_cb(SharedEnvInst envinst,
 }
 
 void StatsDAgent::env_deletion_cb(SharedEnvInst envinst,
-                                  StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+                                  WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -487,10 +493,15 @@ void StatsDAgent::env_deletion_cb(SharedEnvInst envinst,
   }
 }
 
-void StatsDAgent::env_msg_cb(nsuv::ns_async*, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+void StatsDAgent::env_msg_cb(nsuv::ns_async*, WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -508,14 +519,24 @@ void StatsDAgent::env_msg_cb(nsuv::ns_async*, StatsDAgent* agent) {
   }
 }
 
-void StatsDAgent::shutdown_cb_(nsuv::ns_async*, StatsDAgent* agent) {
+void StatsDAgent::shutdown_cb_(nsuv::ns_async*, WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
   agent->do_stop();
 }
 
-void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -533,10 +554,16 @@ void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
 }
 
 // Callback to be registered in nsolid API
-void StatsDAgent::config_agent_cb(std::string config, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+void StatsDAgent::config_agent_cb(std::string config,
+                                  WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -547,21 +574,19 @@ void StatsDAgent::config_agent_cb(std::string config, StatsDAgent* agent) {
   ASSERT_EQ(0, agent->config_msg_.send());
 }
 
-void StatsDAgent::config_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
+void StatsDAgent::config_msg_cb_(nsuv::ns_async*, WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
   int r = 0;
   json config_msg;
-  // Check if the agent is already deleted or if it's closing
-  {
-    nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-    if (!is_running_) {
-      return;
-    }
 
-    while (agent->config_msg_q_.dequeue(config_msg)) {
-      r = agent->config(config_msg);
-      if (agent->status_ != Unconfigured) {
-        ASSERT_EQ(0, agent->update_state_msg_.send());
-      }
+  while (agent->config_msg_q_.dequeue(config_msg)) {
+    r = agent->config(config_msg);
+    if (agent->status_ != Unconfigured) {
+      ASSERT_EQ(0, agent->update_state_msg_.send());
     }
   }
 
@@ -570,20 +595,27 @@ void StatsDAgent::config_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
   }
 }
 
-void StatsDAgent::update_state_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_) {
+void StatsDAgent::update_state_msg_cb_(nsuv::ns_async*,
+                                       WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
     return;
   }
 
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
   agent->update_state();
 }
 
-void StatsDAgent::send_stats_msg_cb_(nsuv::ns_async*, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+void StatsDAgent::send_stats_msg_cb_(nsuv::ns_async*,
+                                     WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -637,7 +669,10 @@ int StatsDAgent::setup_metrics_timer(uint64_t period) {
     return 0;
   }
 
-  return metrics_timer_.start(metrics_timer_cb_, period, period, this);
+  return metrics_timer_.start(metrics_timer_cb_,
+                              period,
+                              period,
+                              weak_from_this());
 }
 
 int StatsDAgent::config_handles() {
@@ -771,7 +806,7 @@ int StatsDAgent::config(const json& config) {
   // If metrics timer is not active or if the diff contains metrics fields,
   // recalculate the metrics status. (stop/start/what period)
   if (!metrics_timer_.is_active() ||
-      utils::find_any_fields_in_diff(diff, StatsDAgent::metrics_fields)) {
+      utils::find_any_fields_in_diff(diff, { "/interval", "/pauseMetrics" })) {
     uint64_t period = 0;
     auto it = config_.find("pauseMetrics");
     if (it != config_.end()) {
@@ -790,10 +825,15 @@ int StatsDAgent::config(const json& config) {
   return 0;
 }
 
-void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -823,10 +863,15 @@ void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
 }
 
 void StatsDAgent::env_metrics_cb_(SharedThreadMetrics metrics,
-                                  StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+                                  WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -899,14 +944,13 @@ void StatsDAgent::setup_udp() {
     }
 
     ASSERT(!retry_timer_.is_active());
-    ASSERT_EQ(0, retry_timer_.start(retry_timer_cb_, 100, 0, this));
+    ASSERT_EQ(0, retry_timer_.start(retry_timer_cb_, 100, 0, weak_from_this()));
   }
 }
 
-void StatsDAgent::status_command_cb_(SharedEnvInst, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_) {
+void StatsDAgent::status_command_cb_(SharedEnvInst, WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
     return;
   }
 
@@ -920,7 +964,7 @@ void StatsDAgent::status(const Status& st) {
       RunCommand(GetEnvInst(EnvList::Inst()->main_thread_id()),
                  CommandType::EventLoop,
                  status_command_cb_,
-                 this);
+                 weak_from_this());
     }
   }
 }
@@ -938,10 +982,15 @@ StatsDAgent::Status StatsDAgent::calculate_status() const {
   return Ready;
 }
 
-void StatsDAgent::retry_timer_cb_(nsuv::ns_timer*, StatsDAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || agent->status_ == Unconfigured) {
+void StatsDAgent::retry_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent agent_wp) {
+  SharedStatsDAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  if (agent->status_ == Unconfigured) {
     return;
   }
 
@@ -971,7 +1020,10 @@ void StatsDAgent::update_state() {
       }
 
       ASSERT(!retry_timer_.is_active());
-      ASSERT_EQ(0, retry_timer_.start(retry_timer_cb_, 100, 0, this));
+      ASSERT_EQ(0, retry_timer_.start(retry_timer_cb_,
+                                      100,
+                                      0,
+                                      weak_from_this()));
     }
   }
 }

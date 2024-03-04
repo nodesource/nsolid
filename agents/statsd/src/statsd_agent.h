@@ -125,7 +125,10 @@ class StatsDUdp {
   nsuv::ns_mutex addr_str_lock_;
 };
 
-class StatsDAgent {
+using SharedStatsDAgent = std::shared_ptr<StatsDAgent>;
+using WeakStatsDAgent = std::weak_ptr<StatsDAgent>;
+
+class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
  public:
   enum Status {
 #define X(type, str)                                                          \
@@ -134,9 +137,7 @@ class StatsDAgent {
 #undef X
   };
 
-  static std::atomic<bool> is_running_;
-
-  static StatsDAgent* Inst();
+  static SharedStatsDAgent Inst();
 
   int setup_metrics_timer(uint64_t period);
 
@@ -184,42 +185,40 @@ class StatsDAgent {
 
   void set_status_cb(status_cb);
 
-  static void config_agent_cb(std::string, StatsDAgent*);
+  static void config_agent_cb(std::string, WeakStatsDAgent);
 
  private:
   StatsDAgent();
 
   ~StatsDAgent();
 
-  void operator delete(void*) = delete;
-
   static const std::vector<std::string> metrics_fields;
 
-  static void run_(nsuv::ns_thread*, StatsDAgent*);
+  static void run_(nsuv::ns_thread*, WeakStatsDAgent);
 
-  static void env_creation_cb(SharedEnvInst, StatsDAgent*);
+  static void env_creation_cb(SharedEnvInst, WeakStatsDAgent);
 
-  static void env_deletion_cb(SharedEnvInst, StatsDAgent*);
+  static void env_deletion_cb(SharedEnvInst, WeakStatsDAgent);
 
-  static void env_msg_cb(nsuv::ns_async*, StatsDAgent*);
+  static void env_msg_cb(nsuv::ns_async*, WeakStatsDAgent);
 
-  static void shutdown_cb_(nsuv::ns_async*, StatsDAgent*);
+  static void shutdown_cb_(nsuv::ns_async*, WeakStatsDAgent);
 
-  static void metrics_msg_cb_(nsuv::ns_async*, StatsDAgent*);
+  static void metrics_msg_cb_(nsuv::ns_async*, WeakStatsDAgent);
 
-  static void metrics_timer_cb_(nsuv::ns_timer*, StatsDAgent*);
+  static void metrics_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent);
 
-  static void config_msg_cb_(nsuv::ns_async*, StatsDAgent*);
+  static void config_msg_cb_(nsuv::ns_async*, WeakStatsDAgent);
 
-  static void update_state_msg_cb_(nsuv::ns_async*, StatsDAgent*);
+  static void update_state_msg_cb_(nsuv::ns_async*, WeakStatsDAgent);
 
-  static void send_stats_msg_cb_(nsuv::ns_async*, StatsDAgent*);
+  static void send_stats_msg_cb_(nsuv::ns_async*, WeakStatsDAgent);
 
-  static void env_metrics_cb_(SharedThreadMetrics, StatsDAgent*);
+  static void env_metrics_cb_(SharedThreadMetrics, WeakStatsDAgent);
 
-  static void status_command_cb_(SharedEnvInst, StatsDAgent*);
+  static void status_command_cb_(SharedEnvInst, WeakStatsDAgent);
 
-  static void retry_timer_cb_(nsuv::ns_timer*, StatsDAgent*);
+  static void retry_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent);
 
   std::string calculate_bucket(const std::string& tpl) const;
 
@@ -256,6 +255,7 @@ class StatsDAgent {
   // For statsd thread start/stop synchronization
   uv_cond_t start_cond_;
   uv_mutex_t start_lock_;
+  nsuv::ns_rwlock stop_lock_;
 
   bool hooks_init_;
 
