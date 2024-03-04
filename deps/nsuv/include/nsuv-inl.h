@@ -29,6 +29,16 @@ void ns_base_req<UV_T, R_T>::init(uv_loop_t* loop, CB cb, D_T* data) {
 }
 
 template <class UV_T, class R_T>
+template <typename CB, typename D_T>
+void ns_base_req<UV_T, R_T>::init(uv_loop_t* loop,
+                                  CB cb,
+                                  std::weak_ptr<D_T> data) {
+  req_cb_ = reinterpret_cast<void (*)()>(cb);
+  req_cb_wp_ = data;
+  loop_ = loop;
+}
+
+template <class UV_T, class R_T>
 uv_loop_t* ns_base_req<UV_T, R_T>::get_loop() {
   return loop_;
 }
@@ -112,6 +122,13 @@ void ns_req<UV_T, R_T, H_T>::init(CB cb, D_T* data) {
 }
 
 template <class UV_T, class R_T, class H_T>
+template <typename CB, typename D_T>
+void ns_req<UV_T, R_T, H_T>::init(CB cb, std::weak_ptr<D_T> data) {
+  ns_base_req<UV_T, R_T>::req_cb_ = reinterpret_cast<void (*)()>(cb);
+  ns_base_req<UV_T, R_T>::req_cb_wp_ = data;
+}
+
+template <class UV_T, class R_T, class H_T>
 H_T* ns_req<UV_T, R_T, H_T>::handle() {
   return H_T::cast(static_cast<UV_T*>(this)->handle);
 }
@@ -126,6 +143,21 @@ void ns_req<UV_T, R_T, H_T>::handle(H_T* handle) {
 template <class H_T>
 template <typename CB, typename D_T>
 int ns_connect<H_T>::init(const struct sockaddr* addr, CB cb, D_T* data) {
+  int len = util::addr_size(addr);
+  if (len < 0)
+    return len;
+
+  ns_req<uv_connect_t, ns_connect<H_T>, H_T>::init(cb, data);
+  std::memcpy(&addr_, addr, len);
+
+  return NSUV_OK;
+}
+
+template <class H_T>
+template <typename CB, typename D_T>
+int ns_connect<H_T>::init(const struct sockaddr* addr,
+                          CB cb,
+                          std::weak_ptr<D_T> data) {
   int len = util::addr_size(addr);
   if (len < 0)
     return len;
@@ -161,6 +193,33 @@ template <typename CB, typename D_T>
 int ns_write<H_T>::init(const std::vector<uv_buf_t>& bufs,
                         CB cb,
                         D_T* data) {
+  ns_req<uv_write_t, ns_write<H_T>, H_T>::init(cb, data);
+
+  int er = bufs_.reserve(bufs.size());
+  if (er)
+    return er;
+  return bufs_.replace(bufs.data(), bufs.size());
+}
+
+template <class H_T>
+template <typename CB, typename D_T>
+int ns_write<H_T>::init(const uv_buf_t bufs[],
+                        size_t nbufs,
+                        CB cb,
+                        std::weak_ptr<D_T> data) {
+  ns_req<uv_write_t, ns_write<H_T>, H_T>::init(cb, data);
+
+  int er = bufs_.reserve(nbufs);
+  if (er)
+    return er;
+  return bufs_.replace(bufs, nbufs);
+}
+
+template <class H_T>
+template <typename CB, typename D_T>
+int ns_write<H_T>::init(const std::vector<uv_buf_t>& bufs,
+                        CB cb,
+                        std::weak_ptr<D_T> data) {
   ns_req<uv_write_t, ns_write<H_T>, H_T>::init(cb, data);
 
   int er = bufs_.reserve(bufs.size());
@@ -232,6 +291,57 @@ int ns_udp_send::init(const std::vector<uv_buf_t>& bufs,
     return er;
   return bufs_.replace(bufs.data(), bufs.size());
 }
+template <typename CB, typename D_T>
+int ns_udp_send::init(const uv_buf_t bufs[],
+                      size_t nbufs,
+                      const struct sockaddr* addr,
+                      CB cb,
+                      std::weak_ptr<D_T> data) {
+  ns_req<uv_udp_send_t, ns_udp_send, ns_udp>::init(cb, data);
+
+  if (addr != nullptr) {
+    addr_.reset(new (std::nothrow) struct sockaddr_storage());
+    if (addr == nullptr)
+      return UV_ENOMEM;
+
+    int len = util::addr_size(addr);
+    if (len < 0)
+      return len;
+
+    std::memcpy(addr_.get(), addr, len);
+  }
+
+  int er = bufs_.reserve(nbufs);
+  if (er)
+    return er;
+  return bufs_.replace(bufs, nbufs);
+}
+
+template <typename CB, typename D_T>
+int ns_udp_send::init(const std::vector<uv_buf_t>& bufs,
+                      const struct sockaddr* addr,
+                      CB cb,
+                      std::weak_ptr<D_T> data) {
+  ns_req<uv_udp_send_t, ns_udp_send, ns_udp>::init(cb, data);
+
+  if (addr != nullptr) {
+    addr_.reset(new (std::nothrow) struct sockaddr_storage());
+    if (addr == nullptr)
+      return UV_ENOMEM;
+
+    int len = util::addr_size(addr);
+    if (len < 0)
+      return len;
+
+    std::memcpy(addr_.get(), addr, len);
+  }
+
+  int er = bufs_.reserve(bufs.size());
+  if (er)
+    return er;
+  return bufs_.replace(bufs.data(), bufs.size());
+}
+
 
 const uv_buf_t* ns_udp_send::bufs() {
   return bufs_.data();
@@ -278,6 +388,25 @@ int ns_addrinfo::get(uv_loop_t* loop,
       hints);
 }
 
+template <typename D_T>
+int ns_addrinfo::get(uv_loop_t* loop,
+                     ns_addrinfo_cb_wp<D_T> cb,
+                     const char* node,
+                     const char* service,
+                     const struct addrinfo* hints,
+                     std::weak_ptr<D_T> data) {
+  ns_base_req<uv_getaddrinfo_t, ns_addrinfo>::init(loop, cb, data);
+  free();
+
+  return uv_getaddrinfo(
+      loop,
+      uv_req(),
+      util::check_null_cb(cb, &addrinfo_proxy_wp_<decltype(cb), D_T>),
+      node,
+      service,
+      hints);
+}
+
 int ns_addrinfo::get(uv_loop_t* loop,
                      ns_addrinfo_cb cb,
                      const char* node,
@@ -319,6 +448,16 @@ void ns_addrinfo::addrinfo_proxy_(uv_getaddrinfo_t* req,
   auto* ai_req = ns_addrinfo::cast(req);
   auto* cb_ = reinterpret_cast<CB_T>(ai_req->req_cb_);
   cb_(ai_req, status, static_cast<D_T*>(ai_req->req_cb_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_addrinfo::addrinfo_proxy_wp_(uv_getaddrinfo_t* req,
+                                     int status,
+                                     struct addrinfo*) {
+  auto* ai_req = ns_addrinfo::cast(req);
+  auto* cb_ = reinterpret_cast<CB_T>(ai_req->req_cb_);
+  auto data = ai_req->req_cb_wp_.lock();
+  cb_(ai_req, status, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -378,6 +517,18 @@ int ns_fs::scandir_next(uv_dirent_t* ent) {
       this,                                                                    \
       NSUV_PASS(P2),                                                           \
       util::check_null_cb(cb, &cb_proxy_<decltype(cb), D_T>));                 \
+  }                                                                            \
+  template <typename D_T>                                                      \
+  int ns_fs::name(uv_loop_t* loop,                                             \
+                  NSUV_PASS(P1),                                               \
+                  ns_fs_cb_wp<D_T> cb,                                         \
+                  std::weak_ptr<D_T> d) {                                      \
+    ns_base_req<uv_fs_t, ns_fs>::init(loop, cb, d);                            \
+    return uv_fs_##name(                                                       \
+      loop,                                                                    \
+      this,                                                                    \
+      NSUV_PASS(P2),                                                           \
+      util::check_null_cb(cb, &cb_proxy_wp_<decltype(cb), D_T>));              \
   }
 
 NSUV_FS_FN(close, (uv_file file), (file))
@@ -466,6 +617,14 @@ void ns_fs::cb_proxy_(uv_fs_t* req) {
   cb(fs_req, static_cast<D_T*>(fs_req->req_cb_data_));
 }
 
+template <typename CB_T, typename D_T>
+void ns_fs::cb_proxy_wp_(uv_fs_t* req) {
+  auto* fs_req = ns_fs::cast(req);
+  auto* cb = reinterpret_cast<CB_T>(fs_req->req_cb_);
+  auto data = fs_req->req_cb_wp_.lock();
+  cb(fs_req, std::static_pointer_cast<D_T>(data));
+}
+
 
 /* ns_random */
 
@@ -505,6 +664,24 @@ int ns_random::get(uv_loop_t* loop,
                    util::check_null_cb(cb, &random_proxy_<decltype(cb), D_T>));
 }
 
+template <typename D_T>
+int ns_random::get(uv_loop_t* loop,
+                   void* buf,
+                   size_t buflen,
+                   uint32_t flags,
+                   ns_random_cb_wp<D_T> cb,
+                   std::weak_ptr<D_T> data) {
+  ns_base_req<uv_random_t, ns_random>::init(loop, cb, data);
+
+  return uv_random(
+      loop,
+      this,
+      buf,
+      buflen,
+      flags,
+      util::check_null_cb(cb, &random_proxy_wp_<decltype(cb), D_T>));
+}
+
 template <typename CB_T>
 void ns_random::random_proxy_(uv_random_t* req,
                               int status,
@@ -523,6 +700,17 @@ void ns_random::random_proxy_(uv_random_t* req,
   auto* r_req = ns_random::cast(req);
   auto* cb = reinterpret_cast<CB_T>(r_req->req_cb_);
   cb(r_req, status, buf, buflen, static_cast<D_T*>(r_req->req_cb_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_random::random_proxy_wp_(uv_random_t* req,
+                                 int status,
+                                 void* buf,
+                                 size_t buflen) {
+  auto* r_req = ns_random::cast(req);
+  auto* cb = reinterpret_cast<CB_T>(r_req->req_cb_);
+  auto data = r_req->req_cb_wp_.lock();
+  cb(r_req, status, buf, buflen, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -559,6 +747,24 @@ int ns_work::queue_work(uv_loop_t* loop,
       util::check_null_cb(after_cb, &after_proxy_<decltype(after_cb), D_T>));
 }
 
+template <typename D_T>
+int ns_work::queue_work(uv_loop_t* loop,
+                        ns_work_cb_wp<D_T> work_cb,
+                        ns_after_work_cb_wp<D_T> after_cb,
+                        std::weak_ptr<D_T> data) {
+  work_cb_ptr_ = reinterpret_cast<void (*)()>(work_cb);
+  after_cb_ptr_ = reinterpret_cast<void (*)()>(after_cb);
+  cb_wp_ = data;
+
+  // Need a nullptr check in case someone decides to static_cast a nullptr to
+  // the work_cb sig. Yes the user shouldn't do this but still need to check.
+  return uv_queue_work(
+      loop,
+      this,
+      util::check_null_cb(work_cb, &work_proxy_wp_<decltype(work_cb), D_T>),
+      util::check_null_cb(after_cb, &after_proxy_wp_<decltype(after_cb), D_T>));
+}
+
 int ns_work::queue_work(uv_loop_t* loop, ns_work_cb work_cb) {
   work_cb_ptr_ = reinterpret_cast<void (*)()>(work_cb);
 
@@ -580,6 +786,20 @@ int ns_work::queue_work(uv_loop_t* loop,
       loop,
       this,
       util::check_null_cb(work_cb, &work_proxy_<decltype(work_cb), D_T>),
+      nullptr);
+}
+
+template <typename D_T>
+int ns_work::queue_work(uv_loop_t* loop,
+                        ns_work_cb_wp<D_T> work_cb,
+                        std::weak_ptr<D_T> data) {
+  work_cb_ptr_ = reinterpret_cast<void (*)()>(work_cb);
+  cb_wp_ = data;
+
+  return uv_queue_work(
+      loop,
+      this,
+      util::check_null_cb(work_cb, &work_proxy_wp_<decltype(work_cb), D_T>),
       nullptr);
 }
 
@@ -605,10 +825,26 @@ void ns_work::work_proxy_(uv_work_t* req) {
 }
 
 template <typename CB_T, typename D_T>
+void ns_work::work_proxy_wp_(uv_work_t* req) {
+  auto* w_req = ns_work::cast(req);
+  auto* cb = reinterpret_cast<CB_T>(w_req->work_cb_ptr_);
+  auto data = w_req->cb_wp_.lock();
+  cb(w_req, std::static_pointer_cast<D_T>(data));
+}
+
+template <typename CB_T, typename D_T>
 void ns_work::after_proxy_(uv_work_t* req, int status) {
   auto* w_req = ns_work::cast(req);
   auto* cb = reinterpret_cast<CB_T>(w_req->after_cb_ptr_);
   cb(w_req, status, static_cast<D_T*>(w_req->cb_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_work::after_proxy_wp_(uv_work_t* req, int status) {
+  auto* w_req = ns_work::cast(req);
+  auto* cb = reinterpret_cast<CB_T>(w_req->after_cb_ptr_);
+  auto data = w_req->cb_wp_.lock();
+  cb(w_req, status, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -696,6 +932,16 @@ void ns_handle<UV_T, H_T>::close(void (*cb)(H_T*, void*), std::nullptr_t) {
 }
 
 template <class UV_T, class H_T>
+template <typename D_T>
+void ns_handle<UV_T, H_T>::close(ns_close_cb_wp<D_T> cb,
+                                 std::weak_ptr<D_T> data) {
+  close_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
+  close_cb_wp_ = data;
+  uv_close(base_handle(),
+           util::check_null_cb(cb, &close_proxy_wp_<decltype(cb), D_T>));
+}
+
+template <class UV_T, class H_T>
 void ns_handle<UV_T, H_T>::close_and_delete() {
   if (get_type() == UV_UNKNOWN_HANDLE) {
     delete H_T::cast(base_handle());
@@ -749,6 +995,15 @@ void ns_handle<UV_T, H_T>::close_proxy_(uv_handle_t* handle) {
   H_T* wrap = H_T::cast(handle);
   auto* cb_ = reinterpret_cast<CB_T>(wrap->close_cb_ptr_);
   cb_(wrap, static_cast<D_T*>(wrap->close_cb_data_));
+}
+
+template <class UV_T, class H_T>
+template <typename CB_T, typename D_T>
+void ns_handle<UV_T, H_T>::close_proxy_wp_(uv_handle_t* handle) {
+  H_T* wrap = H_T::cast(handle);
+  auto* cb_ = reinterpret_cast<CB_T>(wrap->close_cb_ptr_);
+  auto data = wrap->close_cb_wp_.lock();
+  cb_(wrap, std::static_pointer_cast<D_T>(data));
 }
 
 template <class UV_T, class H_T>
@@ -814,6 +1069,20 @@ int ns_stream<UV_T, H_T>::listen(int backlog,
 }
 
 template <class UV_T, class H_T>
+template <typename D_T>
+int ns_stream<UV_T, H_T>::listen(int backlog,
+                                 ns_listen_cb_wp<D_T> cb,
+                                 std::weak_ptr<D_T> data) {
+  listen_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
+  listen_cb_wp_ = data;
+
+  return uv_listen(
+      base_stream(),
+      backlog,
+      util::check_null_cb(cb, &listen_proxy_wp_<decltype(cb), D_T>));
+}
+
+template <class UV_T, class H_T>
 int ns_stream<UV_T, H_T>::accept(H_T* handle) {
   return uv_accept(base_stream(), handle->base_stream());
 }
@@ -843,6 +1112,21 @@ int ns_stream<UV_T, H_T>::read_start(ns_alloc_cb_d<D_T> alloc_cb,
       base_stream(),
       util::check_null_cb(alloc_cb, &alloc_proxy_<decltype(alloc_cb), D_T>),
       util::check_null_cb(read_cb, &read_proxy_<decltype(read_cb), D_T>));
+}
+
+template <class UV_T, class H_T>
+template <typename D_T>
+int ns_stream<UV_T, H_T>::read_start(ns_alloc_cb_wp<D_T> alloc_cb,
+                                     ns_read_cb_wp<D_T> read_cb,
+                                     std::weak_ptr<D_T> data) {
+  alloc_cb_ptr_ = reinterpret_cast<void (*)()>(alloc_cb);
+  read_cb_ptr_ = reinterpret_cast<void (*)()>(read_cb);
+  read_cb_wp_ = data;
+
+  return uv_read_start(
+      base_stream(),
+      util::check_null_cb(alloc_cb, &alloc_proxy_wp_<decltype(alloc_cb), D_T>),
+      util::check_null_cb(read_cb, &read_proxy_wp_<decltype(read_cb), D_T>));
 }
 
 template <class UV_T, class H_T>
@@ -911,6 +1195,24 @@ int ns_stream<UV_T, H_T>::write(ns_write<H_T>* req,
 template <class UV_T, class H_T>
 template <typename D_T>
 int ns_stream<UV_T, H_T>::write(ns_write<H_T>* req,
+                                const uv_buf_t bufs[],
+                                size_t nbufs,
+                                ns_write_cb_wp<D_T> cb,
+                                std::weak_ptr<D_T> data) {
+  int ret = req->init(bufs, nbufs, cb, data);
+  if (ret != NSUV_OK)
+    return ret;
+
+  return uv_write(req->uv_req(),
+                  base_stream(),
+                  req->bufs(),
+                  req->size(),
+                  util::check_null_cb(cb, &write_proxy_wp_<decltype(cb), D_T>));
+}
+
+template <class UV_T, class H_T>
+template <typename D_T>
+int ns_stream<UV_T, H_T>::write(ns_write<H_T>* req,
                                 const std::vector<uv_buf_t>& bufs,
                                 ns_write_cb_d<D_T> cb,
                                 D_T* data) {
@@ -934,6 +1236,23 @@ int ns_stream<UV_T, H_T>::write(ns_write<H_T>* req,
 }
 
 template <class UV_T, class H_T>
+template <typename D_T>
+int ns_stream<UV_T, H_T>::write(ns_write<H_T>* req,
+                                const std::vector<uv_buf_t>& bufs,
+                                ns_write_cb_wp<D_T> cb,
+                                std::weak_ptr<D_T> data) {
+  int ret = req->init(bufs, cb, data);
+  if (ret != NSUV_OK)
+    return ret;
+
+  return uv_write(req->uv_req(),
+                  base_stream(),
+                  req->bufs(),
+                  req->size(),
+                  util::check_null_cb(cb, &write_proxy_wp_<decltype(cb), D_T>));
+}
+
+template <class UV_T, class H_T>
 template <typename CB_T>
 void ns_stream<UV_T, H_T>::listen_proxy_(uv_stream_t* handle, int status) {
   auto* server = H_T::cast(handle);
@@ -947,6 +1266,15 @@ void ns_stream<UV_T, H_T>::listen_proxy_(uv_stream_t* handle, int status) {
   auto* server = H_T::cast(handle);
   auto* cb_ = reinterpret_cast<CB_T>(server->listen_cb_ptr_);
   cb_(server, status, static_cast<D_T*>(server->listen_cb_data_));
+}
+
+template <class UV_T, class H_T>
+template <typename CB_T, typename D_T>
+void ns_stream<UV_T, H_T>::listen_proxy_wp_(uv_stream_t* handle, int status) {
+  auto* server = H_T::cast(handle);
+  auto* cb_ = reinterpret_cast<CB_T>(server->listen_cb_ptr_);
+  auto data = server->listen_cb_wp_.lock();
+  cb_(server, status, std::static_pointer_cast<D_T>(data));
 }
 
 template <class UV_T, class H_T>
@@ -965,8 +1293,19 @@ void ns_stream<UV_T, H_T>::alloc_proxy_(uv_handle_t* handle,
                                         size_t suggested_size,
                                         uv_buf_t* buf) {
   auto* server = H_T::cast(handle);
-  auto* cb_ = reinterpret_cast<CB_T>(server->listen_cb_ptr_);
+  auto* cb_ = reinterpret_cast<CB_T>(server->alloc_cb_ptr_);
   cb_(server, suggested_size, buf, static_cast<D_T*>(server->read_cb_data_));
+}
+
+template <class UV_T, class H_T>
+template <typename CB_T, typename D_T>
+void ns_stream<UV_T, H_T>::alloc_proxy_wp_(uv_handle_t* handle,
+                                           size_t suggested_size,
+                                           uv_buf_t* buf) {
+  auto* server = H_T::cast(handle);
+  auto* cb_ = reinterpret_cast<CB_T>(server->alloc_cb_ptr_);
+  auto data = server->read_cb_wp_.lock();
+  cb_(server, suggested_size, buf, std::static_pointer_cast<D_T>(data));
 }
 
 template <class UV_T, class H_T>
@@ -990,6 +1329,17 @@ void ns_stream<UV_T, H_T>::read_proxy_(uv_stream_t* handle,
 }
 
 template <class UV_T, class H_T>
+template <typename CB_T, typename D_T>
+void ns_stream<UV_T, H_T>::read_proxy_wp_(uv_stream_t* handle,
+                                          ssize_t nread,
+                                          const uv_buf_t* buf) {
+  auto* server = H_T::cast(handle);
+  auto* cb_ = reinterpret_cast<CB_T>(server->read_cb_ptr_);
+  auto data = server->read_cb_wp_.lock();
+  cb_(server, nread, buf, std::static_pointer_cast<D_T>(data));
+}
+
+template <class UV_T, class H_T>
 template <typename CB_T>
 void ns_stream<UV_T, H_T>::write_proxy_(uv_write_t* uv_req, int status) {
   auto* wreq = ns_write<H_T>::cast(uv_req);
@@ -1003,6 +1353,15 @@ void ns_stream<UV_T, H_T>::write_proxy_(uv_write_t* uv_req, int status) {
   auto* wreq = ns_write<H_T>::cast(uv_req);
   auto* cb_ = reinterpret_cast<CB_T>(wreq->req_cb_);
   cb_(wreq, status, static_cast<D_T*>(wreq->req_cb_data_));
+}
+
+template <class UV_T, class H_T>
+template <typename CB_T, typename D_T>
+void ns_stream<UV_T, H_T>::write_proxy_wp_(uv_write_t* uv_req, int status) {
+  auto* wreq = ns_write<H_T>::cast(uv_req);
+  auto* cb_ = reinterpret_cast<CB_T>(wreq->req_cb_);
+  auto data = wreq->req_cb_wp_.lock();
+  cb_(wreq, status, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -1034,6 +1393,19 @@ int ns_async::init(uv_loop_t* loop,
   return init(loop, cb, NSUV_CAST_NULLPTR);
 }
 
+template <typename D_T>
+int ns_async::init(uv_loop_t* loop,
+                   ns_async_cb_wp<D_T> cb,
+                   std::weak_ptr<D_T> data) {
+  async_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
+  async_cb_wp_ = data;
+
+  return uv_async_init(
+    loop,
+    uv_handle(),
+    util::check_null_cb(cb, &async_proxy_wp_<decltype(cb), D_T>));
+}
+
 int ns_async::send() {
   return uv_async_send(uv_handle());
 }
@@ -1050,6 +1422,14 @@ void ns_async::async_proxy_(uv_async_t* handle) {
   auto* wrap = ns_async::cast(handle);
   auto* cb_ = reinterpret_cast<CB_T>(wrap->async_cb_ptr_);
   cb_(wrap, static_cast<D_T*>(wrap->async_cb_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_async::async_proxy_wp_(uv_async_t* handle) {
+  auto* wrap = ns_async::cast(handle);
+  auto* cb_ = reinterpret_cast<CB_T>(wrap->async_cb_ptr_);
+  auto data = wrap->async_cb_wp_.lock();
+  cb_(wrap, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -1094,6 +1474,19 @@ int ns_poll::start(int events,
   return start(events, cb, NSUV_CAST_NULLPTR);
 }
 
+template <typename D_T>
+int ns_poll::start(int events,
+                   ns_poll_cb_wp<D_T> cb,
+                   std::weak_ptr<D_T> data) {
+  poll_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
+  poll_cb_wp_ = data;
+
+  return uv_poll_start(
+    uv_handle(),
+    events,
+    util::check_null_cb(cb, &poll_proxy_wp_<decltype(cb), D_T>));
+}
+
 int ns_poll::stop() {
   return uv_poll_stop(uv_handle());
 }
@@ -1110,6 +1503,14 @@ void ns_poll::poll_proxy_(uv_poll_t* handle, int poll, int events) {
   ns_poll* wrap = ns_poll::cast(handle);
   auto* cb_ = reinterpret_cast<CB_T>(wrap->poll_cb_ptr_);
   cb_(wrap, poll, events, static_cast<D_T*>(wrap->poll_cb_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_poll::poll_proxy_wp_(uv_poll_t* handle, int poll, int events) {
+  ns_poll* wrap = ns_poll::cast(handle);
+  auto* cb_ = reinterpret_cast<CB_T>(wrap->poll_cb_ptr_);
+  auto data = wrap->poll_cb_wp_.lock();
+  cb_(wrap, poll, events, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -1172,6 +1573,16 @@ int ns_tcp::close_reset(void (*cb)(ns_tcp*, void*), std::nullptr_t) {
   return close_reset(cb, NSUV_CAST_NULLPTR);
 }
 
+template <typename D_T>
+int ns_tcp::close_reset(ns_close_cb_wp<D_T> cb, std::weak_ptr<D_T> data) {
+  close_reset_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
+  close_reset_wp_ = data;
+
+  return uv_tcp_close_reset(
+      uv_handle(),
+      util::check_null_cb(cb, &close_reset_proxy_wp_<decltype(cb), D_T>));
+}
+
 int ns_tcp::connect(ns_connect<ns_tcp>* req,
                     const struct sockaddr* addr,
                     ns_connect_cb cb) {
@@ -1209,6 +1620,22 @@ int ns_tcp::connect(ns_connect<ns_tcp>* req,
   return connect(req, addr, cb, NSUV_CAST_NULLPTR);
 }
 
+template <typename D_T>
+int ns_tcp::connect(ns_connect<ns_tcp>* req,
+                    const struct sockaddr* addr,
+                    ns_connect_cb_wp<D_T> cb,
+                    std::weak_ptr<D_T> data) {
+  int ret = req->init(addr, cb, data);
+  if (ret != NSUV_OK)
+    return ret;
+
+  return uv_tcp_connect(
+      req->uv_req(),
+      uv_handle(),
+      addr,
+      util::check_null_cb(cb, &connect_proxy_wp_<decltype(cb), D_T>));
+}
+
 template <typename CB_T>
 void ns_tcp::connect_proxy_(uv_connect_t* uv_req, int status) {
   auto* creq = ns_connect<ns_tcp>::cast(uv_req);
@@ -1223,6 +1650,14 @@ void ns_tcp::connect_proxy_(uv_connect_t* uv_req, int status) {
   cb_(creq, status, static_cast<D_T*>(creq->req_cb_data_));
 }
 
+template <typename CB_T, typename D_T>
+void ns_tcp::connect_proxy_wp_(uv_connect_t* uv_req, int status) {
+  auto* creq = ns_connect<ns_tcp>::cast(uv_req);
+  auto* cb_ = reinterpret_cast<CB_T>(creq->req_cb_);
+  auto data = creq->req_cb_wp_.lock();
+  cb_(creq, status, std::static_pointer_cast<D_T>(data));
+}
+
 template <typename CB_T>
 void ns_tcp::close_reset_proxy_(uv_handle_t* handle) {
   ns_tcp* wrap = ns_tcp::cast(handle);
@@ -1235,6 +1670,14 @@ void ns_tcp::close_reset_proxy_(uv_handle_t* handle) {
   ns_tcp* wrap = ns_tcp::cast(handle);
   auto* cb = reinterpret_cast<CB_T>(wrap->close_reset_cb_ptr_);
   cb(wrap, static_cast<D_T*>(wrap->close_reset_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_tcp::close_reset_proxy_wp_(uv_handle_t* handle) {
+  ns_tcp* wrap = ns_tcp::cast(handle);
+  auto* cb = reinterpret_cast<CB_T>(wrap->close_reset_cb_ptr_);
+  auto data = wrap->close_reset_wp_.lock();
+  cb(wrap, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -1277,6 +1720,21 @@ int ns_timer::start(void (*cb)(ns_timer*, void*),
   return start(cb, timeout, repeat, NSUV_CAST_NULLPTR);
 }
 
+template <typename D_T>
+int ns_timer::start(ns_timer_cb_wp<D_T> cb,
+                    uint64_t timeout,
+                    uint64_t repeat,
+                    std::weak_ptr<D_T> data) {
+  timer_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
+  timer_cb_wp_ = data;
+
+  return uv_timer_start(
+    uv_handle(),
+    util::check_null_cb(cb, &timer_proxy_wp_<decltype(cb), D_T>),
+    timeout,
+    repeat);
+}
+
 int ns_timer::stop() {
   return uv_timer_stop(uv_handle());
 }
@@ -1297,6 +1755,14 @@ void ns_timer::timer_proxy_(uv_timer_t* handle) {
   ns_timer* wrap = ns_timer::cast(handle);
   auto* cb_ = reinterpret_cast<CB_T>(wrap->timer_cb_ptr_);
   cb_(wrap, static_cast<D_T*>(wrap->timer_cb_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_timer::timer_proxy_wp_(uv_timer_t* handle) {
+  ns_timer* wrap = ns_timer::cast(handle);
+  auto* cb_ = reinterpret_cast<CB_T>(wrap->timer_cb_ptr_);
+  auto data = wrap->timer_cb_wp_.lock();
+  cb_(wrap, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -1333,6 +1799,17 @@ void ns_timer::timer_proxy_(uv_timer_t* handle) {
     return start(cb, NSUV_CAST_NULLPTR);                                       \
   }                                                                            \
                                                                                \
+  template <typename D_T>                                                      \
+  int ns_##name::start(ns_##name##_cb_wp<D_T> cb, std::weak_ptr<D_T> data) {   \
+    if (is_active())                                                           \
+      return 0;                                                                \
+    name##_cb_ptr_ = reinterpret_cast<void (*)()>(cb);                         \
+    name##_cb_wp_ = data;                                                      \
+    return uv_##name##_start(                                                  \
+        uv_handle(),                                                           \
+        util::check_null_cb(cb, &name##_proxy_wp_<decltype(cb), D_T>));        \
+  }                                                                            \
+                                                                               \
   int ns_##name::stop() { return uv_##name##_stop(uv_handle()); }              \
                                                                                \
   template <typename CB_T>                                                     \
@@ -1347,6 +1824,14 @@ void ns_timer::timer_proxy_(uv_timer_t* handle) {
     ns_##name* wrap = ns_##name::cast(handle);                                 \
     auto* cb_ = reinterpret_cast<CB_T>(wrap->name##_cb_ptr_);                  \
     cb_(wrap, static_cast<D_T*>(wrap->name##_cb_data_));                       \
+  }                                                                            \
+                                                                               \
+  template <typename CB_T, typename D_T>                                       \
+  void ns_##name::name##_proxy_wp_(uv_##name##_t* handle) {                    \
+    ns_##name* wrap = ns_##name::cast(handle);                                 \
+    auto* cb_ = reinterpret_cast<CB_T>(wrap->name##_cb_ptr_);                  \
+    auto data = wrap->name##_cb_wp_.lock();                                    \
+    cb_(wrap, std::static_pointer_cast<D_T>(data));                            \
   }
 
 
@@ -1522,6 +2007,26 @@ int ns_udp::send(ns_udp_send* req,
 
 template <typename D_T>
 int ns_udp::send(ns_udp_send* req,
+                 const uv_buf_t bufs[],
+                 size_t nbufs,
+                 const struct sockaddr* addr,
+                 ns_udp_send_cb_wp<D_T> cb,
+                 std::weak_ptr<D_T> data) {
+  int r = req->init(bufs, nbufs, addr, cb, data);
+  if (r != 0)
+    return r;
+
+  return uv_udp_send(
+      req->uv_req(),
+      uv_handle(),
+      req->bufs(),
+      req->size(),
+      addr,
+      util::check_null_cb(cb, &send_proxy_wp_<decltype(cb), D_T>));
+}
+
+template <typename D_T>
+int ns_udp::send(ns_udp_send* req,
                  const std::vector<uv_buf_t>& bufs,
                  const struct sockaddr* addr,
                  ns_udp_send_cb_d<D_T> cb,
@@ -1544,6 +2049,25 @@ int ns_udp::send(ns_udp_send* req,
                  void (*cb)(ns_udp_send*, int, void*),
                  std::nullptr_t) {
   return send(req, bufs, addr, cb, NSUV_CAST_NULLPTR);
+}
+
+template <typename D_T>
+int ns_udp::send(ns_udp_send* req,
+                 const std::vector<uv_buf_t>& bufs,
+                 const struct sockaddr* addr,
+                 ns_udp_send_cb_wp<D_T> cb,
+                 std::weak_ptr<D_T> data) {
+  int r = req->init(bufs, addr, cb, data);
+  if (r != 0)
+    return r;
+
+  return uv_udp_send(
+      req->uv_req(),
+      uv_handle(),
+      req->bufs(),
+      req->size(),
+      addr,
+      util::check_null_cb(cb, &send_proxy_wp_<decltype(cb), D_T>));
 }
 
 const sockaddr* ns_udp::local_addr() {
@@ -1579,6 +2103,14 @@ void ns_udp::send_proxy_(uv_udp_send_t* uv_req, int status) {
   auto* ureq = ns_udp_send::cast(uv_req);
   auto* cb_ = reinterpret_cast<CB_T>(ureq->req_cb_);
   cb_(ureq, status, static_cast<D_T*>(ureq->req_cb_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_udp::send_proxy_wp_(uv_udp_send_t* uv_req, int status) {
+  auto* ureq = ns_udp_send::cast(uv_req);
+  auto* cb_ = reinterpret_cast<CB_T>(ureq->req_cb_);
+  auto data = ureq->req_cb_wp_.lock();
+  cb_(ureq, status, std::static_pointer_cast<D_T>(data));
 }
 
 
@@ -1748,6 +2280,17 @@ int ns_thread::create(void (*cb)(ns_thread*, void*), std::nullptr_t) {
   return create(cb, NSUV_CAST_NULLPTR);
 }
 
+template <typename D_T>
+int ns_thread::create(ns_thread_cb_wp<D_T> cb, std::weak_ptr<D_T> data) {
+  thread_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
+  thread_cb_wp_ = data;
+
+  return uv_thread_create(
+      &thread_,
+      util::check_null_cb(cb, &create_proxy_wp_<decltype(cb), D_T>),
+      this);
+}
+
 int ns_thread::create_ex(const uv_thread_options_t* params,
                          ns_thread_cb cb) {
   thread_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
@@ -1777,6 +2320,20 @@ int ns_thread::create_ex(const uv_thread_options_t* params,
                          void (*cb)(ns_thread*, void*),
                          std::nullptr_t) {
   return create_ex(params, cb, NSUV_CAST_NULLPTR);
+}
+
+template <typename D_T>
+int ns_thread::create_ex(const uv_thread_options_t* params,
+                         ns_thread_cb_wp<D_T> cb,
+                         std::weak_ptr<D_T> data) {
+  thread_cb_ptr_ = reinterpret_cast<void (*)()>(cb);
+  thread_cb_wp_ = data;
+
+  return uv_thread_create_ex(
+      &thread_,
+      params,
+      util::check_null_cb(cb, &create_proxy_wp_<decltype(cb), D_T>),
+      this);
 }
 
 int ns_thread::join() {
@@ -1827,6 +2384,14 @@ void ns_thread::create_proxy_(void* arg) {
   auto* wrap = static_cast<ns_thread*>(arg);
   auto* cb_ = reinterpret_cast<CB_T>(wrap->thread_cb_ptr_);
   cb_(wrap, static_cast<D_T*>(wrap->thread_cb_data_));
+}
+
+template <typename CB_T, typename D_T>
+void ns_thread::create_proxy_wp_(void* arg) {
+  auto* wrap = static_cast<ns_thread*>(arg);
+  auto* cb_ = reinterpret_cast<CB_T>(wrap->thread_cb_ptr_);
+  auto data = wrap->thread_cb_wp_.lock();
+  cb_(wrap, std::static_pointer_cast<D_T>(data));
 }
 
 int util::addr_size(const struct sockaddr* addr) {

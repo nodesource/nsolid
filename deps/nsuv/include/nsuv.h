@@ -34,12 +34,16 @@
   template <typename CB_T>                                                     \
   static NSUV_INLINE void name(__VA_ARGS__);                                   \
   template <typename CB_T, typename D_T>                                       \
-  static NSUV_INLINE void name(__VA_ARGS__);
+  static NSUV_INLINE void name(__VA_ARGS__);                                   \
+  template <typename CB_T, typename D_T>                                       \
+  static NSUV_INLINE void name##wp_(__VA_ARGS__);
 
 #define NSUV_CB_FNS(name, ...)                                                 \
   using name = void (*)(__VA_ARGS__);                                          \
   template <typename D_T>                                                      \
-  using name##_d = void (*)(__VA_ARGS__, D_T*);
+  using name##_d = void (*)(__VA_ARGS__, D_T*);                                \
+  template <typename D_T>                                                      \
+  using name##_wp = void (*)(__VA_ARGS__, std::weak_ptr<D_T>);
 
 namespace nsuv {
 
@@ -109,6 +113,10 @@ class ns_base_req : public UV_T {
  protected:
   template <typename CB, typename D_T = void>
   NSUV_INLINE void init(uv_loop_t* loop, CB cb, D_T* data = nullptr);
+  template <typename CB, typename D_T>
+  NSUV_INLINE void init(uv_loop_t* loop,
+                        CB cb,
+                        std::weak_ptr<D_T> data);
 
  public:
   NSUV_INLINE uv_loop_t* get_loop();
@@ -130,6 +138,7 @@ class ns_base_req : public UV_T {
  protected:
   void (*req_cb_)() = nullptr;
   void* req_cb_data_ = nullptr;
+  std::weak_ptr<void> req_cb_wp_;
   uv_loop_t* loop_ = nullptr;
 };
 
@@ -145,6 +154,8 @@ class ns_req : public ns_base_req<UV_T, R_T> {
  public:
   template <typename CB, typename D_T = void>
   NSUV_INLINE void init(CB cb, D_T* data = nullptr);
+  template <typename CB, typename D_T>
+  NSUV_INLINE void init(CB cb, std::weak_ptr<D_T> data);
   /* Return the ns_handle that has ownership of this req. This uses the
    * UV_T::handle field, and downcasts from the uv_handle_t to H_T.
    */
@@ -177,6 +188,10 @@ class ns_connect : public ns_req<uv_connect_t, ns_connect<H_T>, H_T> {
   NSUV_INLINE NSUV_WUR int init(const struct sockaddr* addr,
                                 CB cb,
                                 D_T* data = nullptr);
+  template <typename CB, typename D_T>
+  NSUV_INLINE NSUV_WUR int init(const struct sockaddr* addr,
+                                CB cb,
+                                std::weak_ptr<D_T> data);
   struct sockaddr_storage addr_;
 };
 
@@ -203,6 +218,15 @@ class ns_write : public ns_req<uv_write_t, ns_write<H_T>, H_T> {
   NSUV_INLINE NSUV_WUR int init(const std::vector<uv_buf_t>& bufs,
                                 CB cb,
                                 D_T* data = nullptr);
+  template <typename CB, typename D_T>
+  NSUV_INLINE NSUV_WUR int init(const uv_buf_t bufs[],
+                                size_t nbufs,
+                                CB cb,
+                                std::weak_ptr<D_T> data);
+  template <typename CB, typename D_T>
+  NSUV_INLINE NSUV_WUR int init(const std::vector<uv_buf_t>& bufs,
+                                CB cb,
+                                std::weak_ptr<D_T> data);
 
   util::no_throw_vec<uv_buf_t> bufs_;
 };
@@ -230,6 +254,17 @@ class ns_udp_send : public ns_req<uv_udp_send_t, ns_udp_send, ns_udp> {
                        const struct sockaddr* addr,
                        CB cb,
                        D_T* data = nullptr);
+  template <typename CB, typename D_T>
+  NSUV_INLINE int init(const uv_buf_t bufs[],
+                       size_t nbufs,
+                       const struct sockaddr* addr,
+                       CB cb,
+                       std::weak_ptr<D_T> data);
+  template <typename CB, typename D_T>
+  NSUV_INLINE int init(const std::vector<uv_buf_t>& bufs,
+                       const struct sockaddr* addr,
+                       CB cb,
+                       std::weak_ptr<D_T> data);
 
   util::no_throw_vec<uv_buf_t> bufs_;
   std::unique_ptr<struct sockaddr_storage> addr_;
@@ -258,6 +293,13 @@ class ns_addrinfo : public ns_base_req<uv_getaddrinfo_t, ns_addrinfo> {
                                const char* service,
                                const struct addrinfo* hints,
                                D_T* data = nullptr);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int get(uv_loop_t* loop,
+                               ns_addrinfo_cb_wp<D_T> cb,
+                               const char* node,
+                               const char* service,
+                               const struct addrinfo* hints,
+                               std::weak_ptr<D_T> data);
   NSUV_INLINE const struct addrinfo* info();
   NSUV_INLINE void free();
 
@@ -272,7 +314,11 @@ class ns_addrinfo : public ns_base_req<uv_getaddrinfo_t, ns_addrinfo> {
   NSUV_INLINE NSUV_WUR int name(__VA_ARGS__);                                  \
   NSUV_INLINE NSUV_WUR int name(uv_loop_t*, __VA_ARGS__, ns_fs_cb);            \
   template <typename D_T>                                                      \
-  NSUV_INLINE NSUV_WUR int name(uv_loop_t*, __VA_ARGS__, ns_fs_cb_d<D_T>, D_T*);
+  NSUV_INLINE NSUV_WUR int name(                                               \
+      uv_loop_t*, __VA_ARGS__, ns_fs_cb_d<D_T>, D_T*);                         \
+  template <typename D_T>                                                      \
+  NSUV_INLINE NSUV_WUR int name(                                               \
+      uv_loop_t*, __VA_ARGS__, ns_fs_cb_wp<D_T>, std::weak_ptr<D_T>);
 
 class ns_fs : public ns_base_req<uv_fs_t, ns_fs> {
  public:
@@ -374,6 +420,13 @@ class ns_random : public ns_base_req<uv_random_t, ns_random> {
                                uint32_t flags,
                                ns_random_cb_d<D_T> cb,
                                D_T* data);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int get(uv_loop_t* loop,
+                               void* buf,
+                               size_t buflen,
+                               uint32_t flags,
+                               ns_random_cb_wp<D_T> cb,
+                               std::weak_ptr<D_T> data);
 
  private:
   NSUV_PROXY_FNS(random_proxy_,
@@ -399,6 +452,11 @@ class ns_work : public ns_base_req<uv_work_t, ns_work> {
                                       ns_work_cb_d<D_T> work_cb,
                                       ns_after_work_cb_d<D_T> after_cb,
                                       D_T* data);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int queue_work(uv_loop_t* loop,
+                                      ns_work_cb_wp<D_T> work_cb,
+                                      ns_after_work_cb_wp<D_T> after_cb,
+                                      std::weak_ptr<D_T> data);
   // libuv allows passing nullptr as after_cb, so create another overload.
   NSUV_INLINE NSUV_WUR int queue_work(uv_loop_t* loop,
                                       ns_work_cb work_cb);
@@ -406,6 +464,10 @@ class ns_work : public ns_base_req<uv_work_t, ns_work> {
   NSUV_INLINE NSUV_WUR int queue_work(uv_loop_t* loop,
                                       ns_work_cb_d<D_T> work_cb,
                                       D_T* data);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int queue_work(uv_loop_t* loop,
+                                      ns_work_cb_wp<D_T> work_cb,
+                                      std::weak_ptr<D_T> data);
 
  private:
   NSUV_PROXY_FNS(work_proxy_, uv_work_t*)
@@ -414,6 +476,7 @@ class ns_work : public ns_base_req<uv_work_t, ns_work> {
   void (*work_cb_ptr_)() = nullptr;
   void (*after_cb_ptr_)() = nullptr;
   void* cb_data_ = nullptr;
+  std::weak_ptr<void> cb_wp_;
 };
 
 
@@ -441,6 +504,8 @@ class ns_handle : public UV_T {
   template <typename D_T>
   NSUV_INLINE void close(ns_close_cb_d<D_T>, D_T* data);
   NSUV_INLINE void close(void (*cb)(H_T*, void*), std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE void close(ns_close_cb_wp<D_T>, std::weak_ptr<D_T> data);
   /* Convinence method to just delete the handle after it's closed. */
   NSUV_INLINE void close_and_delete();
   NSUV_INLINE void set_data(void* data);
@@ -462,6 +527,7 @@ class ns_handle : public UV_T {
 
   void (*close_cb_ptr_)() = nullptr;
   void* close_cb_data_ = nullptr;
+  std::weak_ptr<void> close_cb_wp_;
 };
 
 
@@ -488,6 +554,10 @@ class ns_stream : public ns_handle<UV_T, H_T> {
   NSUV_INLINE NSUV_WUR int listen(int backlog,
                                   void (*cb)(H_T*, int, void*),
                                   std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int listen(int backlog,
+                                  ns_listen_cb_wp<D_T> cb,
+                                  std::weak_ptr<D_T> data);
   NSUV_INLINE NSUV_WUR int accept(H_T* handle);
   NSUV_INLINE NSUV_WUR int read_start(ns_alloc_cb alloc_cb,
                                       ns_read_cb read_cb);
@@ -495,6 +565,10 @@ class ns_stream : public ns_handle<UV_T, H_T> {
   NSUV_INLINE NSUV_WUR int read_start(ns_alloc_cb_d<D_T> alloc_cb,
                                       ns_read_cb_d<D_T> read_cb,
                                       D_T* data);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int read_start(ns_alloc_cb_wp<D_T> alloc_cb,
+                                      ns_read_cb_wp<D_T> read_cb,
+                                      std::weak_ptr<D_T> data);
   NSUV_INLINE NSUV_WUR int read_stop();
   NSUV_INLINE NSUV_WUR int write(ns_write<H_T>* req,
                                  const uv_buf_t bufs[],
@@ -516,6 +590,12 @@ class ns_stream : public ns_handle<UV_T, H_T> {
                                  std::nullptr_t);
   template <typename D_T>
   NSUV_INLINE NSUV_WUR int write(ns_write<H_T>* req,
+                                 const uv_buf_t bufs[],
+                                 size_t nbufs,
+                                 ns_write_cb_wp<D_T> cb,
+                                 std::weak_ptr<D_T> data);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int write(ns_write<H_T>* req,
                                  const std::vector<uv_buf_t>& bufs,
                                  ns_write_cb_d<D_T> cb,
                                  D_T* data);
@@ -523,6 +603,11 @@ class ns_stream : public ns_handle<UV_T, H_T> {
                                  const std::vector<uv_buf_t>& bufs,
                                  void (*cb)(ns_write<H_T>*, int, void*),
                                  std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int write(ns_write<H_T>* req,
+                                 const std::vector<uv_buf_t>& bufs,
+                                 ns_write_cb_wp<D_T> cb,
+                                 std::weak_ptr<D_T> data);
 
  private:
   NSUV_PROXY_FNS(listen_proxy_, uv_stream_t* handle, int status)
@@ -532,9 +617,11 @@ class ns_stream : public ns_handle<UV_T, H_T> {
 
   void (*listen_cb_ptr_)() = nullptr;
   void* listen_cb_data_ = nullptr;
+  std::weak_ptr<void> listen_cb_wp_;
   void (*alloc_cb_ptr_)() = nullptr;
   void (*read_cb_ptr_)() = nullptr;
   void* read_cb_data_ = nullptr;
+  std::weak_ptr<void> read_cb_wp_;
 };
 
 
@@ -552,6 +639,10 @@ class ns_async : public ns_handle<uv_async_t, ns_async> {
   NSUV_INLINE NSUV_WUR int init(uv_loop_t* loop,
                                 void (*cb)(ns_async*, void*),
                                 std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int init(uv_loop_t* loop,
+                                ns_async_cb_wp<D_T> cb,
+                                std::weak_ptr<D_T> data);
   NSUV_INLINE NSUV_WUR int send();
 
  private:
@@ -559,6 +650,7 @@ class ns_async : public ns_handle<uv_async_t, ns_async> {
 
   void (*async_cb_ptr_)() = nullptr;
   void* async_cb_data_ = nullptr;
+  std::weak_ptr<void> async_cb_wp_;
 };
 
 
@@ -579,6 +671,10 @@ class ns_poll : public ns_handle<uv_poll_t, ns_poll> {
   NSUV_INLINE NSUV_WUR int start(int events,
                                  void (*cb)(ns_poll*, int, int, void*),
                                  std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int start(int events,
+                                 ns_poll_cb_wp<D_T> cb,
+                                 std::weak_ptr<D_T> data);
   NSUV_INLINE NSUV_WUR int stop();
 
  private:
@@ -586,6 +682,7 @@ class ns_poll : public ns_handle<uv_poll_t, ns_poll> {
 
   void (*poll_cb_ptr_)() = nullptr;
   void* poll_cb_data_ = nullptr;
+  std::weak_ptr<void> poll_cb_wp_;
 };
 
 
@@ -612,6 +709,9 @@ class ns_tcp : public ns_stream<uv_tcp_t, ns_tcp> {
   NSUV_INLINE NSUV_WUR int close_reset(ns_close_cb_d<D_T> cb, D_T* data);
   NSUV_INLINE NSUV_WUR int close_reset(void (*cb)(ns_tcp*, void*),
                                        std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int close_reset(ns_close_cb_wp<D_T> cb,
+                                       std::weak_ptr<D_T> data);
 
   NSUV_INLINE NSUV_WUR int connect(ns_connect<ns_tcp>* req,
                                    const struct sockaddr* addr,
@@ -625,6 +725,11 @@ class ns_tcp : public ns_stream<uv_tcp_t, ns_tcp> {
                                    const struct sockaddr* addr,
                                    void (*cb)(ns_connect<ns_tcp>*, int, void*),
                                    std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int connect(ns_connect<ns_tcp>* req,
+                                   const struct sockaddr* addr,
+                                   ns_connect_cb_wp<D_T> cb,
+                                   std::weak_ptr<D_T> data);
 
  private:
   NSUV_PROXY_FNS(connect_proxy_, uv_connect_t* uv_req, int status)
@@ -632,6 +737,7 @@ class ns_tcp : public ns_stream<uv_tcp_t, ns_tcp> {
 
   void (*close_reset_cb_ptr_)() = nullptr;
   void* close_reset_data_ = nullptr;
+  std::weak_ptr<void> close_reset_wp_;
 };
 
 
@@ -654,6 +760,11 @@ class ns_timer : public ns_handle<uv_timer_t, ns_timer> {
                                  uint64_t timeout,
                                  uint64_t repeat,
                                  std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int start(ns_timer_cb_wp<D_T> cb,
+                                 uint64_t timeout,
+                                 uint64_t repeat,
+                                 std::weak_ptr<D_T> data);
   NSUV_INLINE NSUV_WUR int stop();
   NSUV_INLINE size_t get_repeat();
 
@@ -661,6 +772,7 @@ class ns_timer : public ns_handle<uv_timer_t, ns_timer> {
   NSUV_PROXY_FNS(timer_proxy_, uv_timer_t* handle)
   void (*timer_cb_ptr_)() = nullptr;
   void* timer_cb_data_ = nullptr;
+  std::weak_ptr<void> timer_cb_wp_;
 };
 
 
@@ -676,12 +788,16 @@ class ns_timer : public ns_handle<uv_timer_t, ns_timer> {
     NSUV_INLINE NSUV_WUR int start(ns_##name##_cb_d<D_T> cb, D_T* data);       \
     NSUV_INLINE NSUV_WUR int start(void (*cb)(ns_##name*, void*),              \
                                    std::nullptr_t);                            \
+    template <typename D_T>                                                    \
+    NSUV_INLINE NSUV_WUR int start(ns_##name##_cb_wp<D_T> cb,                  \
+                                   std::weak_ptr<D_T> data);                   \
     NSUV_INLINE NSUV_WUR int stop();                                           \
                                                                                \
    private:                                                                    \
     NSUV_PROXY_FNS(name##_proxy_, uv_##name##_t* handle)                       \
     void (*name##_cb_ptr_)() = nullptr;                                        \
     void* name##_cb_data_ = nullptr;                                           \
+    std::weak_ptr<void> name##_cb_wp_;                                         \
   };
 
 NSUV_LOOP_WATCHER_DEFINE(check)
@@ -740,6 +856,13 @@ class ns_udp : public ns_handle<uv_udp_t, ns_udp> {
                                 std::nullptr_t);
   template <typename D_T>
   NSUV_INLINE NSUV_WUR int send(ns_udp_send* req,
+                                const uv_buf_t bufs[],
+                                size_t nbufs,
+                                const struct sockaddr* addr,
+                                ns_udp_send_cb_wp<D_T> cb,
+                                std::weak_ptr<D_T> data);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int send(ns_udp_send* req,
                                 const std::vector<uv_buf_t>& bufs,
                                 const struct sockaddr* addr,
                                 ns_udp_send_cb_d<D_T> cb,
@@ -749,6 +872,12 @@ class ns_udp : public ns_handle<uv_udp_t, ns_udp> {
                                 const struct sockaddr* addr,
                                 void (*cb)(ns_udp_send*, int, void*),
                                 std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int send(ns_udp_send* req,
+                                const std::vector<uv_buf_t>& bufs,
+                                const struct sockaddr* addr,
+                                ns_udp_send_cb_wp<D_T> cb,
+                                std::weak_ptr<D_T> data);
 
   NSUV_INLINE const struct sockaddr* local_addr();
   NSUV_INLINE const struct sockaddr* remote_addr();
@@ -883,6 +1012,9 @@ class ns_thread {
   NSUV_INLINE NSUV_WUR int create(ns_thread_cb_d<D_T> cb, D_T* data);
   NSUV_INLINE NSUV_WUR int create(void (*cb)(ns_thread*, void*),
                                   std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int create(ns_thread_cb_wp<D_T> cb,
+                                  std::weak_ptr<D_T> data);
   NSUV_INLINE NSUV_WUR int create_ex(const uv_thread_options_t* params,
                                      ns_thread_cb cb);
   template <typename D_T>
@@ -892,6 +1024,10 @@ class ns_thread {
   NSUV_INLINE NSUV_WUR int create_ex(const uv_thread_options_t* params,
                                      void (*cb)(ns_thread*, void*),
                                      std::nullptr_t);
+  template <typename D_T>
+  NSUV_INLINE NSUV_WUR int create_ex(const uv_thread_options_t* params,
+                                     ns_thread_cb_wp<D_T> cb,
+                                     std::weak_ptr<D_T> data);
   NSUV_INLINE NSUV_WUR int join();
   NSUV_INLINE uv_thread_t base();
   NSUV_INLINE NSUV_WUR bool equal(uv_thread_t* t2);
@@ -908,6 +1044,7 @@ class ns_thread {
   uv_thread_t thread_;
   void (*thread_cb_ptr_)() = nullptr;
   void* thread_cb_data_ = nullptr;
+  std::weak_ptr<void> thread_cb_wp_;
 };
 
 }  // namespace nsuv
