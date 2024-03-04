@@ -42,10 +42,12 @@ static void Bucket(const FunctionCallbackInfo<Value>& args) {
 
 static void Status(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  const std::string status_str = StatsDAgent::Inst()->status();
+  const uint8_t* status = reinterpret_cast<const uint8_t*>(status_str.c_str());
   args.GetReturnValue().Set(
-    String::NewFromUtf8(isolate,
-                        StatsDAgent::Inst()->status().c_str(),
-                        NewStringType::kNormal).ToLocalChecked());
+    String::NewFromOneByte(isolate,
+                           status,
+                           NewStringType::kNormal).ToLocalChecked());
 }
 
 static void Send(const FunctionCallbackInfo<Value>& args) {
@@ -90,9 +92,9 @@ static void TcpIp(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().SetNull();
   } else {
     args.GetReturnValue().Set(
-      String::NewFromUtf8(isolate,
-                          tcp_ip.c_str(),
-                          NewStringType::kNormal).ToLocalChecked());
+      String::NewFromOneByte(isolate,
+                             reinterpret_cast<const uint8_t*>(tcp_ip.c_str()),
+                             NewStringType::kNormal).ToLocalChecked());
   }
 }
 
@@ -103,9 +105,9 @@ static void UdpIp(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().SetNull();
   } else {
     args.GetReturnValue().Set(
-      String::NewFromUtf8(isolate,
-                          udp_ip.c_str(),
-                          NewStringType::kNormal).ToLocalChecked());
+      String::NewFromOneByte(isolate,
+                             reinterpret_cast<const uint8_t*>(udp_ip.c_str()),
+                             NewStringType::kNormal).ToLocalChecked());
   }
 }
 
@@ -120,7 +122,7 @@ static void Config(const FunctionCallbackInfo<Value>& args) {
   Local<Object> obj = args[0].As<Object>();
   Local<String> stringify = JSON::Stringify(context, obj).ToLocalChecked();
   String::Utf8Value cfg(isolate, stringify);
-  StatsDAgent::config_agent_cb(*cfg, StatsDAgent::Inst());
+  // StatsDAgent::config_agent_cb(*cfg, StatsDAgent::Inst());
 }
 
 // This binding is only for testing and should only be called once
@@ -139,9 +141,9 @@ static void RegisterStatusCb(const FunctionCallbackInfo<Value>& args) {
       Context::Scope context_scope(context);
       Local<Function> cb = ::node::PersistentToLocal::Strong(
           status_cb_pair_->first);
-      Local<Value> argv = String::NewFromUtf8(
+      Local<Value> argv = String::NewFromOneByte(
         isolate,
-        status.c_str(),
+        reinterpret_cast<const uint8_t*>(status.c_str()),
         NewStringType::kNormal).ToLocalChecked();
 
       USE(cb->Call(context, Undefined(isolate), 1, &argv));
