@@ -42,14 +42,6 @@ static void Bucket(const FunctionCallbackInfo<Value>& args) {
 
 static void Status(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
-  if (!StatsDAgent::is_running_) {
-    args.GetReturnValue().Set(
-      String::NewFromUtf8(isolate,
-                          "unconfigured",
-                          NewStringType::kNormal).ToLocalChecked());
-    return;
-  }
-
   args.GetReturnValue().Set(
     String::NewFromUtf8(isolate,
                         StatsDAgent::Inst()->status().c_str(),
