@@ -79,7 +79,7 @@ curl -sL -o "$PROTOC_ZIP" "https://github.com/protocolbuffers/protobuf/releases/
 unzip -o "$PROTOC_ZIP" -d ./protoc/
 
 echo "Getting opentelemetry-proto files"
-OTEL_PROTO_VERSION="1.0.0"
+OTEL_PROTO_VERSION="1.1.0"
 OTEL_PROTO_TARBALL=v$OTEL_PROTO_VERSION.tar.gz
 
 curl -sL -o "$OTEL_PROTO_TARBALL" "https://github.com/open-telemetry/opentelemetry-proto/archive/refs/tags/$OTEL_PROTO_TARBALL"
@@ -90,14 +90,15 @@ gzip -dc "$OTEL_PROTO_TARBALL" | tar xf -
 rm "$OTEL_PROTO_TARBALL"
 cd opentelemetry-proto-$OTEL_PROTO_VERSION
 mkdir -p "$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp"
-"$WORKSPACE/protoc/bin/protoc" --cpp_out="$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp opentelemetry/proto/common/v1/common.proto" \
-                                        opentelemetry/proto/logs/v1/logs.proto \
-                                        opentelemetry/proto/metrics/v1/metrics.proto \
-                                        opentelemetry/proto/resource/v1/resource.proto \
-                                        opentelemetry/proto/trace/v1/trace.proto \
-                                        opentelemetry/proto/collector/logs/v1/logs_service.proto \
-                                        opentelemetry/proto/collector/metrics/v1/metrics_service.proto \
-                                        opentelemetry/proto/collector/trace/v1/trace_service.proto
+"$WORKSPACE/protoc/bin/protoc" --cpp_out="$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp" \
+    opentelemetry/proto/common/v1/common.proto \
+    opentelemetry/proto/logs/v1/logs.proto \
+    opentelemetry/proto/metrics/v1/metrics.proto \
+    opentelemetry/proto/resource/v1/resource.proto \
+    opentelemetry/proto/trace/v1/trace.proto \
+    opentelemetry/proto/collector/logs/v1/logs_service.proto \
+    opentelemetry/proto/collector/metrics/v1/metrics_service.proto \
+    opentelemetry/proto/collector/trace/v1/trace_service.proto
 
 
 
