@@ -23,6 +23,8 @@ namespace exporter
 namespace otlp
 {
 
+class OtlpGrpcClient;
+
 /**
  * The OTLP exporter exports span data in OpenTelemetry Protocol (OTLP) format.
  */
@@ -58,7 +60,7 @@ public:
    * @return return true when all data are exported, and false when timeout
    */
   bool ForceFlush(
-      std::chrono::microseconds timeout = std::chrono::microseconds::max()) noexcept override;
+      std::chrono::microseconds timeout = (std::chrono::microseconds::max)()) noexcept override;
 
   /**
    * Shut down the exporter.
@@ -67,11 +69,15 @@ public:
    * @return return the status of this operation
    */
   bool Shutdown(
-      std::chrono::microseconds timeout = std::chrono::microseconds::max()) noexcept override;
+      std::chrono::microseconds timeout = (std::chrono::microseconds::max)()) noexcept override;
 
 private:
   // The configuration options associated with this exporter.
   const OtlpGrpcExporterOptions options_;
+
+#ifdef ENABLE_ASYNC_EXPORT
+  std::shared_ptr<OtlpGrpcClient> client_;
+#endif
 
   // For testing
   friend class OtlpGrpcExporterTestPeer;

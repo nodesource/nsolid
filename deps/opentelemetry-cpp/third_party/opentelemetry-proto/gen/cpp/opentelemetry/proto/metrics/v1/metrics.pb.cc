@@ -909,7 +909,7 @@ ResourceMetrics::ResourceMetrics(const ResourceMetrics& from)
     _impl_.schema_url_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_schema_url().empty()) {
-    _this->_impl_.schema_url_.Set(from._internal_schema_url(),
+    _this->_impl_.schema_url_.Set(from._internal_schema_url(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_resource()) {
@@ -1194,7 +1194,7 @@ ScopeMetrics::ScopeMetrics(const ScopeMetrics& from)
     _impl_.schema_url_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_schema_url().empty()) {
-    _this->_impl_.schema_url_.Set(from._internal_schema_url(),
+    _this->_impl_.schema_url_.Set(from._internal_schema_url(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_scope()) {
@@ -1570,7 +1570,7 @@ Metric::Metric(const Metric& from)
     _impl_.name_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_name().empty()) {
-    _this->_impl_.name_.Set(from._internal_name(),
+    _this->_impl_.name_.Set(from._internal_name(), 
       _this->GetArenaForAllocation());
   }
   _impl_.description_.InitDefault();
@@ -1578,7 +1578,7 @@ Metric::Metric(const Metric& from)
     _impl_.description_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_description().empty()) {
-    _this->_impl_.description_.Set(from._internal_description(),
+    _this->_impl_.description_.Set(from._internal_description(), 
       _this->GetArenaForAllocation());
   }
   _impl_.unit_.InitDefault();
@@ -1586,7 +1586,7 @@ Metric::Metric(const Metric& from)
     _impl_.unit_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_unit().empty()) {
-    _this->_impl_.unit_.Set(from._internal_unit(),
+    _this->_impl_.unit_.Set(from._internal_unit(), 
       _this->GetArenaForAllocation());
   }
   clear_has_data();
@@ -5486,7 +5486,7 @@ Exemplar::Exemplar(const Exemplar& from)
     _impl_.span_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_span_id().empty()) {
-    _this->_impl_.span_id_.Set(from._internal_span_id(),
+    _this->_impl_.span_id_.Set(from._internal_span_id(), 
       _this->GetArenaForAllocation());
   }
   _impl_.trace_id_.InitDefault();
@@ -5494,7 +5494,7 @@ Exemplar::Exemplar(const Exemplar& from)
     _impl_.trace_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_trace_id().empty()) {
-    _this->_impl_.trace_id_.Set(from._internal_trace_id(),
+    _this->_impl_.trace_id_.Set(from._internal_trace_id(), 
       _this->GetArenaForAllocation());
   }
   _this->_impl_.time_unix_nano_ = from._impl_.time_unix_nano_;

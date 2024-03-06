@@ -7,6 +7,7 @@
         'exporters/otlp/src/otlp_environment.cc',
         'exporters/otlp/src/otlp_http_client.cc',
         'exporters/otlp/src/otlp_http_exporter.cc',
+        'exporters/otlp/src/otlp_http_exporter_options.cc',
         'exporters/otlp/src/otlp_log_recordable.cc',
         'exporters/otlp/src/otlp_populate_attribute_utils.cc',
         'exporters/otlp/src/otlp_recordable_utils.cc',

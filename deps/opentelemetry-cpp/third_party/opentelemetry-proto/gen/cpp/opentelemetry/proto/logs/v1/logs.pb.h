@@ -1052,14 +1052,14 @@ inline void ResourceLogs::unsafe_arena_set_allocated_resource(
   }
   _impl_.resource_ = resource;
   if (resource) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.logs.v1.ResourceLogs.resource)
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceLogs::release_resource() {
-
+  
   ::opentelemetry::proto::resource::v1::Resource* temp = _impl_.resource_;
   _impl_.resource_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -1075,13 +1075,13 @@ inline ::opentelemetry::proto::resource::v1::Resource* ResourceLogs::release_res
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceLogs::unsafe_arena_release_resource() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.logs.v1.ResourceLogs.resource)
-
+  
   ::opentelemetry::proto::resource::v1::Resource* temp = _impl_.resource_;
   _impl_.resource_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceLogs::_internal_mutable_resource() {
-
+  
   if (_impl_.resource_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::resource::v1::Resource>(GetArenaForAllocation());
     _impl_.resource_ = p;
@@ -1106,9 +1106,9 @@ inline void ResourceLogs::set_allocated_resource(::opentelemetry::proto::resourc
       resource = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, resource, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.resource_ = resource;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.logs.v1.ResourceLogs.resource)
@@ -1165,7 +1165,7 @@ inline const std::string& ResourceLogs::schema_url() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ResourceLogs::set_schema_url(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.schema_url_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.logs.v1.ResourceLogs.schema_url)
 }
@@ -1178,11 +1178,11 @@ inline const std::string& ResourceLogs::_internal_schema_url() const {
   return _impl_.schema_url_.Get();
 }
 inline void ResourceLogs::_internal_set_schema_url(const std::string& value) {
-
+  
   _impl_.schema_url_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ResourceLogs::_internal_mutable_schema_url() {
-
+  
   return _impl_.schema_url_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ResourceLogs::release_schema_url() {
@@ -1191,9 +1191,9 @@ inline std::string* ResourceLogs::release_schema_url() {
 }
 inline void ResourceLogs::set_allocated_schema_url(std::string* schema_url) {
   if (schema_url != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.schema_url_.SetAllocated(schema_url, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -1231,14 +1231,14 @@ inline void ScopeLogs::unsafe_arena_set_allocated_scope(
   }
   _impl_.scope_ = scope;
   if (scope) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.logs.v1.ScopeLogs.scope)
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeLogs::release_scope() {
-
+  
   ::opentelemetry::proto::common::v1::InstrumentationScope* temp = _impl_.scope_;
   _impl_.scope_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -1254,13 +1254,13 @@ inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeLogs::rele
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeLogs::unsafe_arena_release_scope() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.logs.v1.ScopeLogs.scope)
-
+  
   ::opentelemetry::proto::common::v1::InstrumentationScope* temp = _impl_.scope_;
   _impl_.scope_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeLogs::_internal_mutable_scope() {
-
+  
   if (_impl_.scope_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::common::v1::InstrumentationScope>(GetArenaForAllocation());
     _impl_.scope_ = p;
@@ -1285,9 +1285,9 @@ inline void ScopeLogs::set_allocated_scope(::opentelemetry::proto::common::v1::I
       scope = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, scope, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.scope_ = scope;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.logs.v1.ScopeLogs.scope)
@@ -1344,7 +1344,7 @@ inline const std::string& ScopeLogs::schema_url() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ScopeLogs::set_schema_url(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.schema_url_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.logs.v1.ScopeLogs.schema_url)
 }
@@ -1357,11 +1357,11 @@ inline const std::string& ScopeLogs::_internal_schema_url() const {
   return _impl_.schema_url_.Get();
 }
 inline void ScopeLogs::_internal_set_schema_url(const std::string& value) {
-
+  
   _impl_.schema_url_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ScopeLogs::_internal_mutable_schema_url() {
-
+  
   return _impl_.schema_url_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ScopeLogs::release_schema_url() {
@@ -1370,9 +1370,9 @@ inline std::string* ScopeLogs::release_schema_url() {
 }
 inline void ScopeLogs::set_allocated_schema_url(std::string* schema_url) {
   if (schema_url != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.schema_url_.SetAllocated(schema_url, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -1399,7 +1399,7 @@ inline uint64_t LogRecord::time_unix_nano() const {
   return _internal_time_unix_nano();
 }
 inline void LogRecord::_internal_set_time_unix_nano(uint64_t value) {
-
+  
   _impl_.time_unix_nano_ = value;
 }
 inline void LogRecord::set_time_unix_nano(uint64_t value) {
@@ -1419,7 +1419,7 @@ inline uint64_t LogRecord::observed_time_unix_nano() const {
   return _internal_observed_time_unix_nano();
 }
 inline void LogRecord::_internal_set_observed_time_unix_nano(uint64_t value) {
-
+  
   _impl_.observed_time_unix_nano_ = value;
 }
 inline void LogRecord::set_observed_time_unix_nano(uint64_t value) {
@@ -1439,7 +1439,7 @@ inline ::opentelemetry::proto::logs::v1::SeverityNumber LogRecord::severity_numb
   return _internal_severity_number();
 }
 inline void LogRecord::_internal_set_severity_number(::opentelemetry::proto::logs::v1::SeverityNumber value) {
-
+  
   _impl_.severity_number_ = value;
 }
 inline void LogRecord::set_severity_number(::opentelemetry::proto::logs::v1::SeverityNumber value) {
@@ -1458,7 +1458,7 @@ inline const std::string& LogRecord::severity_text() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void LogRecord::set_severity_text(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.severity_text_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.logs.v1.LogRecord.severity_text)
 }
@@ -1471,11 +1471,11 @@ inline const std::string& LogRecord::_internal_severity_text() const {
   return _impl_.severity_text_.Get();
 }
 inline void LogRecord::_internal_set_severity_text(const std::string& value) {
-
+  
   _impl_.severity_text_.Set(value, GetArenaForAllocation());
 }
 inline std::string* LogRecord::_internal_mutable_severity_text() {
-
+  
   return _impl_.severity_text_.Mutable(GetArenaForAllocation());
 }
 inline std::string* LogRecord::release_severity_text() {
@@ -1484,9 +1484,9 @@ inline std::string* LogRecord::release_severity_text() {
 }
 inline void LogRecord::set_allocated_severity_text(std::string* severity_text) {
   if (severity_text != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.severity_text_.SetAllocated(severity_text, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -1520,14 +1520,14 @@ inline void LogRecord::unsafe_arena_set_allocated_body(
   }
   _impl_.body_ = body;
   if (body) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.logs.v1.LogRecord.body)
 }
 inline ::opentelemetry::proto::common::v1::AnyValue* LogRecord::release_body() {
-
+  
   ::opentelemetry::proto::common::v1::AnyValue* temp = _impl_.body_;
   _impl_.body_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -1543,13 +1543,13 @@ inline ::opentelemetry::proto::common::v1::AnyValue* LogRecord::release_body() {
 }
 inline ::opentelemetry::proto::common::v1::AnyValue* LogRecord::unsafe_arena_release_body() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.logs.v1.LogRecord.body)
-
+  
   ::opentelemetry::proto::common::v1::AnyValue* temp = _impl_.body_;
   _impl_.body_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::common::v1::AnyValue* LogRecord::_internal_mutable_body() {
-
+  
   if (_impl_.body_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::common::v1::AnyValue>(GetArenaForAllocation());
     _impl_.body_ = p;
@@ -1574,9 +1574,9 @@ inline void LogRecord::set_allocated_body(::opentelemetry::proto::common::v1::An
       body = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, body, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.body_ = body;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.logs.v1.LogRecord.body)
@@ -1631,7 +1631,7 @@ inline uint32_t LogRecord::dropped_attributes_count() const {
   return _internal_dropped_attributes_count();
 }
 inline void LogRecord::_internal_set_dropped_attributes_count(uint32_t value) {
-
+  
   _impl_.dropped_attributes_count_ = value;
 }
 inline void LogRecord::set_dropped_attributes_count(uint32_t value) {
@@ -1651,7 +1651,7 @@ inline uint32_t LogRecord::flags() const {
   return _internal_flags();
 }
 inline void LogRecord::_internal_set_flags(uint32_t value) {
-
+  
   _impl_.flags_ = value;
 }
 inline void LogRecord::set_flags(uint32_t value) {
@@ -1670,7 +1670,7 @@ inline const std::string& LogRecord::trace_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void LogRecord::set_trace_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.trace_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.logs.v1.LogRecord.trace_id)
 }
@@ -1683,11 +1683,11 @@ inline const std::string& LogRecord::_internal_trace_id() const {
   return _impl_.trace_id_.Get();
 }
 inline void LogRecord::_internal_set_trace_id(const std::string& value) {
-
+  
   _impl_.trace_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* LogRecord::_internal_mutable_trace_id() {
-
+  
   return _impl_.trace_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* LogRecord::release_trace_id() {
@@ -1696,9 +1696,9 @@ inline std::string* LogRecord::release_trace_id() {
 }
 inline void LogRecord::set_allocated_trace_id(std::string* trace_id) {
   if (trace_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.trace_id_.SetAllocated(trace_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -1720,7 +1720,7 @@ inline const std::string& LogRecord::span_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void LogRecord::set_span_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.span_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.logs.v1.LogRecord.span_id)
 }
@@ -1733,11 +1733,11 @@ inline const std::string& LogRecord::_internal_span_id() const {
   return _impl_.span_id_.Get();
 }
 inline void LogRecord::_internal_set_span_id(const std::string& value) {
-
+  
   _impl_.span_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* LogRecord::_internal_mutable_span_id() {
-
+  
   return _impl_.span_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* LogRecord::release_span_id() {
@@ -1746,9 +1746,9 @@ inline std::string* LogRecord::release_span_id() {
 }
 inline void LogRecord::set_allocated_span_id(std::string* span_id) {
   if (span_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.span_id_.SetAllocated(span_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING

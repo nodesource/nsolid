@@ -254,7 +254,7 @@ namespace tld
     ****
 
     How to pack single values:
-
+    
     Primitive values (int, GUID) are packed directly, with no padding or
     alignment. Just reserve sizeof(value) bytes in the buffer, then memcpy the
     value into the buffer. Note that there should be no alignment or padding
@@ -265,7 +265,7 @@ namespace tld
     There is no special encoding reserved for a NULL string. The encoding
     helpers in this header simply treat a NULL string the same as an empty
     string, i.e. AddString((char*)NULL) is the same as AppendString("").
-
+    
     Binary, CountedString, and CountedAnsiString scalars are all encoded as a
     UINT16 byte-count followed by the string data. In this case, no NUL
     termination should be included. Remember that the size is a byte count,
@@ -914,7 +914,7 @@ namespace tld
 
         /*
         Transcodes one code point from UTF-8 to UTF-16LE.
-
+    
         Note that this function requires the input buffer to be nul-terminated.
         This function may try to read several bytes from the input buffer, and the
         nul-termination is required to ensure that it doesn't read off the end of
@@ -930,7 +930,7 @@ namespace tld
         pchUtf16Output:
         Buffer that receives a single code point, encoded in UTF-16-LE as one or
         two 16-bit wchar_t values.
-
+    
         pszUtf8Input:
         Pointer into a nul-terminated UTF-8 byte sequence. On entry, this points
         to the next char to be consumed. This function will advance the pointer
@@ -3355,7 +3355,7 @@ namespace tld
         }
 
         /*
-        Note: the default channel is 11 (WINEVENT_CHANNEL_TRACELOGGING).
+        Note: the default channel is 11 (WINEVENT_CHANNEL_TRACELOGGING). 
         Other channels are only supported if the provider is running on
         Windows 10 or later. If a provider is running on an earlier version
         of Windows and it uses a channel other than 11, TDH will not be able

@@ -23,6 +23,15 @@ namespace metrics
 
 using opentelemetry::sdk::common::OrderedAttributeMap;
 
+constexpr size_t kAggregationCardinalityLimit = 2000;
+const std::string kAggregationCardinalityLimitOverflowError =
+    "Maximum data points for metric stream exceeded. Entry added to overflow";
+const std::string kAttributesLimitOverflowKey = "otel.metrics.overflow";
+const bool kAttributesLimitOverflowValue      = true;
+const size_t kOverflowAttributesHash          = opentelemetry::sdk::common::GetHashForAttributeMap(
+    {{kAttributesLimitOverflowKey,
+      kAttributesLimitOverflowValue}});  // precalculated for optimization
+
 class AttributeHashGenerator
 {
 public:
@@ -35,6 +44,9 @@ public:
 class AttributesHashMap
 {
 public:
+  AttributesHashMap(size_t attributes_limit = kAggregationCardinalityLimit)
+      : attributes_limit_(attributes_limit)
+  {}
   Aggregation *Get(size_t hash) const
   {
     auto it = hash_map_.find(hash);
@@ -57,6 +69,7 @@ public:
    * value and store in the hash
    */
   Aggregation *GetOrSetDefault(const opentelemetry::common::KeyValueIterable &attributes,
+                               const AttributesProcessor *attributes_processor,
                                std::function<std::unique_ptr<Aggregation>()> aggregation_callback,
                                size_t hash)
   {
@@ -66,7 +79,12 @@ public:
       return it->second.second.get();
     }
 
-    MetricAttributes attr{attributes};
+    if (IsOverflowAttributes())
+    {
+      return GetOrSetOveflowAttributes(aggregation_callback);
+    }
+
+    MetricAttributes attr{attributes, attributes_processor};
 
     hash_map_[hash] = {attr, aggregation_callback()};
     return hash_map_[hash].second.get();
@@ -80,6 +98,12 @@ public:
     {
       return it->second.second.get();
     }
+
+    if (IsOverflowAttributes())
+    {
+      return GetOrSetOveflowAttributes(aggregation_callback);
+    }
+
     MetricAttributes attr{};
     hash_map_[hash] = {attr, aggregation_callback()};
     return hash_map_[hash].second.get();
@@ -95,6 +119,11 @@ public:
       return it->second.second.get();
     }
 
+    if (IsOverflowAttributes())
+    {
+      return GetOrSetOveflowAttributes(aggregation_callback);
+    }
+
     MetricAttributes attr{attributes};
 
     hash_map_[hash] = {attr, aggregation_callback()};
@@ -105,6 +134,7 @@ public:
    * Set the value for given key, overwriting the value if already present
    */
   void Set(const opentelemetry::common::KeyValueIterable &attributes,
+           const AttributesProcessor *attributes_processor,
            std::unique_ptr<Aggregation> aggr,
            size_t hash)
   {
@@ -113,9 +143,15 @@ public:
     {
       it->second.second = std::move(aggr);
     }
+    else if (IsOverflowAttributes())
+    {
+      hash_map_[kOverflowAttributesHash] = {
+          MetricAttributes{{kAttributesLimitOverflowKey, kAttributesLimitOverflowValue}},
+          std::move(aggr)};
+    }
     else
     {
-      MetricAttributes attr{attributes};
+      MetricAttributes attr{attributes, attributes_processor};
       hash_map_[hash] = {attr, std::move(aggr)};
     }
   }
@@ -127,10 +163,15 @@ public:
     {
       it->second.second = std::move(aggr);
     }
+    else if (IsOverflowAttributes())
+    {
+      hash_map_[kOverflowAttributesHash] = {
+          MetricAttributes{{kAttributesLimitOverflowKey, kAttributesLimitOverflowValue}},
+          std::move(aggr)};
+    }
     else
     {
-      MetricAttributes attr{attributes};
-      hash_map_[hash] = {attr, std::move(aggr)};
+      hash_map_[hash] = {attributes, std::move(aggr)};
     }
   }
 
@@ -157,6 +198,29 @@ public:
 
 private:
   std::unordered_map<size_t, std::pair<MetricAttributes, std::unique_ptr<Aggregation>>> hash_map_;
+  size_t attributes_limit_;
+
+  Aggregation *GetOrSetOveflowAttributes(
+      std::function<std::unique_ptr<Aggregation>()> aggregation_callback)
+  {
+    auto agg = aggregation_callback();
+    return GetOrSetOveflowAttributes(std::move(agg));
+  }
+
+  Aggregation *GetOrSetOveflowAttributes(std::unique_ptr<Aggregation> agg)
+  {
+    auto it = hash_map_.find(kOverflowAttributesHash);
+    if (it != hash_map_.end())
+    {
+      return it->second.second.get();
+    }
+
+    MetricAttributes attr{{kAttributesLimitOverflowKey, kAttributesLimitOverflowValue}};
+    hash_map_[kOverflowAttributesHash] = {attr, std::move(agg)};
+    return hash_map_[kOverflowAttributesHash].second.get();
+  }
+
+  bool IsOverflowAttributes() const { return (hash_map_.size() + 1 >= attributes_limit_); }
 };
 }  // namespace metrics
 

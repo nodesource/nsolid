@@ -40,6 +40,11 @@ proto::resource::v1::Resource OtlpRecordable::ProtoResource() const noexcept
   return proto;
 }
 
+const opentelemetry::sdk::resource::Resource *OtlpRecordable::GetResource() const noexcept
+{
+  return resource_;
+}
+
 const std::string OtlpRecordable::GetResourceSchemaURL() const noexcept
 {
   std::string schema_url;
@@ -49,6 +54,12 @@ const std::string OtlpRecordable::GetResourceSchemaURL() const noexcept
   }
 
   return schema_url;
+}
+
+const opentelemetry::sdk::instrumentationscope::InstrumentationScope *
+OtlpRecordable::GetInstrumentationScope() const noexcept
+{
+  return instrumentation_scope_;
 }
 
 const std::string OtlpRecordable::GetInstrumentationLibrarySchemaURL() const noexcept
@@ -127,6 +138,13 @@ void OtlpRecordable::SetStatus(trace::StatusCode code, nostd::string_view descri
 void OtlpRecordable::SetName(nostd::string_view name) noexcept
 {
   span_.set_name(name.data(), name.size());
+}
+
+void OtlpRecordable::SetTraceFlags(opentelemetry::trace::TraceFlags flags) noexcept
+{
+  uint32_t all_flags = flags.flags() & opentelemetry::proto::trace::v1::SPAN_FLAGS_TRACE_FLAGS_MASK;
+
+  span_.set_flags(all_flags);
 }
 
 void OtlpRecordable::SetSpanKind(trace::SpanKind span_kind) noexcept

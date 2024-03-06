@@ -292,7 +292,7 @@ inline uint32_t Resource::dropped_attributes_count() const {
   return _internal_dropped_attributes_count();
 }
 inline void Resource::_internal_set_dropped_attributes_count(uint32_t value) {
-
+  
   _impl_.dropped_attributes_count_ = value;
 }
 inline void Resource::set_dropped_attributes_count(uint32_t value) {

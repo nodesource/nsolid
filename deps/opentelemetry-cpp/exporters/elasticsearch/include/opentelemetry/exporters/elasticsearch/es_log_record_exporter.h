@@ -7,7 +7,6 @@
 #include "opentelemetry/common/spin_lock_mutex.h"
 #include "opentelemetry/ext/http/client/http_client_factory.h"
 #include "opentelemetry/nostd/shared_ptr.h"
-#include "opentelemetry/nostd/type_traits.h"
 #include "opentelemetry/sdk/logs/exporter.h"
 #include "opentelemetry/sdk/logs/recordable.h"
 
@@ -100,14 +99,14 @@ public:
    * @return return true when all data are exported, and false when timeout
    */
   bool ForceFlush(
-      std::chrono::microseconds timeout = std::chrono::microseconds::max()) noexcept override;
+      std::chrono::microseconds timeout = (std::chrono::microseconds::max)()) noexcept override;
 
   /**
    * Shutdown this exporter.
    * @param timeout The maximum time to wait for the shutdown method to return
    */
   bool Shutdown(
-      std::chrono::microseconds timeout = std::chrono::microseconds::max()) noexcept override;
+      std::chrono::microseconds timeout = (std::chrono::microseconds::max)()) noexcept override;
 
 private:
   // Stores if this exporter had its Shutdown() method called

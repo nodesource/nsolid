@@ -13,6 +13,7 @@ add_library(
   instrument_metadata_validator.cc
   export/periodic_exporting_metric_reader.cc
   export/periodic_exporting_metric_reader_factory.cc
+  state/filtered_ordered_attribute_map.cc
   state/metric_collector.cc
   state/observable_registry.cc
   state/sync_metric_storage.cc
@@ -47,4 +48,9 @@ if(OPENTELEMETRY_INSTALL)
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+  opentelemetry_add_pkgconfig(
+    metrics "OpenTelemetry SDK - Metrics"
+    "Components for exporting metrics in the OpenTelemetry SDK."
+    "opentelemetry_resources")
 endif()

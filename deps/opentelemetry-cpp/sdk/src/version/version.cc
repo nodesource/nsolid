@@ -12,14 +12,13 @@ namespace sdk
 namespace version
 {
 const int major_version    = 1;
-const int minor_version    = 11;
-const int patch_version    = 0;
+const int minor_version    = 14;
+const int patch_version    = 2;
 const char *pre_release    = "NONE";
 const char *build_metadata = "NONE";
-const char *short_version  = "1.11.0";
-const char *full_version   = "1.11.0-NONE-NONE";
-const char *build_date     = "Mon Aug 21 22:31:07 UTC 2023";
-
+const char *short_version  = "1.14.2";
+const char *full_version   = "1.14.2-NONE-NONE";
+const char *build_date     = "Tue Feb 27 18:25:51 UTC 2024";
 }  // namespace version
 }  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE

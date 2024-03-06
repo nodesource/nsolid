@@ -634,14 +634,14 @@ inline void ExportTraceServiceResponse::unsafe_arena_set_allocated_partial_succe
   }
   _impl_.partial_success_ = partial_success;
   if (partial_success) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.collector.trace.v1.ExportTraceServiceResponse.partial_success)
 }
 inline ::opentelemetry::proto::collector::trace::v1::ExportTracePartialSuccess* ExportTraceServiceResponse::release_partial_success() {
-
+  
   ::opentelemetry::proto::collector::trace::v1::ExportTracePartialSuccess* temp = _impl_.partial_success_;
   _impl_.partial_success_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -657,13 +657,13 @@ inline ::opentelemetry::proto::collector::trace::v1::ExportTracePartialSuccess* 
 }
 inline ::opentelemetry::proto::collector::trace::v1::ExportTracePartialSuccess* ExportTraceServiceResponse::unsafe_arena_release_partial_success() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.collector.trace.v1.ExportTraceServiceResponse.partial_success)
-
+  
   ::opentelemetry::proto::collector::trace::v1::ExportTracePartialSuccess* temp = _impl_.partial_success_;
   _impl_.partial_success_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::collector::trace::v1::ExportTracePartialSuccess* ExportTraceServiceResponse::_internal_mutable_partial_success() {
-
+  
   if (_impl_.partial_success_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::collector::trace::v1::ExportTracePartialSuccess>(GetArenaForAllocation());
     _impl_.partial_success_ = p;
@@ -687,9 +687,9 @@ inline void ExportTraceServiceResponse::set_allocated_partial_success(::opentele
       partial_success = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, partial_success, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.partial_success_ = partial_success;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.collector.trace.v1.ExportTraceServiceResponse.partial_success)
@@ -711,7 +711,7 @@ inline int64_t ExportTracePartialSuccess::rejected_spans() const {
   return _internal_rejected_spans();
 }
 inline void ExportTracePartialSuccess::_internal_set_rejected_spans(int64_t value) {
-
+  
   _impl_.rejected_spans_ = value;
 }
 inline void ExportTracePartialSuccess::set_rejected_spans(int64_t value) {
@@ -730,7 +730,7 @@ inline const std::string& ExportTracePartialSuccess::error_message() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ExportTracePartialSuccess::set_error_message(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.error_message_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.collector.trace.v1.ExportTracePartialSuccess.error_message)
 }
@@ -743,11 +743,11 @@ inline const std::string& ExportTracePartialSuccess::_internal_error_message() c
   return _impl_.error_message_.Get();
 }
 inline void ExportTracePartialSuccess::_internal_set_error_message(const std::string& value) {
-
+  
   _impl_.error_message_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ExportTracePartialSuccess::_internal_mutable_error_message() {
-
+  
   return _impl_.error_message_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ExportTracePartialSuccess::release_error_message() {
@@ -756,9 +756,9 @@ inline std::string* ExportTracePartialSuccess::release_error_message() {
 }
 inline void ExportTracePartialSuccess::set_allocated_error_message(std::string* error_message) {
   if (error_message != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.error_message_.SetAllocated(error_message, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING

@@ -1596,7 +1596,7 @@ inline const std::string& KeyValue::key() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void KeyValue::set_key(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.key_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.KeyValue.key)
 }
@@ -1609,11 +1609,11 @@ inline const std::string& KeyValue::_internal_key() const {
   return _impl_.key_.Get();
 }
 inline void KeyValue::_internal_set_key(const std::string& value) {
-
+  
   _impl_.key_.Set(value, GetArenaForAllocation());
 }
 inline std::string* KeyValue::_internal_mutable_key() {
-
+  
   return _impl_.key_.Mutable(GetArenaForAllocation());
 }
 inline std::string* KeyValue::release_key() {
@@ -1622,9 +1622,9 @@ inline std::string* KeyValue::release_key() {
 }
 inline void KeyValue::set_allocated_key(std::string* key) {
   if (key != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.key_.SetAllocated(key, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -1664,14 +1664,14 @@ inline void KeyValue::unsafe_arena_set_allocated_value(
   }
   _impl_.value_ = value;
   if (value) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.common.v1.KeyValue.value)
 }
 inline ::opentelemetry::proto::common::v1::AnyValue* KeyValue::release_value() {
-
+  
   ::opentelemetry::proto::common::v1::AnyValue* temp = _impl_.value_;
   _impl_.value_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -1687,13 +1687,13 @@ inline ::opentelemetry::proto::common::v1::AnyValue* KeyValue::release_value() {
 }
 inline ::opentelemetry::proto::common::v1::AnyValue* KeyValue::unsafe_arena_release_value() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.common.v1.KeyValue.value)
-
+  
   ::opentelemetry::proto::common::v1::AnyValue* temp = _impl_.value_;
   _impl_.value_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::common::v1::AnyValue* KeyValue::_internal_mutable_value() {
-
+  
   if (_impl_.value_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::common::v1::AnyValue>(GetArenaForAllocation());
     _impl_.value_ = p;
@@ -1717,9 +1717,9 @@ inline void KeyValue::set_allocated_value(::opentelemetry::proto::common::v1::An
       value = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, value, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.value_ = value;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.common.v1.KeyValue.value)
@@ -1740,7 +1740,7 @@ inline const std::string& InstrumentationScope::name() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void InstrumentationScope::set_name(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.InstrumentationScope.name)
 }
@@ -1753,11 +1753,11 @@ inline const std::string& InstrumentationScope::_internal_name() const {
   return _impl_.name_.Get();
 }
 inline void InstrumentationScope::_internal_set_name(const std::string& value) {
-
+  
   _impl_.name_.Set(value, GetArenaForAllocation());
 }
 inline std::string* InstrumentationScope::_internal_mutable_name() {
-
+  
   return _impl_.name_.Mutable(GetArenaForAllocation());
 }
 inline std::string* InstrumentationScope::release_name() {
@@ -1766,9 +1766,9 @@ inline std::string* InstrumentationScope::release_name() {
 }
 inline void InstrumentationScope::set_allocated_name(std::string* name) {
   if (name != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.name_.SetAllocated(name, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -1790,7 +1790,7 @@ inline const std::string& InstrumentationScope::version() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void InstrumentationScope::set_version(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.version_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.InstrumentationScope.version)
 }
@@ -1803,11 +1803,11 @@ inline const std::string& InstrumentationScope::_internal_version() const {
   return _impl_.version_.Get();
 }
 inline void InstrumentationScope::_internal_set_version(const std::string& value) {
-
+  
   _impl_.version_.Set(value, GetArenaForAllocation());
 }
 inline std::string* InstrumentationScope::_internal_mutable_version() {
-
+  
   return _impl_.version_.Mutable(GetArenaForAllocation());
 }
 inline std::string* InstrumentationScope::release_version() {
@@ -1816,9 +1816,9 @@ inline std::string* InstrumentationScope::release_version() {
 }
 inline void InstrumentationScope::set_allocated_version(std::string* version) {
   if (version != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.version_.SetAllocated(version, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -1881,7 +1881,7 @@ inline uint32_t InstrumentationScope::dropped_attributes_count() const {
   return _internal_dropped_attributes_count();
 }
 inline void InstrumentationScope::_internal_set_dropped_attributes_count(uint32_t value) {
-
+  
   _impl_.dropped_attributes_count_ = value;
 }
 inline void InstrumentationScope::set_dropped_attributes_count(uint32_t value) {

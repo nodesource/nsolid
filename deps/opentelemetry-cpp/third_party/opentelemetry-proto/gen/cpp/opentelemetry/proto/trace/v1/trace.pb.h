@@ -145,6 +145,31 @@ inline bool Status_StatusCode_Parse(
   return ::PROTOBUF_NAMESPACE_ID::internal::ParseNamedEnum<Status_StatusCode>(
     Status_StatusCode_descriptor(), name, value);
 }
+enum SpanFlags : int {
+  SPAN_FLAGS_DO_NOT_USE = 0,
+  SPAN_FLAGS_TRACE_FLAGS_MASK = 255,
+  SpanFlags_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::min(),
+  SpanFlags_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::max()
+};
+bool SpanFlags_IsValid(int value);
+constexpr SpanFlags SpanFlags_MIN = SPAN_FLAGS_DO_NOT_USE;
+constexpr SpanFlags SpanFlags_MAX = SPAN_FLAGS_TRACE_FLAGS_MASK;
+constexpr int SpanFlags_ARRAYSIZE = SpanFlags_MAX + 1;
+
+const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* SpanFlags_descriptor();
+template<typename T>
+inline const std::string& SpanFlags_Name(T enum_t_value) {
+  static_assert(::std::is_same<T, SpanFlags>::value ||
+    ::std::is_integral<T>::value,
+    "Incorrect type passed to function SpanFlags_Name.");
+  return ::PROTOBUF_NAMESPACE_ID::internal::NameOfEnum(
+    SpanFlags_descriptor(), enum_t_value);
+}
+inline bool SpanFlags_Parse(
+    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, SpanFlags* value) {
+  return ::PROTOBUF_NAMESPACE_ID::internal::ParseNamedEnum<SpanFlags>(
+    SpanFlags_descriptor(), name, value);
+}
 // ===================================================================
 
 class TracesData final :
@@ -1011,6 +1036,7 @@ class Span_Link final :
     kSpanIdFieldNumber = 2,
     kTraceStateFieldNumber = 3,
     kDroppedAttributesCountFieldNumber = 5,
+    kFlagsFieldNumber = 6,
   };
   // repeated .opentelemetry.proto.common.v1.KeyValue attributes = 4;
   int attributes_size() const;
@@ -1081,6 +1107,15 @@ class Span_Link final :
   void _internal_set_dropped_attributes_count(uint32_t value);
   public:
 
+  // fixed32 flags = 6;
+  void clear_flags();
+  uint32_t flags() const;
+  void set_flags(uint32_t value);
+  private:
+  uint32_t _internal_flags() const;
+  void _internal_set_flags(uint32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:opentelemetry.proto.trace.v1.Span.Link)
  private:
   class _Internal;
@@ -1094,6 +1129,7 @@ class Span_Link final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr span_id_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr trace_state_;
     uint32_t dropped_attributes_count_;
+    uint32_t flags_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1278,6 +1314,7 @@ class Span final :
     kDroppedAttributesCountFieldNumber = 10,
     kDroppedEventsCountFieldNumber = 12,
     kDroppedLinksCountFieldNumber = 14,
+    kFlagsFieldNumber = 16,
   };
   // repeated .opentelemetry.proto.common.v1.KeyValue attributes = 9;
   int attributes_size() const;
@@ -1475,6 +1512,15 @@ class Span final :
   void _internal_set_dropped_links_count(uint32_t value);
   public:
 
+  // fixed32 flags = 16;
+  void clear_flags();
+  uint32_t flags() const;
+  void set_flags(uint32_t value);
+  private:
+  uint32_t _internal_flags() const;
+  void _internal_set_flags(uint32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:opentelemetry.proto.trace.v1.Span)
  private:
   class _Internal;
@@ -1498,6 +1544,7 @@ class Span final :
     uint32_t dropped_attributes_count_;
     uint32_t dropped_events_count_;
     uint32_t dropped_links_count_;
+    uint32_t flags_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1777,14 +1824,14 @@ inline void ResourceSpans::unsafe_arena_set_allocated_resource(
   }
   _impl_.resource_ = resource;
   if (resource) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.trace.v1.ResourceSpans.resource)
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceSpans::release_resource() {
-
+  
   ::opentelemetry::proto::resource::v1::Resource* temp = _impl_.resource_;
   _impl_.resource_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -1800,13 +1847,13 @@ inline ::opentelemetry::proto::resource::v1::Resource* ResourceSpans::release_re
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceSpans::unsafe_arena_release_resource() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.trace.v1.ResourceSpans.resource)
-
+  
   ::opentelemetry::proto::resource::v1::Resource* temp = _impl_.resource_;
   _impl_.resource_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceSpans::_internal_mutable_resource() {
-
+  
   if (_impl_.resource_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::resource::v1::Resource>(GetArenaForAllocation());
     _impl_.resource_ = p;
@@ -1831,9 +1878,9 @@ inline void ResourceSpans::set_allocated_resource(::opentelemetry::proto::resour
       resource = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, resource, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.resource_ = resource;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.trace.v1.ResourceSpans.resource)
@@ -1890,7 +1937,7 @@ inline const std::string& ResourceSpans::schema_url() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ResourceSpans::set_schema_url(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.schema_url_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.ResourceSpans.schema_url)
 }
@@ -1903,11 +1950,11 @@ inline const std::string& ResourceSpans::_internal_schema_url() const {
   return _impl_.schema_url_.Get();
 }
 inline void ResourceSpans::_internal_set_schema_url(const std::string& value) {
-
+  
   _impl_.schema_url_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ResourceSpans::_internal_mutable_schema_url() {
-
+  
   return _impl_.schema_url_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ResourceSpans::release_schema_url() {
@@ -1916,9 +1963,9 @@ inline std::string* ResourceSpans::release_schema_url() {
 }
 inline void ResourceSpans::set_allocated_schema_url(std::string* schema_url) {
   if (schema_url != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.schema_url_.SetAllocated(schema_url, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -1956,14 +2003,14 @@ inline void ScopeSpans::unsafe_arena_set_allocated_scope(
   }
   _impl_.scope_ = scope;
   if (scope) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.trace.v1.ScopeSpans.scope)
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeSpans::release_scope() {
-
+  
   ::opentelemetry::proto::common::v1::InstrumentationScope* temp = _impl_.scope_;
   _impl_.scope_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -1979,13 +2026,13 @@ inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeSpans::rel
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeSpans::unsafe_arena_release_scope() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.trace.v1.ScopeSpans.scope)
-
+  
   ::opentelemetry::proto::common::v1::InstrumentationScope* temp = _impl_.scope_;
   _impl_.scope_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeSpans::_internal_mutable_scope() {
-
+  
   if (_impl_.scope_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::common::v1::InstrumentationScope>(GetArenaForAllocation());
     _impl_.scope_ = p;
@@ -2010,9 +2057,9 @@ inline void ScopeSpans::set_allocated_scope(::opentelemetry::proto::common::v1::
       scope = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, scope, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.scope_ = scope;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.trace.v1.ScopeSpans.scope)
@@ -2069,7 +2116,7 @@ inline const std::string& ScopeSpans::schema_url() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ScopeSpans::set_schema_url(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.schema_url_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.ScopeSpans.schema_url)
 }
@@ -2082,11 +2129,11 @@ inline const std::string& ScopeSpans::_internal_schema_url() const {
   return _impl_.schema_url_.Get();
 }
 inline void ScopeSpans::_internal_set_schema_url(const std::string& value) {
-
+  
   _impl_.schema_url_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ScopeSpans::_internal_mutable_schema_url() {
-
+  
   return _impl_.schema_url_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ScopeSpans::release_schema_url() {
@@ -2095,9 +2142,9 @@ inline std::string* ScopeSpans::release_schema_url() {
 }
 inline void ScopeSpans::set_allocated_schema_url(std::string* schema_url) {
   if (schema_url != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.schema_url_.SetAllocated(schema_url, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2124,7 +2171,7 @@ inline uint64_t Span_Event::time_unix_nano() const {
   return _internal_time_unix_nano();
 }
 inline void Span_Event::_internal_set_time_unix_nano(uint64_t value) {
-
+  
   _impl_.time_unix_nano_ = value;
 }
 inline void Span_Event::set_time_unix_nano(uint64_t value) {
@@ -2143,7 +2190,7 @@ inline const std::string& Span_Event::name() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span_Event::set_name(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.Event.name)
 }
@@ -2156,11 +2203,11 @@ inline const std::string& Span_Event::_internal_name() const {
   return _impl_.name_.Get();
 }
 inline void Span_Event::_internal_set_name(const std::string& value) {
-
+  
   _impl_.name_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span_Event::_internal_mutable_name() {
-
+  
   return _impl_.name_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span_Event::release_name() {
@@ -2169,9 +2216,9 @@ inline std::string* Span_Event::release_name() {
 }
 inline void Span_Event::set_allocated_name(std::string* name) {
   if (name != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.name_.SetAllocated(name, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2231,7 +2278,7 @@ inline uint32_t Span_Event::dropped_attributes_count() const {
   return _internal_dropped_attributes_count();
 }
 inline void Span_Event::_internal_set_dropped_attributes_count(uint32_t value) {
-
+  
   _impl_.dropped_attributes_count_ = value;
 }
 inline void Span_Event::set_dropped_attributes_count(uint32_t value) {
@@ -2254,7 +2301,7 @@ inline const std::string& Span_Link::trace_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span_Link::set_trace_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.trace_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.Link.trace_id)
 }
@@ -2267,11 +2314,11 @@ inline const std::string& Span_Link::_internal_trace_id() const {
   return _impl_.trace_id_.Get();
 }
 inline void Span_Link::_internal_set_trace_id(const std::string& value) {
-
+  
   _impl_.trace_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span_Link::_internal_mutable_trace_id() {
-
+  
   return _impl_.trace_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span_Link::release_trace_id() {
@@ -2280,9 +2327,9 @@ inline std::string* Span_Link::release_trace_id() {
 }
 inline void Span_Link::set_allocated_trace_id(std::string* trace_id) {
   if (trace_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.trace_id_.SetAllocated(trace_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2304,7 +2351,7 @@ inline const std::string& Span_Link::span_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span_Link::set_span_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.span_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.Link.span_id)
 }
@@ -2317,11 +2364,11 @@ inline const std::string& Span_Link::_internal_span_id() const {
   return _impl_.span_id_.Get();
 }
 inline void Span_Link::_internal_set_span_id(const std::string& value) {
-
+  
   _impl_.span_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span_Link::_internal_mutable_span_id() {
-
+  
   return _impl_.span_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span_Link::release_span_id() {
@@ -2330,9 +2377,9 @@ inline std::string* Span_Link::release_span_id() {
 }
 inline void Span_Link::set_allocated_span_id(std::string* span_id) {
   if (span_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.span_id_.SetAllocated(span_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2354,7 +2401,7 @@ inline const std::string& Span_Link::trace_state() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span_Link::set_trace_state(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.trace_state_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.Link.trace_state)
 }
@@ -2367,11 +2414,11 @@ inline const std::string& Span_Link::_internal_trace_state() const {
   return _impl_.trace_state_.Get();
 }
 inline void Span_Link::_internal_set_trace_state(const std::string& value) {
-
+  
   _impl_.trace_state_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span_Link::_internal_mutable_trace_state() {
-
+  
   return _impl_.trace_state_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span_Link::release_trace_state() {
@@ -2380,9 +2427,9 @@ inline std::string* Span_Link::release_trace_state() {
 }
 inline void Span_Link::set_allocated_trace_state(std::string* trace_state) {
   if (trace_state != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.trace_state_.SetAllocated(trace_state, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2442,12 +2489,32 @@ inline uint32_t Span_Link::dropped_attributes_count() const {
   return _internal_dropped_attributes_count();
 }
 inline void Span_Link::_internal_set_dropped_attributes_count(uint32_t value) {
-
+  
   _impl_.dropped_attributes_count_ = value;
 }
 inline void Span_Link::set_dropped_attributes_count(uint32_t value) {
   _internal_set_dropped_attributes_count(value);
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.Link.dropped_attributes_count)
+}
+
+// fixed32 flags = 6;
+inline void Span_Link::clear_flags() {
+  _impl_.flags_ = 0u;
+}
+inline uint32_t Span_Link::_internal_flags() const {
+  return _impl_.flags_;
+}
+inline uint32_t Span_Link::flags() const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.trace.v1.Span.Link.flags)
+  return _internal_flags();
+}
+inline void Span_Link::_internal_set_flags(uint32_t value) {
+  
+  _impl_.flags_ = value;
+}
+inline void Span_Link::set_flags(uint32_t value) {
+  _internal_set_flags(value);
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.Link.flags)
 }
 
 // -------------------------------------------------------------------
@@ -2465,7 +2532,7 @@ inline const std::string& Span::trace_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span::set_trace_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.trace_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.trace_id)
 }
@@ -2478,11 +2545,11 @@ inline const std::string& Span::_internal_trace_id() const {
   return _impl_.trace_id_.Get();
 }
 inline void Span::_internal_set_trace_id(const std::string& value) {
-
+  
   _impl_.trace_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span::_internal_mutable_trace_id() {
-
+  
   return _impl_.trace_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span::release_trace_id() {
@@ -2491,9 +2558,9 @@ inline std::string* Span::release_trace_id() {
 }
 inline void Span::set_allocated_trace_id(std::string* trace_id) {
   if (trace_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.trace_id_.SetAllocated(trace_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2515,7 +2582,7 @@ inline const std::string& Span::span_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span::set_span_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.span_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.span_id)
 }
@@ -2528,11 +2595,11 @@ inline const std::string& Span::_internal_span_id() const {
   return _impl_.span_id_.Get();
 }
 inline void Span::_internal_set_span_id(const std::string& value) {
-
+  
   _impl_.span_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span::_internal_mutable_span_id() {
-
+  
   return _impl_.span_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span::release_span_id() {
@@ -2541,9 +2608,9 @@ inline std::string* Span::release_span_id() {
 }
 inline void Span::set_allocated_span_id(std::string* span_id) {
   if (span_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.span_id_.SetAllocated(span_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2565,7 +2632,7 @@ inline const std::string& Span::trace_state() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span::set_trace_state(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.trace_state_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.trace_state)
 }
@@ -2578,11 +2645,11 @@ inline const std::string& Span::_internal_trace_state() const {
   return _impl_.trace_state_.Get();
 }
 inline void Span::_internal_set_trace_state(const std::string& value) {
-
+  
   _impl_.trace_state_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span::_internal_mutable_trace_state() {
-
+  
   return _impl_.trace_state_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span::release_trace_state() {
@@ -2591,9 +2658,9 @@ inline std::string* Span::release_trace_state() {
 }
 inline void Span::set_allocated_trace_state(std::string* trace_state) {
   if (trace_state != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.trace_state_.SetAllocated(trace_state, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2615,7 +2682,7 @@ inline const std::string& Span::parent_span_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span::set_parent_span_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.parent_span_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.parent_span_id)
 }
@@ -2628,11 +2695,11 @@ inline const std::string& Span::_internal_parent_span_id() const {
   return _impl_.parent_span_id_.Get();
 }
 inline void Span::_internal_set_parent_span_id(const std::string& value) {
-
+  
   _impl_.parent_span_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span::_internal_mutable_parent_span_id() {
-
+  
   return _impl_.parent_span_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span::release_parent_span_id() {
@@ -2641,9 +2708,9 @@ inline std::string* Span::release_parent_span_id() {
 }
 inline void Span::set_allocated_parent_span_id(std::string* parent_span_id) {
   if (parent_span_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.parent_span_id_.SetAllocated(parent_span_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2652,6 +2719,26 @@ inline void Span::set_allocated_parent_span_id(std::string* parent_span_id) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.trace.v1.Span.parent_span_id)
+}
+
+// fixed32 flags = 16;
+inline void Span::clear_flags() {
+  _impl_.flags_ = 0u;
+}
+inline uint32_t Span::_internal_flags() const {
+  return _impl_.flags_;
+}
+inline uint32_t Span::flags() const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.trace.v1.Span.flags)
+  return _internal_flags();
+}
+inline void Span::_internal_set_flags(uint32_t value) {
+  
+  _impl_.flags_ = value;
+}
+inline void Span::set_flags(uint32_t value) {
+  _internal_set_flags(value);
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.flags)
 }
 
 // string name = 5;
@@ -2665,7 +2752,7 @@ inline const std::string& Span::name() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Span::set_name(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Span.name)
 }
@@ -2678,11 +2765,11 @@ inline const std::string& Span::_internal_name() const {
   return _impl_.name_.Get();
 }
 inline void Span::_internal_set_name(const std::string& value) {
-
+  
   _impl_.name_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Span::_internal_mutable_name() {
-
+  
   return _impl_.name_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Span::release_name() {
@@ -2691,9 +2778,9 @@ inline std::string* Span::release_name() {
 }
 inline void Span::set_allocated_name(std::string* name) {
   if (name != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.name_.SetAllocated(name, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -2716,7 +2803,7 @@ inline ::opentelemetry::proto::trace::v1::Span_SpanKind Span::kind() const {
   return _internal_kind();
 }
 inline void Span::_internal_set_kind(::opentelemetry::proto::trace::v1::Span_SpanKind value) {
-
+  
   _impl_.kind_ = value;
 }
 inline void Span::set_kind(::opentelemetry::proto::trace::v1::Span_SpanKind value) {
@@ -2736,7 +2823,7 @@ inline uint64_t Span::start_time_unix_nano() const {
   return _internal_start_time_unix_nano();
 }
 inline void Span::_internal_set_start_time_unix_nano(uint64_t value) {
-
+  
   _impl_.start_time_unix_nano_ = value;
 }
 inline void Span::set_start_time_unix_nano(uint64_t value) {
@@ -2756,7 +2843,7 @@ inline uint64_t Span::end_time_unix_nano() const {
   return _internal_end_time_unix_nano();
 }
 inline void Span::_internal_set_end_time_unix_nano(uint64_t value) {
-
+  
   _impl_.end_time_unix_nano_ = value;
 }
 inline void Span::set_end_time_unix_nano(uint64_t value) {
@@ -2813,7 +2900,7 @@ inline uint32_t Span::dropped_attributes_count() const {
   return _internal_dropped_attributes_count();
 }
 inline void Span::_internal_set_dropped_attributes_count(uint32_t value) {
-
+  
   _impl_.dropped_attributes_count_ = value;
 }
 inline void Span::set_dropped_attributes_count(uint32_t value) {
@@ -2873,7 +2960,7 @@ inline uint32_t Span::dropped_events_count() const {
   return _internal_dropped_events_count();
 }
 inline void Span::_internal_set_dropped_events_count(uint32_t value) {
-
+  
   _impl_.dropped_events_count_ = value;
 }
 inline void Span::set_dropped_events_count(uint32_t value) {
@@ -2933,7 +3020,7 @@ inline uint32_t Span::dropped_links_count() const {
   return _internal_dropped_links_count();
 }
 inline void Span::_internal_set_dropped_links_count(uint32_t value) {
-
+  
   _impl_.dropped_links_count_ = value;
 }
 inline void Span::set_dropped_links_count(uint32_t value) {
@@ -2970,14 +3057,14 @@ inline void Span::unsafe_arena_set_allocated_status(
   }
   _impl_.status_ = status;
   if (status) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.trace.v1.Span.status)
 }
 inline ::opentelemetry::proto::trace::v1::Status* Span::release_status() {
-
+  
   ::opentelemetry::proto::trace::v1::Status* temp = _impl_.status_;
   _impl_.status_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -2993,13 +3080,13 @@ inline ::opentelemetry::proto::trace::v1::Status* Span::release_status() {
 }
 inline ::opentelemetry::proto::trace::v1::Status* Span::unsafe_arena_release_status() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.trace.v1.Span.status)
-
+  
   ::opentelemetry::proto::trace::v1::Status* temp = _impl_.status_;
   _impl_.status_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::trace::v1::Status* Span::_internal_mutable_status() {
-
+  
   if (_impl_.status_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::trace::v1::Status>(GetArenaForAllocation());
     _impl_.status_ = p;
@@ -3023,9 +3110,9 @@ inline void Span::set_allocated_status(::opentelemetry::proto::trace::v1::Status
       status = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, status, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.status_ = status;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.trace.v1.Span.status)
@@ -3046,7 +3133,7 @@ inline const std::string& Status::message() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Status::set_message(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.message_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.trace.v1.Status.message)
 }
@@ -3059,11 +3146,11 @@ inline const std::string& Status::_internal_message() const {
   return _impl_.message_.Get();
 }
 inline void Status::_internal_set_message(const std::string& value) {
-
+  
   _impl_.message_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Status::_internal_mutable_message() {
-
+  
   return _impl_.message_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Status::release_message() {
@@ -3072,9 +3159,9 @@ inline std::string* Status::release_message() {
 }
 inline void Status::set_allocated_message(std::string* message) {
   if (message != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.message_.SetAllocated(message, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -3097,7 +3184,7 @@ inline ::opentelemetry::proto::trace::v1::Status_StatusCode Status::code() const
   return _internal_code();
 }
 inline void Status::_internal_set_code(::opentelemetry::proto::trace::v1::Status_StatusCode value) {
-
+  
   _impl_.code_ = value;
 }
 inline void Status::set_code(::opentelemetry::proto::trace::v1::Status_StatusCode value) {
@@ -3139,6 +3226,11 @@ template <> struct is_proto_enum< ::opentelemetry::proto::trace::v1::Status_Stat
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::opentelemetry::proto::trace::v1::Status_StatusCode>() {
   return ::opentelemetry::proto::trace::v1::Status_StatusCode_descriptor();
+}
+template <> struct is_proto_enum< ::opentelemetry::proto::trace::v1::SpanFlags> : ::std::true_type {};
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::opentelemetry::proto::trace::v1::SpanFlags>() {
+  return ::opentelemetry::proto::trace::v1::SpanFlags_descriptor();
 }
 
 PROTOBUF_NAMESPACE_CLOSE

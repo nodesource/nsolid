@@ -38,8 +38,19 @@ void ObservableRegistry::RemoveCallback(opentelemetry::metrics::ObservableCallba
   callbacks_.erase(new_end, callbacks_.end());
 }
 
+void ObservableRegistry::CleanupCallback(opentelemetry::metrics::ObservableInstrument *instrument)
+{
+  std::lock_guard<std::mutex> lock_guard{callbacks_m_};
+  auto iter = std::remove_if(callbacks_.begin(), callbacks_.end(),
+                             [instrument](const std::unique_ptr<ObservableCallbackRecord> &record) {
+                               return record->instrument == instrument;
+                             });
+  callbacks_.erase(iter, callbacks_.end());
+}
+
 void ObservableRegistry::Observe(opentelemetry::common::SystemTimestamp collection_ts)
 {
+  static DefaultAttributesProcessor default_attribute_processor;
   std::lock_guard<std::mutex> lock_guard{callbacks_m_};
   for (auto &callback_wrap : callbacks_)
   {
@@ -59,7 +70,7 @@ void ObservableRegistry::Observe(opentelemetry::common::SystemTimestamp collecti
     if (value_type == InstrumentValueType::kDouble)
     {
       nostd::shared_ptr<opentelemetry::metrics::ObserverResultT<double>> ob_res(
-          new opentelemetry::sdk::metrics::ObserverResultT<double>());
+          new opentelemetry::sdk::metrics::ObserverResultT<double>(&default_attribute_processor));
       callback_wrap->callback(ob_res, callback_wrap->state);
       storage->RecordDouble(
           static_cast<opentelemetry::sdk::metrics::ObserverResultT<double> *>(ob_res.get())
@@ -69,7 +80,7 @@ void ObservableRegistry::Observe(opentelemetry::common::SystemTimestamp collecti
     else
     {
       nostd::shared_ptr<opentelemetry::metrics::ObserverResultT<int64_t>> ob_res(
-          new opentelemetry::sdk::metrics::ObserverResultT<int64_t>());
+          new opentelemetry::sdk::metrics::ObserverResultT<int64_t>(&default_attribute_processor));
       callback_wrap->callback(ob_res, callback_wrap->state);
       storage->RecordLong(
           static_cast<opentelemetry::sdk::metrics::ObserverResultT<int64_t> *>(ob_res.get())

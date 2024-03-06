@@ -90,6 +90,7 @@ PROTOBUF_CONSTEXPR Span_Link::Span_Link(
   , /*decltype(_impl_.span_id_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.trace_state_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.dropped_attributes_count_)*/0u
+  , /*decltype(_impl_.flags_)*/0u
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct Span_LinkDefaultTypeInternal {
   PROTOBUF_CONSTEXPR Span_LinkDefaultTypeInternal()
@@ -117,6 +118,7 @@ PROTOBUF_CONSTEXPR Span::Span(
   , /*decltype(_impl_.dropped_attributes_count_)*/0u
   , /*decltype(_impl_.dropped_events_count_)*/0u
   , /*decltype(_impl_.dropped_links_count_)*/0u
+  , /*decltype(_impl_.flags_)*/0u
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct SpanDefaultTypeInternal {
   PROTOBUF_CONSTEXPR SpanDefaultTypeInternal()
@@ -146,7 +148,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORIT
 }  // namespace proto
 }  // namespace opentelemetry
 static ::_pb::Metadata file_level_metadata_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto[7];
-static const ::_pb::EnumDescriptor* file_level_enum_descriptors_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto[2];
+static const ::_pb::EnumDescriptor* file_level_enum_descriptors_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto[3];
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto = nullptr;
 
 const uint32_t TableStruct_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
@@ -196,6 +198,7 @@ const uint32_t TableStruct_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto::o
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span_Link, _impl_.trace_state_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span_Link, _impl_.attributes_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span_Link, _impl_.dropped_attributes_count_),
+  PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span_Link, _impl_.flags_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -206,6 +209,7 @@ const uint32_t TableStruct_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto::o
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span, _impl_.span_id_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span, _impl_.trace_state_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span, _impl_.parent_span_id_),
+  PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span, _impl_.flags_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span, _impl_.name_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span, _impl_.kind_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::trace::v1::Span, _impl_.start_time_unix_nano_),
@@ -232,8 +236,8 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 16, -1, -1, sizeof(::opentelemetry::proto::trace::v1::ScopeSpans)},
   { 25, -1, -1, sizeof(::opentelemetry::proto::trace::v1::Span_Event)},
   { 35, -1, -1, sizeof(::opentelemetry::proto::trace::v1::Span_Link)},
-  { 46, -1, -1, sizeof(::opentelemetry::proto::trace::v1::Span)},
-  { 67, -1, -1, sizeof(::opentelemetry::proto::trace::v1::Status)},
+  { 47, -1, -1, sizeof(::opentelemetry::proto::trace::v1::Span)},
+  { 69, -1, -1, sizeof(::opentelemetry::proto::trace::v1::Status)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -261,39 +265,42 @@ const char descriptor_table_protodef_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_
   "e\030\001 \001(\01323.opentelemetry.proto.common.v1."
   "InstrumentationScope\0221\n\005spans\030\002 \003(\0132\".op"
   "entelemetry.proto.trace.v1.Span\022\022\n\nschem"
-  "a_url\030\003 \001(\t\"\346\007\n\004Span\022\020\n\010trace_id\030\001 \001(\014\022\017"
+  "a_url\030\003 \001(\t\"\204\010\n\004Span\022\020\n\010trace_id\030\001 \001(\014\022\017"
   "\n\007span_id\030\002 \001(\014\022\023\n\013trace_state\030\003 \001(\t\022\026\n\016"
-  "parent_span_id\030\004 \001(\014\022\014\n\004name\030\005 \001(\t\0229\n\004ki"
-  "nd\030\006 \001(\0162+.opentelemetry.proto.trace.v1."
-  "Span.SpanKind\022\034\n\024start_time_unix_nano\030\007 "
-  "\001(\006\022\032\n\022end_time_unix_nano\030\010 \001(\006\022;\n\nattri"
-  "butes\030\t \003(\0132\'.opentelemetry.proto.common"
-  ".v1.KeyValue\022 \n\030dropped_attributes_count"
-  "\030\n \001(\r\0228\n\006events\030\013 \003(\0132(.opentelemetry.p"
-  "roto.trace.v1.Span.Event\022\034\n\024dropped_even"
-  "ts_count\030\014 \001(\r\0226\n\005links\030\r \003(\0132\'.opentele"
-  "metry.proto.trace.v1.Span.Link\022\033\n\023droppe"
-  "d_links_count\030\016 \001(\r\0224\n\006status\030\017 \001(\0132$.op"
-  "entelemetry.proto.trace.v1.Status\032\214\001\n\005Ev"
-  "ent\022\026\n\016time_unix_nano\030\001 \001(\006\022\014\n\004name\030\002 \001("
-  "\t\022;\n\nattributes\030\003 \003(\0132\'.opentelemetry.pr"
-  "oto.common.v1.KeyValue\022 \n\030dropped_attrib"
-  "utes_count\030\004 \001(\r\032\235\001\n\004Link\022\020\n\010trace_id\030\001 "
-  "\001(\014\022\017\n\007span_id\030\002 \001(\014\022\023\n\013trace_state\030\003 \001("
-  "\t\022;\n\nattributes\030\004 \003(\0132\'.opentelemetry.pr"
-  "oto.common.v1.KeyValue\022 \n\030dropped_attrib"
-  "utes_count\030\005 \001(\r\"\231\001\n\010SpanKind\022\031\n\025SPAN_KI"
-  "ND_UNSPECIFIED\020\000\022\026\n\022SPAN_KIND_INTERNAL\020\001"
-  "\022\024\n\020SPAN_KIND_SERVER\020\002\022\024\n\020SPAN_KIND_CLIE"
-  "NT\020\003\022\026\n\022SPAN_KIND_PRODUCER\020\004\022\026\n\022SPAN_KIN"
-  "D_CONSUMER\020\005\"\256\001\n\006Status\022\017\n\007message\030\002 \001(\t"
-  "\022=\n\004code\030\003 \001(\0162/.opentelemetry.proto.tra"
-  "ce.v1.Status.StatusCode\"N\n\nStatusCode\022\025\n"
-  "\021STATUS_CODE_UNSET\020\000\022\022\n\016STATUS_CODE_OK\020\001"
-  "\022\025\n\021STATUS_CODE_ERROR\020\002J\004\010\001\020\002Bw\n\037io.open"
-  "telemetry.proto.trace.v1B\nTraceProtoP\001Z\'"
-  "go.opentelemetry.io/proto/otlp/trace/v1\252"
-  "\002\034OpenTelemetry.Proto.Trace.V1b\006proto3"
+  "parent_span_id\030\004 \001(\014\022\r\n\005flags\030\020 \001(\007\022\014\n\004n"
+  "ame\030\005 \001(\t\0229\n\004kind\030\006 \001(\0162+.opentelemetry."
+  "proto.trace.v1.Span.SpanKind\022\034\n\024start_ti"
+  "me_unix_nano\030\007 \001(\006\022\032\n\022end_time_unix_nano"
+  "\030\010 \001(\006\022;\n\nattributes\030\t \003(\0132\'.opentelemet"
+  "ry.proto.common.v1.KeyValue\022 \n\030dropped_a"
+  "ttributes_count\030\n \001(\r\0228\n\006events\030\013 \003(\0132(."
+  "opentelemetry.proto.trace.v1.Span.Event\022"
+  "\034\n\024dropped_events_count\030\014 \001(\r\0226\n\005links\030\r"
+  " \003(\0132\'.opentelemetry.proto.trace.v1.Span"
+  ".Link\022\033\n\023dropped_links_count\030\016 \001(\r\0224\n\006st"
+  "atus\030\017 \001(\0132$.opentelemetry.proto.trace.v"
+  "1.Status\032\214\001\n\005Event\022\026\n\016time_unix_nano\030\001 \001"
+  "(\006\022\014\n\004name\030\002 \001(\t\022;\n\nattributes\030\003 \003(\0132\'.o"
+  "pentelemetry.proto.common.v1.KeyValue\022 \n"
+  "\030dropped_attributes_count\030\004 \001(\r\032\254\001\n\004Link"
+  "\022\020\n\010trace_id\030\001 \001(\014\022\017\n\007span_id\030\002 \001(\014\022\023\n\013t"
+  "race_state\030\003 \001(\t\022;\n\nattributes\030\004 \003(\0132\'.o"
+  "pentelemetry.proto.common.v1.KeyValue\022 \n"
+  "\030dropped_attributes_count\030\005 \001(\r\022\r\n\005flags"
+  "\030\006 \001(\007\"\231\001\n\010SpanKind\022\031\n\025SPAN_KIND_UNSPECI"
+  "FIED\020\000\022\026\n\022SPAN_KIND_INTERNAL\020\001\022\024\n\020SPAN_K"
+  "IND_SERVER\020\002\022\024\n\020SPAN_KIND_CLIENT\020\003\022\026\n\022SP"
+  "AN_KIND_PRODUCER\020\004\022\026\n\022SPAN_KIND_CONSUMER"
+  "\020\005\"\256\001\n\006Status\022\017\n\007message\030\002 \001(\t\022=\n\004code\030\003"
+  " \001(\0162/.opentelemetry.proto.trace.v1.Stat"
+  "us.StatusCode\"N\n\nStatusCode\022\025\n\021STATUS_CO"
+  "DE_UNSET\020\000\022\022\n\016STATUS_CODE_OK\020\001\022\025\n\021STATUS"
+  "_CODE_ERROR\020\002J\004\010\001\020\002*H\n\tSpanFlags\022\031\n\025SPAN"
+  "_FLAGS_DO_NOT_USE\020\000\022 \n\033SPAN_FLAGS_TRACE_"
+  "FLAGS_MASK\020\377\001Bw\n\037io.opentelemetry.proto."
+  "trace.v1B\nTraceProtoP\001Z\'go.opentelemetry"
+  ".io/proto/otlp/trace/v1\252\002\034OpenTelemetry."
+  "Proto.Trace.V1b\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto_deps[2] = {
   &::descriptor_table_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto,
@@ -301,7 +308,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_opentelemetry_2fpro
 };
 static ::_pbi::once_flag descriptor_table_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto = {
-    false, false, 1878, descriptor_table_protodef_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto,
+    false, false, 1982, descriptor_table_protodef_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto,
     "opentelemetry/proto/trace/v1/trace.proto",
     &descriptor_table_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto_once, descriptor_table_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto_deps, 2, 7,
     schemas, file_default_instances, TableStruct_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto::offsets,
@@ -370,6 +377,20 @@ constexpr Status_StatusCode Status::StatusCode_MIN;
 constexpr Status_StatusCode Status::StatusCode_MAX;
 constexpr int Status::StatusCode_ARRAYSIZE;
 #endif  // (__cplusplus < 201703) && (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* SpanFlags_descriptor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&descriptor_table_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto);
+  return file_level_enum_descriptors_opentelemetry_2fproto_2ftrace_2fv1_2ftrace_2eproto[2];
+}
+bool SpanFlags_IsValid(int value) {
+  switch (value) {
+    case 0:
+    case 255:
+      return true;
+    default:
+      return false;
+  }
+}
+
 
 // ===================================================================
 
@@ -594,7 +615,7 @@ ResourceSpans::ResourceSpans(const ResourceSpans& from)
     _impl_.schema_url_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_schema_url().empty()) {
-    _this->_impl_.schema_url_.Set(from._internal_schema_url(),
+    _this->_impl_.schema_url_.Set(from._internal_schema_url(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_resource()) {
@@ -879,7 +900,7 @@ ScopeSpans::ScopeSpans(const ScopeSpans& from)
     _impl_.schema_url_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_schema_url().empty()) {
-    _this->_impl_.schema_url_.Set(from._internal_schema_url(),
+    _this->_impl_.schema_url_.Set(from._internal_schema_url(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_scope()) {
@@ -1157,7 +1178,7 @@ Span_Event::Span_Event(const Span_Event& from)
     _impl_.name_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_name().empty()) {
-    _this->_impl_.name_.Set(from._internal_name(),
+    _this->_impl_.name_.Set(from._internal_name(), 
       _this->GetArenaForAllocation());
   }
   ::memcpy(&_impl_.time_unix_nano_, &from._impl_.time_unix_nano_,
@@ -1450,6 +1471,7 @@ Span_Link::Span_Link(const Span_Link& from)
     , decltype(_impl_.span_id_){}
     , decltype(_impl_.trace_state_){}
     , decltype(_impl_.dropped_attributes_count_){}
+    , decltype(_impl_.flags_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -1458,7 +1480,7 @@ Span_Link::Span_Link(const Span_Link& from)
     _impl_.trace_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_trace_id().empty()) {
-    _this->_impl_.trace_id_.Set(from._internal_trace_id(),
+    _this->_impl_.trace_id_.Set(from._internal_trace_id(), 
       _this->GetArenaForAllocation());
   }
   _impl_.span_id_.InitDefault();
@@ -1466,7 +1488,7 @@ Span_Link::Span_Link(const Span_Link& from)
     _impl_.span_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_span_id().empty()) {
-    _this->_impl_.span_id_.Set(from._internal_span_id(),
+    _this->_impl_.span_id_.Set(from._internal_span_id(), 
       _this->GetArenaForAllocation());
   }
   _impl_.trace_state_.InitDefault();
@@ -1474,10 +1496,12 @@ Span_Link::Span_Link(const Span_Link& from)
     _impl_.trace_state_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_trace_state().empty()) {
-    _this->_impl_.trace_state_.Set(from._internal_trace_state(),
+    _this->_impl_.trace_state_.Set(from._internal_trace_state(), 
       _this->GetArenaForAllocation());
   }
-  _this->_impl_.dropped_attributes_count_ = from._impl_.dropped_attributes_count_;
+  ::memcpy(&_impl_.dropped_attributes_count_, &from._impl_.dropped_attributes_count_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.flags_) -
+    reinterpret_cast<char*>(&_impl_.dropped_attributes_count_)) + sizeof(_impl_.flags_));
   // @@protoc_insertion_point(copy_constructor:opentelemetry.proto.trace.v1.Span.Link)
 }
 
@@ -1491,6 +1515,7 @@ inline void Span_Link::SharedCtor(
     , decltype(_impl_.span_id_){}
     , decltype(_impl_.trace_state_){}
     , decltype(_impl_.dropped_attributes_count_){0u}
+    , decltype(_impl_.flags_){0u}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.trace_id_.InitDefault();
@@ -1538,7 +1563,9 @@ void Span_Link::Clear() {
   _impl_.trace_id_.ClearToEmpty();
   _impl_.span_id_.ClearToEmpty();
   _impl_.trace_state_.ClearToEmpty();
-  _impl_.dropped_attributes_count_ = 0u;
+  ::memset(&_impl_.dropped_attributes_count_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.flags_) -
+      reinterpret_cast<char*>(&_impl_.dropped_attributes_count_)) + sizeof(_impl_.flags_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1594,6 +1621,14 @@ const char* Span_Link::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
           _impl_.dropped_attributes_count_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // fixed32 flags = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 53)) {
+          _impl_.flags_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<uint32_t>(ptr);
+          ptr += sizeof(uint32_t);
         } else
           goto handle_unusual;
         continue;
@@ -1662,6 +1697,12 @@ uint8_t* Span_Link::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(5, this->_internal_dropped_attributes_count(), target);
   }
 
+  // fixed32 flags = 6;
+  if (this->_internal_flags() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFixed32ToArray(6, this->_internal_flags(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -1711,6 +1752,11 @@ size_t Span_Link::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_dropped_attributes_count());
   }
 
+  // fixed32 flags = 6;
+  if (this->_internal_flags() != 0) {
+    total_size += 1 + 4;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -1741,6 +1787,9 @@ void Span_Link::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
   }
   if (from._internal_dropped_attributes_count() != 0) {
     _this->_internal_set_dropped_attributes_count(from._internal_dropped_attributes_count());
+  }
+  if (from._internal_flags() != 0) {
+    _this->_internal_set_flags(from._internal_flags());
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -1774,7 +1823,12 @@ void Span_Link::InternalSwap(Span_Link* other) {
       &_impl_.trace_state_, lhs_arena,
       &other->_impl_.trace_state_, rhs_arena
   );
-  swap(_impl_.dropped_attributes_count_, other->_impl_.dropped_attributes_count_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(Span_Link, _impl_.flags_)
+      + sizeof(Span_Link::_impl_.flags_)
+      - PROTOBUF_FIELD_OFFSET(Span_Link, _impl_.dropped_attributes_count_)>(
+          reinterpret_cast<char*>(&_impl_.dropped_attributes_count_),
+          reinterpret_cast<char*>(&other->_impl_.dropped_attributes_count_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata Span_Link::GetMetadata() const {
@@ -1822,6 +1876,7 @@ Span::Span(const Span& from)
     , decltype(_impl_.dropped_attributes_count_){}
     , decltype(_impl_.dropped_events_count_){}
     , decltype(_impl_.dropped_links_count_){}
+    , decltype(_impl_.flags_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -1830,7 +1885,7 @@ Span::Span(const Span& from)
     _impl_.trace_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_trace_id().empty()) {
-    _this->_impl_.trace_id_.Set(from._internal_trace_id(),
+    _this->_impl_.trace_id_.Set(from._internal_trace_id(), 
       _this->GetArenaForAllocation());
   }
   _impl_.span_id_.InitDefault();
@@ -1838,7 +1893,7 @@ Span::Span(const Span& from)
     _impl_.span_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_span_id().empty()) {
-    _this->_impl_.span_id_.Set(from._internal_span_id(),
+    _this->_impl_.span_id_.Set(from._internal_span_id(), 
       _this->GetArenaForAllocation());
   }
   _impl_.trace_state_.InitDefault();
@@ -1846,7 +1901,7 @@ Span::Span(const Span& from)
     _impl_.trace_state_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_trace_state().empty()) {
-    _this->_impl_.trace_state_.Set(from._internal_trace_state(),
+    _this->_impl_.trace_state_.Set(from._internal_trace_state(), 
       _this->GetArenaForAllocation());
   }
   _impl_.parent_span_id_.InitDefault();
@@ -1854,7 +1909,7 @@ Span::Span(const Span& from)
     _impl_.parent_span_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_parent_span_id().empty()) {
-    _this->_impl_.parent_span_id_.Set(from._internal_parent_span_id(),
+    _this->_impl_.parent_span_id_.Set(from._internal_parent_span_id(), 
       _this->GetArenaForAllocation());
   }
   _impl_.name_.InitDefault();
@@ -1862,15 +1917,15 @@ Span::Span(const Span& from)
     _impl_.name_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_name().empty()) {
-    _this->_impl_.name_.Set(from._internal_name(),
+    _this->_impl_.name_.Set(from._internal_name(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_status()) {
     _this->_impl_.status_ = new ::opentelemetry::proto::trace::v1::Status(*from._impl_.status_);
   }
   ::memcpy(&_impl_.start_time_unix_nano_, &from._impl_.start_time_unix_nano_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.dropped_links_count_) -
-    reinterpret_cast<char*>(&_impl_.start_time_unix_nano_)) + sizeof(_impl_.dropped_links_count_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.flags_) -
+    reinterpret_cast<char*>(&_impl_.start_time_unix_nano_)) + sizeof(_impl_.flags_));
   // @@protoc_insertion_point(copy_constructor:opentelemetry.proto.trace.v1.Span)
 }
 
@@ -1894,6 +1949,7 @@ inline void Span::SharedCtor(
     , decltype(_impl_.dropped_attributes_count_){0u}
     , decltype(_impl_.dropped_events_count_){0u}
     , decltype(_impl_.dropped_links_count_){0u}
+    , decltype(_impl_.flags_){0u}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.trace_id_.InitDefault();
@@ -1963,8 +2019,8 @@ void Span::Clear() {
   }
   _impl_.status_ = nullptr;
   ::memset(&_impl_.start_time_unix_nano_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.dropped_links_count_) -
-      reinterpret_cast<char*>(&_impl_.start_time_unix_nano_)) + sizeof(_impl_.dropped_links_count_));
+      reinterpret_cast<char*>(&_impl_.flags_) -
+      reinterpret_cast<char*>(&_impl_.start_time_unix_nano_)) + sizeof(_impl_.flags_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -2117,6 +2173,14 @@ const char* Span::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
         } else
           goto handle_unusual;
         continue;
+      // fixed32 flags = 16;
+      case 16:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 133)) {
+          _impl_.flags_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<uint32_t>(ptr);
+          ptr += sizeof(uint32_t);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -2252,6 +2316,12 @@ uint8_t* Span::_InternalSerialize(
         _Internal::status(this).GetCachedSize(), target, stream);
   }
 
+  // fixed32 flags = 16;
+  if (this->_internal_flags() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFixed32ToArray(16, this->_internal_flags(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -2362,6 +2432,11 @@ size_t Span::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_dropped_links_count());
   }
 
+  // fixed32 flags = 16;
+  if (this->_internal_flags() != 0) {
+    total_size += 2 + 4;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -2420,6 +2495,9 @@ void Span::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_
   if (from._internal_dropped_links_count() != 0) {
     _this->_internal_set_dropped_links_count(from._internal_dropped_links_count());
   }
+  if (from._internal_flags() != 0) {
+    _this->_internal_set_flags(from._internal_flags());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -2463,8 +2541,8 @@ void Span::InternalSwap(Span* other) {
       &other->_impl_.name_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(Span, _impl_.dropped_links_count_)
-      + sizeof(Span::_impl_.dropped_links_count_)
+      PROTOBUF_FIELD_OFFSET(Span, _impl_.flags_)
+      + sizeof(Span::_impl_.flags_)
       - PROTOBUF_FIELD_OFFSET(Span, _impl_.status_)>(
           reinterpret_cast<char*>(&_impl_.status_),
           reinterpret_cast<char*>(&other->_impl_.status_));
@@ -2502,7 +2580,7 @@ Status::Status(const Status& from)
     _impl_.message_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_message().empty()) {
-    _this->_impl_.message_.Set(from._internal_message(),
+    _this->_impl_.message_.Set(from._internal_message(), 
       _this->GetArenaForAllocation());
   }
   _this->_impl_.code_ = from._impl_.code_;
