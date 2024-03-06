@@ -1082,7 +1082,7 @@ KeyValue::KeyValue(const KeyValue& from)
     _impl_.key_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_key().empty()) {
-    _this->_impl_.key_.Set(from._internal_key(),
+    _this->_impl_.key_.Set(from._internal_key(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_value()) {
@@ -1324,7 +1324,7 @@ InstrumentationScope::InstrumentationScope(const InstrumentationScope& from)
     _impl_.name_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_name().empty()) {
-    _this->_impl_.name_.Set(from._internal_name(),
+    _this->_impl_.name_.Set(from._internal_name(), 
       _this->GetArenaForAllocation());
   }
   _impl_.version_.InitDefault();
@@ -1332,7 +1332,7 @@ InstrumentationScope::InstrumentationScope(const InstrumentationScope& from)
     _impl_.version_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_version().empty()) {
-    _this->_impl_.version_.Set(from._internal_version(),
+    _this->_impl_.version_.Set(from._internal_version(), 
       _this->GetArenaForAllocation());
   }
   _this->_impl_.dropped_attributes_count_ = from._impl_.dropped_attributes_count_;

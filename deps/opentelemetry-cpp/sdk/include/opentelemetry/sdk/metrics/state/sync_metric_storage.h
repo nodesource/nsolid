@@ -40,9 +40,10 @@ public:
                     const AttributesProcessor *attributes_processor,
                     nostd::shared_ptr<ExemplarReservoir> &&exemplar_reservoir
                         OPENTELEMETRY_MAYBE_UNUSED,
-                    const AggregationConfig *aggregation_config)
+                    const AggregationConfig *aggregation_config,
+                    size_t attributes_limit = kAggregationCardinalityLimit)
       : instrument_descriptor_(instrument_descriptor),
-        attributes_hashmap_(new AttributesHashMap()),
+        attributes_hashmap_(new AttributesHashMap(attributes_limit)),
         attributes_processor_(attributes_processor),
 #ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
         exemplar_reservoir_(exemplar_reservoir),
@@ -98,7 +99,8 @@ public:
         });
 
     std::lock_guard<opentelemetry::common::SpinLockMutex> guard(attribute_hashmap_lock_);
-    attributes_hashmap_->GetOrSetDefault(attributes, create_default_aggregation_, hash)
+    attributes_hashmap_
+        ->GetOrSetDefault(attributes, attributes_processor_, create_default_aggregation_, hash)
         ->Aggregate(value);
   }
 
@@ -147,7 +149,8 @@ public:
           }
         });
     std::lock_guard<opentelemetry::common::SpinLockMutex> guard(attribute_hashmap_lock_);
-    attributes_hashmap_->GetOrSetDefault(attributes, create_default_aggregation_, hash)
+    attributes_hashmap_
+        ->GetOrSetDefault(attributes, attributes_processor_, create_default_aggregation_, hash)
         ->Aggregate(value);
   }
 
@@ -161,11 +164,6 @@ private:
   InstrumentDescriptor instrument_descriptor_;
   // hashmap to maintain the metrics for delta collection (i.e, collection since last Collect call)
   std::unique_ptr<AttributesHashMap> attributes_hashmap_;
-  // unreported metrics stash for all the collectors
-  std::unordered_map<CollectorHandle *, std::list<std::shared_ptr<AttributesHashMap>>>
-      unreported_metrics_;
-  // last reported metrics stash for all the collectors.
-  std::unordered_map<CollectorHandle *, LastReportedMetrics> last_reported_metrics_;
   std::function<std::unique_ptr<Aggregation>()> create_default_aggregation_;
   const AttributesProcessor *attributes_processor_;
 #ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW

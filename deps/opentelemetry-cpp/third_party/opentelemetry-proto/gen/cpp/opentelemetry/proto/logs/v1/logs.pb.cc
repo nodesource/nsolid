@@ -501,7 +501,7 @@ ResourceLogs::ResourceLogs(const ResourceLogs& from)
     _impl_.schema_url_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_schema_url().empty()) {
-    _this->_impl_.schema_url_.Set(from._internal_schema_url(),
+    _this->_impl_.schema_url_.Set(from._internal_schema_url(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_resource()) {
@@ -786,7 +786,7 @@ ScopeLogs::ScopeLogs(const ScopeLogs& from)
     _impl_.schema_url_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_schema_url().empty()) {
-    _this->_impl_.schema_url_.Set(from._internal_schema_url(),
+    _this->_impl_.schema_url_.Set(from._internal_schema_url(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_scope()) {
@@ -1081,7 +1081,7 @@ LogRecord::LogRecord(const LogRecord& from)
     _impl_.severity_text_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_severity_text().empty()) {
-    _this->_impl_.severity_text_.Set(from._internal_severity_text(),
+    _this->_impl_.severity_text_.Set(from._internal_severity_text(), 
       _this->GetArenaForAllocation());
   }
   _impl_.trace_id_.InitDefault();
@@ -1089,7 +1089,7 @@ LogRecord::LogRecord(const LogRecord& from)
     _impl_.trace_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_trace_id().empty()) {
-    _this->_impl_.trace_id_.Set(from._internal_trace_id(),
+    _this->_impl_.trace_id_.Set(from._internal_trace_id(), 
       _this->GetArenaForAllocation());
   }
   _impl_.span_id_.InitDefault();
@@ -1097,7 +1097,7 @@ LogRecord::LogRecord(const LogRecord& from)
     _impl_.span_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_span_id().empty()) {
-    _this->_impl_.span_id_.Set(from._internal_span_id(),
+    _this->_impl_.span_id_.Set(from._internal_span_id(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_body()) {

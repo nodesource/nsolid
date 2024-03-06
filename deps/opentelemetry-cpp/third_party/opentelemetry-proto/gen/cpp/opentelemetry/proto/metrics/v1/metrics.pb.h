@@ -3668,14 +3668,14 @@ inline void ResourceMetrics::unsafe_arena_set_allocated_resource(
   }
   _impl_.resource_ = resource;
   if (resource) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.metrics.v1.ResourceMetrics.resource)
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceMetrics::release_resource() {
-
+  
   ::opentelemetry::proto::resource::v1::Resource* temp = _impl_.resource_;
   _impl_.resource_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -3691,13 +3691,13 @@ inline ::opentelemetry::proto::resource::v1::Resource* ResourceMetrics::release_
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceMetrics::unsafe_arena_release_resource() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.metrics.v1.ResourceMetrics.resource)
-
+  
   ::opentelemetry::proto::resource::v1::Resource* temp = _impl_.resource_;
   _impl_.resource_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::resource::v1::Resource* ResourceMetrics::_internal_mutable_resource() {
-
+  
   if (_impl_.resource_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::resource::v1::Resource>(GetArenaForAllocation());
     _impl_.resource_ = p;
@@ -3722,9 +3722,9 @@ inline void ResourceMetrics::set_allocated_resource(::opentelemetry::proto::reso
       resource = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, resource, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.resource_ = resource;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.metrics.v1.ResourceMetrics.resource)
@@ -3781,7 +3781,7 @@ inline const std::string& ResourceMetrics::schema_url() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ResourceMetrics::set_schema_url(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.schema_url_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.metrics.v1.ResourceMetrics.schema_url)
 }
@@ -3794,11 +3794,11 @@ inline const std::string& ResourceMetrics::_internal_schema_url() const {
   return _impl_.schema_url_.Get();
 }
 inline void ResourceMetrics::_internal_set_schema_url(const std::string& value) {
-
+  
   _impl_.schema_url_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ResourceMetrics::_internal_mutable_schema_url() {
-
+  
   return _impl_.schema_url_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ResourceMetrics::release_schema_url() {
@@ -3807,9 +3807,9 @@ inline std::string* ResourceMetrics::release_schema_url() {
 }
 inline void ResourceMetrics::set_allocated_schema_url(std::string* schema_url) {
   if (schema_url != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.schema_url_.SetAllocated(schema_url, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -3847,14 +3847,14 @@ inline void ScopeMetrics::unsafe_arena_set_allocated_scope(
   }
   _impl_.scope_ = scope;
   if (scope) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.metrics.v1.ScopeMetrics.scope)
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeMetrics::release_scope() {
-
+  
   ::opentelemetry::proto::common::v1::InstrumentationScope* temp = _impl_.scope_;
   _impl_.scope_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -3870,13 +3870,13 @@ inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeMetrics::r
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeMetrics::unsafe_arena_release_scope() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.metrics.v1.ScopeMetrics.scope)
-
+  
   ::opentelemetry::proto::common::v1::InstrumentationScope* temp = _impl_.scope_;
   _impl_.scope_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::common::v1::InstrumentationScope* ScopeMetrics::_internal_mutable_scope() {
-
+  
   if (_impl_.scope_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::common::v1::InstrumentationScope>(GetArenaForAllocation());
     _impl_.scope_ = p;
@@ -3901,9 +3901,9 @@ inline void ScopeMetrics::set_allocated_scope(::opentelemetry::proto::common::v1
       scope = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, scope, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.scope_ = scope;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.metrics.v1.ScopeMetrics.scope)
@@ -3960,7 +3960,7 @@ inline const std::string& ScopeMetrics::schema_url() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ScopeMetrics::set_schema_url(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.schema_url_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.metrics.v1.ScopeMetrics.schema_url)
 }
@@ -3973,11 +3973,11 @@ inline const std::string& ScopeMetrics::_internal_schema_url() const {
   return _impl_.schema_url_.Get();
 }
 inline void ScopeMetrics::_internal_set_schema_url(const std::string& value) {
-
+  
   _impl_.schema_url_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ScopeMetrics::_internal_mutable_schema_url() {
-
+  
   return _impl_.schema_url_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ScopeMetrics::release_schema_url() {
@@ -3986,9 +3986,9 @@ inline std::string* ScopeMetrics::release_schema_url() {
 }
 inline void ScopeMetrics::set_allocated_schema_url(std::string* schema_url) {
   if (schema_url != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.schema_url_.SetAllocated(schema_url, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -4014,7 +4014,7 @@ inline const std::string& Metric::name() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Metric::set_name(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.metrics.v1.Metric.name)
 }
@@ -4027,11 +4027,11 @@ inline const std::string& Metric::_internal_name() const {
   return _impl_.name_.Get();
 }
 inline void Metric::_internal_set_name(const std::string& value) {
-
+  
   _impl_.name_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Metric::_internal_mutable_name() {
-
+  
   return _impl_.name_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Metric::release_name() {
@@ -4040,9 +4040,9 @@ inline std::string* Metric::release_name() {
 }
 inline void Metric::set_allocated_name(std::string* name) {
   if (name != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.name_.SetAllocated(name, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -4064,7 +4064,7 @@ inline const std::string& Metric::description() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Metric::set_description(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.description_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.metrics.v1.Metric.description)
 }
@@ -4077,11 +4077,11 @@ inline const std::string& Metric::_internal_description() const {
   return _impl_.description_.Get();
 }
 inline void Metric::_internal_set_description(const std::string& value) {
-
+  
   _impl_.description_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Metric::_internal_mutable_description() {
-
+  
   return _impl_.description_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Metric::release_description() {
@@ -4090,9 +4090,9 @@ inline std::string* Metric::release_description() {
 }
 inline void Metric::set_allocated_description(std::string* description) {
   if (description != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.description_.SetAllocated(description, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -4114,7 +4114,7 @@ inline const std::string& Metric::unit() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Metric::set_unit(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.unit_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.metrics.v1.Metric.unit)
 }
@@ -4127,11 +4127,11 @@ inline const std::string& Metric::_internal_unit() const {
   return _impl_.unit_.Get();
 }
 inline void Metric::_internal_set_unit(const std::string& value) {
-
+  
   _impl_.unit_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Metric::_internal_mutable_unit() {
-
+  
   return _impl_.unit_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Metric::release_unit() {
@@ -4140,9 +4140,9 @@ inline std::string* Metric::release_unit() {
 }
 inline void Metric::set_allocated_unit(std::string* unit) {
   if (unit != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.unit_.SetAllocated(unit, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -4632,7 +4632,7 @@ inline ::opentelemetry::proto::metrics::v1::AggregationTemporality Sum::aggregat
   return _internal_aggregation_temporality();
 }
 inline void Sum::_internal_set_aggregation_temporality(::opentelemetry::proto::metrics::v1::AggregationTemporality value) {
-
+  
   _impl_.aggregation_temporality_ = value;
 }
 inline void Sum::set_aggregation_temporality(::opentelemetry::proto::metrics::v1::AggregationTemporality value) {
@@ -4652,7 +4652,7 @@ inline bool Sum::is_monotonic() const {
   return _internal_is_monotonic();
 }
 inline void Sum::_internal_set_is_monotonic(bool value) {
-
+  
   _impl_.is_monotonic_ = value;
 }
 inline void Sum::set_is_monotonic(bool value) {
@@ -4716,7 +4716,7 @@ inline ::opentelemetry::proto::metrics::v1::AggregationTemporality Histogram::ag
   return _internal_aggregation_temporality();
 }
 inline void Histogram::_internal_set_aggregation_temporality(::opentelemetry::proto::metrics::v1::AggregationTemporality value) {
-
+  
   _impl_.aggregation_temporality_ = value;
 }
 inline void Histogram::set_aggregation_temporality(::opentelemetry::proto::metrics::v1::AggregationTemporality value) {
@@ -4780,7 +4780,7 @@ inline ::opentelemetry::proto::metrics::v1::AggregationTemporality ExponentialHi
   return _internal_aggregation_temporality();
 }
 inline void ExponentialHistogram::_internal_set_aggregation_temporality(::opentelemetry::proto::metrics::v1::AggregationTemporality value) {
-
+  
   _impl_.aggregation_temporality_ = value;
 }
 inline void ExponentialHistogram::set_aggregation_temporality(::opentelemetry::proto::metrics::v1::AggregationTemporality value) {
@@ -4885,7 +4885,7 @@ inline uint64_t NumberDataPoint::start_time_unix_nano() const {
   return _internal_start_time_unix_nano();
 }
 inline void NumberDataPoint::_internal_set_start_time_unix_nano(uint64_t value) {
-
+  
   _impl_.start_time_unix_nano_ = value;
 }
 inline void NumberDataPoint::set_start_time_unix_nano(uint64_t value) {
@@ -4905,7 +4905,7 @@ inline uint64_t NumberDataPoint::time_unix_nano() const {
   return _internal_time_unix_nano();
 }
 inline void NumberDataPoint::_internal_set_time_unix_nano(uint64_t value) {
-
+  
   _impl_.time_unix_nano_ = value;
 }
 inline void NumberDataPoint::set_time_unix_nano(uint64_t value) {
@@ -5041,7 +5041,7 @@ inline uint32_t NumberDataPoint::flags() const {
   return _internal_flags();
 }
 inline void NumberDataPoint::_internal_set_flags(uint32_t value) {
-
+  
   _impl_.flags_ = value;
 }
 inline void NumberDataPoint::set_flags(uint32_t value) {
@@ -5111,7 +5111,7 @@ inline uint64_t HistogramDataPoint::start_time_unix_nano() const {
   return _internal_start_time_unix_nano();
 }
 inline void HistogramDataPoint::_internal_set_start_time_unix_nano(uint64_t value) {
-
+  
   _impl_.start_time_unix_nano_ = value;
 }
 inline void HistogramDataPoint::set_start_time_unix_nano(uint64_t value) {
@@ -5131,7 +5131,7 @@ inline uint64_t HistogramDataPoint::time_unix_nano() const {
   return _internal_time_unix_nano();
 }
 inline void HistogramDataPoint::_internal_set_time_unix_nano(uint64_t value) {
-
+  
   _impl_.time_unix_nano_ = value;
 }
 inline void HistogramDataPoint::set_time_unix_nano(uint64_t value) {
@@ -5151,7 +5151,7 @@ inline uint64_t HistogramDataPoint::count() const {
   return _internal_count();
 }
 inline void HistogramDataPoint::_internal_set_count(uint64_t value) {
-
+  
   _impl_.count_ = value;
 }
 inline void HistogramDataPoint::set_count(uint64_t value) {
@@ -5333,7 +5333,7 @@ inline uint32_t HistogramDataPoint::flags() const {
   return _internal_flags();
 }
 inline void HistogramDataPoint::_internal_set_flags(uint32_t value) {
-
+  
   _impl_.flags_ = value;
 }
 inline void HistogramDataPoint::set_flags(uint32_t value) {
@@ -5413,7 +5413,7 @@ inline int32_t ExponentialHistogramDataPoint_Buckets::offset() const {
   return _internal_offset();
 }
 inline void ExponentialHistogramDataPoint_Buckets::_internal_set_offset(int32_t value) {
-
+  
   _impl_.offset_ = value;
 }
 inline void ExponentialHistogramDataPoint_Buckets::set_offset(int32_t value) {
@@ -5521,7 +5521,7 @@ inline uint64_t ExponentialHistogramDataPoint::start_time_unix_nano() const {
   return _internal_start_time_unix_nano();
 }
 inline void ExponentialHistogramDataPoint::_internal_set_start_time_unix_nano(uint64_t value) {
-
+  
   _impl_.start_time_unix_nano_ = value;
 }
 inline void ExponentialHistogramDataPoint::set_start_time_unix_nano(uint64_t value) {
@@ -5541,7 +5541,7 @@ inline uint64_t ExponentialHistogramDataPoint::time_unix_nano() const {
   return _internal_time_unix_nano();
 }
 inline void ExponentialHistogramDataPoint::_internal_set_time_unix_nano(uint64_t value) {
-
+  
   _impl_.time_unix_nano_ = value;
 }
 inline void ExponentialHistogramDataPoint::set_time_unix_nano(uint64_t value) {
@@ -5561,7 +5561,7 @@ inline uint64_t ExponentialHistogramDataPoint::count() const {
   return _internal_count();
 }
 inline void ExponentialHistogramDataPoint::_internal_set_count(uint64_t value) {
-
+  
   _impl_.count_ = value;
 }
 inline void ExponentialHistogramDataPoint::set_count(uint64_t value) {
@@ -5609,7 +5609,7 @@ inline int32_t ExponentialHistogramDataPoint::scale() const {
   return _internal_scale();
 }
 inline void ExponentialHistogramDataPoint::_internal_set_scale(int32_t value) {
-
+  
   _impl_.scale_ = value;
 }
 inline void ExponentialHistogramDataPoint::set_scale(int32_t value) {
@@ -5629,7 +5629,7 @@ inline uint64_t ExponentialHistogramDataPoint::zero_count() const {
   return _internal_zero_count();
 }
 inline void ExponentialHistogramDataPoint::_internal_set_zero_count(uint64_t value) {
-
+  
   _impl_.zero_count_ = value;
 }
 inline void ExponentialHistogramDataPoint::set_zero_count(uint64_t value) {
@@ -5666,14 +5666,14 @@ inline void ExponentialHistogramDataPoint::unsafe_arena_set_allocated_positive(
   }
   _impl_.positive_ = positive;
   if (positive) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.metrics.v1.ExponentialHistogramDataPoint.positive)
 }
 inline ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* ExponentialHistogramDataPoint::release_positive() {
-
+  
   ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* temp = _impl_.positive_;
   _impl_.positive_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -5689,13 +5689,13 @@ inline ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Bucket
 }
 inline ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* ExponentialHistogramDataPoint::unsafe_arena_release_positive() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.metrics.v1.ExponentialHistogramDataPoint.positive)
-
+  
   ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* temp = _impl_.positive_;
   _impl_.positive_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* ExponentialHistogramDataPoint::_internal_mutable_positive() {
-
+  
   if (_impl_.positive_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets>(GetArenaForAllocation());
     _impl_.positive_ = p;
@@ -5719,9 +5719,9 @@ inline void ExponentialHistogramDataPoint::set_allocated_positive(::opentelemetr
       positive = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, positive, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.positive_ = positive;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.metrics.v1.ExponentialHistogramDataPoint.positive)
@@ -5756,14 +5756,14 @@ inline void ExponentialHistogramDataPoint::unsafe_arena_set_allocated_negative(
   }
   _impl_.negative_ = negative;
   if (negative) {
-
+    
   } else {
-
+    
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opentelemetry.proto.metrics.v1.ExponentialHistogramDataPoint.negative)
 }
 inline ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* ExponentialHistogramDataPoint::release_negative() {
-
+  
   ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* temp = _impl_.negative_;
   _impl_.negative_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
@@ -5779,13 +5779,13 @@ inline ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Bucket
 }
 inline ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* ExponentialHistogramDataPoint::unsafe_arena_release_negative() {
   // @@protoc_insertion_point(field_release:opentelemetry.proto.metrics.v1.ExponentialHistogramDataPoint.negative)
-
+  
   ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* temp = _impl_.negative_;
   _impl_.negative_ = nullptr;
   return temp;
 }
 inline ::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets* ExponentialHistogramDataPoint::_internal_mutable_negative() {
-
+  
   if (_impl_.negative_ == nullptr) {
     auto* p = CreateMaybeMessage<::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets>(GetArenaForAllocation());
     _impl_.negative_ = p;
@@ -5809,9 +5809,9 @@ inline void ExponentialHistogramDataPoint::set_allocated_negative(::opentelemetr
       negative = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
           message_arena, negative, submessage_arena);
     }
-
+    
   } else {
-
+    
   }
   _impl_.negative_ = negative;
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.metrics.v1.ExponentialHistogramDataPoint.negative)
@@ -5829,7 +5829,7 @@ inline uint32_t ExponentialHistogramDataPoint::flags() const {
   return _internal_flags();
 }
 inline void ExponentialHistogramDataPoint::_internal_set_flags(uint32_t value) {
-
+  
   _impl_.flags_ = value;
 }
 inline void ExponentialHistogramDataPoint::set_flags(uint32_t value) {
@@ -5945,7 +5945,7 @@ inline double ExponentialHistogramDataPoint::zero_threshold() const {
   return _internal_zero_threshold();
 }
 inline void ExponentialHistogramDataPoint::_internal_set_zero_threshold(double value) {
-
+  
   _impl_.zero_threshold_ = value;
 }
 inline void ExponentialHistogramDataPoint::set_zero_threshold(double value) {
@@ -5969,7 +5969,7 @@ inline double SummaryDataPoint_ValueAtQuantile::quantile() const {
   return _internal_quantile();
 }
 inline void SummaryDataPoint_ValueAtQuantile::_internal_set_quantile(double value) {
-
+  
   _impl_.quantile_ = value;
 }
 inline void SummaryDataPoint_ValueAtQuantile::set_quantile(double value) {
@@ -5989,7 +5989,7 @@ inline double SummaryDataPoint_ValueAtQuantile::value() const {
   return _internal_value();
 }
 inline void SummaryDataPoint_ValueAtQuantile::_internal_set_value(double value) {
-
+  
   _impl_.value_ = value;
 }
 inline void SummaryDataPoint_ValueAtQuantile::set_value(double value) {
@@ -6050,7 +6050,7 @@ inline uint64_t SummaryDataPoint::start_time_unix_nano() const {
   return _internal_start_time_unix_nano();
 }
 inline void SummaryDataPoint::_internal_set_start_time_unix_nano(uint64_t value) {
-
+  
   _impl_.start_time_unix_nano_ = value;
 }
 inline void SummaryDataPoint::set_start_time_unix_nano(uint64_t value) {
@@ -6070,7 +6070,7 @@ inline uint64_t SummaryDataPoint::time_unix_nano() const {
   return _internal_time_unix_nano();
 }
 inline void SummaryDataPoint::_internal_set_time_unix_nano(uint64_t value) {
-
+  
   _impl_.time_unix_nano_ = value;
 }
 inline void SummaryDataPoint::set_time_unix_nano(uint64_t value) {
@@ -6090,7 +6090,7 @@ inline uint64_t SummaryDataPoint::count() const {
   return _internal_count();
 }
 inline void SummaryDataPoint::_internal_set_count(uint64_t value) {
-
+  
   _impl_.count_ = value;
 }
 inline void SummaryDataPoint::set_count(uint64_t value) {
@@ -6110,7 +6110,7 @@ inline double SummaryDataPoint::sum() const {
   return _internal_sum();
 }
 inline void SummaryDataPoint::_internal_set_sum(double value) {
-
+  
   _impl_.sum_ = value;
 }
 inline void SummaryDataPoint::set_sum(double value) {
@@ -6170,7 +6170,7 @@ inline uint32_t SummaryDataPoint::flags() const {
   return _internal_flags();
 }
 inline void SummaryDataPoint::_internal_set_flags(uint32_t value) {
-
+  
   _impl_.flags_ = value;
 }
 inline void SummaryDataPoint::set_flags(uint32_t value) {
@@ -6231,7 +6231,7 @@ inline uint64_t Exemplar::time_unix_nano() const {
   return _internal_time_unix_nano();
 }
 inline void Exemplar::_internal_set_time_unix_nano(uint64_t value) {
-
+  
   _impl_.time_unix_nano_ = value;
 }
 inline void Exemplar::set_time_unix_nano(uint64_t value) {
@@ -6326,7 +6326,7 @@ inline const std::string& Exemplar::span_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Exemplar::set_span_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.span_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.metrics.v1.Exemplar.span_id)
 }
@@ -6339,11 +6339,11 @@ inline const std::string& Exemplar::_internal_span_id() const {
   return _impl_.span_id_.Get();
 }
 inline void Exemplar::_internal_set_span_id(const std::string& value) {
-
+  
   _impl_.span_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Exemplar::_internal_mutable_span_id() {
-
+  
   return _impl_.span_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Exemplar::release_span_id() {
@@ -6352,9 +6352,9 @@ inline std::string* Exemplar::release_span_id() {
 }
 inline void Exemplar::set_allocated_span_id(std::string* span_id) {
   if (span_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.span_id_.SetAllocated(span_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -6376,7 +6376,7 @@ inline const std::string& Exemplar::trace_id() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void Exemplar::set_trace_id(ArgT0&& arg0, ArgT... args) {
-
+ 
  _impl_.trace_id_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:opentelemetry.proto.metrics.v1.Exemplar.trace_id)
 }
@@ -6389,11 +6389,11 @@ inline const std::string& Exemplar::_internal_trace_id() const {
   return _impl_.trace_id_.Get();
 }
 inline void Exemplar::_internal_set_trace_id(const std::string& value) {
-
+  
   _impl_.trace_id_.Set(value, GetArenaForAllocation());
 }
 inline std::string* Exemplar::_internal_mutable_trace_id() {
-
+  
   return _impl_.trace_id_.Mutable(GetArenaForAllocation());
 }
 inline std::string* Exemplar::release_trace_id() {
@@ -6402,9 +6402,9 @@ inline std::string* Exemplar::release_trace_id() {
 }
 inline void Exemplar::set_allocated_trace_id(std::string* trace_id) {
   if (trace_id != nullptr) {
-
+    
   } else {
-
+    
   }
   _impl_.trace_id_.SetAllocated(trace_id, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
