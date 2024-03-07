@@ -33,7 +33,7 @@ void DynatraceMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                         const ProcessMetricsStor& prev_stor) {
   std::string metrics;
 
-#define V(CType, CName, JSName, MType)                                         \
+#define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \
   auto it = std::find(discarded_metrics.begin(),                               \
                       discarded_metrics.end(),                                 \
@@ -71,11 +71,10 @@ void DynatraceMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
 
 /*virtual*/
 void DynatraceMetrics::got_thr_metrics(
-    const std::vector<std::pair<ThreadMetricsStor,
-                                ThreadMetricsStor>>& thr_metrics) {
+    const std::vector<MetricsExporter::ThrMetricsStor>& thr_metrics) {
   std::string metrics;
   for (const auto& tm : thr_metrics) {
-    metrics += got_thr_metrics(tm.first, tm.second);
+    metrics += got_thr_metrics(tm.stor, tm.prev_stor);
   }
 
   if (metrics.size() > 0) {
@@ -89,7 +88,7 @@ std::string DynatraceMetrics::got_thr_metrics(
     const ThreadMetricsStor& stor,
     const ThreadMetricsStor& prev_stor) {
   std::string metrics;
-#define V(CType, CName, JSName, MType)                                         \
+#define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \
   auto it = std::find(discarded_metrics.begin(),                               \
                       discarded_metrics.end(),                                 \

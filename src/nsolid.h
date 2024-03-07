@@ -27,38 +27,49 @@ namespace nsolid {
 
 class EnvInst;
 
+#define kNSByte "byte"
+#define kNSMhz "MHz"
+#define kNSMSecs "ms"
+#define kNSSecs "s"
+#define kNSUSecs "us"
+#define kNSNoUnit ""
+
 #define NSOLID_PROCESS_METRICS_STRINGS(V)                                      \
-  V(std::string, title, title, EOther)                                         \
-  V(std::string, user, user, EOther)
+  V(std::string, title, title, EOther, kNSNoUnit)                              \
+  V(std::string, user, user, EOther, kNSNoUnit)
 
 #define NSOLID_PROCESS_METRICS_UINT64_FIRST(V)                                 \
-  V(uint64_t, timestamp, timestamp, ECounter)
+  V(uint64_t, timestamp, timestamp, ECounter, kNSMSecs)
 
 #define NSOLID_PROCESS_METRICS_UINT64(V)                                       \
-  V(uint64_t, uptime, uptime, ECounter)                                        \
-  V(uint64_t, system_uptime, systemUptime, ECounter)                           \
-  V(uint64_t, free_mem, freeMem, EGauge)                                       \
-  V(uint64_t, block_input_op_count, blockInputOpCount, ECounter)               \
-  V(uint64_t, block_output_op_count, blockOutputOpCount, ECounter)             \
+  V(uint64_t, uptime, uptime, ECounter, kNSSecs)                               \
+  V(uint64_t, system_uptime, systemUptime, ECounter, kNSSecs)                  \
+  V(uint64_t, free_mem, freeMem, EGauge, kNSByte)                              \
+  V(uint64_t, block_input_op_count, blockInputOpCount, ECounter, kNSNoUnit)    \
+  V(uint64_t, block_output_op_count, blockOutputOpCount, ECounter, kNSNoUnit)  \
   V(uint64_t, ctx_switch_involuntary_count,                                    \
               ctxSwitchInvoluntaryCount,                                       \
-              ECounter)                                                        \
-  V(uint64_t, ctx_switch_voluntary_count, ctxSwitchVoluntaryCount, ECounter)   \
-  V(uint64_t, ipc_received_count, ipcReceivedCount, ECounter)                  \
-  V(uint64_t, ipc_sent_count, ipcSentCount, ECounter)                          \
-  V(uint64_t, page_fault_hard_count, pageFaultHardCount, ECounter)             \
-  V(uint64_t, page_fault_soft_count, pageFaultSoftCount, ECounter)             \
-  V(uint64_t, signal_count, signalCount, ECounter)                             \
-  V(uint64_t, swap_count, swapCount, ECounter)                                 \
-  V(uint64_t, rss, rss, EGauge)
+              ECounter,                                                        \
+              kNSNoUnit)                                                       \
+  V(uint64_t, ctx_switch_voluntary_count,                                      \
+              ctxSwitchVoluntaryCount,                                         \
+              ECounter,                                                        \
+              kNSNoUnit)                                                       \
+  V(uint64_t, ipc_received_count, ipcReceivedCount, ECounter, kNSNoUnit)       \
+  V(uint64_t, ipc_sent_count, ipcSentCount, ECounter, kNSNoUnit)               \
+  V(uint64_t, page_fault_hard_count, pageFaultHardCount, ECounter, kNSNoUnit)  \
+  V(uint64_t, page_fault_soft_count, pageFaultSoftCount, ECounter, kNSNoUnit)  \
+  V(uint64_t, signal_count, signalCount, ECounter, kNSNoUnit)                  \
+  V(uint64_t, swap_count, swapCount, ECounter, kNSNoUnit)                      \
+  V(uint64_t, rss, rss, EGauge, kNSByte)
 
 #define NSOLID_PROCESS_METRICS_DOUBLE(V)                                       \
-  V(double, load_1m, load1m, EGauge)                                           \
-  V(double, load_5m, load5m, EGauge)                                           \
-  V(double, load_15m, load15m, EGauge)                                         \
-  V(double, cpu_user_percent, cpuUserPercent, EGauge)                          \
-  V(double, cpu_system_percent, cpuSystemPercent, EGauge)                      \
-  V(double, cpu_percent, cpuPercent, EGauge)
+  V(double, load_1m, load1m, EGauge, kNSNoUnit)                                \
+  V(double, load_5m, load5m, EGauge, kNSNoUnit)                                \
+  V(double, load_15m, load15m, EGauge, kNSNoUnit)                              \
+  V(double, cpu_user_percent, cpuUserPercent, EGauge, kNSNoUnit)               \
+  V(double, cpu_system_percent, cpuSystemPercent, EGauge, kNSNoUnit)           \
+  V(double, cpu_percent, cpuPercent, EGauge, kNSNoUnit)
 
 #define NSOLID_PROCESS_METRICS_NUMBERS(V)                                      \
   NSOLID_PROCESS_METRICS_UINT64_FIRST(V)                                       \
@@ -70,75 +81,139 @@ class EnvInst;
   NSOLID_PROCESS_METRICS_NUMBERS(V)
 
 #define NSOLID_ENV_METRICS_STRINGS(V)                                          \
-  V(std::string, thread_name, threadName, EOther)
+  V(std::string, thread_name, threadName, EOther, kNSNoUnit)
 
 #define NSOLID_ENV_METRICS_UINT64_FIRST(V)                                     \
-  V(uint64_t, thread_id, threadId, EOther)
+  V(uint64_t, thread_id, threadId, EOther, kNSNoUnit)
 
 #define NSOLID_ENV_METRICS_UINT64(V)                                           \
-  V(uint64_t, timestamp, timestamp, ECounter)                                  \
-  V(uint64_t, active_handles, activeHandles, EGauge)                           \
-  V(uint64_t, active_requests, activeRequests, EGauge)                         \
-  V(uint64_t, total_heap_size, heapTotal, EGauge)                              \
-  V(uint64_t, total_heap_size_executable, totalHeapSizeExecutable, EGauge)     \
-  V(uint64_t, total_physical_size, totalPhysicalSize, EGauge)                  \
-  V(uint64_t, total_available_size, totalAvailableSize, EGauge)                \
-  V(uint64_t, used_heap_size, heapUsed, EGauge)                                \
-  V(uint64_t, heap_size_limit, heapSizeLimit, EGauge)                          \
-  V(uint64_t, malloced_memory, mallocedMemory, EGauge)                         \
-  V(uint64_t, external_memory, externalMem, EGauge)                            \
-  V(uint64_t, peak_malloced_memory, peakMallocedMemory, EGauge)                \
-  V(uint64_t, number_of_native_contexts, numberOfNativeContexts, EGauge)       \
-  V(uint64_t, number_of_detached_contexts, numberOfDetachedContexts, EGauge)   \
-  V(uint64_t, gc_count, gcCount, ECounter)                                     \
-  V(uint64_t, gc_forced_count, gcForcedCount, ECounter)                        \
-  V(uint64_t, gc_full_count, gcFullCount, ECounter)                            \
-  V(uint64_t, gc_major_count, gcMajorCount, ECounter)                          \
-  V(uint64_t, dns_count, dnsCount, ECounter)                                   \
-  V(uint64_t, http_client_abort_count, httpClientAbortCount, ECounter)         \
-  V(uint64_t, http_client_count, httpClientCount, ECounter)                    \
-  V(uint64_t, http_server_abort_count, httpServerAbortCount, ECounter)         \
-  V(uint64_t, http_server_count, httpServerCount, ECounter)                    \
-  V(uint64_t, loop_idle_time, loopIdleTime, EGauge)                            \
-  V(uint64_t, loop_iterations, loopIterations, ECounter)                       \
-  V(uint64_t, loop_iter_with_events, loopIterWithEvents, ECounter)             \
-  V(uint64_t, events_processed, eventsProcessed, ECounter)                     \
-  V(uint64_t, events_waiting, eventsWaiting, EGauge)                           \
-  V(uint64_t, provider_delay, providerDelay, EGauge)                           \
-  V(uint64_t, processing_delay, processingDelay, EGauge)                       \
-  V(uint64_t, loop_total_count, loopTotalCount, ECounter)                      \
-  V(uint64_t, pipe_server_created_count, pipeServerCreatedCount, ECounter)     \
-  V(uint64_t, pipe_server_destroyed_count, pipeServerDestroyedCount, ECounter) \
-  V(uint64_t, pipe_socket_created_count, pipeSocketCreatedCount, ECounter)     \
-  V(uint64_t, pipe_socket_destroyed_count, pipeSocketDestroyedCount, ECounter) \
-  V(uint64_t, tcp_server_created_count, tcpServerCreatedCount, ECounter)       \
-  V(uint64_t, tcp_server_destroyed_count, tcpServerDestroyedCount, ECounter)   \
-  V(uint64_t, tcp_client_created_count, tcpSocketCreatedCount, ECounter)       \
-  V(uint64_t, tcp_client_destroyed_count, tcpSocketDestroyedCount, ECounter)   \
-  V(uint64_t, udp_socket_created_count, udpSocketCreatedCount, ECounter)       \
-  V(uint64_t, udp_socket_destroyed_count, udpSocketDestroyedCount, ECounter)   \
-  V(uint64_t, promise_created_count, promiseCreatedCount, ECounter)            \
-  V(uint64_t, promise_resolved_count, promiseResolvedCount, ECounter)          \
-  V(uint64_t, fs_handles_opened, fsHandlesOpenedCount, ECounter)               \
-  V(uint64_t, fs_handles_closed, fsHandlesClosedCount, ECounter)
+  V(uint64_t, timestamp, timestamp, ECounter, kNSMSecs)                        \
+  V(uint64_t, active_handles, activeHandles, EGauge, kNSNoUnit)                \
+  V(uint64_t, active_requests, activeRequests, EGauge, kNSNoUnit)              \
+  V(uint64_t, total_heap_size, heapTotal, EGauge, kNSByte)                     \
+  V(uint64_t,                                                                  \
+    total_heap_size_executable,                                                \
+    totalHeapSizeExecutable,                                                   \
+    EGauge,                                                                    \
+    kNSByte)                                                                   \
+  V(uint64_t, total_physical_size, totalPhysicalSize, EGauge, kNSByte)         \
+  V(uint64_t, total_available_size, totalAvailableSize, EGauge, kNSByte)       \
+  V(uint64_t, used_heap_size, heapUsed, EGauge, kNSByte)                       \
+  V(uint64_t, heap_size_limit, heapSizeLimit, EGauge, kNSByte)                 \
+  V(uint64_t, malloced_memory, mallocedMemory, EGauge, kNSByte)                \
+  V(uint64_t, external_memory, externalMem, EGauge, kNSByte)                   \
+  V(uint64_t, peak_malloced_memory, peakMallocedMemory, EGauge, kNSByte)       \
+  V(uint64_t,                                                                  \
+    number_of_native_contexts,                                                 \
+    numberOfNativeContexts,                                                    \
+    EGauge,                                                                    \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    number_of_detached_contexts,                                               \
+    numberOfDetachedContexts,                                                  \
+    EGauge,                                                                    \
+    kNSNoUnit)                                                                 \
+  V(uint64_t, gc_count, gcCount, ECounter, kNSNoUnit)                          \
+  V(uint64_t, gc_forced_count, gcForcedCount, ECounter, kNSNoUnit)             \
+  V(uint64_t, gc_full_count, gcFullCount, ECounter, kNSNoUnit)                 \
+  V(uint64_t, gc_major_count, gcMajorCount, ECounter, kNSNoUnit)               \
+  V(uint64_t, dns_count, dnsCount, ECounter, kNSNoUnit)                        \
+  V(uint64_t,                                                                  \
+    http_client_abort_count,                                                   \
+    httpClientAbortCount,                                                      \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t, http_client_count, httpClientCount, ECounter, kNSNoUnit)         \
+  V(uint64_t,                                                                  \
+    http_server_abort_count,                                                   \
+    httpServerAbortCount,                                                      \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t, http_server_count, httpServerCount, ECounter, kNSNoUnit)         \
+  V(uint64_t, loop_idle_time, loopIdleTime, EGauge, kNSMSecs)                  \
+  V(uint64_t, loop_iterations, loopIterations, ECounter, kNSNoUnit)            \
+  V(uint64_t, loop_iter_with_events, loopIterWithEvents, ECounter, kNSNoUnit)  \
+  V(uint64_t, events_processed, eventsProcessed, ECounter, kNSNoUnit)          \
+  V(uint64_t, events_waiting, eventsWaiting, EGauge, kNSNoUnit)                \
+  V(uint64_t, provider_delay, providerDelay, EGauge, kNSMSecs)                 \
+  V(uint64_t, processing_delay, processingDelay, EGauge, kNSMSecs)             \
+  V(uint64_t, loop_total_count, loopTotalCount, ECounter, kNSNoUnit)           \
+  V(uint64_t,                                                                  \
+    pipe_server_created_count,                                                 \
+    pipeServerCreatedCount,                                                    \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    pipe_server_destroyed_count,                                               \
+    pipeServerDestroyedCount,                                                  \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    pipe_socket_created_count,                                                 \
+    pipeSocketCreatedCount,                                                    \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    pipe_socket_destroyed_count,                                               \
+    pipeSocketDestroyedCount,                                                  \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    tcp_server_created_count,                                                  \
+    tcpServerCreatedCount,                                                     \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    tcp_server_destroyed_count,                                                \
+    tcpServerDestroyedCount,                                                   \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    tcp_client_created_count,                                                  \
+    tcpSocketCreatedCount,                                                     \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    tcp_client_destroyed_count,                                                \
+    tcpSocketDestroyedCount,                                                   \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    udp_socket_created_count,                                                  \
+    udpSocketCreatedCount,                                                     \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t,                                                                  \
+    udp_socket_destroyed_count,                                                \
+    udpSocketDestroyedCount,                                                   \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t, promise_created_count, promiseCreatedCount, ECounter, kNSNoUnit) \
+  V(uint64_t,                                                                  \
+    promise_resolved_count,                                                    \
+    promiseResolvedCount,                                                      \
+    ECounter,                                                                  \
+    kNSNoUnit)                                                                 \
+  V(uint64_t, fs_handles_opened, fsHandlesOpenedCount, ECounter, kNSNoUnit)    \
+  V(uint64_t, fs_handles_closed, fsHandlesClosedCount, ECounter, kNSNoUnit)
 
 #define NSOLID_ENV_METRICS_DOUBLE(V)                                           \
-  V(double, gc_dur_us99_ptile, gcDurUs99Ptile, ESeries)                        \
-  V(double, gc_dur_us_median, gcDurUsMedian, ESeries)                          \
-  V(double, dns99_ptile, dns99Ptile, ESeries)                                  \
-  V(double, dns_median, dnsMedian, ESeries)                                    \
-  V(double, http_client99_ptile, httpClient99Ptile, ESeries)                   \
-  V(double, http_client_median, httpClientMedian, ESeries)                     \
-  V(double, http_server99_ptile, httpServer99Ptile, ESeries)                   \
-  V(double, http_server_median, httpServerMedian, ESeries)                     \
-  V(double, loop_utilization, loopUtilization, EGauge)                         \
-  V(double, res_5s, res5s, EGauge)                                             \
-  V(double, res_1m, res1m, EGauge)                                             \
-  V(double, res_5m, res5m, EGauge)                                             \
-  V(double, res_15m, res15m, EGauge)                                           \
-  V(double, loop_avg_tasks, loopAvgTasks, EGauge)                              \
-  V(double, loop_estimated_lag, loopEstimatedLag, EGauge)                      \
-  V(double, loop_idle_percent, loopIdlePercent, EGauge)
+  V(double, gc_dur_us99_ptile, gcDurUs99Ptile, ESeries, kNSUSecs)              \
+  V(double, gc_dur_us_median, gcDurUsMedian, ESeries, kNSUSecs)                \
+  V(double, dns99_ptile, dns99Ptile, ESeries, kNSMSecs)                        \
+  V(double, dns_median, dnsMedian, ESeries, kNSMSecs)                          \
+  V(double, http_client99_ptile, httpClient99Ptile, ESeries, kNSMSecs)         \
+  V(double, http_client_median, httpClientMedian, ESeries, kNSMSecs)           \
+  V(double, http_server99_ptile, httpServer99Ptile, ESeries, kNSMSecs)         \
+  V(double, http_server_median, httpServerMedian, ESeries, kNSMSecs)           \
+  V(double, loop_utilization, loopUtilization, EGauge, kNSNoUnit)              \
+  V(double, res_5s, res5s, EGauge, kNSNoUnit)                                  \
+  V(double, res_1m, res1m, EGauge, kNSNoUnit)                                  \
+  V(double, res_5m, res5m, EGauge, kNSNoUnit)                                  \
+  V(double, res_15m, res15m, EGauge, kNSNoUnit)                                \
+  V(double, loop_avg_tasks, loopAvgTasks, EGauge, kNSNoUnit)                   \
+  V(double, loop_estimated_lag, loopEstimatedLag, EGauge, kNSMSecs)            \
+  V(double, loop_idle_percent, loopIdlePercent, EGauge, kNSNoUnit)
 
 #define NSOLID_ENV_METRICS_NUMBERS(V)                                          \
   NSOLID_ENV_METRICS_UINT64_FIRST(V)                                           \
@@ -569,10 +644,10 @@ class NODE_EXTERN ProcessMetrics {
    *
    */
   struct MetricsStor {
-#define PM1(Type, CName, JSName, MType) Type CName;
+#define PM1(Type, CName, JSName, MType, Unit) Type CName;
     NSOLID_PROCESS_METRICS_STRINGS(PM1)
 #undef PM1
-#define PM2(Type, CName, JSName, MType) Type CName = 0;
+#define PM2(Type, CName, JSName, MType, Unit) Type CName = 0;
     NSOLID_PROCESS_METRICS_NUMBERS(PM2)
 #undef PM2
     // This is a duplicate of cpuPercent, for backwards compatibility.
@@ -620,10 +695,10 @@ class NODE_EXTERN ThreadMetrics :
    *
    */
   struct MetricsStor {
-#define EM1(Type, CName, JSName, MType) Type CName;
+#define EM1(Type, CName, JSName, MType, Unit) Type CName;
     NSOLID_ENV_METRICS_STRINGS(EM1)
 #undef EM1
-#define EM2(Type, CName, JSName, MType) Type CName = 0;
+#define EM2(Type, CName, JSName, MType, Unit) Type CName = 0;
     NSOLID_ENV_METRICS_NUMBERS(EM2)
 #undef EM2
    private:

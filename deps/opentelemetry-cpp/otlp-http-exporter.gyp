@@ -8,6 +8,9 @@
         'exporters/otlp/src/otlp_http_client.cc',
         'exporters/otlp/src/otlp_http_exporter.cc',
         'exporters/otlp/src/otlp_http_exporter_options.cc',
+        'exporters/otlp/src/otlp_http_metric_exporter.cc',
+        'exporters/otlp/src/otlp_http_metric_exporter_options.cc',
+        'exporters/otlp/src/otlp_metric_utils.cc',
         'exporters/otlp/src/otlp_log_recordable.cc',
         'exporters/otlp/src/otlp_populate_attribute_utils.cc',
         'exporters/otlp/src/otlp_recordable_utils.cc',
@@ -24,8 +27,10 @@
         'sdk/src/trace/exporter.cc',
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/common/v1/common.pb.cc',
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/logs/v1/logs.pb.cc',
+        'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/metrics/v1/metrics.pb.cc',
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/resource/v1/resource.pb.cc',
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/trace/v1/trace.pb.cc',
+        'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/metrics/v1/metrics_service.pb.cc',
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/trace/v1/trace_service.pb.cc'
       ],
       'include_dirs': [

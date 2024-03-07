@@ -1,9 +1,13 @@
 #include "otlp_agent.h"
+#include "nsolid/nsolid_api.h"
+#include "env-inl.h"
 #include "debug_utils-inl.h"
 #include "datadog_metrics.h"
 #include "dynatrace_metrics.h"
 #include "newrelic_metrics.h"
-#include "opentelemetry/sdk/resource/resource.h"
+#include "nsolid/nsolid_util.h"
+#include "otlp_metrics.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
 #include "opentelemetry/ext/http/client/curl/http_client_curl.h"
@@ -18,14 +22,17 @@ namespace exporter = OPENTELEMETRY_NAMESPACE::exporter;
 namespace ext = OPENTELEMETRY_NAMESPACE::ext;
 namespace trace = OPENTELEMETRY_NAMESPACE::trace;
 namespace resource = sdk::resource;
+namespace instrumentationscope = sdk::instrumentationscope;
 namespace detail = trace::propagation::detail;
+using resource::SemanticConventions::kServiceName;
+using resource::SemanticConventions::kServiceInstanceId;
+using resource::SemanticConventions::kServiceVersion;
 
 static const size_t kTraceIdSize             = 32;
 static const size_t kSpanIdSize              = 16;
 
 static std::atomic<bool> is_running_ = { false };
 nsuv::ns_rwlock exit_lock_;
-static resource::ResourceAttributes resource_attributes_;
 
 namespace node {
 namespace nsolid {
@@ -42,6 +49,15 @@ inline void DebugJSON(const char* str, const json& msg) {
         DebugCategory::NSOLID_OTLP_AGENT))) {
     Debug(str, msg.dump(4).c_str());
   }
+}
+
+JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
+    metrics_(ThreadMetrics::Create(envinst)),
+    prev_() {
+  const AliasedFloat64Array& ps =
+      envinst->env()->performance_state()->milestones;
+  loop_start_ = performance::performance_process_start_timestamp +
+                ps[performance::NODE_PERFORMANCE_MILESTONE_LOOP_START] / 1e3;
 }
 
 
@@ -64,6 +80,7 @@ OTLPAgent::OTLPAgent(): ready_(false),
                         hooks_init_(false),
                         trace_flags_(0),
                         otlp_http_exporter_(nullptr),
+                        resource_(create_resource()),
                         metrics_interval_(0),
                         proc_metrics_(),
                         proc_prev_stor_(),
@@ -73,6 +90,8 @@ OTLPAgent::OTLPAgent(): ready_(false),
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
   ASSERT_EQ(0, exit_lock_.init(true));
   is_running_ = true;
+  scope_ = instrumentationscope::InstrumentationScope::Create(
+            "nsolid", NODE_VERSION "+ns" NSOLID_VERSION);
 }
 
 
@@ -249,15 +268,18 @@ int OTLPAgent::config(const nlohmann::json& config) {
   std::tuple<SharedEnvInst, bool> tup;
   while (agent->env_msg_q_.dequeue(tup)) {
     SharedEnvInst envinst = std::get<0>(tup);
-    bool creation = std::get<1>(tup);
-    if (creation) {
-      auto pair = agent->env_metrics_map_.emplace(
-        std::piecewise_construct,
-        std::forward_as_tuple(GetThreadId(envinst)),
-        std::forward_as_tuple(envinst));
-      ASSERT(pair.second);
-    } else {
-      agent->env_metrics_map_.erase(GetThreadId(envinst));
+    EnvInst::Scope scp(envinst);
+    if (scp.Success()) {
+      bool creation = std::get<1>(tup);
+      if (creation) {
+        auto pair = agent->env_metrics_map_.emplace(
+          std::piecewise_construct,
+          std::forward_as_tuple(GetThreadId(envinst)),
+          std::forward_as_tuple(envinst));
+        ASSERT(pair.second);
+      } else {
+        agent->env_metrics_map_.erase(GetThreadId(envinst));
+      }
     }
   }
 }
@@ -296,14 +318,13 @@ void OTLPAgent::do_start() {
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, this));
 
+  ready_ = true;
   if (!hooks_init_) {
     ASSERT_EQ(0, OnConfigurationHook(config_agent_cb_, this));
     ASSERT_EQ(0, ThreadAddedHook(on_thread_add_, this));
     ASSERT_EQ(0, ThreadRemovedHook(on_thread_remove_, this));
     hooks_init_ = true;
   }
-
-  ready_ = true;
 
   uv_cond_signal(&start_cond_);
   uv_mutex_unlock(&start_lock_);
@@ -346,7 +367,6 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
   using time_point = std::chrono::system_clock::time_point;
   using std::chrono::milliseconds;
   using std::chrono::nanoseconds;
-  auto resource = resource::Resource::Create(resource_attributes_);
   std::vector<std::unique_ptr<sdk::trace::Recordable>> recordables;
   Tracer::SpanStor s;
   while (agent->span_msg_q_.dequeue(s)) {
@@ -397,7 +417,7 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
 
     recordable->SetAttribute("thread.id", s.thread_id);
 
-    recordable->SetResource(resource);
+    recordable->SetResource(agent->resource_);
 
     recordables.push_back(std::move(recordable));
   }
@@ -432,14 +452,13 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
     return;
   }
 
-  std::vector<std::pair<ThreadMetricsStor,
-                        ThreadMetricsStor>> thr_metrics_vector;
+  std::vector<MetricsExporter::ThrMetricsStor> thr_metrics_vector;
   ThreadMetricsStor stor;
   while (agent->thr_metrics_msg_q_.dequeue(stor)) {
     auto it = agent->env_metrics_map_.find(stor.thread_id);
     if (it != agent->env_metrics_map_.end()) {
       auto& metrics = it->second;
-      thr_metrics_vector.emplace_back(stor, metrics.prev_);
+      thr_metrics_vector.push_back({stor, metrics.prev_, metrics.loop_start_ });
       metrics.prev_ = stor;
     }
   }
@@ -564,7 +583,6 @@ void OTLPAgent::config_otlp_agent(const json& config) {
     ASSERT(it != config.end());
     const nlohmann::json& otlp = it.value();
     config_endpoint(type, otlp);
-    config_service(config);
   } else {
     Debug("No otlp agent configuration. Stopping the agent\n");
     do_stop();
@@ -576,21 +594,29 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
   auto it = config.find("url");
   ASSERT(it != config.end());
   exporter::otlp::OtlpHttpExporterOptions opts;
-  opts.url = it->get<std::string>() + "/v1/traces";
+  const std::string url = it->get<std::string>();
+  opts.url = url + "/v1/traces";
   setup_trace_otlp_exporter(opts);
+  metrics_exporter_.reset(new OTLPMetrics(&loop_, url, "", *this));
 }
 
-
-void OTLPAgent::config_service(const json& config) {
+resource::Resource OTLPAgent::create_resource() const {
+  json config = json::parse(nsolid::GetConfig(), nullptr, false);
+  // assert because the runtime should never send me an invalid JSON config
+  ASSERT(!config.is_discarded());
   auto it = config.find("app");
   ASSERT(it != config.end());
-  resource_attributes_.SetAttribute("service.name", it->get<std::string>());
-  resource_attributes_.SetAttribute("service.version", "1.0.0");
+  resource::ResourceAttributes attrs({
+    {kServiceName, it->get<std::string>()},
+    {kServiceInstanceId, nsolid::GetAgentId()}
+  });
+
   it = config.find("appVersion");
   if (it != config.end()) {
-    resource_attributes_.SetAttribute("service.version",
-                                      it->get<std::string>());
+    attrs.SetAttribute(kServiceVersion, it->get<std::string>());
   }
+
+  return resource::Resource::Create(attrs);
 }
 
 

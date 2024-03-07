@@ -165,13 +165,13 @@ std::string ProcessMetrics::toJSON() {
 
   uv_mutex_lock(&stor_lock_);
   metrics_string += "{";
-#define V(Type, CName, JSName, MType)                                          \
+#define V(Type, CName, JSName, MType, Unit)                                    \
   metrics_string += "\"" #JSName "\":";                                        \
   metrics_string += nlohmann::json(stor_.CName).dump();                        \
   metrics_string += ",";
   NSOLID_PROCESS_METRICS_STRINGS(V)
 #undef V
-#define V(Type, CName, JSName, MType)                                          \
+#define V(Type, CName, JSName, MType, Unit)                                    \
   metrics_string += "\"" #JSName "\":";                                        \
   metrics_string += std::to_string(stor_.CName);                               \
   metrics_string += ",";
@@ -314,13 +314,13 @@ std::string ThreadMetrics::toJSON() {
   uv_mutex_unlock(&stor_lock_);
 
   metrics_string += "{";
-#define V(Type, CName, JSName, MType)                                          \
+#define V(Type, CName, JSName, MType, Unit)                                    \
   metrics_string += "\"" #JSName "\":\"";                                      \
   metrics_string += dup.CName;                                                 \
   metrics_string += "\",";
   NSOLID_ENV_METRICS_STRINGS(V)
 #undef V
-#define V(Type, CName, JSName, MType)                                          \
+#define V(Type, CName, JSName, MType, Unit)                                    \
   metrics_string += "\"" #JSName "\":";                                        \
   metrics_string += isnan(dup.CName) ?                                         \
       "null" : std::to_string(dup.CName);                                      \

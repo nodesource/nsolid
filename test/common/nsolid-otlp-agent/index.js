@@ -18,9 +18,13 @@ class OTLPServer extends EventEmitter {
     };
     this.#server = fork(path.join(__dirname, 'otlp-server.mjs') + '', args, opts);
     this.#server.on('message', (message) => {
+      // console.dir(message, { depth: null });
       switch (message.type) {
+        case 'metrics':
+          this.emit('metrics', message.data);
+          break;
         case 'spans':
-          this.emit('spans', message.spans);
+          this.emit('spans', message.data);
           break;
         case 'port':
           cb(null, message.port);

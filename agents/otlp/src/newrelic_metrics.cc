@@ -35,7 +35,7 @@ void NewRelicMetrics::got_proc_metrics(
     const ProcessMetricsStor& prev_stor) {
   json metrics = json::array();
 
-#define V(CType, CName, JSName, MType)                                         \
+#define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \
   auto it = std::find(discarded_metrics.begin(),                               \
                       discarded_metrics.end(),                                 \
@@ -88,11 +88,10 @@ void NewRelicMetrics::got_proc_metrics(
 
 /*virtual*/
 void NewRelicMetrics::got_thr_metrics(
-    const std::vector<std::pair<ThreadMetricsStor,
-                                ThreadMetricsStor>>& thr_metrics) {
+    const std::vector<MetricsExporter::ThrMetricsStor>& thr_metrics) {
   json body = json::array();
   for (const auto& tm : thr_metrics) {
-    body.push_back(got_thr_metrics(tm.first, tm.second));
+    body.push_back(got_thr_metrics(tm.stor, tm.prev_stor));
   }
 
   if (body.size() > 0) {
@@ -105,7 +104,7 @@ void NewRelicMetrics::got_thr_metrics(
 json NewRelicMetrics::got_thr_metrics(const ThreadMetricsStor& stor,
                                       const ThreadMetricsStor& prev_stor) {
   json metrics = json::array();
-#define V(CType, CName, JSName, MType)                                         \
+#define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \
   auto it = std::find(discarded_metrics.begin(),                               \
                       discarded_metrics.end(),                                 \
