@@ -543,7 +543,7 @@ void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, WeakStatsDAgent agent_wp) {
   ThreadMetrics::MetricsStor stor;
   while (agent->metrics_msg_q_.dequeue(stor)) {
     json body = {
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
       { #JSName, stor.CName },
       NSOLID_ENV_METRICS_NUMBERS(V)
 #undef V
@@ -853,7 +853,7 @@ void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent agent_wp) {
   ASSERT_EQ(0, agent->proc_metrics_.Update());
   proc_stor = agent->proc_metrics_.Get();
   json body = {
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
     { #JSName, proc_stor.CName },
     NSOLID_PROCESS_METRICS_NUMBERS(V)
 #undef V

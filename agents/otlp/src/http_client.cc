@@ -16,8 +16,8 @@ OTLPHttpClient::OTLPHttpClient(uv_loop_t* loop): HttpClient(loop) {
 }
 
 int OTLPHttpClient::post_datadog_metrics(const std::string& url,
-                                     const std::string& key,
-                                     const std::string& metrics) {
+                                         const std::string& key,
+                                         const std::string& metrics) {
   static std::string auth = "DD-API-KEY: ";
   struct curl_slist* header_list = nullptr;
   header_list = curl_slist_append(header_list, std::string(auth + key).c_str());
@@ -26,8 +26,8 @@ int OTLPHttpClient::post_datadog_metrics(const std::string& url,
 }
 
 int OTLPHttpClient::post_dynatrace_metrics(const std::string& url,
-                                       const std::string& auth_header,
-                                       const std::string& metrics) {
+                                           const std::string& auth_header,
+                                           const std::string& metrics) {
   static std::string auth = "Authorization: ";
   struct curl_slist* header_list = nullptr;
   header_list = curl_slist_append(header_list,
@@ -37,8 +37,8 @@ int OTLPHttpClient::post_dynatrace_metrics(const std::string& url,
 }
 
 int OTLPHttpClient::post_newrelic_metrics(const std::string& url,
-                                      const std::string& key,
-                                      const std::string& metrics) {
+                                          const std::string& key,
+                                          const std::string& metrics) {
   static std::string auth = "api-key: ";
   struct curl_slist* header_list = nullptr;
   header_list = curl_slist_append(header_list, std::string(auth + key).c_str());
@@ -48,8 +48,8 @@ int OTLPHttpClient::post_newrelic_metrics(const std::string& url,
 }
 
 int OTLPHttpClient::post_metrics(const std::string& url,
-                             const std::string& metrics,
-                             struct curl_slist* header_list) {
+                                 const std::string& metrics,
+                                 struct curl_slist* header_list) {
   Debug("Posting Metrics to '%s'\n", url.c_str());
   CURL* handle = curl_easy_init();
   ASSERT_NOT_NULL(handle);

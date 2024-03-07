@@ -35,7 +35,7 @@ void DatadogMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                       const ProcessMetricsStor& prev_stor) {
   json series = json::array();
 
-#define V(CType, CName, JSName, MType)                                         \
+#define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \
   auto it = std::find(discarded_metrics.begin(),                               \
                       discarded_metrics.end(),                                 \
@@ -85,11 +85,10 @@ void DatadogMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
 
 /*virtual*/
 void DatadogMetrics::got_thr_metrics(
-    const std::vector<std::pair<ThreadMetricsStor,
-                                ThreadMetricsStor>>& thr_metrics) {
+    const std::vector<MetricsExporter::ThrMetricsStor>& thr_metrics) {
   json series = json::array();
   for (const auto& tm : thr_metrics) {
-    got_thr_metrics(tm.first, tm.second, series);
+    got_thr_metrics(tm.stor, tm.prev_stor, series);
   }
 
   if (series.size() > 0) {
@@ -106,7 +105,7 @@ void DatadogMetrics::got_thr_metrics(
 void DatadogMetrics::got_thr_metrics(const ThreadMetricsStor& stor,
                                      const ThreadMetricsStor& prev_stor,
                                      nlohmann::json& series) {
-#define V(CType, CName, JSName, MType)                                         \
+#define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \
   auto it = std::find(discarded_metrics.begin(),                               \
                       discarded_metrics.end(),                                 \

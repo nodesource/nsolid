@@ -10,6 +10,9 @@ async function startServer(cb) {
   const ExportSpansServiceRequestProto =
     getExportRequestProto(ServiceClientType.SPANS);
 
+  const ExportMetricsServiceRequestProto =
+    getExportRequestProto(ServiceClientType.METRICS);
+
   const server = http.createServer(async (req, res) => {
     const body = [];
     req.on('data', (chunk) => {
@@ -20,9 +23,20 @@ async function startServer(cb) {
         data: 'Hello World!',
       }));
 
-      const data = ExportSpansServiceRequestProto.decode(Buffer.concat(body));
-      const spans = data?.toJSON();
-      cb(null, spans);
+      // If url ends in traces, decode spans
+      if (req.url.endsWith('/v1/traces')) {
+        const data = ExportSpansServiceRequestProto.decode(Buffer.concat(body));
+        const spans = data?.toJSON();
+        cb(null, 'spans', spans);
+        return;
+      }
+
+      // If url ends in metrics, decode metrics
+      if (req.url.endsWith('/v1/metrics')) {
+        const data = ExportMetricsServiceRequestProto.decode(Buffer.concat(body));
+        const metrics = data?.toJSON();
+        cb(null, 'metrics', metrics);
+      }
     });
   });
 
@@ -36,9 +50,9 @@ async function startServer(cb) {
   return server;
 }
 
-const server = await startServer((err, spans) => {
+const server = await startServer((err, type, data) => {
   assert.ifError(err);
-  process.send({ type: 'spans', spans });
+  process.send({ type, data });
 });
 
 process.send({ type: 'port', port: server.address().port });

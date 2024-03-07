@@ -143,38 +143,38 @@ const char MSG_7[] = "{"
 "}";
 
 const char PROCESS_METRICS_MSG[] = "{"
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
   "\"" #JSName "\":%" PRIu64
   NSOLID_PROCESS_METRICS_UINT64_FIRST(V)
 #undef V
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
   ",\"" #JSName "\":%" PRIu64
   NSOLID_PROCESS_METRICS_UINT64(V)
 #undef V
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
   ",\""#JSName"\":%f"
   NSOLID_PROCESS_METRICS_DOUBLE(V)
 #undef V
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
   ",\""#JSName"\":%s"
   NSOLID_PROCESS_METRICS_STRINGS(V)
 #undef V
   "}";
 
 const char THREAD_METRICS_MSG[] = "{"
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
   "\"" #JSName "\":%" PRIu64
   NSOLID_ENV_METRICS_UINT64_FIRST(V)
 #undef V
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
   ",\"" #JSName "\":%" PRIu64
   NSOLID_ENV_METRICS_UINT64(V)
 #undef V
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
   ",\""#JSName"\":%f"
   NSOLID_ENV_METRICS_DOUBLE(V)
 #undef V
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
   ",\""#JSName"\":%s"
   NSOLID_ENV_METRICS_STRINGS(V)
 #undef V
@@ -904,11 +904,11 @@ void ZmqAgent::got_env_metrics(const ThreadMetrics::MetricsStor& stor) {
     snprintf(msg_buf_,
              msg_size_,
              PROCESS_METRICS_MSG
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
             , proc_stor.CName
 NSOLID_PROCESS_METRICS_NUMBERS(V)
 #undef V
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
             , json(proc_stor.CName).dump().c_str()
 NSOLID_PROCESS_METRICS_STRINGS(V)
 #undef V
@@ -922,11 +922,11 @@ NSOLID_PROCESS_METRICS_STRINGS(V)
       snprintf(msg_buf_,
                msg_size_,
                THREAD_METRICS_MSG
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
             , it->CName
 NSOLID_ENV_METRICS_NUMBERS(V)
 #undef V
-#define V(Type, CName, JSName, MType) \
+#define V(Type, CName, JSName, MType, Unit) \
             , json(it->CName.c_str()).dump().c_str()
 NSOLID_ENV_METRICS_STRINGS(V)
 #undef V

@@ -18,9 +18,8 @@ class DynatraceMetrics final: public MetricsExporter {
   virtual void got_proc_metrics(const ProcessMetrics::MetricsStor& stor,
                                 const ProcessMetrics::MetricsStor& prev_stor);
 
-  void got_thr_metrics(
-      const std::vector<std::pair<ThreadMetrics::MetricsStor,
-                                  ThreadMetrics::MetricsStor>>&);
+  virtual void got_thr_metrics(
+      const std::vector<MetricsExporter::ThrMetricsStor>&);
 
 
  private:

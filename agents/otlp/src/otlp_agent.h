@@ -8,19 +8,23 @@
 
 #include "asserts-cpp/asserts.h"
 #include "metrics_exporter.h"
+#include "opentelemetry/sdk/resource/resource.h"
 
 
 // Class pre-declaration
-namespace opentelemetry {
-inline namespace v1 {
+OPENTELEMETRY_BEGIN_NAMESPACE
 namespace exporter {
 namespace otlp {
 class OtlpHttpExporter;
 struct OtlpHttpExporterOptions;
 }
 }
+namespace sdk {
+namespace instrumentationscope {
+class InstrumentationScope;
 }
 }
+OPENTELEMETRY_END_NAMESPACE
 
 namespace node {
 namespace nsolid {
@@ -28,11 +32,10 @@ namespace nsolid {
 namespace otlp {
 
 struct JSThreadMetrics {
+  explicit JSThreadMetrics(SharedEnvInst envinst);
   SharedThreadMetrics metrics_;
   ThreadMetrics::MetricsStor prev_;
-  explicit JSThreadMetrics(SharedEnvInst envinst)
-    : metrics_(ThreadMetrics::Create(envinst)),
-      prev_() {}
+  double loop_start_;
 };
 
 class OTLPAgent {
@@ -46,6 +49,7 @@ class OTLPAgent {
   int config(const nlohmann::json& config);
 
  private:
+  friend class OTLPMetrics;
   OTLPAgent();
 
   ~OTLPAgent();
@@ -93,12 +97,12 @@ class OTLPAgent {
 
   void config_otlp_endpoint(const nlohmann::json& config);
 
-  void config_service(const nlohmann::json& service);
+  OPENTELEMETRY_NAMESPACE::sdk::resource::Resource create_resource() const;
 
   void got_proc_metrics();
 
   void setup_trace_otlp_exporter(  // NOLINTNEXTLINE(runtime/references)
-    opentelemetry::v1::exporter::otlp::OtlpHttpExporterOptions& opts);
+    OPENTELEMETRY_NAMESPACE::exporter::otlp::OtlpHttpExporterOptions& opts);
 
   int setup_metrics_timer(uint64_t period);
 
@@ -124,8 +128,12 @@ class OTLPAgent {
   TSQueue<Tracer::SpanStor> span_msg_q_;
   uint32_t trace_flags_;
 
-  std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpHttpExporter>
+  std::unique_ptr<OPENTELEMETRY_NAMESPACE::exporter::otlp::OtlpHttpExporter>
     otlp_http_exporter_;
+  OPENTELEMETRY_NAMESPACE::sdk::resource::Resource resource_;
+  std::unique_ptr
+    <OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope>
+      scope_;
 
   // For the Metrics API
   uint64_t metrics_interval_;
