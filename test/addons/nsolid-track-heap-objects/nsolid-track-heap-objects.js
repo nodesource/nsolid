@@ -26,6 +26,8 @@ if (!isMainThread) {
   return;
 }
 
+const keepAlive = setInterval(() => {}, 1000);
+
 process.on('beforeExit', mustCall(() => {
   er = binding.stopTrackingHeapObjects(0);
   // It could be peding or not.
@@ -33,34 +35,40 @@ process.on('beforeExit', mustCall(() => {
 }));
 
 // Normal usage check.
-er = binding.startTrackingHeapObjects(threadId, false, false, 10000);
-assert.strictEqual(er, 0);
-er = binding.stopTrackingHeapObjects(threadId);
-assert.strictEqual(er, 0);
-setTimeout(() => {
-  // Check error codes for invalid calls.
-  er = binding.startTrackingHeapObjects(threadId, false, false, 10000);
-  assert.strictEqual(er, 0);
-  er = binding.startTrackingHeapObjects(threadId, false, false, 10);
-  assert.strictEqual(er, UV_EEXIST);
+er = binding.startTrackingHeapObjects(threadId, false, false, 10000, mustCall((status, profile) => {
+  assert.strictEqual(status, 0);
+  assert(JSON.parse(profile));
 
-  er = binding.stopTrackingHeapObjectsSync(threadId);
-  assert.strictEqual(er, 0);
-  setTimeout(() => {
+  // // Check error codes for invalid calls.
+  er = binding.startTrackingHeapObjects(threadId, false, false, 10000, mustCall((status, profile) => {
+    assert.strictEqual(status, 0);
+    assert(JSON.parse(profile));
+
     er = binding.stopTrackingHeapObjects(threadId);
     assert.strictEqual(er, UV_ENOENT);
     // Test getting profile
-    er = binding.startTrackingHeapObjects(threadId, false, false, 10);
-    assert.strictEqual(er, 0);
+    er = binding.startTrackingHeapObjects(threadId, false, false, 10, mustCall((status, profile) => {
+      assert.strictEqual(status, 0);
+      assert(JSON.parse(profile));
 
-    setTimeout(() => {
-      // The CPU profile should have ended by now.
       er = binding.stopTrackingHeapObjects(threadId);
       assert.strictEqual(er, UV_ENOENT);
       testWorker();
-    }, 500);
-  }, 500);
-}, 500);
+      clearInterval(keepAlive);
+    }));
+    assert.strictEqual(er, 0);
+  }));
+
+  assert.strictEqual(er, 0);
+  er = binding.startTrackingHeapObjects(threadId, false, false, 10);
+  assert.strictEqual(er, UV_EEXIST);
+  er = binding.stopTrackingHeapObjectsSync(threadId);
+  assert.strictEqual(er, 0);
+}));
+
+assert.strictEqual(er, 0);
+er = binding.stopTrackingHeapObjects(threadId);
+assert.strictEqual(er, 0);
 
 function testWorker() {
   const worker = new Worker(__filename, { argv: [process.pid] });

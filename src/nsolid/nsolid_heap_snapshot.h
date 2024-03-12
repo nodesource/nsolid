@@ -20,9 +20,15 @@ namespace nsolid {
 
 class NSolidHeapSnapshot {
  public:
+  enum HeapSnapshotFlags {
+    kFlagNone = 0,
+    kFlagIsTrackingHeapObjects = 1 << 0,
+    kFlagIsDone = 1 << 1
+  };
+
   struct HeapSnapshotStor {
     bool redacted;
-    bool is_tracking_heapobjects_;
+    uint32_t flags;
     uint64_t snapshot_id;
     Snapshot::snapshot_proxy_sig cb;
     internal::user_data data;

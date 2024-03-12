@@ -26,12 +26,16 @@ int NSolidHeapSnapshot::StartTrackingHeapObjects(
     Snapshot::snapshot_proxy_sig proxy) {
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
-  uint64_t profile_id = in_progress_timers_.fetch_add(
-      1, std::memory_order_relaxed);
+  uint64_t profile_id =
+    in_progress_timers_.fetch_add(1, std::memory_order_relaxed);
   // We can not trigger this command if there is already a snapshot in progress
   auto it = threads_running_snapshots_.emplace(
         thread_id,
-        HeapSnapshotStor{ redacted, true, profile_id, proxy, std::move(data) });
+        HeapSnapshotStor{ redacted,
+                          kFlagIsTrackingHeapObjects,
+                          profile_id,
+                          proxy,
+                          std::move(data) });
   if (it.second == false) {
     return UV_EEXIST;
   }
@@ -62,9 +66,8 @@ int NSolidHeapSnapshot::GetHeapSnapshot(SharedEnvInst envinst,
     return UV_EEXIST;
   }
 
-  uint64_t profile_id = in_progress_timers_.fetch_add(
-      1,
-      std::memory_order_relaxed);
+  uint64_t profile_id =
+    in_progress_timers_.fetch_add(1, std::memory_order_relaxed);
 
   int status = RunCommand(envinst,
                           CommandType::Interrupt,
@@ -76,7 +79,7 @@ int NSolidHeapSnapshot::GetHeapSnapshot(SharedEnvInst envinst,
         thread_id,
         HeapSnapshotStor{
             redacted,
-            false,
+            kFlagNone,
             profile_id,
             proxy,
             internal::user_data(data, deleter)});
@@ -90,8 +93,10 @@ int NSolidHeapSnapshot::StopTrackingHeapObjects(SharedEnvInst envinst) {
   nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
   auto it = threads_running_snapshots_.find(thread_id);
   // Make sure there is a snapshot running
-  if (it == threads_running_snapshots_.end())
+  if (it == threads_running_snapshots_.end() ||
+      !(it->second.flags & kFlagIsTrackingHeapObjects)) {
     return UV_ENOENT;
+  }
 
   int er = RunCommand(envinst,
                       CommandType::Interrupt,
@@ -111,7 +116,7 @@ int NSolidHeapSnapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
   HeapSnapshotStor& stor = it->second;
   // If this condition is reached. This was called by EnvList::RemoveEnv.
   // It wants to stop any pending snapshot w/ tracking heap object.
-  if (!stor.is_tracking_heapobjects_) {
+  if (!(stor.flags & kFlagIsTrackingHeapObjects) || stor.flags & kFlagIsDone) {
     // If no pending trackers, just do nothing
     // There are not peding snapshots with trackers
     return UV_ENOENT;
@@ -142,10 +147,7 @@ int NSolidHeapSnapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
       snapshot->Serialize(&stream);
     }
 
-    ASSERT_EQ(stor.is_tracking_heapobjects_, true);
     profiler->StopTrackingHeapObjects();
-    stor.is_tracking_heapobjects_ = false;
-
 
     // At this point, the snapshot is fully serialized
     stor.cb(0, snapshot_str.c_str(), stor.data.get());
@@ -176,7 +178,7 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
   HeapSnapshotStor& stor = it->second;
   // If this condition is reached. This was called by EnvList::RemoveEnv.
   // It wants to stop any pending snapshot w/ tracking heap object.
-  if (!stor.is_tracking_heapobjects_) {
+  if (!(stor.flags & kFlagIsTrackingHeapObjects) || stor.flags & kFlagIsDone) {
     // If no pending trackers, just do nothing
     // There are not peding snapshots with trackers
     return;
@@ -191,9 +193,10 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
 
   const v8::HeapSnapshot* snapshot = profiler->TakeHeapSnapshot();
   if (snapshot == nullptr) {
-    stor.cb(heap_profiler::HEAP_SNAPSHOT_FAILURE,
-            std::string(),
-            stor.data.get());
+    QueueCallback(snapshot_cb,
+                  thread_id,
+                  heap_profiler::HEAP_SNAPSHOT_FAILURE,
+                  std::string());
   } else {
     DataOutputStream<uint64_t, v8::HeapSnapshot> stream(
       [](std::string snapshot_str, uint64_t* tid) {
@@ -207,15 +210,15 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
       snapshot->Serialize(&stream);
     }
 
-    ASSERT_EQ(stor.is_tracking_heapobjects_, true);
     profiler->StopTrackingHeapObjects();
-    stor.is_tracking_heapobjects_ = false;
 
     // Work around a deficiency in the API. The HeapSnapshot object is const
     // but we cannot call HeapProfiler::DeleteAllHeapSnapshots() because that
     // invalidates _all_ snapshots, including those created by other tools.
     const_cast<v8::HeapSnapshot*>(snapshot)->Delete();
   }
+
+  stor.flags |= kFlagIsDone;
 }
 
 void NSolidHeapSnapshot::start_tracking_heapobjects(
@@ -231,7 +234,7 @@ void NSolidHeapSnapshot::start_tracking_heapobjects(
   ASSERT(it != snapshotter->threads_running_snapshots_.end());
 
   HeapSnapshotStor& stor = it->second;
-  ASSERT_EQ(stor.is_tracking_heapobjects_, true);
+  ASSERT(stor.flags & kFlagIsTrackingHeapObjects);
 
   envinst->isolate()->GetHeapProfiler()->StartTrackingHeapObjects(
       trackAllocations);
@@ -266,7 +269,7 @@ void NSolidHeapSnapshot::take_snapshot_timer(SharedEnvInst envinst,
     return;
   }
 
-  ASSERT_EQ(stor.is_tracking_heapobjects_, true);
+  ASSERT(stor.flags & kFlagIsTrackingHeapObjects);
 
   // Give control back to the V8 thread
   int er = RunCommand(envinst,
@@ -320,9 +323,8 @@ void NSolidHeapSnapshot::take_snapshot(SharedEnvInst envinst,
     }
 
     // A snapshot requested via `StopTrackingHeapObjects` or timer
-    if (stor.is_tracking_heapobjects_) {
+    if (stor.flags & kFlagIsTrackingHeapObjects) {
       profiler->StopTrackingHeapObjects();
-      stor.is_tracking_heapobjects_ = false;
     }
 
     // Work around a deficiency in the API. The HeapSnapshot object is const
@@ -330,6 +332,8 @@ void NSolidHeapSnapshot::take_snapshot(SharedEnvInst envinst,
     // invalidates _all_ snapshots, including those created by other tools.
     const_cast<v8::HeapSnapshot*>(snapshot)->Delete();
   }
+
+  stor.flags |= kFlagIsDone;
 }
 
 void NSolidHeapSnapshot::snapshot_cb(uint64_t thread_id,
