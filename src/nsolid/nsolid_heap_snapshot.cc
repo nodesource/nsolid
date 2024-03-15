@@ -1,4 +1,7 @@
 #include "nsolid_heap_snapshot.h"
+#include "asserts-cpp/asserts.h"
+#include "nsolid_api.h"
+#include "nsolid_output_stream.h"
 
 namespace node {
 namespace nsolid {
