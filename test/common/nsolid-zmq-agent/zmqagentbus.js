@@ -24,6 +24,17 @@ const defaultHeapProfileSettings = {
   },
 };
 
+const defaultHeapSamplingSettings = {
+  duration: 5000, // milliseconds
+  sampleInterval: 512 * 1024,
+  stackDepth: 16,
+  flags: 0,
+  threadId: 0,
+  metadata: {
+    reason: 'unspecified',
+  },
+};
+
 const defaultSnapshotSettings = {
   threadId: 0,
   metadata: {
@@ -174,6 +185,19 @@ class ZmqAgentBus extends EventEmitter {
     const args = profileSettings === null ? profileSettings : { ...defaultHeapProfileSettings, ...profileSettings };
     const requestId = this._sendCB({ id: id, command: 'heap_profile', args }, callback);
     debuglog('ZmqAgentBus:agentHeapProfileStart', requestId);
+    return requestId;
+  }
+
+  /**
+   * Send heap_sampling start to a connected agent
+   * @param {agentId} id the Agent id
+   * @param {object} samplingSettings heap sampling command settings object
+   * @returns {string} requestId
+   */
+  agentHeapSamplingStart(id, samplingSettings, callback) {
+    const args = samplingSettings === null ? samplingSettings : { ...defaultHeapSamplingSettings, ...samplingSettings };
+    const requestId = this._sendCB({ id: id, command: 'heap_sampling', args }, callback);
+    debuglog('ZmqAgentBus:agentHeapSamplingStart', requestId);
     return requestId;
   }
 
