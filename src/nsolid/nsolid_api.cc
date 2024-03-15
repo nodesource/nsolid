@@ -5,7 +5,6 @@
 #include "nsolid_cpu_profiler.h"
 #include "otlp/src/otlp_agent.h"
 #include "statsd/src/statsd_agent.h"
-#include "nsuv-inl.h"
 #include "util.h"
 #include "env-inl.h"
 #include "uv.h"
@@ -969,7 +968,7 @@ void EnvList::RemoveEnv(Environment* env) {
   // End any pending CPU profiles. This has to be done before removing the
   // EnvList from env_map_ so the checks in StopProfilingSync() pass.
   NSolidCpuProfiler::Inst()->StopProfilingSync(envinst_sp);
-  NSolidHeapSnapshot::Inst()->StopTrackingHeapObjectsSync(envinst_sp);
+  heap_snapshot_.StopTrackingHeapObjects(envinst_sp);
 
   // Remove the GC prologue and epilogue callbacks just to be safe.
   envinst_sp->env()->isolate()->RemoveGCPrologueCallback(

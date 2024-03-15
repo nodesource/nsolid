@@ -17,9 +17,10 @@
 #include "node.h"
 #include "node_snapshotable.h"
 #include "nsolid.h"
-#include "../../deps/nsuv/include/nsuv-inl.h"
-#include "nsolid_util.h"
+#include "nsuv-inl.h"
+#include "nsolid_heap_snapshot.h"
 #include "nsolid_trace.h"
+#include "nsolid_util.h"
 #include "spinlock.h"
 #include "thread_safe.h"
 #include "v8.h"
@@ -567,6 +568,8 @@ class EnvList {
                        void* data);
   void RemoveMetricsStreamHook(TSList<MetricsStreamHookStor>::iterator it);
 
+  NSolidHeapSnapshot* HeapSnapshot() { return &heap_snapshot_; }
+
  private:
   friend class EnvInst;
   friend class Metrics;
@@ -679,6 +682,8 @@ class EnvList {
   DispatchQueue<tracing::SpanItem> span_item_q_;
 
   double time_origin_;
+
+  NSolidHeapSnapshot heap_snapshot_;
 };
 
 

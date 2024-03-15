@@ -33,7 +33,9 @@ class NSolidHeapSnapshot {
 
   NSOLID_DELETE_UNUSED_CONSTRUCTORS(NSolidHeapSnapshot)
 
-  static NSolidHeapSnapshot* Inst();
+  NSolidHeapSnapshot();
+  ~NSolidHeapSnapshot();
+
 
   int GetHeapSnapshot(SharedEnvInst envinst,
                       bool redacted,
@@ -53,9 +55,6 @@ class NSolidHeapSnapshot {
   int StopTrackingHeapObjectsSync(SharedEnvInst envinst);
 
  private:
-  NSolidHeapSnapshot();
-  ~NSolidHeapSnapshot();
-
   static void start_tracking_heapobjects(SharedEnvInst envinst,
                                          bool trackAllocations,
                                          uint64_t duration,
@@ -73,7 +72,8 @@ class NSolidHeapSnapshot {
 
   static void snapshot_cb(uint64_t thread_id,
                           int status,
-                          const std::string& snapshot);
+                          const std::string& snapshot,
+                          NSolidHeapSnapshot* snapshotter);
 
   std::map<uint64_t, HeapSnapshotStor> threads_running_snapshots_;
   nsuv::ns_mutex in_progress_heap_snapshots_;

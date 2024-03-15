@@ -6,11 +6,6 @@
 namespace node {
 namespace nsolid {
 
-NSolidHeapSnapshot* NSolidHeapSnapshot::Inst() {
-  static NSolidHeapSnapshot snapshot;
-  return &snapshot;
-}
-
 NSolidHeapSnapshot::NSolidHeapSnapshot() {
   ASSERT_EQ(0, in_progress_heap_snapshots_.init(true));
 }
@@ -199,11 +194,12 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
     QueueCallback(snapshot_cb,
                   thread_id,
                   heap_profiler::HEAP_SNAPSHOT_FAILURE,
-                  std::string());
+                  std::string(),
+                  snapshotter);
   } else {
     DataOutputStream<uint64_t, v8::HeapSnapshot> stream(
-      [](std::string snapshot_str, uint64_t* tid) {
-      QueueCallback(snapshot_cb, *tid, 0, snapshot_str);
+      [&snapshotter](std::string snapshot_str, uint64_t* tid) {
+      QueueCallback(snapshot_cb, *tid, 0, snapshot_str, snapshotter);
     }, snapshot, &thread_id);
 
     if (stor.redacted) {
@@ -311,11 +307,12 @@ void NSolidHeapSnapshot::take_snapshot(SharedEnvInst envinst,
     QueueCallback(snapshot_cb,
                   thread_id,
                   heap_profiler::HEAP_SNAPSHOT_FAILURE,
-                  std::string());
+                  std::string(),
+                  snapshotter);
   } else {
     DataOutputStream<uint64_t, v8::HeapSnapshot> stream(
-      [](std::string snapshot_str, uint64_t* tid) {
-      QueueCallback(snapshot_cb, *tid, 0, snapshot_str);
+      [&snapshotter](std::string snapshot_str, uint64_t* tid) {
+      QueueCallback(snapshot_cb, *tid, 0, snapshot_str, snapshotter);
     }, snapshot, &thread_id);
 
     if (stor.redacted) {
@@ -341,8 +338,8 @@ void NSolidHeapSnapshot::take_snapshot(SharedEnvInst envinst,
 
 void NSolidHeapSnapshot::snapshot_cb(uint64_t thread_id,
                                      int status,
-                                     const std::string& snapshot) {
-  NSolidHeapSnapshot* snapshotter = NSolidHeapSnapshot::Inst();
+                                     const std::string& snapshot,
+                                     NSolidHeapSnapshot* snapshotter) {
   nsuv::ns_mutex::scoped_lock lock(&snapshotter->in_progress_heap_snapshots_);
   auto it = snapshotter->threads_running_snapshots_.find(thread_id);
   ASSERT(it != snapshotter->threads_running_snapshots_.end());
