@@ -3,17 +3,14 @@
 
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
-#include <v8.h>
-#include <v8-profiler.h>
-#include <nsolid/nsolid_api.h>
-#include <nsolid/nsolid_output_stream.h>
 #include <atomic>
-#include <new>
-#include <set>
-#include <tuple>
+#include <map>
+#include <string>
 
-#include "asserts-cpp/asserts.h"
 #include "nlohmann/json.hpp"
+#include "nsolid.h"
+#include "nsolid_util.h"
+#include "nsuv-inl.h"
 
 namespace node {
 namespace nsolid {
