@@ -527,7 +527,7 @@ int Snapshot::start_tracking_heap_objects_(SharedEnvInst envinst,
                                            uint64_t duration,
                                            internal::user_data data,
                                            snapshot_proxy_sig proxy) {
-  return NSolidHeapSnapshot::Inst()->StartTrackingHeapObjects(
+  return EnvList::Inst()->HeapSnapshot()->StartTrackingHeapObjects(
       envinst, redacted, trackAllocations, duration, std::move(data), proxy);
 }
 
@@ -535,14 +535,14 @@ int Snapshot::StopTrackingHeapObjects(SharedEnvInst envinst) {
   if (envinst == nullptr)
     return UV_ESRCH;
 
-  return NSolidHeapSnapshot::Inst()->StopTrackingHeapObjects(envinst);
+  return EnvList::Inst()->HeapSnapshot()->StopTrackingHeapObjects(envinst);
 }
 
 int Snapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
   if (envinst == nullptr)
     return UV_ESRCH;
 
-  return NSolidHeapSnapshot::Inst()->StopTrackingHeapObjectsSync(envinst);
+  return EnvList::Inst()->HeapSnapshot()->StopTrackingHeapObjectsSync(envinst);
 }
 
 int Snapshot::get_snapshot_(SharedEnvInst envinst,
@@ -553,7 +553,7 @@ int Snapshot::get_snapshot_(SharedEnvInst envinst,
   if (envinst == nullptr)
     return UV_ESRCH;
 
-  return NSolidHeapSnapshot::Inst()->
+  return EnvList::Inst()->HeapSnapshot()->
     GetHeapSnapshot(envinst, redacted, data, proxy, deleter);
 }
 

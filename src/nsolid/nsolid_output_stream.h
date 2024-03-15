@@ -30,7 +30,7 @@ enum ErrorType {
 template <class Data, typename V8Object>
 class DataOutputStream : public v8::OutputStream {
  public:
-  using h_cb = void (*)(std::string, Data*);
+  typedef std::function<void(std::string, uint64_t*)> h_cb;
 
   DataOutputStream(h_cb cb,
                    const V8Object* object,
