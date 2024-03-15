@@ -205,7 +205,9 @@ const char PONG[] = "{\"pong\":true}";
   V(kDataNegotiated, "data_negotiated")                                        \
   V(kDuration, "duration")                                                     \
   V(kExit, "exit")                                                             \
+  V(kFlags, "flags")                                                           \
   V(kHeapProfile, "heap_profile")                                              \
+  V(kHeapSampling, "heap_sampling")                                            \
   V(kInterval, "interval")                                                     \
   V(kMessage, "message")                                                       \
   V(kMetadata, "metadata")                                                     \
@@ -214,7 +216,9 @@ const char PONG[] = "{\"pong\":true}";
   V(kProfile, "profile")                                                       \
   V(kReconfigure, "reconfigure")                                               \
   V(kRequestId, "requestId")                                                   \
+  V(kSampleInterval, "sampleInterval")                                         \
   V(kSnapshot, "snapshot")                                                     \
+  V(kStackDepth, "stackDepth")                                                 \
   V(kTrackAllocations, "trackAllocations")                                     \
   V(kThreadId, "threadId")                                                     \
   V(kVersion, "version")
@@ -1547,6 +1551,10 @@ int ZmqAgent::command_message(const json& message) {
     return start_heap_profiling(message, req_id);
   }
 
+  if (type == kHeapSampling) {
+    return start_heap_sampling(message, req_id);
+  }
+
   if (type == "info") {
     return send_info(req_id.c_str());
   }
@@ -1675,8 +1683,10 @@ ZmqAgent::ZmqCommandError ZmqAgent::create_command_error(
       cmd_error.code = 409;
       if (command == kProfile || command == kHeapProfile) {
         cmd_error.message = "Profile already in progress";
-      } else {
+      } else if (command == kSnapshot) {
         cmd_error.message = "Snapshot already in progress";
+      } else if (command == kHeapSampling) {
+        cmd_error.message = "Heap Sampling already in progress";
       }
     break;
     case UV_EINVAL:
@@ -2157,6 +2167,20 @@ void ZmqAgent::heap_profile_cb(int status,
   ASSERT_EQ(0, agent->profile_msg_.send());
 }
 
+void ZmqAgent::heap_sampling_cb(int status,
+                                std::string profile,
+                                uint64_t thread_id,
+                                ZmqAgent* agent) {
+  if (!is_running || agent->profile_msg_.is_closing()) {
+    return;
+  }
+
+  agent->profile_msg_q_.enqueue(
+    ProfileQStor { kHeapSampl, status, profile, thread_id });
+
+  ASSERT_EQ(0, agent->profile_msg_.send());
+}
+
 
 void ZmqAgent::cpu_profile_cb(int status,
                               std::string profile,
@@ -2178,6 +2202,9 @@ void ZmqAgent::profile_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
     switch (stor.type) {
       case kHeapProf:
         agent->got_prof<HeapProfilePolicy>(stor);
+      break;
+      case kHeapSampl:
+        agent->got_prof<HeapSamplingPolicy>(stor);
       break;
       case kCpu:
         agent->got_prof<CPUProfilePolicy>(stor);
@@ -2319,6 +2346,11 @@ int ZmqAgent::start_profiling(const json& message,
 int ZmqAgent::start_heap_profiling(const json& message,
                                    const std::string& req_id) {
   return start_prof<HeapProfilePolicy>(message, req_id);
+}
+
+int ZmqAgent::start_heap_sampling(const json& message,
+                                  const std::string& req_id) {
+  return start_prof<HeapSamplingPolicy>(message, req_id);
 }
 
 int ZmqAgent::stop_profiling(uint64_t thread_id) {
@@ -2697,6 +2729,48 @@ int ZmqAgent::HeapProfilePolicy::start_profiling(uint64_t thread_id,
                                             heap_profile_cb,
                                             thread_id,
                                             agent);
+}
+
+int ZmqAgent::HeapSamplingPolicy::start_profiling(uint64_t thread_id,
+                                                  uint64_t duration,
+                                                  const nlohmann::json& args,
+                                                  ProfileStor& stor,
+                                                  ZmqAgent* agent) {
+  auto it = args.find(kSampleInterval);
+  if (it != args.end()) {
+    if (!it->is_number_unsigned()) {
+      return UV_EINVAL;
+    }
+
+    stor.sample_interval = *it;
+  }
+
+  it = args.find(kStackDepth);
+  if (it != args.end()) {
+    if (!it->is_number_unsigned()) {
+      return UV_EINVAL;
+    }
+
+    stor.stack_depth = *it;
+  }
+
+  it = args.find(kFlags);
+  if (it != args.end()) {
+    if (!it->is_number_unsigned()) {
+      return UV_EINVAL;
+    }
+
+    stor.flags = *it;
+  }
+
+  return Snapshot::StartSampling(GetEnvInst(thread_id),
+                                 stor.sample_interval,
+                                 stor.stack_depth,
+                                 stor.flags,
+                                 duration,
+                                 heap_sampling_cb,
+                                 thread_id,
+                                 agent);
 }
 
 ZmqCommandHandleRes ZmqCommandHandle::create(ZmqAgent& agent,

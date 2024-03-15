@@ -1301,10 +1301,6 @@ int Snapshot::StartSampling(SharedEnvInst envinst,
                             uint64_t duration,
                             Cb&& cb,
                             Data&&... data) {
-  if (envinst == nullptr) {
-    return UV_ESRCH;
-  }
-
   // Use default profiler values
   uint64_t sample_interval = 512 * 1024;
   int stack_depth = 16;
