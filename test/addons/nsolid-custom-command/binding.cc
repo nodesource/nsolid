@@ -67,11 +67,11 @@ static void custom_command_cb(std::string req_id,
                                   NewStringType::kNormal).ToLocalChecked();
   }
 
-  fn->Call(context,
+  v8::MaybeLocal<Value> ret = fn->Call(context,
            Undefined(isolate),
            5,
            argv);
-
+  assert(!ret.IsEmpty());
   cb_map_.erase(iter);
 }
 

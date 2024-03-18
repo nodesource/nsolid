@@ -2,6 +2,7 @@
 #include <v8.h>
 #include <uv.h>
 #include <nsolid.h>
+#include <v8-profiler.h>
 
 #include <assert.h>
 #include <map>
@@ -27,7 +28,7 @@ struct Stor {
 std::map<uint64_t, Stor> profiles;
 uv_mutex_t profiles_map_lock;
 
-static void profile_cb(node::nsolid::SharedEnvInst envinst, int status) {
+static void sample_cb(node::nsolid::SharedEnvInst envinst, int status) {
   uint64_t thread_id = node::nsolid::GetThreadId(envinst);
   uv_mutex_lock(&profiles_map_lock);
   auto it = profiles.find(thread_id);
@@ -51,7 +52,7 @@ static void profile_cb(node::nsolid::SharedEnvInst envinst, int status) {
   assert(!ret.IsEmpty());
 }
 
-static void got_profile(int status,
+static void got_sampled(int status,
                         std::string profile,
                         uint64_t thread_id) {
   assert(status == 0);
@@ -65,50 +66,42 @@ static void got_profile(int status,
       node::nsolid::SharedEnvInst envinst = node::nsolid::GetEnvInst(thread_id);
       assert(0 == node::nsolid::RunCommand(envinst,
                                            node::nsolid::CommandType::EventLoop,
-                                           profile_cb,
+                                           sample_cb,
                                            status));
     }
   } else {
     it->second.profile += profile;
   }
-
   uv_mutex_unlock(&profiles_map_lock);
 }
 
-static void StartTrackingHeapObjectsBinding(
+static void at_exit_cb() {
+  uv_mutex_destroy(&profiles_map_lock);
+}
+
+
+static void StartHeapSampler(
     const FunctionCallbackInfo<Value>& args) {
-  HandleScope handle_scope(args.GetIsolate());
+  v8::HandleScope handle_scope(args.GetIsolate());
   // thread_id
   assert(args[0]->IsUint32());
-  // Redacted heap snapshot
-  assert(args[1]->IsBoolean());
-  // Track allocations
-  assert(args[2]->IsBoolean());
   // Stop after this many milliseconds
-  assert(args[3]->IsNumber());
-  if (args.Length() > 4) {
-    assert(args[4]->IsFunction());
-  }
+  assert(args[1]->IsNumber());
 
   uint64_t thread_id = args[0].As<Number>()->Value();
-  bool redacted = args[1]->BooleanValue(args.GetIsolate());
-  bool track_allocations = args[2]->BooleanValue(args.GetIsolate());
   uint64_t duration = static_cast<uint64_t>(
-      args[3]->NumberValue(args.GetIsolate()->GetCurrentContext()).FromJust());
+      args[1]->NumberValue(args.GetIsolate()->GetCurrentContext()).FromJust());
 
   uv_mutex_lock(&profiles_map_lock);
   auto pair = profiles.emplace(thread_id, Stor());
-  if (args.Length() > 4) {
-    pair.first->second.cb.Reset(args.GetIsolate(), args[4].As<Function>());
+  if (args.Length() > 2) {
+    pair.first->second.cb.Reset(args.GetIsolate(), args[2].As<Function>());
   }
   uv_mutex_unlock(&profiles_map_lock);
-
-  int ret = node::nsolid::Snapshot::StartTrackingHeapObjects(
+  int ret = node::nsolid::Snapshot::StartSampling(
       node::nsolid::GetEnvInst(thread_id),
-      redacted,
-      track_allocations,
       duration,
-      got_profile,
+      got_sampled,
       thread_id);
   if (ret != 0) {
     if (pair.second) {
@@ -119,45 +112,38 @@ static void StartTrackingHeapObjectsBinding(
   } else {
     assert(pair.second);
   }
-
   args.GetReturnValue().Set(Integer::New(args.GetIsolate(), ret));
 }
 
-static void StopTrackingHeapObjects(const FunctionCallbackInfo<Value>& args) {
-  HandleScope handle_scope(args.GetIsolate());
+static void StopHeapSampler(const FunctionCallbackInfo<Value>& args) {
+  v8::HandleScope handle_scope(args.GetIsolate());
   // thread_id
   assert(args[0]->IsUint32());
 
   uint64_t thread_id = args[0].As<Number>()->Value();
 
-  int ret = node::nsolid::Snapshot::StopTrackingHeapObjects(
+  int ret = node::nsolid::Snapshot::StopSampling(
       node::nsolid::GetEnvInst(thread_id));
-  args.GetReturnValue().Set(ret);
+  args.GetReturnValue().Set(Integer::New(args.GetIsolate(), ret));
 }
 
-static void StopTrackingHeapObjectsSync(
-    const FunctionCallbackInfo<Value>& args) {
-  HandleScope handle_scope(args.GetIsolate());
+static void StopHeapSamplerSync(const FunctionCallbackInfo<Value>& args) {
+  v8::HandleScope handle_scope(args.GetIsolate());
   // thread_id
   assert(args[0]->IsUint32());
 
   uint64_t thread_id = args[0].As<Number>()->Value();
 
-  int ret = node::nsolid::Snapshot::StopTrackingHeapObjectsSync(
+  int ret = node::nsolid::Snapshot::StopSamplingSync(
       node::nsolid::GetEnvInst(thread_id));
-  args.GetReturnValue().Set(ret);
-}
-
-static void at_exit_cb() {
-  uv_mutex_destroy(&profiles_map_lock);
+  args.GetReturnValue().Set(Integer::New(args.GetIsolate(), ret));
 }
 
 NODE_MODULE_INIT(/* exports, module, context */) {
   NODE_SET_METHOD(
-      exports, "startTrackingHeapObjects", StartTrackingHeapObjectsBinding);
-  NODE_SET_METHOD(exports, "stopTrackingHeapObjects", StopTrackingHeapObjects);
-  NODE_SET_METHOD(
-      exports, "stopTrackingHeapObjectsSync", StopTrackingHeapObjectsSync);
+      exports, "startSampling", StartHeapSampler);
+  NODE_SET_METHOD(exports, "stopSampling", StopHeapSampler);
+  NODE_SET_METHOD(exports, "stopSamplingSync", StopHeapSamplerSync);
   node::nsolid::SharedEnvInst envinst = node::nsolid::GetLocalEnvInst(context);
   if (node::nsolid::IsMainThread(envinst)) {
     assert(0 == uv_mutex_init(&profiles_map_lock));
