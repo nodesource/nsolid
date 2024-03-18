@@ -3,6 +3,7 @@
 
 #include "node.h"
 #include "uv.h"
+#include "v8-profiler.h"
 
 #include <memory>
 #include <string>
@@ -1015,13 +1016,88 @@ class NODE_EXTERN Snapshot {
    */
   static int StopTrackingHeapObjectsSync(SharedEnvInst envinst);
 
+  /**
+   * @brief Will start sampling heap allocations.
+   *
+   * @param envinst SharedEnvInst of thread to take a sampled snapshot from.
+   * @param duration duration in milliseconds of the heap profiler after which
+   * the sampled heap snapshot will be returned in the callback.
+   * @param cb callback function with the following signature:
+   * `cb(int status, std::string snapshot, ...Data)`. It will be called from the
+   * NSolid thread.
+   * @param data variable number of arguments to be propagated to the callback.
+   * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
+   * error value otherwise.
+   */
+  template <typename Cb, typename... Data>
+  static int StartSampling(SharedEnvInst envinst,
+                           uint64_t duration,
+                           Cb&& cb,
+                           Data&&... data);
+
+  /**
+   * @brief Will start sampling heap allocations.
+   *
+   * @param envinst SharedEnvInst of thread to take the snapshot from.
+   * @param sample_interval frequency (in bytes) at which the heap profiler
+   * samples are taken. Each allocation is sampled every sample_interval bytes
+   * allocated.
+   * @param stack_depth refers to the depth of the call stack that will be
+   * captured during heap profiling
+   * @param flags additional flags or options that can be used when
+   * starting heap profiling. See
+   * \link v8::HeapProfiler::SamplingFlags SamplingFlags\endlink
+   * for available flags.
+   * @param duration duration in milliseconds of the heap profiler after which
+   * the heap snapshot will be returned in the callback.
+   * @param cb callback function with the following signature:
+   * `cb(int status, std::string snapshot, ...Data)`. It will be called from the
+   * NSolid thread.
+   * @param data variable number of arguments to be propagated to the callback.
+   * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
+   * error value otherwise.
+   */
+  template <typename Cb, typename... Data>
+  static int StartSampling(SharedEnvInst envinst,
+                           uint64_t sample_interval,
+                           int stack_depth,
+                           v8::HeapProfiler::SamplingFlags flags,
+                           uint64_t duration,
+                           Cb&& cb,
+                           Data&&... data);
+
+  /**
+   * @brief  Stops the HeapProfiler allocation sampler
+   * @param envinst SharedEnvInst of thread to take the snapshot from.
+   * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
+   * error value otherwise.
+   */
+  static int StopSampling(SharedEnvInst envinst);
+
+  /**
+   * @brief  Stops the HeapProfiler allocation sampler synchronously
+   * @param envinst SharedEnvInst of thread to take the snapshot from.
+   * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
+   * error value otherwise.
+   */
+  static int StopSamplingSync(SharedEnvInst envinst);
+
  private:
   static int start_tracking_heap_objects_(SharedEnvInst envinst,
                                           bool redacted,
-                                          bool trackAllocations,
+                                          bool track_allocations,
                                           uint64_t duration,
                                           internal::user_data data,
                                           snapshot_proxy_sig proxy);
+
+  static int start_allocation_sampling_(SharedEnvInst envinst,
+                                        uint64_t sample_interval,
+                                        int stack_depth,
+                                        v8::HeapProfiler::SamplingFlags flags,
+                                        uint64_t duration,
+                                        internal::user_data data,
+                                        snapshot_proxy_sig proxy);
+
 
   static int get_snapshot_(SharedEnvInst envinst,
                            bool redacted,
@@ -1218,6 +1294,62 @@ int Snapshot::StartTrackingHeapObjects(SharedEnvInst envinst,
                                       std::move(user_data),
                                       snapshot_proxy_<UserData>);
 }
+
+
+template <typename Cb, typename... Data>
+int Snapshot::StartSampling(SharedEnvInst envinst,
+                            uint64_t duration,
+                            Cb&& cb,
+                            Data&&... data) {
+  if (envinst == nullptr) {
+    return UV_ESRCH;
+  }
+
+  // Use default profiler values
+  uint64_t sample_interval = 512 * 1024;
+  int stack_depth = 16;
+  return Snapshot::StartSampling(envinst,
+                                 sample_interval,
+                                 stack_depth,
+                                 v8::HeapProfiler::kSamplingNoFlags,
+                                 duration,
+                                 cb,
+                                 data...);
+}
+
+template <typename Cb, typename... Data>
+int Snapshot::StartSampling(SharedEnvInst envinst,
+                            uint64_t sample_interval,
+                            int stack_depth,
+                            v8::HeapProfiler::SamplingFlags flags,
+                            uint64_t duration,
+                            Cb&& cb,
+                            Data&&... data) {
+  if (envinst == nullptr) {
+    return UV_ESRCH;
+  }
+
+  // NOLINTNEXTLINE(build/namespaces)
+  using namespace std::placeholders;
+  using UserData = decltype(std::bind(
+      std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+
+  auto user_data = internal::user_data(new (std::nothrow) UserData(
+      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...)),
+                        internal::delete_proxy_<UserData>);
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
+
+  return start_allocation_sampling_(envinst,
+                                    sample_interval,
+                                    stack_depth,
+                                    flags,
+                                    duration,
+                                    std::move(user_data),
+                                    snapshot_proxy_<UserData>);
+}
+
 
 template <typename Cb, typename... Data>
 int Snapshot::TakeSnapshot(SharedEnvInst envinst,
