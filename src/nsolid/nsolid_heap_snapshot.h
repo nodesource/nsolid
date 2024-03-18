@@ -20,11 +20,23 @@ class NSolidHeapSnapshot {
   enum HeapSnapshotFlags {
     kFlagNone = 0,
     kFlagIsTrackingHeapObjects = 1 << 0,
-    kFlagIsDone = 1 << 1
+    kFlagIsSamplingHeap = 1 << 1,
+    kFlagIsDone = 1 << 2
   };
 
   struct HeapSnapshotStor {
     bool redacted;
+    uint32_t flags;
+    uint64_t snapshot_id;
+    Snapshot::snapshot_proxy_sig cb;
+    internal::user_data data;
+  };
+
+  struct HeapSamplerStor {
+    uint64_t sample_interval;
+    int stack_depth;
+    v8::HeapProfiler::SamplingFlags sampling_flags;
+    uint64_t duration;
     uint32_t flags;
     uint64_t snapshot_id;
     Snapshot::snapshot_proxy_sig cb;
@@ -53,6 +65,18 @@ class NSolidHeapSnapshot {
   int StopTrackingHeapObjects(SharedEnvInst envinst);
 
   int StopTrackingHeapObjectsSync(SharedEnvInst envinst);
+  int StartSamplingProfiler(SharedEnvInst envinst,
+                            uint64_t sampleInterval,
+                            int stackDepth,
+                            // TODO(juan) - this is a bitfield ask to reviewers
+                            // if it is ok to use the v8 enum for this one.
+                            v8::HeapProfiler::SamplingFlags samplingFlags,
+                            uint64_t duration,
+                            internal::user_data data,
+                            Snapshot::snapshot_proxy_sig proxy);
+
+  int StopSamplingProfiler(SharedEnvInst envinst);
+  int StopSamplingProfilerSync(SharedEnvInst envinst);
 
  private:
   static void start_tracking_heapobjects(SharedEnvInst envinst,
@@ -63,6 +87,18 @@ class NSolidHeapSnapshot {
 
   static void stop_tracking_heap_objects(SharedEnvInst envinst_sp,
                                          NSolidHeapSnapshot*);
+
+  static void start_sampling_profiler(SharedEnvInst envinst,
+                                      uint64_t duration,
+                                      uint64_t snapshot_id,
+                                      NSolidHeapSnapshot*);
+
+  static void stop_sampling_profiler(SharedEnvInst envinst_sp,
+                                     uint64_t snapshot_id,
+                                     NSolidHeapSnapshot*);
+
+  static void take_sampled_snapshot(SharedEnvInst envinst_sp,
+                                    NSolidHeapSnapshot*);
 
   static void take_snapshot(SharedEnvInst envinst_sp, NSolidHeapSnapshot*);
 
@@ -75,9 +111,17 @@ class NSolidHeapSnapshot {
                           const std::string& snapshot,
                           NSolidHeapSnapshot* snapshotter);
 
+  static void sampling_cb(uint64_t thread_id,
+                          int status,
+                          const std::string snapshot,
+                          NSolidHeapSnapshot* snapshotter);
+
   std::map<uint64_t, HeapSnapshotStor> threads_running_snapshots_;
   nsuv::ns_mutex in_progress_heap_snapshots_;
   std::atomic<uint64_t> in_progress_timers_{0};
+
+  std::map<uint64_t, HeapSamplerStor> threads_running_heap_sampling_;
+  nsuv::ns_mutex in_progress_heap_sampling_;
 };
 
 }  // namespace nsolid

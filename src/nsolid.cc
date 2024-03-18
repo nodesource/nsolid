@@ -521,14 +521,46 @@ int CpuProfiler::get_cpu_profile_(SharedEnvInst envinst,
                                                    deleter);
 }
 
+int Snapshot::start_allocation_sampling_(SharedEnvInst envinst,
+                                         uint64_t sample_interval,
+                                         int stack_depth,
+                                         v8::HeapProfiler::SamplingFlags flags,
+                                         uint64_t duration,
+                                         internal::user_data data,
+                                         snapshot_proxy_sig proxy) {
+  return EnvList::Inst()->HeapSnapshot()->StartSamplingProfiler(
+      envinst,
+      sample_interval,
+      stack_depth,
+      flags,
+      duration,
+      std::move(data),
+      proxy);
+}
+
+int Snapshot::StopSampling(SharedEnvInst envinst) {
+  if (envinst == nullptr)
+    return UV_ESRCH;
+
+  return EnvList::Inst()->HeapSnapshot()->StopSamplingProfiler(envinst);
+}
+
+int Snapshot::StopSamplingSync(SharedEnvInst envinst) {
+  if (envinst == nullptr)
+    return UV_ESRCH;
+
+  return EnvList::Inst()->HeapSnapshot()->StopSamplingProfilerSync(envinst);
+}
+
+
 int Snapshot::start_tracking_heap_objects_(SharedEnvInst envinst,
                                            bool redacted,
-                                           bool trackAllocations,
+                                           bool track_allocations,
                                            uint64_t duration,
                                            internal::user_data data,
                                            snapshot_proxy_sig proxy) {
   return EnvList::Inst()->HeapSnapshot()->StartTrackingHeapObjects(
-      envinst, redacted, trackAllocations, duration, std::move(data), proxy);
+      envinst, redacted, track_allocations, duration, std::move(data), proxy);
 }
 
 int Snapshot::StopTrackingHeapObjects(SharedEnvInst envinst) {
