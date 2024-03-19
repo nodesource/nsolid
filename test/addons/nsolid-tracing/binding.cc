@@ -119,6 +119,20 @@ std::queue<std::string> spans_;
 json expected_traces_ = {};
 
 
+// NOLINTNEXTLINE(runtime/references)
+static void sort_children_by_start(nlohmann::json& obj) {
+  if (obj.contains("children") && obj["children"].is_array()) {
+    std::sort(obj["children"].begin(), obj["children"].end(),
+              [](const nlohmann::json& a, const nlohmann::json& b) {
+      return a["start"] < b["start"];
+    });
+    for (auto& child : obj["children"]) {
+      sort_children_by_start(child);
+    }
+  }
+}
+
+
 static void at_exit_cb() {
   delete tracer_;
   after_ = ns_since_epoch() / 1e6;
@@ -142,6 +156,11 @@ static void at_exit_cb() {
   json traces_array = {};
   for (auto& entry : trace_map) {
     traces_array.push_back(entry.second.to_json());
+  }
+
+  // Sort spans by start time
+  for (auto& trace : traces_array) {
+    sort_children_by_start(trace);
   }
 
   fprintf(stderr, "traces_array: %s\n", traces_array.dump(4).c_str());
