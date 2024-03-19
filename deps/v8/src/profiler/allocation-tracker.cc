@@ -189,7 +189,10 @@ AllocationTracker::~AllocationTracker() {
 
 
 void AllocationTracker::PrepareForSerialization() {
-  for (UnresolvedLocation* location : unresolved_locations_) {
+  for (std::vector<UnresolvedLocation*>::size_type i = 0;
+       i < unresolved_locations_.size() /* size may grow in loop! */;
+       ++i) {
+    UnresolvedLocation* location = unresolved_locations_[i];
     location->Resolve();
     delete location;
   }
