@@ -39,6 +39,17 @@ function setupTracesCheck(port, addresses) {
         },
         {
           attributes: {
+            'http.method': 'CONNECT',
+            'http.url': `http://localhost:${port}google.com:80`,
+          },
+          end_reason: binding.kSpanEndExit,
+          name: 'HTTP CONNECT',
+          thread_id: 0,
+          kind: binding.kServer,
+          type: binding.kSpanHttpServer,
+        },
+        {
+          attributes: {
             'http.method': 'GET',
             'http.status_code': 200,
             'http.status_text': 'OK',
@@ -116,17 +127,6 @@ function setupTracesCheck(port, addresses) {
               type: binding.kSpanHttpServer,
             },
           ],
-        },
-        {
-          attributes: {
-            'http.method': 'CONNECT',
-            'http.url': `http://localhost:${port}google.com:80`,
-          },
-          end_reason: binding.kSpanEndExit,
-          name: 'HTTP CONNECT',
-          thread_id: 0,
-          kind: binding.kServer,
-          type: binding.kSpanHttpServer,
         },
       ],
     },
