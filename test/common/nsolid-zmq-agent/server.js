@@ -22,8 +22,7 @@ function isValidToken(token) {
   return true;
 }
 
-function startAuthServer(cb) {
-  const keyPair = zmq.curveKeypair();
+function startAuthServer(keyPair, cb) {
   const server = http.createServer((req, res) => {
     // Check that the request is valid by checking the NSOLID-SAAS-TOKEN header
     // and return a 200 ok with the key pairs. Otherwise return a 500 error.
@@ -53,7 +52,7 @@ function startAuthServer(cb) {
   });
 
   server.listen(0, () => {
-    cb(server, keyPair);
+    cb(server);
   });
 }
 
@@ -64,7 +63,7 @@ class ZmqServer {
     this.config = config;
     this.authServer = null;
     this.keyPair = zmq.curveKeypair();
-    this.clientKeyPair = null;
+    this.clientKeyPair = zmq.curveKeypair();
   }
 
   start(commandHandler, dataHandler, bulkHandler, authHandler, cb) {
@@ -84,9 +83,8 @@ class ZmqServer {
         bindUrl: 'inproc://zeromq.zap.01',
         bindCb: (err) => {
           if (err) return cb(err);
-          startAuthServer((server, clientKeyPair) => {
+          startAuthServer(this.clientKeyPair, (server) => {
             this.authServer = server;
-            this.clientKeyPair = clientKeyPair;
             this.#doStart(commandHandler, dataHandler, bulkHandler, cb);
           });
         },
@@ -133,6 +131,7 @@ class ZmqServer {
     }
     debuglog('Shutting down ZeroMQ');
 
+    this.started = false;
     if (this.zap) {
       closeCatching('zap', this.zap);
     }

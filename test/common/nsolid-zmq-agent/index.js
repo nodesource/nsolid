@@ -215,6 +215,10 @@ class TestPlayground {
     this.client = null;
   }
 
+  updateConfig(config) {
+    this.zmqAgentBus.updateConfig(config);
+  }
+
   async startServer() {
     return new Promise((resolve) => {
       this.zmqAgentBus.start((err) => {
@@ -242,60 +246,15 @@ class TestPlayground {
 
     options = options || {};
 
-    let id;
-    let events = this.#config.saas ? -1 : 0;
-    let authCount = 0;
+    const state = {
+      id: null,
+      events: this.#config.saas ? -1 : 0,
+      authCount: 0,
+    };
     eventTypes.forEach((eventType) => {
       this.zmqAgentBus.on(eventType, (agentId, data) => {
-        console.log(`[${events}] ${eventType}, ${agentId}`);
-        try {
-          if (!id) {
-            id = agentId;
-          } else if (eventType !== 'agent-authorized') {
-            assert.strictEqual(id, agentId);
-          }
-
-          switch (++events) {
-            case 0:
-              assert.strictEqual(eventType, 'agent-authorized');
-              ++authCount;
-              break;
-            case 1:
-              assert.strictEqual(eventType, 'agent-connected');
-              break;
-            case 2:
-              if (this.#config.saas && eventType === 'agent-authorized') {
-                --events;
-                ++authCount;
-              }
-
-              this.#checkInitialSequence(eventType, data);
-              // The runtime may send metrics before the initial sequence is sent.
-              if (eventType === 'agent-metrics') {
-                --events;
-              }
-              break;
-            case 3:
-              this.#checkInitialSequence(eventType, data);
-              break;
-            case 4:
-              this.#checkInitialSequence(eventType, data);
-              assert.ok(this.#bootstrapState &&
-                        (BootstrapState.GOTINFO | BootstrapState.GOTPACKAGES | BootstrapState.GOTMETRICS));
-              done(null, agentId);
-              break;
-            default:
-              if (this.#config.saas) {
-                // There should be 3 auth events, one per channel.
-                assert.strictEqual(authCount, 3);
-              }
-              if (next)
-                next(eventType, agentId, data);
-          }
-        } catch (err) {
-          this.stopClient();
-          done(err);
-        }
+        console.log(`[${state.events}] ${eventType}, ${agentId}`);
+        this.detectInitialSequence(state, eventType, data, agentId, done, next);
       });
     });
 
@@ -350,6 +309,55 @@ class TestPlayground {
 
   #clientAlive() {
     return this.client && this.client.child();
+  }
+
+  detectInitialSequence(state, eventType, data, agentId, done, next) {
+    try {
+      if (!state.id) {
+        state.id = agentId;
+      } else if (eventType !== 'agent-authorized') {
+        assert.strictEqual(state.id, agentId);
+      }
+
+      switch (++state.events) {
+        case 0:
+          assert.strictEqual(eventType, 'agent-authorized');
+          ++state.authCount;
+          break;
+        case 1:
+          assert.strictEqual(eventType, 'agent-connected');
+          break;
+        case 2:
+          if (this.#config.saas && eventType === 'agent-authorized') {
+            --state.events;
+            ++state.authCount;
+          }
+
+          this.#checkInitialSequence(eventType, data);
+          if (eventType === 'agent-metrics') {
+            --state.events;
+          }
+          break;
+        case 3:
+          this.#checkInitialSequence(eventType, data);
+          break;
+        case 4:
+          this.#checkInitialSequence(eventType, data);
+          assert.ok(this.#bootstrapState &&
+                    (BootstrapState.GOTINFO | BootstrapState.GOTPACKAGES | BootstrapState.GOTMETRICS));
+          done(null, agentId);
+          break;
+        default:
+          if (this.#config.saas) {
+            assert.strictEqual(state.authCount, 3);
+          }
+          if (next)
+            next(eventType, agentId, data);
+      }
+    } catch (err) {
+      this.stopClient();
+      done(err);
+    }
   }
 
   #unsubscribeAll() {

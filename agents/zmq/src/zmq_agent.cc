@@ -1012,13 +1012,7 @@ int ZmqAgent::setup_metrics_timer(uint64_t period) {
   return metrics_timer_.start(metrics_timer_cb, 0, period, this);
 }
 
-// Implement negotiation process for data and bulk endpoints.
-// For the moment, only if those endpoints have not already been configured
 int ZmqAgent::config_sockets(const json& sockets) {
-  if (data_handle_ && bulk_handle_) {
-    return 0;
-  }
-
   std::unique_ptr<ZmqEndpoint> command_endpt;
   std::unique_ptr<ZmqEndpoint> data_endpt;
   std::unique_ptr<ZmqEndpoint> bulk_endpt;
@@ -1030,20 +1024,16 @@ int ZmqAgent::config_sockets(const json& sockets) {
                           ZmqHandle::get_default_port(ZmqHandle::Command)));
   }
 
-  if (!data_handle_) {
-    it = sockets.find("dataBindAddr");
-    if (it != sockets.end()) {
-      data_endpt.reset(
-        ZmqEndpoint::create(*it, ZmqHandle::get_default_port(ZmqHandle::Data)));
-    }
+  it = sockets.find("dataBindAddr");
+  if (it != sockets.end()) {
+    data_endpt.reset(
+      ZmqEndpoint::create(*it, ZmqHandle::get_default_port(ZmqHandle::Data)));
   }
 
-  if (!bulk_handle_) {
-    it = sockets.find("bulkBindAddr");
-    if (it != sockets.end()) {
-      bulk_endpt.reset(
-        ZmqEndpoint::create(*it, ZmqHandle::get_default_port(ZmqHandle::Bulk)));
-    }
+  it = sockets.find("bulkBindAddr");
+  if (it != sockets.end()) {
+    bulk_endpt.reset(
+      ZmqEndpoint::create(*it, ZmqHandle::get_default_port(ZmqHandle::Bulk)));
   }
 
   if (!data_endpt && !bulk_endpt) {

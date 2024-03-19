@@ -215,6 +215,11 @@ class ZmqAgentBus extends EventEmitter {
     this.server.shutdown(cb);
   }
 
+  updateConfig(config) {
+    this.serverConfig = { ...this.serverConfig, ...config };
+    this.server.config = this.serverConfig;
+  }
+
   // ****************
   // Translate the AgentBus interface into ZeroMQ messages
   //
