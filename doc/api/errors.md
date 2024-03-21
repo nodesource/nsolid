@@ -3594,6 +3594,18 @@ Error when trying to start taking a heap profile with the JS API.
 
 Error when trying to stop a heap profile being taken with the JS API.
 
+<a id="ERR_NSOLID_HEAP_SAMPLING_START"></a>
+
+### `ERR_NSOLID_HEAP_SAMPLING_START`
+
+Error when trying to start taking a heap sampling with the JS API.
+
+<a id="ERR_NSOLID_HEAP_SAMPLING_STOP"></a>
+
+### `ERR_NSOLID_HEAP_SAMPLING_STOP`
+
+Error when trying to stop a heap sampling being taken with the JS API.
+
 <a id="ERR_NSOLID_HEAP_SNAPSHOT"></a>
 
 ### `ERR_NSOLID_HEAP_SNAPSHOT`

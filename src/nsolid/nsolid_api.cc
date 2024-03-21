@@ -2574,6 +2574,56 @@ static void HeapProfileEnd(const FunctionCallbackInfo<Value>& args) {
 }
 
 
+static void HeapSampling(const FunctionCallbackInfo<Value>& args) {
+  CHECK(args[0]->IsNumber());  // thread_id
+  CHECK(args[1]->IsNumber());  // duration
+  CHECK(args[2]->IsNumber());  // sample_interval
+  CHECK(args[3]->IsUint32());  // stack_depth
+  CHECK(args[4]->IsUint32());  // flags
+  CHECK(args[5]->IsFunction());  // stream cb
+  uint64_t thread_id = args[0].As<Number>()->Value();
+  uint64_t duration = args[1].As<Number>()->Value();
+  uint64_t sample_interval = args[2].As<Number>()->Value();
+  int stack_depth = args[3].As<Uint32>()->Value();
+  v8::HeapProfiler::SamplingFlags flags =
+    static_cast<v8::HeapProfiler::SamplingFlags>(args[4].As<Uint32>()->Value());
+  SharedEnvInst envinst = EnvInst::GetInst(thread_id);
+  Isolate* isolate = args.GetIsolate();
+  v8::Global<Function> cb(isolate, args[5].As<Function>());
+  std::shared_ptr<v8::Global<Function>> cb_ptr(
+    new v8::Global<Function>(std::move(cb)),
+    [](v8::Global<Function>* ptr) {
+      ptr->Reset();
+      delete ptr;
+    });
+
+  SharedEnvInst current_envinst = EnvInst::GetCurrent(isolate);
+  int ret = Snapshot::StartSampling(envinst,
+                                    sample_interval,
+                                    stack_depth,
+                                    flags,
+                                    duration,
+                                    heapprofile_cb,
+                                    current_envinst,
+                                    std::move(cb_ptr));
+  if (ret == 0) {
+    // Add a reference to the current environment to prevent the loop from
+    // exiting.
+    current_envinst->env()->add_refs(1);
+  }
+
+  args.GetReturnValue().Set(ret);
+}
+
+static void HeapSamplingEnd(const FunctionCallbackInfo<Value>& args) {
+  CHECK(args[0]->IsNumber());  // thread_id
+  uint64_t thread_id = args[0].As<Number>()->Value();
+  SharedEnvInst envinst = EnvInst::GetInst(thread_id);
+  int ret = Snapshot::StopSampling(envinst);
+  args.GetReturnValue().Set(ret);
+}
+
+
 static void CustomCommandResponse(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsString());
   CHECK(args[1]->IsString());
@@ -2778,6 +2828,8 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "getTraceId", GetTraceId);
   SetMethod(context, target, "heapProfile", HeapProfile);
   SetMethod(context, target, "heapProfileEnd", HeapProfileEnd);
+  SetMethod(context, target, "heapSampling", HeapSampling);
+  SetMethod(context, target, "heapSamplingEnd", HeapSamplingEnd);
 
   SetMethod(context, target, "_getOnBlockedBody", GetOnBlockedBody);
   SetMethod(context, target, "_setupArrayBuffers", SetupArrayBuffers);
@@ -2904,6 +2956,8 @@ void BindingData::RegisterExternalReferences(
   registry->Register(GetTraceId);
   registry->Register(HeapProfile);
   registry->Register(HeapProfileEnd);
+  registry->Register(HeapSampling);
+  registry->Register(HeapSamplingEnd);
   registry->Register(GetOnBlockedBody);
   registry->Register(SetupArrayBuffers);
 }
