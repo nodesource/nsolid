@@ -2366,6 +2366,13 @@ int ZmqAgent::stop_heap_profiling(uint64_t thread_id) {
   return Snapshot::StopTrackingHeapObjectsSync(GetEnvInst(thread_id));
 }
 
+int ZmqAgent::stop_heap_sampling(uint64_t thread_id) {
+  // This method is only called from the JS thread the profile it's stopping is
+  // running so the sync StopSamplingSync method can be safely
+  // called.
+  return Snapshot::StopSamplingSync(GetEnvInst(thread_id));
+}
+
 void ZmqAgent::status_command_cb(SharedEnvInst, ZmqAgent* agent) {
   agent->status_cb_(agent->status());
 }

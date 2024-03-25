@@ -5,16 +5,21 @@ const {
   ERR_NSOLID_CPU_PROFILE_STOP,
   ERR_NSOLID_HEAP_PROFILE_START,
   ERR_NSOLID_HEAP_PROFILE_STOP,
+  ERR_NSOLID_HEAP_SAMPLING_START,
+  ERR_NSOLID_HEAP_SAMPLING_STOP,
   ERR_NSOLID_HEAP_SNAPSHOT,
 } = require('internal/errors').codes;
 const {
   validateBoolean,
   validateFunction,
   validateNumber,
+  validateObject,
 } = require('internal/validators');
 
 module.exports = ({ heapProfile: _heapProfile,
                     heapProfileEnd: _heapProfileEnd,
+                    heapSampling: _heapSampling,
+                    heapSamplingEnd: _heapSamplingEnd,
                     profile: _profile,
                     profileEnd: _profileEnd,
                     snapshot: _snapshot,
@@ -121,7 +126,7 @@ module.exports = ({ heapProfile: _heapProfile,
    * sends the data to the console once it's done. It does not return until the
    * profiling has started or it has failed.
    * @param {number} [timeout=600000]
-   * @param {trackAllocations} [trackAllocations=false]
+   * @param {boolean} [trackAllocations=false]
    * @param {heapProfileCallback} [cb] called when the profile has started or there
    * has been an error.
    * @example
@@ -218,6 +223,118 @@ module.exports = ({ heapProfile: _heapProfile,
     }
   };
 
+  const defaultHeapSamplingOptions = { sampleInterval: 512 * 1024, stackDepth: 16, flags: 0 };
+  /**
+   * Executes Heap sampling of the current JS thread for `timeout` seconds and
+   * sends the data to the console once it's done. It does not return until the
+   * sampling has started or it has failed.
+   * @param {number} [duration=600000] duration of the sampling in milliseconds
+   * @param {object} [options={ sampleInterval: 512 * 1024, stackDepth: 16, flags: 0 }]
+   * @param {number} options.sampleInterval every allocation will be allocated every `sampleInterval` bytes
+   * @param {string} options.stackDepth stack depth to capture
+   * @param {string} options.flags flags to pass to the profiler. See:
+   * https://v8docs.nodesource.com/node-20.3/d7/d76/classv8_1_1_heap_profiler.html#a785d454e7866f222e199d667be567392
+   * @param {heapSamplingCallback} [cb] called when the sampling has started or there
+   * has been an error.
+   * @example
+   * const nsolid = require('nsolid');
+   * // async version. Starts sampling for 600ms with default options
+   * nsolid.heapSampling(600, (err) => {
+   *   if(!err) {
+   *     console.log('Sampling started!');
+   *   }
+   * });
+   * // sync version
+   * try {
+   *   // starts sampling for 600000 ms with sampleInterval of 256kB
+   *   const opts = { sampleInterval: 256 * 1024 };
+   *   nsolid.heapProfile(opts);
+   * } catch (err) {
+   *   // In case an error happens
+   * }
+   * @throws Will throw an error if an error happens and no callback was passed.
+   * @function heapSampling
+   * @memberof module:nsolid
+   */
+  const heapSampling = (duration, options, cb) => {
+    if (typeof duration === 'function') {
+      cb = duration;
+      duration = null;
+      options = null;
+    } else if (typeof options === 'function') {
+      cb = options;
+      options = null;
+    }
+
+    duration = duration || 600000;
+    options = options || {};
+    validateObject(options, 'options');
+    options = { ...defaultHeapSamplingOptions, ...options };
+    validateNumber(duration, 'duration');
+    validateNumber(options.sampleInterval, 'options.sampleInterval');
+    validateNumber(options.stackDepth, 'options.stackDepth');
+    validateNumber(options.flags, 'options.flags');
+
+    if (cb !== undefined) {
+      validateFunction(cb, 'heapSamplingCallback');
+    }
+
+    const status = _heapSampling(options.sampleInterval, options.stackDepth, options.flags, duration);
+    let err;
+    if (status !== 0) {
+      err = new ERR_NSOLID_HEAP_SAMPLING_START();
+      err.code = status;
+    }
+
+    if (cb) {
+      process.nextTick(() => cb(err));
+    } else if (err) {
+      throw err;
+    }
+  };
+
+  /**
+   * Stops the running heap sampling in the current JS thread (if any)
+   * @param {heapSamplingEndCallback} [cb] called when the sampling has started or
+   * there has been an error.
+   * @example
+   * const nsolid = require('nsolid');
+   * // async version
+   * nsolid.heapSampling(600, (err) => {
+   *   if(!err) {
+   *     console.log('Sampling started!');
+   *     setTimeout(() => {
+   *       nsolid.heapSamplingEnd((err) => {
+   *         if (!err) {
+   *           console.log('Sampling ended!');
+   *         }}
+   *       });
+   *     }, 1000);
+   *   }
+   * });
+   * @throws Will throw an error if an error happens and no callback was passed.
+   * @function heapSamplingEnd
+   * @memberof module:nsolid
+   */
+  const heapSamplingEnd = (cb) => {
+    if (cb !== undefined) {
+      validateFunction(cb, 'heapSamplingEndCallback');
+    }
+
+    const status = _heapSamplingEnd();
+    let err;
+    if (status !== 0) {
+      err = new ERR_NSOLID_HEAP_SAMPLING_STOP();
+      err.code = status;
+    }
+
+    if (cb) {
+      process.nextTick(() => cb(err));
+    } else if (err) {
+      throw err;
+    }
+  };
+
   /**
    * It generates a heap snapshot of the current JS thread and sends it to the
    * console. It does not return until the snapshot has been generated or an
@@ -264,6 +381,8 @@ module.exports = ({ heapProfile: _heapProfile,
   return {
     heapProfile,
     heapProfileEnd,
+    heapSampling,
+    heapSamplingEnd,
     profile,
     profileEnd,
     snapshot,
