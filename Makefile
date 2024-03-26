@@ -391,10 +391,12 @@ ADDONS_HEADERS_PREREQS := tools/install.py \
 	$(wildcard deps/uv/include/*/*.h) \
 	$(wildcard deps/v8/include/*.h) \
 	$(wildcard deps/v8/include/*/*.h) \
+	$(wildcard deps/nsuv/include/*.h) \
 	deps/zlib/zconf.h deps/zlib/zlib.h \
 	src/node.h src/node_api.h src/js_native_api.h src/js_native_api_types.h \
 	src/node_api_types.h src/node_buffer.h src/node_object_wrap.h \
-	src/node_version.h
+	src/node_version.h src/nsolid/nsolid_api.h src/util-inl.h \
+	src/env-inl.h
 
 ADDONS_HEADERS_DIR = out/$(BUILDTYPE)/addons_headers
 
@@ -412,8 +414,7 @@ ADDONS_BINDING_SOURCES := \
 	$(filter-out test/addons/??_*/*.h, $(wildcard test/addons/*/*.h))
 
 ADDONS_PREREQS := test/addons/.headersbuildstamp \
-	deps/npm/node_modules/node-gyp/package.json tools/build_addons.py \
-	src/nsolid.h src/nsolid/nsolid_api.h deps/nsuv/include/*.h
+	deps/npm/node_modules/node-gyp/package.json tools/build_addons.py
 
 define run_build_addons
 env $(PYTHON) "$$PWD/tools/build_addons.py" --loglevel=$(LOGLEVEL) --headers-dir "$(ADDONS_HEADERS_DIR)" $1
