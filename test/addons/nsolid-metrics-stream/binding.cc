@@ -101,7 +101,9 @@ static void got_metrics_stream_js_thread(node::nsolid::SharedEnvInst,
   }
 
   Local<Value> v = static_cast<Local<Value>>(metrics_array);
-  fn->Call(context, Undefined(isolate), 1, &v).ToLocalChecked();
+  v8::MaybeLocal<Value> ret =
+    fn->Call(context, Undefined(isolate), 1, &v).ToLocalChecked();
+  assert(!ret.IsEmpty());
 }
 
 static void got_metrics_stream(MetricsStream* ms,
