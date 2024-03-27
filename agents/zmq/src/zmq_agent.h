@@ -438,6 +438,12 @@ class ZmqAgent {
 
   int stop_heap_profiling(uint64_t thread_id);
 
+  int start_heap_sampling(
+    const nlohmann::json& message,
+    const std::string& req_id = utils::generate_unique_id());
+
+  int stop_heap_sampling(uint64_t thread_id);
+
   int start_profiling(
     const nlohmann::json& message,
     const std::string& req_id = utils::generate_unique_id());
@@ -465,7 +471,7 @@ class ZmqAgent {
   enum ProfileType {
     kCpu = 0,
     kHeapProf,
-    // kHeapSampling
+    kHeapSampl,
     kNumberOfProfileTypes
   };
 
@@ -474,6 +480,9 @@ class ZmqAgent {
     json metadata;
     uint64_t timestamp;
     bool trackAllocations = false;
+    uint64_t sample_interval = 0;
+    int stack_depth = 0;
+    v8::HeapProfiler::SamplingFlags flags = v8::HeapProfiler::kSamplingNoFlags;
   };
 
   using StartProfiling = int (*)(uint64_t,
@@ -544,6 +553,11 @@ class ZmqAgent {
                               std::string profile,
                               uint64_t thread_id,
                               ZmqAgent* agent);
+
+  static void heap_sampling_cb(int status,
+                               std::string profile,
+                               uint64_t thread_id,
+                               ZmqAgent* agent);
 
   static void heap_snapshot_cb(int,
                                std::string,
@@ -804,6 +818,19 @@ class ZmqAgent {
     static constexpr const char* cmd = "heap_profile";
     static constexpr const char* stop_cmd = "heap_profile_stop";
     static constexpr ProfileType Type = ProfileType::kHeapProf;
+  };
+
+  class HeapSamplingPolicy {
+   public:
+    static int start_profiling(uint64_t thread_id,
+                               uint64_t duration,
+                               const nlohmann::json& metadata,
+                               ProfileStor& stor,  // NOLINT(runtime/references)
+                               ZmqAgent* agent);
+
+    static constexpr const char* cmd = "heap_sampling";
+    static constexpr const char* stop_cmd = "heap_sampling_stop";
+    static constexpr ProfileType Type = ProfileType::kHeapSampl;
   };
 };
 

@@ -968,7 +968,8 @@ void EnvList::RemoveEnv(Environment* env) {
   // End any pending CPU profiles. This has to be done before removing the
   // EnvList from env_map_ so the checks in StopProfilingSync() pass.
   NSolidCpuProfiler::Inst()->StopProfilingSync(envinst_sp);
-  heap_snapshot_.StopTrackingHeapObjects(envinst_sp);
+  heap_snapshot_.StopTrackingHeapObjectsSync(envinst_sp);
+  heap_snapshot_.StopSamplingProfilerSync(envinst_sp);
 
   // Remove the GC prologue and epilogue callbacks just to be safe.
   envinst_sp->env()->isolate()->RemoveGCPrologueCallback(
@@ -1314,7 +1315,8 @@ void EnvList::DoExit(bool on_signal) {
     SharedEnvInst envinst = GetEnvInst(main_thread_id_);
     int r1 = nsolid::CpuProfiler::StopProfileSync(envinst);
     int r2 = nsolid::Snapshot::StopTrackingHeapObjectsSync(envinst);
-    profile_stopped = r1 == 0 || r2 == 0;
+    int r3 = nsolid::Snapshot::StopSamplingSync(envinst);
+    profile_stopped = r1 == 0 || r2 == 0 || r3 == 0;
   }
 
   at_exit_hook_list_.for_each([&on_signal,
