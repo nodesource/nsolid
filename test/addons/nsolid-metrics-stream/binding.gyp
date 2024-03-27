@@ -5,8 +5,6 @@
     'includes': ['../common.gypi'],
     'defines': [ 'NODE_WANT_INTERNALS=1' ],
     'include_dirs': [
-      '../../../src/',
-      '../../../deps/v8/include/',
     ],
     'target_defaults': {
       'default_configuration': 'Release',
