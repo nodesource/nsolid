@@ -1,9 +1,3 @@
-# Copyright (c) 2013-2022 GitHub Inc.
-# Copyright 2022 the V8 project authors. All rights reserved.
-# Copyright 2023 Microsoft Inc.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
 # This file is used by GN for building, which is NOT the build system used for
 # building official binaries.
 # Please edit the gyp files if you are making changes to build system.
@@ -25,7 +19,7 @@ template("base64_gn_build") {
     } else {
       defines = []
     }
-    if (target_cpu == "x86" || target_cpu == "x64") {
+    if (current_cpu == "x86" || current_cpu == "x64") {
       defines += [
         "HAVE_SSSE3=1",
         "HAVE_SSE41=1",
@@ -35,10 +29,10 @@ template("base64_gn_build") {
         "HAVE_AVX512=1",
       ]
     }
-    if (target_cpu == "arm") {
+    if (current_cpu == "arm") {
       defines += [ "HAVE_NEON32=1" ]
     }
-    if (target_cpu == "arm64") {
+    if (current_cpu == "arm64") {
       defines += [ "HAVE_NEON64=1" ]
     }
     if (is_clang || !is_win) {
@@ -75,7 +69,7 @@ template("base64_gn_build") {
   source_set("base64_ssse3") {
     configs += [ ":base64_internal_config" ]
     sources = [ "base64/lib/arch/ssse3/codec.c" ]
-    if (target_cpu == "x86" || target_cpu == "x64") {
+    if (current_cpu == "x86" || current_cpu == "x64") {
       if (is_clang || !is_win) {
         cflags_c = [ "-mssse3" ]
       }
@@ -85,7 +79,7 @@ template("base64_gn_build") {
   source_set("base64_sse41") {
     configs += [ ":base64_internal_config" ]
     sources = [ "base64/lib/arch/sse41/codec.c" ]
-    if (target_cpu == "x86" || target_cpu == "x64") {
+    if (current_cpu == "x86" || current_cpu == "x64") {
       if (is_clang || !is_win) {
         cflags_c = [ "-msse4.1" ]
       }
@@ -95,7 +89,7 @@ template("base64_gn_build") {
   source_set("base64_sse42") {
     configs += [ ":base64_internal_config" ]
     sources = [ "base64/lib/arch/sse42/codec.c" ]
-    if (target_cpu == "x86" || target_cpu == "x64") {
+    if (current_cpu == "x86" || current_cpu == "x64") {
       if (is_clang || !is_win) {
         cflags_c = [ "-msse4.2" ]
       }
@@ -105,7 +99,7 @@ template("base64_gn_build") {
   source_set("base64_avx") {
     configs += [ ":base64_internal_config" ]
     sources = [ "base64/lib/arch/avx/codec.c" ]
-    if (target_cpu == "x86" || target_cpu == "x64") {
+    if (current_cpu == "x86" || current_cpu == "x64") {
       if (is_clang || !is_win) {
         cflags_c = [ "-mavx" ]
       } else if (is_win) {
@@ -117,7 +111,7 @@ template("base64_gn_build") {
   source_set("base64_avx2") {
     configs += [ ":base64_internal_config" ]
     sources = [ "base64/lib/arch/avx2/codec.c" ]
-    if (target_cpu == "x86" || target_cpu == "x64") {
+    if (current_cpu == "x86" || current_cpu == "x64") {
       if (is_clang || !is_win) {
         cflags_c = [ "-mavx2" ]
       } else if (is_win) {
@@ -129,7 +123,7 @@ template("base64_gn_build") {
   source_set("base64_avx512") {
     configs += [ ":base64_internal_config" ]
     sources = [ "base64/lib/arch/avx512/codec.c" ]
-    if (target_cpu == "x86" || target_cpu == "x64") {
+    if (current_cpu == "x86" || current_cpu == "x64") {
       if (is_clang || !is_win) {
         cflags_c = [
           "-mavx512vl",
@@ -144,7 +138,7 @@ template("base64_gn_build") {
   source_set("base64_neon32") {
     configs += [ ":base64_internal_config" ]
     sources = [ "base64/lib/arch/neon32/codec.c" ]
-    if (target_cpu == "arm") {
+    if (current_cpu == "arm") {
       if (is_clang || !is_win) {
         cflags_c = [ "-mfpu=neon" ]
       }

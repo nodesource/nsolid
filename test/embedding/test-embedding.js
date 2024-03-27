@@ -14,12 +14,11 @@ tmpdir.refresh();
 common.allowGlobals(global.require);
 common.allowGlobals(global.embedVars);
 
-function resolveBuiltBinary(bin) {
-  let binary = `out/${common.buildType}/${bin}`;
+function resolveBuiltBinary(binary) {
   if (common.isWindows) {
     binary += '.exe';
   }
-  return path.resolve(__dirname, '..', '..', binary);
+  return path.join(path.dirname(process.execPath), binary);
 }
 
 const binary = resolveBuiltBinary('embedtest');
@@ -78,7 +77,9 @@ function getReadFileCodeForPath(path) {
 }
 
 // Basic snapshot support
-for (const extraSnapshotArgs of [[], ['--embedder-snapshot-as-file']]) {
+for (const extraSnapshotArgs of [
+  [], ['--embedder-snapshot-as-file'], ['--without-code-cache'],
+]) {
   // readSync + eval since snapshots don't support userland require() (yet)
   const snapshotFixture = fixtures.path('snapshot', 'echo-args.js');
   const blobPath = tmpdir.resolve('embedder-snapshot.blob');

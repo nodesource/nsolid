@@ -4,9 +4,10 @@
 
 <!-- type=misc -->
 
-These objects are available in all modules. The following variables may appear
-to be global but are not. They exist only in the scope of modules, see the
-[module system documentation][]:
+These objects are available in all modules.
+
+The following variables may appear to be global but are not. They exist only in
+the scope of [CommonJS modules][]:
 
 * [`__dirname`][]
 * [`__filename`][]
@@ -478,7 +479,7 @@ added:
 changes:
   - version: v18.0.0
     pr-url: https://github.com/nodejs/node/pull/41811
-    description: No longer behind `--experimental-global-fetch` CLI flag.
+    description: No longer behind `--experimental-fetch` CLI flag.
 -->
 
 > Stability: 1 - Experimental. Disable this API with the [`--no-experimental-fetch`][]
@@ -505,7 +506,7 @@ added:
 changes:
   - version: v18.0.0
     pr-url: https://github.com/nodejs/node/pull/41811
-    description: No longer behind `--experimental-global-fetch` CLI flag.
+    description: No longer behind `--experimental-fetch` CLI flag.
 -->
 
 > Stability: 1 - Experimental. Disable this API with the [`--no-experimental-fetch`][]
@@ -541,7 +542,7 @@ added:
 changes:
   - version: v18.0.0
     pr-url: https://github.com/nodejs/node/pull/41811
-    description: No longer behind `--experimental-global-fetch` CLI flag.
+    description: No longer behind `--experimental-fetch` CLI flag.
 -->
 
 > Stability: 1 - Experimental. Disable this API with the [`--no-experimental-fetch`][]
@@ -778,7 +779,7 @@ added:
 changes:
   - version: v18.0.0
     pr-url: https://github.com/nodejs/node/pull/41811
-    description: No longer behind `--experimental-global-fetch` CLI flag.
+    description: No longer behind `--experimental-fetch` CLI flag.
 -->
 
 > Stability: 1 - Experimental. Disable this API with the [`--no-experimental-fetch`][]
@@ -795,7 +796,7 @@ added:
 changes:
   - version: v18.0.0
     pr-url: https://github.com/nodejs/node/pull/41811
-    description: No longer behind `--experimental-global-fetch` CLI flag.
+    description: No longer behind `--experimental-fetch` CLI flag.
 -->
 
 > Stability: 1 - Experimental. Disable this API with the [`--no-experimental-fetch`][]
@@ -1008,6 +1009,7 @@ added: v18.0.0
 A browser-compatible implementation of [`WritableStreamDefaultWriter`][].
 
 [CommonJS module]: modules.md
+[CommonJS modules]: modules.md
 [ECMAScript module]: esm.md
 [Web Crypto API]: webcrypto.md
 [`--experimental-websocket`]: cli.md#--experimental-websocket
@@ -1072,7 +1074,6 @@ A browser-compatible implementation of [`WritableStreamDefaultWriter`][].
 [`structuredClone`]: https://developer.mozilla.org/en-US/docs/Web/API/structuredClone
 [buffer section]: buffer.md
 [built-in objects]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
-[module system documentation]: modules.md
 [timers]: timers.md
 [webassembly-mdn]: https://developer.mozilla.org/en-US/docs/WebAssembly
 [webassembly-org]: https://webassembly.org
