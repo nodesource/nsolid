@@ -397,7 +397,7 @@ ADDONS_HEADERS_PREREQS := tools/install.py \
 	src/node_api_types.h src/node_buffer.h src/node_object_wrap.h \
 	src/node_version.h src/nsolid.h
 # These are added for some specific N|Solid addons testing internals
-ADDONS_HEADERS_PREREQS += src/nsolid/nsolid_api.h src/util-inl.h src/env-inl.h
+ADDONS_HEADERS_PREREQS += src/nsolid/nsolid_api.h
 
 ADDONS_HEADERS_DIR = out/$(BUILDTYPE)/addons_headers
 
