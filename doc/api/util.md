@@ -1275,8 +1275,8 @@ is the `name`, the second item of the array is the `value`.
 ### `mimeParams.get(name)`
 
 * `name` {string}
-* Returns: {string} or `null` if there is no name-value pair with the given
-  `name`.
+* Returns: {string | null} A string or `null` if there is no name-value pair
+  with the given `name`.
 
 Returns the value of the first name-value pair whose name is `name`. If there
 are no such pairs, `null` is returned.
@@ -1593,6 +1593,36 @@ $ node negate.js --no-logfile --logfile=test.log --color --no-color
 { logfile: 'test.log', color: false }
 ```
 
+## `util.parseEnv(content)`
+
+> Stability: 1.1 - Active development
+
+<!-- YAML
+added: v20.12.0
+-->
+
+* `content` {string}
+
+The raw contents of a `.env` file.
+
+* Returns: {Object}
+
+Given an example `.env` file:
+
+```cjs
+const { parseEnv } = require('node:util');
+
+parseEnv('HELLO=world\nHELLO=oh my\n');
+// Returns: { HELLO: 'oh my' }
+```
+
+```mjs
+import { parseEnv } from 'node:util';
+
+parseEnv('HELLO=world\nHELLO=oh my\n');
+// Returns: { HELLO: 'oh my' }
+```
+
 ## `util.promisify(original)`
 
 <!-- YAML
@@ -1761,6 +1791,42 @@ Returns `str` with any ANSI escape codes removed.
 console.log(util.stripVTControlCharacters('\u001B[4mvalue\u001B[0m'));
 // Prints "value"
 ```
+
+## `util.styleText(format, text)`
+
+> Stability: 1.1 - Active development
+
+<!-- YAML
+added: v20.12.0
+-->
+
+* `format` {string} A text format defined in `util.inspect.colors`.
+* `text` {string} The text to to be formatted.
+
+This function returns a formatted text considering the `format` passed.
+
+```mjs
+import { styleText } from 'node:util';
+const errorMessage = styleText('red', 'Error! Error!');
+console.log(errorMessage);
+```
+
+```cjs
+const { styleText } = require('node:util');
+const errorMessage = styleText('red', 'Error! Error!');
+console.log(errorMessage);
+```
+
+`util.inspect.colors` also provides text formats such as `italic`, and
+`underline` and you can combine both:
+
+```cjs
+console.log(
+  util.styleText('underline', util.styleText('italic', 'My italic underlined message')),
+);
+```
+
+The full list of formats can be found in [modifiers][].
 
 ## Class: `util.TextDecoder`
 
@@ -2836,25 +2902,6 @@ Returns `true` if the value is a built-in [`WeakSet`][] instance.
 util.types.isWeakSet(new WeakSet());  // Returns true
 ```
 
-### `util.types.isWebAssemblyCompiledModule(value)`
-
-<!-- YAML
-added: v10.0.0
-deprecated: v14.0.0
--->
-
-> Stability: 0 - Deprecated: Use `value instanceof WebAssembly.Module` instead.
-
-* `value` {any}
-* Returns: {boolean}
-
-Returns `true` if the value is a built-in [`WebAssembly.Module`][] instance.
-
-```js
-const module = new WebAssembly.Module(wasmBuffer);
-util.types.isWebAssemblyCompiledModule(module);  // Returns true
-```
-
 ## Deprecated APIs
 
 The following APIs are deprecated and should no longer be used. Existing
@@ -3360,7 +3407,6 @@ util.log('Timestamped message.');
 [`Uint8ClampedArray`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray
 [`WeakMap`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
 [`WeakSet`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet
-[`WebAssembly.Module`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module
 [`assert.deepStrictEqual()`]: assert.md#assertdeepstrictequalactual-expected-message
 [`console.error()`]: console.md#consoleerrordata-args
 [`mime.toString()`]: #mimetostring
@@ -3383,6 +3429,7 @@ util.log('Timestamped message.');
 [default sort]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
 [global symbol registry]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/for
 [list of deprecated APIS]: deprecations.md#list-of-deprecated-apis
+[modifiers]: #modifiers
 [realm]: https://tc39.es/ecma262/#realm
 [semantically incompatible]: https://github.com/nodejs/node/issues/4179
 [util.inspect.custom]: #utilinspectcustom

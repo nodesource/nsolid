@@ -81,7 +81,7 @@ declare namespace InternalFSBinding {
   function fchmod(fd: number, mode: number, usePromises: typeof kUsePromises): Promise<void>;
 
   function fchown(fd: number, uid: number, gid: number, req: FSReqCallback): void;
-  function fchown(fd: number, uid: number, gid: number, req: undefined, ctx: FSSyncContext): void;
+  function fchown(fd: number, uid: number, gid: number): void;
   function fchown(fd: number, uid: number, gid: number, usePromises: typeof kUsePromises): Promise<void>;
 
   function fdatasync(fd: number, req: FSReqCallback): void;
@@ -261,7 +261,6 @@ export interface FsBinding {
   fsync: typeof InternalFSBinding.fsync;
   ftruncate: typeof InternalFSBinding.ftruncate;
   futimes: typeof InternalFSBinding.futimes;
-  internalModuleReadJSON: typeof InternalFSBinding.internalModuleReadJSON;
   internalModuleStat: typeof InternalFSBinding.internalModuleStat;
   lchown: typeof InternalFSBinding.lchown;
   link: typeof InternalFSBinding.link;

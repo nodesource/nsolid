@@ -100,15 +100,14 @@ expected.beforePreExec = new Set([
   'Internal Binding nsolid_api',
   'Internal Binding worker',
   'NativeModule internal/nsolid_module',
+  'Internal Binding wasm_web_api',
 ]);
 
 expected.atRunTime = new Set([
-  'Internal Binding wasm_web_api',
   'NativeModule internal/modules/run_main',
   'NativeModule internal/net',
   'NativeModule internal/dns/utils',
   'NativeModule internal/process/pre_execution',
-  'NativeModule internal/vm/module',
   'NativeModule internal/modules/esm/utils',
   'Internal Binding nsolid_statsd_agent',
   'Internal Binding nsolid_zmq_agent',
@@ -171,6 +170,11 @@ if (process.features.inspector) {
   expected.beforePreExec.add('Internal Binding inspector');
   expected.beforePreExec.add('NativeModule internal/util/inspector');
   expected.atRunTime.add('NativeModule internal/inspector_async_hook');
+
+  // This is loaded if the test is run with NODE_V8_COVERAGE.
+  if (process.env.NODE_V8_COVERAGE) {
+    expected.atRunTime.add('Internal Binding profiler');
+  }
 }
 
 const difference = (setA, setB) => {

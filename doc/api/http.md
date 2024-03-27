@@ -2991,12 +2991,12 @@ added:
 * `value` {string|string\[]} Header value
 * Returns: {this}
 
-Append a single header value for the header object.
+Append a single header value to the header object.
 
-If the value is an array, this is equivalent of calling this method multiple
+If the value is an array, this is equivalent to calling this method multiple
 times.
 
-If there were no previous value for the header, this is equivalent of calling
+If there were no previous values for the header, this is equivalent to calling
 [`outgoingMessage.setHeader(name, value)`][].
 
 Depending of the value of `options.uniqueHeaders` when the client request or the
@@ -3090,7 +3090,7 @@ added: v0.4.0
 -->
 
 * `name` {string} Name of header
-* Returns {string | undefined}
+* Returns: {string | undefined}
 
 Gets the value of the HTTP header with the given name. If that header is not
 set, the returned value will be `undefined`.
@@ -3101,7 +3101,7 @@ set, the returned value will be `undefined`.
 added: v7.7.0
 -->
 
-* Returns {string\[]}
+* Returns: {string\[]}
 
 Returns an array containing the unique names of the current outgoing headers.
 All names are lowercase.
@@ -3140,7 +3140,7 @@ added: v7.7.0
 -->
 
 * `name` {string}
-* Returns {boolean}
+* Returns: {boolean}
 
 Returns `true` if the header identified by `name` is currently set in the
 outgoing headers. The header name is case-insensitive.
@@ -3360,7 +3360,7 @@ changes:
 * `chunk` {string|Buffer|Uint8Array}
 * `encoding` {string} **Default**: `utf8`
 * `callback` {Function}
-* Returns {boolean}
+* Returns: {boolean}
 
 Sends a chunk of the body. This method can be called multiple times.
 

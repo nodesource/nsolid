@@ -1,6 +1,4 @@
 #include <node.h>
-#include <env-inl.h>
-#include <util-inl.h>
 #include <v8.h>
 #include <nsolid.h>
 #include "../../../deps/nsuv/include/nsuv-inl.h"
@@ -18,6 +16,7 @@ using v8::Global;
 using v8::HandleScope;
 using v8::Isolate;
 using v8::Local;
+using v8::MaybeLocal;
 using v8::Number;
 using v8::Object;
 using v8::PersistentBase;
@@ -71,24 +70,22 @@ static void got_metrics_stream_js_thread(node::nsolid::SharedEnvInst,
   HandleScope handle_scope(isolate);
   Local<Context> context = isolate->GetCurrentContext();
   Context::Scope context_scope(context);
-  node::Environment* env = node::GetCurrentEnvironment(context);
   Local<Function> fn;
   {
     nsuv::ns_mutex::scoped_lock lock(map_mutex_);
     auto iter = cb_map_.find(thread_id);
     assert(iter != cb_map_.end());
-    if (!env->can_call_into_js()) {
-      cb_map_.erase(iter);
-      return;
-    }
-
     // Retrieve the v8::Function from the cb_map_
     fn = PersistentToLocalStrong(iter->second);
   }
 
   Local<Array> metrics_array = Array::New(isolate);
-  Local<String> type_prop_name = node::FIXED_ONE_BYTE_STRING(isolate, "type");
-  Local<String> value_prop_name = node::FIXED_ONE_BYTE_STRING(isolate, "value");
+  Local<String> type_prop_name =
+    String::NewFromOneByte(
+      isolate, reinterpret_cast<const uint8_t*>("type")).ToLocalChecked();
+  Local<String> value_prop_name =
+    String::NewFromOneByte(
+      isolate, reinterpret_cast<const uint8_t*>("value")).ToLocalChecked();
   for (size_t i = 0; i < bucket.size(); ++i) {
     const MetricsStream::Datapoint& dp(bucket[i]);
     Local<Object> elem = Object::New(isolate);
@@ -101,7 +98,12 @@ static void got_metrics_stream_js_thread(node::nsolid::SharedEnvInst,
   }
 
   Local<Value> v = static_cast<Local<Value>>(metrics_array);
-  fn->Call(context, Undefined(isolate), 1, &v).ToLocalChecked();
+  MaybeLocal<Value> ret = fn->Call(context, Undefined(isolate), 1, &v);
+  if (ret.IsEmpty()) {
+    // This might happen if the thread is not alive anymore.
+    nsuv::ns_mutex::scoped_lock lock(map_mutex_);
+    cb_map_.erase(thread_id);
+  }
 }
 
 static void got_metrics_stream(MetricsStream* ms,

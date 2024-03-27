@@ -514,13 +514,6 @@ void FreeEnvironment(Environment* env) {
     RunAtExit(env);
   }
 
-  // This call needs to be made while the `Environment` is still alive
-  // because we assume that it is available for async tracking in the
-  // NodePlatform implementation.
-  MultiIsolatePlatform* platform = env->isolate_data()->platform();
-  if (platform != nullptr)
-    platform->DrainTasks(isolate);
-
   delete env;
 }
 
@@ -736,7 +729,7 @@ Maybe<bool> InitializeContextRuntime(Local<Context> context) {
     }
   } else if (per_process::cli_options->disable_proto != "") {
     // Validated in ProcessGlobalArgs
-    OnFatalError("InitializeContextRuntime()", "invalid --disable-proto mode");
+    UNREACHABLE("invalid --disable-proto mode");
   }
 
   return Just(true);
@@ -811,6 +804,9 @@ Maybe<bool> InitializePrimordials(Local<Context> context) {
   // relatively cheap and all the scripts that we may want to run at
   // startup are always present in it.
   thread_local builtins::BuiltinLoader builtin_loader;
+  // Primordials can always be just eagerly compiled.
+  builtin_loader.SetEagerCompile();
+
   for (const char** module = context_files; *module != nullptr; module++) {
     Local<Value> arguments[] = {exports, primordials};
     if (builtin_loader

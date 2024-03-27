@@ -385,11 +385,14 @@ added: v10.0.0
 * `buffer` {Buffer|TypedArray|DataView} A buffer that will be filled with the
   file data read.
 * `offset` {integer} The location in the buffer at which to start filling.
-* `length` {integer} The number of bytes to read.
-* `position` {integer|null} The location where to begin reading data from the
-  file. If `null`, data will be read from the current file position, and
-  the position will be updated. If `position` is an integer, the current
-  file position will remain unchanged.
+  **Default:** `0`
+* `length` {integer} The number of bytes to read. **Default:**
+  `buffer.byteLength - offset`
+* `position` {integer|bigint|null} The location where to begin reading data
+  from the file. If `null` or `-1`, data will be read from the current file
+  position, and the position will be updated. If `position` is a non-negative
+  integer, the current file position will remain unchanged.
+  **Default:**: `null`
 * Returns: {Promise} Fulfills upon success with an object with two properties:
   * `bytesRead` {integer} The number of bytes read
   * `buffer` {Buffer|TypedArray|DataView} A reference to the passed in `buffer`
@@ -3439,7 +3442,7 @@ added: v19.8.0
 * `path` {string|Buffer|URL}
 * `options` {Object}
   * `type` {string} An optional mime type for the blob.
-* Return: {Promise} containing {Blob}
+* Returns: {Promise} Fulfills with a {Blob} upon success.
 
 Returns a {Blob} whose data is backed by the given file.
 
@@ -6407,7 +6410,7 @@ The read-only path of this directory as was provided to [`fs.opendir()`][],
 added: v12.12.0
 -->
 
-* Returns: {Promise} containing {fs.Dirent|null}
+* Returns: {Promise} Fulfills with a {fs.Dirent|null}
 
 Asynchronously read the next directory entry via readdir(3) as an
 {fs.Dirent}.
@@ -6465,7 +6468,7 @@ included in the iteration results.
 added: v12.12.0
 -->
 
-* Returns: {AsyncIterator} of {fs.Dirent}
+* Returns: {AsyncIterator} An AsyncIterator of {fs.Dirent}
 
 Asynchronously iterates over the directory until all entries have
 been read. Refer to the POSIX readdir(3) documentation for more detail.
@@ -6578,15 +6581,33 @@ The file name that this {fs.Dirent} object refers to. The type of this
 value is determined by the `options.encoding` passed to [`fs.readdir()`][] or
 [`fs.readdirSync()`][].
 
-#### `dirent.path`
+#### `dirent.parentPath`
 
 <!-- YAML
-added: v20.1.0
+added:
+  - v20.12.0
 -->
+
+> Stability: 1 – Experimental
 
 * {string}
 
-The base path that this {fs.Dirent} object refers to.
+The path to the parent directory of the file this {fs.Dirent} object refers to.
+
+#### `dirent.path`
+
+<!-- YAML
+added:
+  - v20.1.0
+  - v18.17.0
+deprecated: v20.12.0
+-->
+
+> Stability: 0 - Deprecated: Use [`dirent.parentPath`][] instead.
+
+* {string}
+
+Alias for `dirent.parentPath`.
 
 ### Class: `fs.FSWatcher`
 
@@ -6914,8 +6935,9 @@ added: v0.1.10
 
 Returns `true` if the {fs.Stats} object describes a file system directory.
 
-If the {fs.Stats} object was obtained from [`fs.lstat()`][], this method will
-always return `false`. This is because [`fs.lstat()`][] returns information
+If the {fs.Stats} object was obtained from calling [`fs.lstat()`][] on a
+symbolic link which resolves to a directory, this method will return `false`.
+This is because [`fs.lstat()`][] returns information
 about a symbolic link itself and not the path it resolves to.
 
 #### `stats.isFIFO()`
@@ -8139,6 +8161,7 @@ the file contents.
 [`Number.MAX_SAFE_INTEGER`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
 [`ReadDirectoryChangesW`]: https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-readdirectorychangesw
 [`UV_THREADPOOL_SIZE`]: cli.md#uv_threadpool_sizesize
+[`dirent.parentPath`]: #direntparentpath
 [`event ports`]: https://illumos.org/man/port_create
 [`filehandle.createReadStream()`]: #filehandlecreatereadstreamoptions
 [`filehandle.createWriteStream()`]: #filehandlecreatewritestreamoptions
