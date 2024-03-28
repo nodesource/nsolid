@@ -49,7 +49,7 @@ class StatsDEndpoint {
  public:
   NSOLID_DELETE_UNUSED_CONSTRUCTORS(StatsDEndpoint)
 
-  static StatsDEndpoint* create(uv_loop_t* loop, const std::string& addr);
+  static StatsDEndpoint* create(const std::string& addr);
 
   const std::string& protocol() const { return protocol_; }
 
