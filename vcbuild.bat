@@ -369,7 +369,8 @@ if errorlevel 1 (
 if "%target%" == "Clean" goto exit
 
 :after-build
-rd %config%
+:: Check existence of %config% before removing it.
+if exist %config% rd %config%
 if errorlevel 1 echo "Old build output exists at 'out\%config%'. Please remove." & exit /B
 :: Use /J because /D (symlink) requires special permissions.
 if EXIST out\%config% mklink /J %config% out\%config%&&copy /Y out\%config%\nsolid.lib out\%config%\node.lib> nul
@@ -460,10 +461,8 @@ if defined dll (
   copy /Y node.def %TARGET_NAME%\Release\ > nul
   if errorlevel 1 echo Cannot copy node.def && goto package_error
 
-  set HEADERS_ONLY=1
-  python ..\tools\install.py install %CD%\%TARGET_NAME% \ > nul
+  python ..\tools\install.py install --dest-dir %CD%\%TARGET_NAME% --prefix \ --headers-only --silent
   if errorlevel 1 echo Cannot install headers && goto package_error
-  set HEADERS_ONLY=
 )
 cd ..
 
@@ -591,8 +590,7 @@ for /d %%F in (test\addons\??_*) do (
 if %errorlevel% neq 0 exit /b %errorlevel%
 :: building addons
 setlocal
-set npm_config_nodedir=%~dp0
-"%node_exe%" "%~dp0tools\build-addons.mjs" "%~dp0deps\npm\node_modules\node-gyp\bin\node-gyp.js" "%~dp0test\addons"
+python "%~dp0tools\build_addons.py" "%~dp0test\addons"
 if errorlevel 1 exit /b 1
 endlocal
 
@@ -609,8 +607,7 @@ for /d %%F in (test\js-native-api\??_*) do (
 )
 :: building js-native-api
 setlocal
-set npm_config_nodedir=%~dp0
-"%node_exe%" "%~dp0tools\build-addons.mjs" "%~dp0deps\npm\node_modules\node-gyp\bin\node-gyp.js" "%~dp0test\js-native-api"
+python "%~dp0tools\build_addons.py" "%~dp0test\js-native-api"
 if errorlevel 1 exit /b 1
 endlocal
 goto build-node-api-tests
@@ -628,8 +625,7 @@ for /d %%F in (test\node-api\??_*) do (
 )
 :: building node-api
 setlocal
-set npm_config_nodedir=%~dp0
-"%node_exe%" "%~dp0tools\build-addons.mjs" "%~dp0deps\npm\node_modules\node-gyp\bin\node-gyp.js" "%~dp0test\node-api"
+python "%~dp0tools\build_addons.py" "%~dp0test\node-api"
 if errorlevel 1 exit /b 1
 endlocal
 goto test-agents-prereqs

@@ -36,6 +36,13 @@ using CFunctionCallbackUint32Uint32Uint64 =
 using CFunctionCallbackUint32Uint32Double =
   void (*)(v8::Local<v8::Object> receiver, uint32_t, uint32_t, double);
 
+using CFunctionWithDoubleReturnDouble = double (*)(v8::Local<v8::Value>,
+                                                   const double);
+using CFunctionWithInt64Fallback = void (*)(v8::Local<v8::Value>,
+                                            const int64_t,
+                                            v8::FastApiCallbackOptions&);
+using CFunctionWithBool = void (*)(v8::Local<v8::Value>, bool);
+
 // This class manages the external references from the V8 heap
 // to the C++ addresses in Node.js.
 class ExternalReferenceRegistry {
@@ -55,6 +62,9 @@ class ExternalReferenceRegistry {
   V(CFunctionCallbackDouble)                                                   \
   V(CFunctionCallbackUint32Uint32Uint64)                                       \
   V(CFunctionCallbackUint32Uint32Double)                                       \
+  V(CFunctionWithDoubleReturnDouble)                                           \
+  V(CFunctionWithInt64Fallback)                                                \
+  V(CFunctionWithBool)                                                         \
   V(const v8::CFunctionInfo*)                                                  \
   V(v8::FunctionCallback)                                                      \
   V(v8::AccessorGetterCallback)                                                \
@@ -118,10 +128,12 @@ class ExternalReferenceRegistry {
   V(permission)                                                                \
   V(process_methods)                                                           \
   V(process_object)                                                            \
+  V(process_wrap)                                                              \
   V(report)                                                                    \
   V(task_queue)                                                                \
   V(tcp_wrap)                                                                  \
   V(tty_wrap)                                                                  \
+  V(udp_wrap)                                                                  \
   V(url)                                                                       \
   V(util)                                                                      \
   V(pipe_wrap)                                                                 \
@@ -133,6 +145,7 @@ class ExternalReferenceRegistry {
   V(string_decoder)                                                            \
   V(stream_wrap)                                                               \
   V(signal_wrap)                                                               \
+  V(spawn_sync)                                                                \
   V(trace_events)                                                              \
   V(timers)                                                                    \
   V(types)                                                                     \

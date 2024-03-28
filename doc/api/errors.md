@@ -1710,6 +1710,12 @@ When setting the priority for an HTTP/2 stream, the stream may be marked as
 a dependency for a parent stream. This error code is used when an attempt is
 made to mark a stream and dependent of itself.
 
+<a id="ERR_HTTP2_TOO_MANY_CUSTOM_SETTINGS"></a>
+
+### `ERR_HTTP2_TOO_MANY_CUSTOM_SETTINGS`
+
+The number of supported custom settings (10) has been exceeded.
+
 <a id="ERR_HTTP2_TOO_MANY_INVALID_FRAMES"></a>
 
 ### `ERR_HTTP2_TOO_MANY_INVALID_FRAMES`
@@ -2395,6 +2401,17 @@ error indicates that the idle loop has failed to stop.
 An attempt was made to use operations that can only be used when building
 V8 startup snapshot even though Node.js isn't building one.
 
+<a id="ERR_NOT_IN_SINGLE_EXECUTABLE_APPLICATION"></a>
+
+### `ERR_NOT_IN_SINGLE_EXECUTABLE_APPLICATION`
+
+<!-- YAML
+added: v20.12.0
+-->
+
+The operation cannot be performed when it's not in a single-executable
+application.
+
 <a id="ERR_NOT_SUPPORTED_IN_SNAPSHOT"></a>
 
 ### `ERR_NOT_SUPPORTED_IN_SNAPSHOT`
@@ -2540,6 +2557,17 @@ and HTTP/2 `Server` instances.
 The [`server.close()`][] method was called when a `net.Server` was not
 running. This applies to all instances of `net.Server`, including HTTP, HTTPS,
 and HTTP/2 `Server` instances.
+
+<a id="ERR_SINGLE_EXECUTABLE_APPLICATION_ASSET_NOT_FOUND"></a>
+
+### `ERR_SINGLE_EXECUTABLE_APPLICATION_ASSET_NOT_FOUND`
+
+<!-- YAML
+added: v20.12.0
+-->
+
+A key was passed to single executable application APIs to identify an asset,
+but no match could be found.
 
 <a id="ERR_SOCKET_ALREADY_BOUND"></a>
 
@@ -2986,6 +3014,26 @@ import 'package-name'; // supported
 ### `ERR_UNSUPPORTED_ESM_URL_SCHEME`
 
 `import` with URL schemes other than `file` and `data` is unsupported.
+
+<a id="ERR_UNSUPPORTED_RESOLVE_REQUEST"></a>
+
+### `ERR_UNSUPPORTED_RESOLVE_REQUEST`
+
+An attempt was made to resolve an invalid module referrer. This can happen when
+importing or calling `import.meta.resolve()` with either:
+
+* a bare specifier that is not a builtin module from a module whose URL scheme
+  is not `file`.
+* a [relative URL][] from a module whose URL scheme is not a [special scheme][].
+
+```mjs
+try {
+  // Trying to import the package 'bare-specifier' from a `data:` URL module:
+  await import('data:text/javascript,import "bare-specifier"');
+} catch (e) {
+  console.log(e.code); // ERR_UNSUPPORTED_RESOLVE_REQUEST
+}
+```
 
 <a id="ERR_USE_AFTER_CLOSE"></a>
 
@@ -3723,7 +3771,9 @@ The native call from `process.cpuUsage` could not be processed.
 [event emitter-based]: events.md#class-eventemitter
 [file descriptors]: https://en.wikipedia.org/wiki/File_descriptor
 [policy]: permissions.md#policies
+[relative URL]: https://url.spec.whatwg.org/#relative-url-string
 [self-reference a package using its name]: packages.md#self-referencing-a-package-using-its-name
+[special scheme]: https://url.spec.whatwg.org/#special-scheme
 [stream-based]: stream.md
 [syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 [try-catch]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/try...catch

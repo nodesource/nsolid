@@ -10,10 +10,11 @@ Node.js APIs might be deprecated for any of the following reasons:
 * An improved alternative API is available.
 * Breaking changes to the API are expected in a future major release.
 
-Node.js uses three kinds of Deprecations:
+Node.js uses four kinds of deprecations:
 
 * Documentation-only
-* Runtime
+* Application (non-`node_modules` code only)
+* Runtime (all code)
 * End-of-Life
 
 A Documentation-only deprecation is one that is expressed only within the
@@ -25,10 +26,17 @@ deprecations below. Documentation-only deprecations that support that flag
 are explicitly labeled as such in the
 [list of Deprecated APIs](#list-of-deprecated-apis).
 
-A Runtime deprecation will, by default, generate a process warning that will
-be printed to `stderr` the first time the deprecated API is used. When the
-[`--throw-deprecation`][] command-line flag is used, a Runtime deprecation will
-cause an error to be thrown.
+An Application deprecation for only non-`node_modules` code will, by default,
+generate a process warning that will be printed to `stderr` the first time
+the deprecated API is used in code that's not loaded from `node_modules`.
+When the [`--throw-deprecation`][] command-line flag is used, a Runtime
+deprecation will cause an error to be thrown. When
+[`--pending-deprecation`][] is used, warnings will also be emitted for
+code loaded from `node_modules`.
+
+A runtime deprecation for all code is similar to the runtime deprecation
+for non-`node_modules` code, except that it also emits a warning for
+code loaded from `node_modules`.
 
 An End-of-Life deprecation is used when functionality is or will soon be removed
 from Node.js.
@@ -140,7 +148,7 @@ changes:
     description: Documentation-only deprecation.
 -->
 
-Type: Runtime (supports [`--pending-deprecation`][])
+Type: Application (non-`node_modules` code only)
 
 The `Buffer()` function and `new Buffer()` constructor are deprecated due to
 API usability issues that can lead to accidental security issues.
@@ -3424,7 +3432,11 @@ deprecated. Get them from `fs.constants` or `fs.promises.constants` instead.
 
 <!-- YAML
 changes:
-  - version: v20.11.0
+  - version: v20.12.0
+    pr-url: https://github.com/nodejs/node/pull/51442
+    description: End-of-Life.
+  - version:
+    - v20.11.0
     pr-url: https://github.com/nodejs/node/pull/50486
     description: A deprecation code has been assigned.
   - version: v14.0.0
@@ -3432,10 +3444,39 @@ changes:
     description: Documentation-only deprecation.
 -->
 
+Type: End-of-Life
+
+The `util.types.isWebAssemblyCompiledModule` API has been removed.
+Please use `value instanceof WebAssembly.Module` instead.
+
+### DEP0178: `dirent.path`
+
+<!-- YAML
+changes:
+  - version: v20.12.0
+    pr-url: https://github.com/nodejs/node/pull/51020
+    description: Documentation-only deprecation.
+-->
+
 Type: Documentation-only
 
-The [`util.types.isWebAssemblyCompiledModule`][] API is deprecated. Please use
-`value instanceof WebAssembly.Module` instead.
+The [`dirent.path`][] is deprecated due to its lack of consistency across
+release lines. Please use [`dirent.parentPath`][] instead.
+
+### DEP0179: `Hash` constructor
+
+<!-- YAML
+changes:
+  - version: v20.12.0
+    pr-url: https://github.com/nodejs/node/pull/51077
+    description: Documentation-only deprecation.
+-->
+
+Type: Documentation-only
+
+Calling `Hash` class directly with `Hash()` or `new Hash()` is
+deprecated due to being internals, not intended for public use.
+Please use the [`crypto.createHash()`][] method to create Hash instances.
 
 [NIST SP 800-38D]: https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf
 [RFC 6066]: https://tools.ietf.org/html/rfc6066#section-3
@@ -3475,6 +3516,7 @@ The [`util.types.isWebAssemblyCompiledModule`][] API is deprecated. Please use
 [`crypto.createCipheriv()`]: crypto.md#cryptocreatecipherivalgorithm-key-iv-options
 [`crypto.createDecipher()`]: crypto.md#cryptocreatedecipheralgorithm-password-options
 [`crypto.createDecipheriv()`]: crypto.md#cryptocreatedecipherivalgorithm-key-iv-options
+[`crypto.createHash()`]: crypto.md#cryptocreatehashalgorithm-options
 [`crypto.fips`]: crypto.md#cryptofips
 [`crypto.pbkdf2()`]: crypto.md#cryptopbkdf2password-salt-iterations-keylen-digest-callback
 [`crypto.randomBytes()`]: crypto.md#cryptorandombytessize-callback
@@ -3483,6 +3525,8 @@ The [`util.types.isWebAssemblyCompiledModule`][] API is deprecated. Please use
 [`decipher.setAuthTag()`]: crypto.md#deciphersetauthtagbuffer-encoding
 [`diagnostics_channel.subscribe(name, onMessage)`]: diagnostics_channel.md#diagnostics_channelsubscribename-onmessage
 [`diagnostics_channel.unsubscribe(name, onMessage)`]: diagnostics_channel.md#diagnostics_channelunsubscribename-onmessage
+[`dirent.parentPath`]: fs.md#direntparentpath
+[`dirent.path`]: fs.md#direntpath
 [`dns.lookup()`]: dns.md#dnslookuphostname-options-callback
 [`dnsPromises.lookup()`]: dns.md#dnspromiseslookuphostname-options
 [`domain`]: domain.md
@@ -3580,7 +3624,6 @@ The [`util.types.isWebAssemblyCompiledModule`][] API is deprecated. Please use
 [`util.log()`]: util.md#utillogstring
 [`util.promisify`]: util.md#utilpromisifyoriginal
 [`util.toUSVString()`]: util.md#utiltousvstringstring
-[`util.types.isWebAssemblyCompiledModule`]: util.md#utiltypesiswebassemblycompiledmodulevalue
 [`util.types`]: util.md#utiltypes
 [`util`]: util.md
 [`worker.exitedAfterDisconnect`]: cluster.md#workerexitedafterdisconnect

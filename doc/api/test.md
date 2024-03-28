@@ -105,9 +105,12 @@ If any tests fail, the process exit code is set to `1`.
 
 ## Subtests
 
-The test context's `test()` method allows subtests to be created. This method
-behaves identically to the top level `test()` function. The following example
-demonstrates the creation of a top level test with two subtests.
+The test context's `test()` method allows subtests to be created.
+It allows you to structure your tests in a hierarchical manner,
+where you can create nested tests within a larger test.
+This method behaves identically to the top level `test()` function.
+The following example demonstrates the creation of a
+top level test with two subtests.
 
 ```js
 test('top level test', async (t) => {
@@ -121,9 +124,13 @@ test('top level test', async (t) => {
 });
 ```
 
+> **Note:** `beforeEach` and `afterEach` hooks are triggered
+> between each subtest execution.
+
 In this example, `await` is used to ensure that both subtests have completed.
 This is necessary because parent tests do not wait for their subtests to
-complete. Any subtests that are still outstanding when their parent finishes
+complete, unlike tests created with the `describe` and `it` syntax.
+Any subtests that are still outstanding when their parent finishes
 are cancelled and treated as failures. Any subtest failures cause the parent
 test to fail.
 
@@ -1173,8 +1180,11 @@ import process from 'node:process';
 import path from 'node:path';
 
 run({ files: [path.resolve('./tests/test.js')] })
-  .compose(tap)
-  .pipe(process.stdout);
+ .on('test:fail', () => {
+   process.exitCode = 1;
+ })
+ .compose(tap)
+ .pipe(process.stdout);
 ```
 
 ```cjs
@@ -1183,8 +1193,11 @@ const { run } = require('node:test');
 const path = require('node:path');
 
 run({ files: [path.resolve('./tests/test.js')] })
-  .compose(tap)
-  .pipe(process.stdout);
+ .on('test:fail', () => {
+   process.exitCode = 1;
+ })
+ .compose(tap)
+ .pipe(process.stdout);
 ```
 
 ## `test([name][, options][, fn])`
@@ -1422,6 +1435,9 @@ describe('tests', async () => {
 });
 ```
 
+**Note:** The `after` hook is guaranteed to run,
+even if tests within the suite fail.
+
 ## `beforeEach([fn][, options])`
 
 <!-- YAML
@@ -1474,6 +1490,9 @@ added:
 
 This function is used to create a hook running
 after each subtest of the current test.
+
+**Note:** The `afterEach` hook is guaranteed to run after every test,
+even if any of the tests fail.
 
 ```js
 describe('tests', async () => {
@@ -2420,7 +2439,7 @@ changes:
     description: added type to test:pass and test:fail events for when the test is a suite.
 -->
 
-* Extends {ReadableStream}
+* Extends {Readable}
 
 A successful call to [`run()`][] method will return a new {TestsStream}
 object, streaming a series of events representing the execution of the tests.
@@ -2815,8 +2834,9 @@ added:
   - v16.17.0
 -->
 
-* {AbortSignal} Can be used to abort test subtasks when the test has been
-  aborted.
+* Type: {AbortSignal}
+
+Can be used to abort test subtasks when the test has been aborted.
 
 ```js
 test('top level test', async (t) => {
@@ -2961,8 +2981,9 @@ added:
   - v16.17.0
 -->
 
-* {AbortSignal} Can be used to abort test subtasks when the test has been
-  aborted.
+* Type: {AbortSignal}
+
+Can be used to abort test subtasks when the test has been aborted.
 
 [TAP]: https://testanything.org/
 [TTY]: tty.md

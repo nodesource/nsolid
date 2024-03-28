@@ -1023,6 +1023,18 @@
           'sources': [
             '<!@pymod_do_main(GN-scraper "<(V8_ROOT)/BUILD.gn"  "\\"v8_base_without_compiler.*?v8_enable_wasm_gdb_remote_debugging.*?v8_current_cpu == \\"loong64\\".*?sources \\+= ")',
           ],
+          'conditions': [
+            ['v8_enable_webassembly==1', {
+              'conditions': [
+                ['(_toolset=="host" and host_arch=="arm64" or _toolset=="target" and target_arch=="arm64") or (_toolset=="host" and host_arch=="loong64" or _toolset=="target" and target_arch=="loong64") or (_toolset=="host" and host_arch=="x64" or _toolset=="target" and target_arch=="x64")', {
+                  'sources': [
+                    '<(V8_ROOT)/src/trap-handler/handler-inside-posix.cc',
+                    '<(V8_ROOT)/src/trap-handler/handler-outside-posix.cc',
+                  ],
+                }],
+              ],
+            }],
+          ],
         }],        
         ['OS=="win"', {
           # This will prevent V8's .cc files conflicting with the inspector's
@@ -1232,8 +1244,7 @@
             'target_conditions': [
               ['_toolset=="host" and host_os=="linux"', {
                 'libraries': [
-                  '-ldl',
-                  '-lrt'
+                  '-ldl'
                 ],
               }],
             ],
@@ -1970,6 +1981,12 @@
           ]
         }],
       ],
+      # -Wno-invalid-offsetof flag is not valid for C.
+      # The flag is initially set in `toolchain.gypi` for all targets.
+      'cflags!': [ '-Wno-invalid-offsetof' ],
+      'xcode_settings': {
+        'WARNING_CFLAGS!': ['-Wno-invalid-offsetof']
+      },
       'direct_dependent_settings': {
         'include_dirs': [
           '<(V8_ROOT)/third_party/zlib',

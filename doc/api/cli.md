@@ -103,6 +103,47 @@ If this flag is passed, the behavior can still be set to not abort through
 [`process.setUncaughtExceptionCaptureCallback()`][] (and through usage of the
 `node:domain` module that uses it).
 
+### `--allow-addons`
+
+<!-- YAML
+added: v20.12.0
+-->
+
+> Stability: 1.1 - Active development
+
+When using the [Permission Model][], the process will not be able to use
+native addons by default.
+Attempts to do so will throw an `ERR_DLOPEN_DISABLED` unless the
+user explicitly passes the `--allow-addons` flag when starting Node.js.
+
+Example:
+
+```cjs
+// Attempt to require an native addon
+require('nodejs-addon-example');
+```
+
+```console
+$ node --experimental-permission --allow-fs-read=* index.js
+node:internal/modules/cjs/loader:1319
+  return process.dlopen(module, path.toNamespacedPath(filename));
+                 ^
+
+Error: Cannot load native addon because loading addons is disabled.
+    at Module._extensions..node (node:internal/modules/cjs/loader:1319:18)
+    at Module.load (node:internal/modules/cjs/loader:1091:32)
+    at Module._load (node:internal/modules/cjs/loader:938:12)
+    at Module.require (node:internal/modules/cjs/loader:1115:19)
+    at require (node:internal/modules/helpers:130:18)
+    at Object.<anonymous> (/home/index.js:1:15)
+    at Module._compile (node:internal/modules/cjs/loader:1233:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1287:10)
+    at Module.load (node:internal/modules/cjs/loader:1091:32)
+    at Module._load (node:internal/modules/cjs/loader:938:12) {
+  code: 'ERR_DLOPEN_DISABLED'
+}
+```
+
 ### `--allow-child-process`
 
 <!-- YAML
@@ -323,6 +364,30 @@ Currently the support for run-time snapshot is experimental in that:
    a report in the [Node.js issue tracker][] and link to it in the
    [tracking issue for user-land snapshots][].
 
+### `--build-snapshot-config`
+
+<!-- YAML
+added: v20.12.0
+-->
+
+> Stability: 1 - Experimental
+
+Specifies the path to a JSON configuration file which configures snapshot
+creation behavior.
+
+The following options are currently supported:
+
+* `builder` {string} Required. Provides the name to the script that is executed
+  before building the snapshot, as if [`--build-snapshot`][] had been passed
+  with `builder` as the main script name.
+* `withoutCodeCache` {boolean} Optional. Including the code cache reduces the
+  time spent on compiling functions included in the snapshot at the expense
+  of a bigger snapshot size and potentially breaking portability of the
+  snapshot.
+
+When using this flag, additional script files provided on the command line will
+not be executed and instead be interpreted as regular command line arguments.
+
 ### `-c`, `--check`
 
 <!-- YAML
@@ -478,7 +543,7 @@ For example, the following script will emit the
 [DEP0025 `require('node:sys')`][DEP0025 warning], but not any Experimental
 Warnings (such as
 [ExperimentalWarning: `vm.measureMemory` is an experimental feature][]
-in <=v21) when executed with `node --disable-warning=ExperimentalWarnings`:
+in <=v21) when executed with `node --disable-warning=ExperimentalWarning`:
 
 ```mjs
 import sys from 'node:sys';
@@ -565,8 +630,19 @@ application reference the transpiled code, not the original source position.
 `--enable-source-maps` enables caching of Source Maps and makes a best
 effort to report stack traces relative to the original source file.
 
-Overriding `Error.prepareStackTrace` prevents `--enable-source-maps` from
-modifying the stack trace.
+Overriding `Error.prepareStackTrace` may prevent `--enable-source-maps` from
+modifying the stack trace. Call and return the results of the original
+`Error.prepareStackTrace` in the overriding function to modify the stack trace
+with source maps.
+
+```js
+const originalPrepareStackTrace = Error.prepareStackTrace;
+Error.prepareStackTrace = (error, trace) => {
+  // Modify error and trace and format stack trace with
+  // original Error.prepareStackTrace.
+  return originalPrepareStackTrace(error, trace);
+};
+```
 
 Note, enabling source maps can introduce latency to your application
 when `Error.stack` is accessed. If you access `Error.stack` frequently
@@ -579,6 +655,10 @@ of `--enable-source-maps`.
 
 <!-- YAML
 added: v20.6.0
+changes:
+  - version: v20.12.0
+    pr-url: https://github.com/nodejs/node/pull/51289
+    description: Add support to multi-line values.
 -->
 
 Loads environment variables from a file relative to the current directory,
@@ -613,6 +693,20 @@ They are omitted from the values.
 
 ```text
 USERNAME="nodejs" # will result in `nodejs` as the value.
+```
+
+Multi-line values are supported:
+
+```text
+MULTI_LINE="THIS IS
+A MULTILINE"
+# will result in `THIS IS\nA MULTILINE` as the value.
+```
+
+Export keyword before a key is ignored:
+
+```text
+export USERNAME="nodejs" # will result in `nodejs` as the value.
 ```
 
 ### `-e`, `--eval "script"`
@@ -1057,12 +1151,13 @@ Modules preloaded with `--require` will run before modules preloaded with `--imp
 added: v12.0.0
 -->
 
-This configures Node.js to interpret string input as CommonJS or as an ES
-module. String input is input via `--eval`, `--print`, or `STDIN`.
+This configures Node.js to interpret `--eval` or `STDIN` input as CommonJS or
+as an ES module. Valid values are `"commonjs"` or `"module"`. The default is
+`"commonjs"` unless [`--experimental-default-type=module`][] is used.
 
-Valid values are `"commonjs"` and `"module"`. The default is `"commonjs"`.
-
-The REPL does not support this option.
+The REPL does not support this option. Usage of `--input-type=module` with
+[`--print`][] will throw an error, as `--print` does not support ES module
+syntax.
 
 ### `--insecure-http-parser`
 
@@ -1154,12 +1249,12 @@ Opens the REPL even if stdin does not appear to be a terminal.
 added: v12.0.0
 -->
 
+> Stability: 1 - Experimental. This flag is inherited from V8 and is subject to
+> change upstream.
+
 Disable [runtime allocation of executable memory][jitless]. This may be
 required on some platforms for security reasons. It can also reduce attack
 surface on other platforms, but the performance impact may be severe.
-
-This flag is inherited from V8 and is subject to change upstream. It may
-disappear in a non-semver-major release.
 
 ### `--max-http-header-size=size`
 
@@ -2333,6 +2428,7 @@ Node.js options that are allowed are:
 
 <!-- node-options-node start -->
 
+* `--allow-addons`
 * `--allow-child-process`
 * `--allow-fs-read`
 * `--allow-fs-write`
@@ -2832,6 +2928,7 @@ done
 [`--allow-fs-read`]: #--allow-fs-read
 [`--allow-fs-write`]: #--allow-fs-write
 [`--allow-worker`]: #--allow-worker
+[`--build-snapshot`]: #--build-snapshot
 [`--cpu-prof-dir`]: #--cpu-prof-dir
 [`--diagnostic-dir`]: #--diagnostic-dirdirectory
 [`--experimental-default-type=module`]: #--experimental-default-typetype
@@ -2841,6 +2938,7 @@ done
 [`--import`]: #--importmodule
 [`--openssl-config`]: #--openssl-configfile
 [`--preserve-symlinks`]: #--preserve-symlinks
+[`--print`]: #-p---print-script
 [`--redirect-warnings`]: #--redirect-warningsfile
 [`--require`]: #-r---require-module
 [`Atomics.wait()`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Atomics/wait

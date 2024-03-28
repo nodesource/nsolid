@@ -32,6 +32,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 
 namespace node {
@@ -57,6 +58,8 @@ using v8::Number;
 using v8::Object;
 using v8::ObjectTemplate;
 using v8::Private;
+using v8::Promise;
+using v8::PromiseHookType;
 using v8::Script;
 using v8::SnapshotCreator;
 using v8::StackTrace;
@@ -64,6 +67,7 @@ using v8::String;
 using v8::Symbol;
 using v8::TracingController;
 using v8::TryCatch;
+using v8::Uint32;
 using v8::Undefined;
 using v8::Value;
 using v8::WrapperDescriptor;
@@ -287,6 +291,12 @@ std::ostream& operator<<(std::ostream& output,
   return output;
 }
 
+std::ostream& operator<<(std::ostream& output, const SnapshotFlags& flags) {
+  output << "static_cast<SnapshotFlags>(" << static_cast<uint32_t>(flags)
+         << ")";
+  return output;
+}
+
 std::ostream& operator<<(std::ostream& output, const SnapshotMetadata& i) {
   output << "{\n"
          << "  "
@@ -298,6 +308,7 @@ std::ostream& operator<<(std::ostream& output, const SnapshotMetadata& i) {
          << "  \"" << i.node_arch << "\", // node_arch\n"
          << "  \"" << i.node_platform << "\", // node_platform\n"
          << "  " << i.v8_cache_version_tag << ", // v8_cache_version_tag\n"
+         << "  " << i.flags << ", // flags\n"
          << "}";
   return output;
 }
@@ -808,9 +819,24 @@ Environment::Environment(IsolateData* isolate_data,
         isolate_data->worker_context()->env()->builtin_loader());
   } else if (isolate_data->snapshot_data() != nullptr) {
     // ... otherwise, if a snapshot was provided, use its code cache.
-    builtin_loader()->RefreshCodeCache(
-        isolate_data->snapshot_data()->code_cache);
+    size_t cache_size = isolate_data->snapshot_data()->code_cache.size();
+    per_process::Debug(DebugCategory::CODE_CACHE,
+                       "snapshot contains %zu code cache\n",
+                       cache_size);
+    if (cache_size > 0) {
+      builtin_loader()->RefreshCodeCache(
+          isolate_data->snapshot_data()->code_cache);
+    }
   }
+
+  // We are supposed to call builtin_loader_.SetEagerCompile() in
+  // snapshot mode here because it's beneficial to compile built-ins
+  // loaded in the snapshot eagerly and include the code of inner functions
+  // that are likely to be used by user since they are part of the core
+  // startup. But this requires us to start the coverage collections
+  // before Environment/Context creation which is not currently possible.
+  // TODO(joyeecheung): refactor V8ProfilerConnection classes to parse
+  // JSON without v8 and lift this restriction.
 
   // We'll be creating new objects so make sure we've entered the context.
   HandleScope handle_scope(isolate);
@@ -824,7 +850,7 @@ Environment::Environment(IsolateData* isolate_data,
   }
 
   set_env_vars(per_process::system_environment);
-  enabled_debug_list_.Parse(env_vars(), isolate);
+  enabled_debug_list_.Parse(env_vars());
 
   // We create new copies of the per-Environment option sets, so that it is
   // easier to modify them after Environment creation. The defaults are
@@ -856,7 +882,10 @@ Environment::Environment(IsolateData* isolate_data,
   destroy_async_id_list_.reserve(512);
 
   performance_state_ = std::make_unique<performance::PerformanceState>(
-      isolate, time_origin_, MAYBE_FIELD_PTR(env_info, performance_state));
+      isolate,
+      time_origin_,
+      time_origin_timestamp_,
+      MAYBE_FIELD_PTR(env_info, performance_state));
 
   if (*TRACE_EVENT_API_GET_CATEGORY_GROUP_ENABLED(
           TRACING_CATEGORY_NODE1(environment)) != 0) {
@@ -879,23 +908,29 @@ Environment::Environment(IsolateData* isolate_data,
     // The process shouldn't be able to neither
     // spawn/worker nor use addons or enable inspector
     // unless explicitly allowed by the user
-    options_->allow_native_addons = false;
+    if (!options_->allow_addons) {
+      options_->allow_native_addons = false;
+    }
     flags_ = flags_ | EnvironmentFlags::kNoCreateInspector;
-    permission()->Apply({"*"}, permission::PermissionScope::kInspector);
+    permission()->Apply(this, {"*"}, permission::PermissionScope::kInspector);
     if (!options_->allow_child_process) {
-      permission()->Apply({"*"}, permission::PermissionScope::kChildProcess);
+      permission()->Apply(
+          this, {"*"}, permission::PermissionScope::kChildProcess);
     }
     if (!options_->allow_worker_threads) {
-      permission()->Apply({"*"}, permission::PermissionScope::kWorkerThreads);
+      permission()->Apply(
+          this, {"*"}, permission::PermissionScope::kWorkerThreads);
     }
 
     if (!options_->allow_fs_read.empty()) {
-      permission()->Apply(options_->allow_fs_read,
+      permission()->Apply(this,
+                          options_->allow_fs_read,
                           permission::PermissionScope::kFileSystemRead);
     }
 
     if (!options_->allow_fs_write.empty()) {
-      permission()->Apply(options_->allow_fs_write,
+      permission()->Apply(this,
+                          options_->allow_fs_write,
                           permission::PermissionScope::kFileSystemWrite);
     }
   }
@@ -1812,7 +1847,7 @@ void Environment::DeserializeProperties(const EnvSerializeInfo* info) {
   immediate_info_.Deserialize(ctx);
   timeout_info_.Deserialize(ctx);
   tick_info_.Deserialize(ctx);
-  performance_state_->Deserialize(ctx, time_origin_);
+  performance_state_->Deserialize(ctx, time_origin_, time_origin_timestamp_);
   exit_info_.Deserialize(ctx);
   stream_base_state_.Deserialize(ctx);
   should_abort_on_uncaught_toggle_.Deserialize(ctx);
@@ -1844,6 +1879,60 @@ void Environment::BuildEmbedderGraph(Isolate* isolate,
   Environment* env = static_cast<Environment*>(data);
   // Start traversing embedder objects from the root Environment object.
   tracker.Track(env);
+}
+
+std::optional<uint32_t> GetPromiseId(Environment* env, Local<Promise> promise) {
+  Local<Value> id_val;
+  if (!promise->GetPrivate(env->context(), env->promise_trace_id())
+           .ToLocal(&id_val) ||
+      !id_val->IsUint32()) {
+    return std::nullopt;
+  }
+  return id_val.As<Uint32>()->Value();
+}
+
+void Environment::TracePromises(PromiseHookType type,
+                                Local<Promise> promise,
+                                Local<Value> parent) {
+  // We don't care about the execution of promises, just the
+  // creation/resolution.
+  if (type == PromiseHookType::kBefore || type == PromiseHookType::kAfter) {
+    return;
+  }
+  Isolate* isolate = Isolate::GetCurrent();
+  Local<Context> context = isolate->GetCurrentContext();
+  Environment* env = Environment::GetCurrent(context);
+  if (env == nullptr) return;
+
+  std::optional<uint32_t> parent_id;
+  if (!parent.IsEmpty() && parent->IsPromise()) {
+    parent_id = GetPromiseId(env, parent.As<Promise>());
+  }
+
+  uint32_t id = 0;
+  std::string action;
+  if (type == PromiseHookType::kInit) {
+    id = env->trace_promise_id_counter_++;
+    promise->SetPrivate(
+        context, env->promise_trace_id(), Uint32::New(isolate, id));
+    action = "created";
+  } else if (type == PromiseHookType::kResolve) {
+    auto opt = GetPromiseId(env, promise);
+    if (!opt.has_value()) return;
+    id = opt.value();
+    action = "resolved";
+  } else {
+    UNREACHABLE();
+  }
+
+  FPrintF(stderr, "[--trace-promises] ");
+  if (parent_id.has_value()) {
+    FPrintF(stderr, "promise #%d ", parent_id.value());
+  }
+  FPrintF(stderr, "%s promise #%d\n", action, id);
+  // TODO(joyeecheung): we can dump the native stack trace too if the
+  // JS stack trace is empty i.e. it may be resolved on the native side.
+  PrintCurrentStackTrace(isolate);
 }
 
 size_t Environment::NearHeapLimitCallback(void* data,
