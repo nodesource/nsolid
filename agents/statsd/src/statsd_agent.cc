@@ -686,7 +686,7 @@ int StatsDAgent::config_handles() {
   if (it != config_.end()) {
     // parse the endpoint and then create the corresponding handle
     const std::string statsd = *it;
-    endpoint_.reset(StatsDEndpoint::create(&loop_, statsd));
+    endpoint_.reset(StatsDEndpoint::create(statsd));
     if (endpoint_ == nullptr) {
       // print some kind of error here
       Debug("Invalid endpoint: '%s'. Stopping the agent\n", statsd.c_str());

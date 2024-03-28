@@ -13,8 +13,7 @@ namespace statsd {
 
 using sockaddr_storage_v = std::vector<struct sockaddr_storage>;
 
-StatsDEndpoint* StatsDEndpoint::create(uv_loop_t* loop,
-                                       const std::string& addr) {
+StatsDEndpoint* StatsDEndpoint::create(const std::string& addr) {
   size_t pos_prot;
   size_t pos_port;
   size_t start_host;
@@ -66,16 +65,25 @@ StatsDEndpoint* StatsDEndpoint::create(uv_loop_t* loop,
                               reinterpret_cast<struct sockaddr_in6*>(&ss))) {
     addresses.push_back(ss);
   } else {
+    uv_loop_t loop;
     nsuv::ns_addrinfo a_info;
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_socktype = SOCK_STREAM;
 
-    int ret = a_info.get(loop,
+    // uv_getaddrinfo() should really allow to be called without a uv_loop_t,
+    // but since it doesn't use this method of calling. The call will be
+    // fine since it doesn't require uv_run() when called sync. Calling
+    // uv_loop_init() does have a bit of overhead, but not going to worry
+    // about that since this is hardly ever called. If necessary then we can
+    // use an alternative method of doing this.
+    uv_loop_init(&loop);
+    int ret = a_info.get(&loop,
                          nullptr,
                          hostname.c_str(),
                          std::to_string(port).c_str(),
                          &hints);
+    uv_loop_close(&loop);
     if (ret != 0) {
       // The hostname wasn't a valid IP, a valid hostname or couldn't be
       // resolved.
