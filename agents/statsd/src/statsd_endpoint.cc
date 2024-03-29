@@ -54,6 +54,11 @@ StatsDEndpoint* StatsDEndpoint::create(const std::string& addr) {
     }
   }
 
+  // Only "tcp" and "udp" are supported.
+  if (protocol != "udp" && protocol != "tcp") {
+    return nullptr;
+  }
+
   sockaddr_storage_v addresses;
   struct sockaddr_storage ss;
   if (0 == uv_ip4_addr(hostname.c_str(),
