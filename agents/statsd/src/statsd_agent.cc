@@ -697,9 +697,10 @@ int StatsDAgent::config_handles() {
     ASSERT_EQ(0, retry_timer_.stop());
     if (endpoint_->protocol() == "tcp") {
       setup_tcp();
-    } else {
-      ASSERT_STR_EQ(endpoint_->protocol().c_str(), "udp");
+    } else if (endpoint_->protocol() == "udp") {
       setup_udp();
+    } else {
+      abort();  // Unreachable
     }
 
     return 0;
@@ -997,9 +998,10 @@ void StatsDAgent::retry_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent agent_wp) {
   ASSERT_NOT_NULL(agent->endpoint_.get());
   if (agent->endpoint_->protocol() == "tcp") {
     agent->setup_tcp();
-  } else {
-    ASSERT_STR_EQ(agent->endpoint_->protocol().c_str(), "udp");
+  } else if (endpoint_->protocol() == "udp") {
     agent->setup_udp();
+  } else {
+    abort();  // Unreachable
   }
 }
 
