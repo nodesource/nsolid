@@ -41,10 +41,12 @@ Span::Span(uint64_t thread_id) {
 
 
 void Span::add_prop(const SpanPropBase& prop) {
+  static double performance_process_start_timestamp =
+    performance::performance_process_start_timestamp / 1e3;
   switch (prop.type()) {
     case Span::kSpanStart:
     {
-      stor_.start = EnvList::Inst()->GetTimeOrigin() + prop.val<double>();
+      stor_.start = performance_process_start_timestamp + prop.val<double>();
     }
     break;
     case Span::kSpanOtelIds:
@@ -61,7 +63,7 @@ void Span::add_prop(const SpanPropBase& prop) {
     break;
     case Span::kSpanEnd:
     {
-      stor_.end = EnvList::Inst()->GetTimeOrigin() + prop.val<double>();
+      stor_.end = performance_process_start_timestamp + prop.val<double>();
     }
     break;
     case Span::kSpanName:

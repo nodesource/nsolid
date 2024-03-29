@@ -1266,8 +1266,8 @@ void EnvInst::send_datapoint(MetricsStream::Type type,
   EnvList* envlist = EnvList::Inst();
   double ts = 0;
   if (has_metrics_stream_hooks_) {
-    ts = (PERFORMANCE_NOW() - performance::timeOrigin) / 1e6 +
-         envlist->time_origin_;
+    ts = (PERFORMANCE_NOW() - env()->time_origin()) / 1e6 +
+         env()->time_origin_timestamp() / 1e3;
   }
 
   envlist->datapoints_q_.Enqueue({ thread_id_, ts, type, value });
@@ -2443,12 +2443,6 @@ static void setThreadName(const FunctionCallbackInfo<Value>& args) {
 }
 
 
-static void SetTimeOrigin(const FunctionCallbackInfo<Value>& args) {
-  CHECK(args[0]->IsNumber());
-  EnvList::Inst()->SetTimeOrigin(args[0].As<Number>()->Value());
-}
-
-
 static void SetToggleTracingFn(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   CHECK(args[0]->IsFunction());
@@ -2778,7 +2772,6 @@ void BindingData::Initialize(Local<Object> target,
             AttachRequestToCustomCommand);
   SetMethod(context, target, "getThreadName", getThreadName);
   SetMethod(context, target, "setThreadName", setThreadName);
-  SetMethod(context, target, "setTimeOrigin", SetTimeOrigin);
   SetMethod(context, target, "setToggleTracingFn", SetToggleTracingFn);
   SetMethod(context, target, "setTrackPromisesFn", SetTrackPromisesFn);
   SetMethod(context, target, "getSpanId", GetSpanId);
@@ -2905,7 +2898,6 @@ void BindingData::RegisterExternalReferences(
   registry->Register(AttachRequestToCustomCommand);
   registry->Register(getThreadName);
   registry->Register(setThreadName);
-  registry->Register(SetTimeOrigin);
   registry->Register(SetToggleTracingFn);
   registry->Register(SetTrackPromisesFn);
   registry->Register(GetSpanId);

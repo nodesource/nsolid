@@ -542,10 +542,6 @@ class EnvList {
 
   void UpdateTracingFlags(uint32_t flags);
 
-  void SetTimeOrigin(double t) { time_origin_ = t; }
-
-  double GetTimeOrigin() const { return time_origin_; }
-
   inline uv_thread_t thread();
   inline size_t env_map_size();
   inline nsuv::ns_mutex* command_lock();
@@ -680,8 +676,6 @@ class EnvList {
   TSQueue<std::string> trace_id_q_;
   tracing::TracerImpl tracer_;
   DispatchQueue<tracing::SpanItem> span_item_q_;
-
-  double time_origin_;
 
   NSolidHeapSnapshot heap_snapshot_;
 };
