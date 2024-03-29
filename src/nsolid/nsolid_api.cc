@@ -2442,12 +2442,6 @@ static void setThreadName(const FunctionCallbackInfo<Value>& args) {
 }
 
 
-static void SetTimeOrigin(const FunctionCallbackInfo<Value>& args) {
-  CHECK(args[0]->IsNumber());
-  EnvList::Inst()->SetTimeOrigin(args[0].As<Number>()->Value());
-}
-
-
 static void SetToggleTracingFn(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   CHECK(args[0]->IsFunction());
@@ -2827,7 +2821,6 @@ void BindingData::Initialize(Local<Object> target,
             AttachRequestToCustomCommand);
   SetMethod(context, target, "getThreadName", getThreadName);
   SetMethod(context, target, "setThreadName", setThreadName);
-  SetMethod(context, target, "setTimeOrigin", SetTimeOrigin);
   SetMethod(context, target, "setToggleTracingFn", SetToggleTracingFn);
   SetMethod(context, target, "setTrackPromisesFn", SetTrackPromisesFn);
   SetMethod(context, target, "getSpanId", GetSpanId);
@@ -2956,7 +2949,6 @@ void BindingData::RegisterExternalReferences(
   registry->Register(AttachRequestToCustomCommand);
   registry->Register(getThreadName);
   registry->Register(setThreadName);
-  registry->Register(SetTimeOrigin);
   registry->Register(SetToggleTracingFn);
   registry->Register(SetTrackPromisesFn);
   registry->Register(GetSpanId);
