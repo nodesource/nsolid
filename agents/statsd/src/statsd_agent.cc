@@ -39,46 +39,40 @@ inline void DebugJSON(const char* str, const json& msg) {
 
 StatsDTcp::StatsDTcp(uv_loop_t* loop,
                      nsuv::ns_async* update_state_msg)
-  : tcp_(new nsuv::ns_tcp()),
+  : loop_(loop),
     update_state_msg_(update_state_msg),
     status_(Initial),
     internal_state_(0) {
-  ASSERT_EQ(0, tcp_->init(loop));
   ASSERT_EQ(0, addr_str_lock_.init());
   write_req_.set_data(nullptr);
 }
 
 StatsDTcp::~StatsDTcp() {
   addr_str_lock_.destroy();
+  // Make sure close_and_delete() is always called before the destructor is
+  // called.
+  ASSERT_NULL(retry_timer_);
+  ASSERT_NULL(tcp_);
 }
 
 void StatsDTcp::close_and_delete() {
-  tcp_->close_and_delete();
+  // It is technically possible to call close_and_delete() before calling
+  // setup(), so need to make sure tcp_ is available.
+  if (tcp_) {
+    tcp_->close_and_delete();
+    tcp_ = nullptr;
+  }
+  if (retry_timer_) {
+    retry_timer_->close_and_delete();
+    retry_timer_ = nullptr;
+  }
+
   if (internal_state_ == 0) {
     delete this;
     return;
   }
 
   internal_state_ |= kClosing;
-}
-
-void StatsDTcp::connect(const struct sockaddr* addr) {
-#ifdef DEBUG
-  Debug("Connecting to: tcp://%s\n", addr_to_string(addr).c_str());
-#endif
-  int r = tcp_->connect(&connect_req_, addr, connect_cb_, this);
-  if (r == 0) {
-    addr_str(addr_to_string(addr));
-    status(Connecting);
-    internal_state_ |= kConnecting;
-  } else {
-#ifdef DEBUG
-    // connection error. Try w/ the next address
-    Debug("Error '%s' connecting to: %s. Trying with the next address...\n",
-          uv_err_name(r), addr_to_string(addr).c_str());
-#endif
-    status(ConnectionError);
-  }
 }
 
 void StatsDTcp::status(const StatsDTcp::Status& status) {
@@ -109,13 +103,34 @@ int StatsDTcp::write(const string_vector& messages) {
   if (r < 0) {
     delete req;
     delete sv;
-    addr_str("");
     Debug("Error: '%s' writing. Reconnecting...\n", uv_err_name(r));
     status(Disconnected);
+    prep_retry_timer_();
+    connect_();
   }
 
   req->set_data(sv);
   return r;
+}
+
+void StatsDTcp::setup(StatsDEndpoint* endpoint) {
+  ASSERT_NOT_NULL(endpoint);
+
+  // If setup() is called while the instance is still attempting to connect,
+  // then the instance can already exist.
+  if (retry_timer_) {
+    USE(retry_timer_->stop());
+  }
+
+  if (tcp_ != nullptr) {
+    tcp_->close_and_delete();
+  }
+  tcp_ = new nsuv::ns_tcp();
+  ASSERT_EQ(0, tcp_->init(loop_));
+
+  endpoint_.reset(endpoint);
+  addr_index_ = 0;
+  connect_();
 }
 
 void StatsDTcp::connect_cb_(nsuv::ns_connect<nsuv::ns_tcp>* req,
@@ -133,13 +148,29 @@ void StatsDTcp::connect_cb_(nsuv::ns_connect<nsuv::ns_tcp>* req,
           addr_to_string(req->sockaddr()).c_str());
 #endif
     tcp->status(Connected);
-  } else {
-    tcp->addr_str("");
+    if (tcp->retry_timer_) {
+      tcp->retry_timer_->close_and_delete();
+      tcp->retry_timer_ = nullptr;
+    }
+    return;
+  }
+
+#ifdef DEBUG
+  if (status != 0) {
     // connection error. Try w/ the next address
     Debug("Error '%s' connecting to: %s. Trying with the next address...\n",
           uv_err_name(status), addr_to_string(req->sockaddr()).c_str());
-    tcp->status(ConnectionError);
   }
+#endif
+
+  tcp->addr_str("");
+  if (++tcp->addr_index_ < tcp->endpoint_->addresses().size()) {
+    tcp->connect_();
+    return;
+  }
+
+  tcp->prep_retry_timer_();
+  tcp->retry_after_fail_();
 }
 
 void StatsDTcp::write_cb_(nsuv::ns_write<nsuv::ns_tcp>* req,
@@ -160,39 +191,82 @@ void StatsDTcp::write_cb_(nsuv::ns_write<nsuv::ns_tcp>* req,
     tcp->addr_str("");
     Debug("Error: '%s' writing. Reconnecting...\n", uv_err_name(status));
     tcp->status(Disconnected);
+    tcp->connect_();
   }
+}
+
+void StatsDTcp::retry_timer_cb_(nsuv::ns_timer* timer, StatsDTcp* tcp) {
+  // tcp should always be valid if this callback is called, since there
+  // shouldn't be any multi-threaded resource management for this class.
+  tcp->connect_();
+}
+
+void StatsDTcp::prep_retry_timer_() {
+  if (retry_timer_ == nullptr) {
+    retry_timer_ = new nsuv::ns_timer();
+    ASSERT_EQ(0, retry_timer_->init(loop_));
+  } else {
+    USE(retry_timer_->stop());
+  }
+}
+
+void StatsDTcp::retry_after_fail_() {
+  Debug("Error connecting to all addresses. Retry in 3 seconds...\n");
+  // All addresses have been attempted.
+  status(ConnectionError);
+  // Reattempt all IP addresses after 3 seconds.
+  addr_index_ = 0;
+  ASSERT_EQ(0, retry_timer_->start(retry_timer_cb_, 3000, 0, this));
+}
+
+void StatsDTcp::connect_() {
+  auto* ss = &endpoint_->addresses()[addr_index_];
+  const struct sockaddr* addr = reinterpret_cast<const struct sockaddr*>(ss);
+  addr_str("");
+
+#ifdef DEBUG
+  Debug("Connecting to: tcp://%s\n", addr_to_string(addr).c_str());
+#endif
+
+  int r = tcp_->connect(&connect_req_, addr, connect_cb_, this);
+  if (r == 0) {
+    addr_str(addr_to_string(addr));
+    status(Connecting);
+    internal_state_ |= kConnecting;
+    return;
+  }
+
+  prep_retry_timer_();
+
+  if (++addr_index_ >= endpoint_->addresses().size()) {
+    retry_after_fail_();
+    return;
+  }
+
+#ifdef DEBUG
+  // connection error. Try w/ the next address
+  Debug("Error '%s' connecting to: %s. Trying with the next address...\n",
+        uv_err_name(r), addr_to_string(addr).c_str());
+#endif
+  // Move on to the next address and try again.
+  ASSERT_EQ(0, retry_timer_->start(retry_timer_cb_, 100, 0, this));
 }
 
 
 StatsDUdp::StatsDUdp(uv_loop_t* loop,
                      nsuv::ns_async* update_state_msg)
-  : udp_(new nsuv::ns_udp()),
+  : loop_(loop),
     update_state_msg_(update_state_msg),
     connected_(false) {
-  ASSERT_EQ(0, udp_->init(loop));
   ASSERT_EQ(0, addr_str_lock_.init());
 }
 
 StatsDUdp::~StatsDUdp() {
   addr_str_lock_.destroy();
   udp_->close_and_delete();
-}
-
-int StatsDUdp::connect(const struct sockaddr* addr) {
-#ifdef DEBUG
-  Debug("Connecting to: udp://%s\n", addr_to_string(addr).c_str());
-#endif
-  int r = udp_->connect(addr);
-  if (r != 0) {
-    // connection error. Try w/ the next address
-    Debug("Error '%s' connecting to: udp://%s. Trying with the next address\n",
-          uv_err_name(r), addr_to_string(addr).c_str());
-    return r;
+  if (retry_timer_) {
+    retry_timer_->close_and_delete();
   }
-
-  addr_str(addr_to_string(addr));
-  connected(true);
-  return 0;
 }
 
 void StatsDUdp::connected(bool conn) {
@@ -280,6 +354,26 @@ cleanup_and_error:
   return r;
 }
 
+void StatsDUdp::setup(StatsDEndpoint* endpoint) {
+  ASSERT_NOT_NULL(endpoint);
+
+  // If setup() is called while the instance is still attempting to connect,
+  // then the instance can already exist.
+  if (retry_timer_) {
+    USE(retry_timer_->stop());
+  }
+
+  if (udp_ != nullptr) {
+    udp_->close_and_delete();
+  }
+  udp_ = new nsuv::ns_udp();
+  ASSERT_EQ(0, udp_->init(loop_));
+
+  endpoint_.reset(endpoint);
+  addr_index_ = 0;
+  connect_();
+}
+
 void StatsDUdp::write_cb_(nsuv::ns_udp_send* req, int status, StatsDUdp* udp) {
   if (status < 0) {
     struct sockaddr_storage ss;
@@ -305,6 +399,59 @@ void StatsDUdp::write_cb_(nsuv::ns_udp_send* req, int status, StatsDUdp* udp) {
   delete req;
 }
 
+void StatsDUdp::retry_timer_cb_(nsuv::ns_timer*, StatsDUdp* udp) {
+  // udp should always be valid if this callback is called, since there
+  // shouldn't be any multi-threaded resource management for this class.
+  udp->connect_();
+}
+
+void StatsDUdp::prep_retry_timer_() {
+  if (retry_timer_ == nullptr) {
+    retry_timer_ = new nsuv::ns_timer();
+    ASSERT_EQ(0, retry_timer_->init(loop_));
+  } else {
+    USE(retry_timer_->stop());
+  }
+}
+
+void StatsDUdp::connect_() {
+  auto* ss = &endpoint_->addresses()[addr_index_];
+  const struct sockaddr* addr = reinterpret_cast<const struct sockaddr*>(ss);
+
+#ifdef DEBUG
+  Debug("Connecting to: udp://%s\n", addr_to_string(addr).c_str());
+#endif
+
+  int r = udp_->connect(addr);
+  if (r == 0) {
+    addr_str(addr_to_string(addr));
+    connected(true);
+    if (retry_timer_) {
+      retry_timer_->close_and_delete();
+      retry_timer_ = nullptr;
+    }
+    return;
+  }
+
+  prep_retry_timer_();
+
+  if (++addr_index_ > endpoint_->addresses().size()) {
+    Debug("Error connecting to all addresses. Retry in 3 seconds...\n");
+    // Reattempt all IP addresses after 3 seconds.
+    addr_index_ = 0;
+    ASSERT_EQ(0, retry_timer_->start(retry_timer_cb_, 3000, 0, this));
+    return;
+  }
+
+#ifdef DEBUG
+  // connection error. Try w/ the next address
+  Debug("Error '%s' connecting to: udp://%s. Trying with the next address\n",
+        uv_err_name(r), addr_to_string(addr).c_str());
+#endif
+  ASSERT_EQ(0, retry_timer_->start(retry_timer_cb_, 100, 0, this));
+}
+
+
 SharedStatsDAgent StatsDAgent::Inst() {
   static SharedStatsDAgent agent(new StatsDAgent(), [](StatsDAgent* agent) {
     delete agent;
@@ -316,7 +463,6 @@ StatsDAgent::StatsDAgent(): hooks_init_(false),
                             tcp_(nullptr),
                             udp_(nullptr),
                             endpoint_(nullptr),
-                            addr_index_(0),
                             proc_metrics_(),
                             config_(default_agent_config),
                             status_(Unconfigured),
@@ -603,7 +749,7 @@ void StatsDAgent::update_state_msg_cb_(nsuv::ns_async*,
   }
 
   nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  agent->update_state();
+  agent->status(agent->calculate_status());
 }
 
 void StatsDAgent::send_stats_msg_cb_(nsuv::ns_async*,
@@ -676,39 +822,41 @@ int StatsDAgent::setup_metrics_timer(uint64_t period) {
 }
 
 int StatsDAgent::config_handles() {
-  if (tcp_) {
-    tcp_->close_and_delete();
-    tcp_ = nullptr;
-  }
-
-  udp_.reset(nullptr);
   auto it = config_.find("statsd");
-  if (it != config_.end()) {
-    // parse the endpoint and then create the corresponding handle
-    const std::string statsd = *it;
-    endpoint_.reset(StatsDEndpoint::create(statsd));
-    if (endpoint_ == nullptr) {
-      // print some kind of error here
-      Debug("Invalid endpoint: '%s'. Stopping the agent\n", statsd.c_str());
-      config_ = default_agent_config;
-      return UV_EINVAL;
-    }
 
-    ASSERT_EQ(0, retry_timer_.stop());
-    if (endpoint_->protocol() == "tcp") {
-      setup_tcp();
-    } else if (endpoint_->protocol() == "udp") {
-      setup_udp();
-    } else {
-      abort();  // Unreachable
-    }
-
-    return 0;
-  } else {
+  if (it == config_.end()) {
     Debug("No statsd configuration. Stopping the agent\n");
     config_ = default_agent_config;
     return UV_EINVAL;
   }
+
+  // parse the endpoint and then create the corresponding handle
+  const std::string statsd = *it;
+  auto endpoint = StatsDEndpoint::create(statsd);
+  if (endpoint == nullptr) {
+    // print some kind of error here
+    Debug("Invalid endpoint: '%s'. Stopping the agent\n", statsd.c_str());
+    config_ = default_agent_config;
+    return UV_EINVAL;
+  }
+
+  if (endpoint->protocol() == "tcp") {
+    // TODO(trevnorris): If a timer is only created when needed, then this
+    // should always be nullptr. Should replace if with ASSERT_NULL.
+    if (tcp_ == nullptr) {
+      tcp_ = new StatsDTcp(&loop_, &update_state_msg_);
+    }
+    tcp_->setup(endpoint);
+  } else if (endpoint->protocol() == "udp") {
+    if (udp_.get() == nullptr) {
+      udp_.reset(new StatsDUdp(&loop_, &update_state_msg_));
+    }
+    udp_->setup(endpoint);
+  } else {
+    abort();  // UNREACHABLE
+  }
+
+  return 0;
 }
 
 #define STATSD_BUCKET_REGEX_REPLACE(X)                                         \
@@ -916,37 +1064,12 @@ int StatsDAgent::send_metrics(const json& metrics,
 
   if (tcp_) {
     return tcp_->write(serialized_metrics);
-  } else {
-    // udp
+  }
+  if (udp_) {
     return udp_->write(serialized_metrics);
   }
-}
 
-void StatsDAgent::setup_tcp() {
-  if (tcp_) {
-    tcp_->close_and_delete();
-  }
-  addr_index_ = 0;
-  tcp_ = new StatsDTcp(&loop_, &update_state_msg_);
-  auto* ss = &endpoint_->addresses()[addr_index_];
-  auto* addr = reinterpret_cast<const struct sockaddr*>(ss);
-  tcp_->connect(addr);
-}
-
-void StatsDAgent::setup_udp() {
-  udp_.reset(nullptr);
-  udp_.reset(new StatsDUdp(&loop_, &update_state_msg_));
-  addr_index_ = 0;
-  auto* ss = &endpoint_->addresses()[addr_index_];
-  auto* addr = reinterpret_cast<const struct sockaddr*>(ss);
-  if (udp_->connect(addr) != 0) {
-    if (++addr_index_ >= endpoint_->addresses().size()) {
-      addr_index_ = 0;
-    }
-
-    ASSERT(!retry_timer_.is_active());
-    ASSERT_EQ(0, retry_timer_.start(retry_timer_cb_, 100, 0, weak_from_this()));
-  }
+  abort();  // UNREACHABLE
 }
 
 void StatsDAgent::status_command_cb_(SharedEnvInst, WeakStatsDAgent agent_wp) {
@@ -981,53 +1104,6 @@ StatsDAgent::Status StatsDAgent::calculate_status() const {
   }
 
   return Ready;
-}
-
-void StatsDAgent::retry_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent agent_wp) {
-  SharedStatsDAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
-    return;
-  }
-
-  // Check if the agent is closing
-  nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  if (agent->status_ == Unconfigured) {
-    return;
-  }
-
-  ASSERT_NOT_NULL(agent->endpoint_.get());
-  if (agent->endpoint_->protocol() == "tcp") {
-    agent->setup_tcp();
-  } else if (endpoint_->protocol() == "udp") {
-    agent->setup_udp();
-  } else {
-    abort();  // Unreachable
-  }
-}
-
-// Recalculate agent status on tcp / udp status change
-// Deal with reconnection in case of tcp connection error or disconnection
-// In case of ConnectionError -> try with the next address
-// In case of Disconnection -> try with the same address
-// retry after 100ms
-void StatsDAgent::update_state() {
-  status(calculate_status());
-  if (tcp_) {
-    auto st = tcp_->status();
-    if (st == StatsDTcp::ConnectionError || st == StatsDTcp::Disconnected) {
-      if (st == StatsDTcp::ConnectionError) {
-        if (++addr_index_ >= endpoint_->addresses().size()) {
-          addr_index_ = 0;
-        }
-      }
-
-      ASSERT(!retry_timer_.is_active());
-      ASSERT_EQ(0, retry_timer_.start(retry_timer_cb_,
-                                      100,
-                                      0,
-                                      weak_from_this()));
-    }
-  }
 }
 
 }  // namespace statsd
