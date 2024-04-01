@@ -25,6 +25,8 @@ namespace statsd {
 using status_cb = void(*)(const std::string&);
 
 // predeclarations
+class StatsDTcp;
+class StatsDUdp;
 class StatsDAgent;
 class StatsDEndpoint;
 
@@ -36,6 +38,9 @@ static const nlohmann::json default_agent_config = {
 
 class StatsDTcp {
  public:
+  // StatsDTcp will attempt to connect to all IPs returned from the endpoint.
+  // While attempting each of these it'll have the Connecting Status. If all
+  // IPs have been attempted then the Status will be ConnectionError.
   enum Status {
     Initial,
     Connecting,
@@ -48,13 +53,15 @@ class StatsDTcp {
 
   void close_and_delete();
 
-  void connect(const struct sockaddr* addr);
-
   Status status() const { return status_; }
 
   void status(const Status& status);
 
   int write(const std::vector<std::string>& messages);
+
+  // If setup() is called again with a new StatsDEndpoint then the previous
+  // connection will be closed and deleted.
+  void setup(StatsDEndpoint* endpoint);
 
   const std::string addr_str() {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
@@ -77,11 +84,21 @@ class StatsDTcp {
 
   static void write_cb_(nsuv::ns_write<nsuv::ns_tcp>*, int, StatsDTcp*);
 
+  static void retry_timer_cb_(nsuv::ns_timer*, StatsDTcp*);
+
   inline void do_delete() { delete this; }
+
+  inline void prep_retry_timer_();
+
+  inline void retry_after_fail_();
+
+  void connect_();
 
   ~StatsDTcp();
 
-  nsuv::ns_tcp* tcp_;
+  uv_loop_t* loop_ = nullptr;
+  nsuv::ns_timer* retry_timer_ = nullptr;
+  nsuv::ns_tcp* tcp_ = nullptr;
   nsuv::ns_connect<nsuv::ns_tcp> connect_req_;
   nsuv::ns_write<nsuv::ns_tcp> write_req_;
   nsuv::ns_async* update_state_msg_;
@@ -89,7 +106,10 @@ class StatsDTcp {
   std::string addr_str_;
   nsuv::ns_mutex addr_str_lock_;
   int internal_state_;
+  size_t addr_index_ = 0;
+  std::unique_ptr<StatsDEndpoint> endpoint_;
 };
+
 
 class StatsDUdp {
  public:
@@ -97,13 +117,13 @@ class StatsDUdp {
 
   ~StatsDUdp();
 
-  int connect(const struct sockaddr* addr);
-
   bool connected() const { return connected_; }
 
   void connected(bool conn);
 
   int write(const std::vector<std::string>& messages);
+
+  void setup(StatsDEndpoint* endpoint);
 
   const std::string addr_str() {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
@@ -118,11 +138,21 @@ class StatsDUdp {
  private:
   static void write_cb_(nsuv::ns_udp_send*, int, StatsDUdp*);
 
-  nsuv::ns_udp* udp_;
+  static void retry_timer_cb_(nsuv::ns_timer*, StatsDUdp*);
+
+  inline void prep_retry_timer_();
+
+  void connect_();
+
+  uv_loop_t* loop_ = nullptr;
+  nsuv::ns_timer* retry_timer_ = nullptr;
+  nsuv::ns_udp* udp_ = nullptr;
   nsuv::ns_async* update_state_msg_;
   bool connected_;
   std::string addr_str_;
   nsuv::ns_mutex addr_str_lock_;
+  size_t addr_index_ = 0;
+  std::unique_ptr<StatsDEndpoint> endpoint_;
 };
 
 using SharedStatsDAgent = std::shared_ptr<StatsDAgent>;
@@ -218,8 +248,6 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
 
   static void status_command_cb_(SharedEnvInst, WeakStatsDAgent);
 
-  static void retry_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent);
-
   std::string calculate_bucket(const std::string& tpl) const;
 
   std::string calculate_tags(const std::string& tpl) const;
@@ -238,15 +266,9 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
                    uint64_t thread_id = static_cast<uint64_t>(-1),
                    const char* thread_name = nullptr);
 
-  void setup_tcp();
-
-  void setup_udp();
-
   void status(const Status&);
 
   Status calculate_status() const;
-
-  void update_state();
 
   uv_loop_t loop_;
   nsuv::ns_thread thread_;
@@ -265,7 +287,6 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
   StatsDTcp* tcp_;
   std::unique_ptr<StatsDUdp> udp_;
   std::unique_ptr<StatsDEndpoint> endpoint_;
-  size_t addr_index_;
   nsuv::ns_timer retry_timer_;
 
   // For the Metrics API
