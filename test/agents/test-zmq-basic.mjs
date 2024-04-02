@@ -12,17 +12,23 @@ const tests = [];
 tests.push({
   name: 'should work if agent is killed with signal',
   test: async (playground) => {
+    let state = 0;
     return new Promise((resolve) => {
       playground.bootstrap(mustSucceed(async (agentId) => {
         const exit = await playground.client.kill();
         assert.ok(exit);
         assert.strictEqual(exit.code, null);
         assert.strictEqual(exit.signal, 'SIGTERM');
-        resolve();
-      }), (eventType, agentId, data) => {
+        if (++state === 2) {
+          resolve();
+        }
+      }), mustCall((eventType, agentId, data) => {
         assert.strictEqual(eventType, 'agent-exit');
         checkExitData(data, { exit_code: SIGTERM, error: null });
-      });
+        if (++state === 2) {
+          resolve();
+        }
+      }));
     });
   },
 });
