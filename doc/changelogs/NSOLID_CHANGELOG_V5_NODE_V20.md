@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-04-03, Version 20.12.1-nsolid-v5.1.1 'Iron'
+
+## Commits
+
+* \[[`f71ed43b3f`](https://github.com/nodesource/nsolid/commit/f71ed43b3f)] - Merge tag 'v20.12.1' (Juan Arboleda)
+
 ## 2024-03-27, Version 20.12.0-nsolid-v5.1.0 'Iron'
 
 ## Commits
