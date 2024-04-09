@@ -1494,7 +1494,6 @@ void EnvList::env_list_routine_(ns_thread*, EnvList* envlist) {
 
 void EnvList::blocked_loop_timer_cb_(ns_timer*) {
   EnvList* envlist = EnvList::Inst();
-  uint64_t now = uv_hrtime();
   // Adjust from milliseconds to nanoseconds.
   uint64_t min_threshold_ns = envlist->min_blocked_threshold_ * 1000000;
   std::list<SharedEnvInst> envinst_list;
@@ -1513,6 +1512,7 @@ void EnvList::blocked_loop_timer_cb_(ns_timer*) {
     // TODO(trevnorris): REMOVE provider_times so libuv don't need to use the
     // floating patch.
     uint64_t exit_time = envinst_sp->provider_times().second;
+    uint64_t now = uv_hrtime();
     uint64_t blocked_time = exit_time == 0 ? 0 : now - exit_time;
 
     if (blocked_time < min_threshold_ns || envinst_sp->reported_blocked_)
