@@ -2,15 +2,19 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-04-10, Version 20.12.2-nsolid-v5.1.2 'Iron'
+
+* \[[`ea4b14d82b`](https://github.com/nodesource/nsolid/commit/ea4b14d82b)] - Merge tag 'v20.12.2' (Trevor Norris)
+
 ## 2024-04-03, Version 20.12.1-nsolid-v5.1.1 'Iron'
 
-## Commits
+### Commits
 
 * \[[`f71ed43b3f`](https://github.com/nodesource/nsolid/commit/f71ed43b3f)] - Merge tag 'v20.12.1' (Juan Arboleda)
 
 ## 2024-03-27, Version 20.12.0-nsolid-v5.1.0 'Iron'
 
-## Commits
+### Commits
 
 * \[[`e6024de2bf`](https://github.com/nodesource/nsolid/commit/e6024de2bf)] - Merge tag 'v20.12.0' (Trevor Norris)
 * \[[`e32fecb3b0`](https://github.com/nodesource/nsolid/commit/e32fecb3b0)] - **deps**: update opentelemetry-cpp to 1.14.2 (Santiago Gimeno) [nodesource/nsolid#109](https://github.com/nodesource/nsolid/pull/109)
