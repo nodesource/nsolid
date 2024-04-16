@@ -40,13 +40,13 @@ class StatsDTcp {
  public:
   // StatsDTcp will attempt to connect to all IPs returned from the endpoint.
   // While attempting each of these it'll have the Connecting Status. If all
-  // IPs have been attempted then the Status will be ConnectionError.
+  // IPs have been attempted then the Status will be ConnectionError, but
+  // will reattempt to connect to all IPs after 3 seconds.
   enum Status {
     Initial,
     Connecting,
     Connected,
     ConnectionError,
-    Disconnected
   };
 
   StatsDTcp(uv_loop_t*, nsuv::ns_async*);
