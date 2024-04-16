@@ -104,7 +104,6 @@ int StatsDTcp::write(const string_vector& messages) {
     delete req;
     delete sv;
     Debug("Error: '%s' writing. Reconnecting...\n", uv_err_name(r));
-    status(Disconnected);
     prep_retry_timer_();
     connect_();
   }
@@ -190,7 +189,6 @@ void StatsDTcp::write_cb_(nsuv::ns_write<nsuv::ns_tcp>* req,
   if (status < 0) {
     tcp->addr_str("");
     Debug("Error: '%s' writing. Reconnecting...\n", uv_err_name(status));
-    tcp->status(Disconnected);
     tcp->connect_();
   }
 }
