@@ -108,6 +108,7 @@ int StatsDTcp::write(const string_vector& messages) {
     connect_();
   }
 
+  internal_state_ |= kWriting;
   req->set_data(sv);
   return r;
 }
@@ -180,9 +181,6 @@ void StatsDTcp::write_cb_(nsuv::ns_write<nsuv::ns_tcp>* req,
   delete sv;
   delete req;
 
-  // TODO(trevnorris): Valgrind had a failure here accessing tcp. It must have
-  // become invalid. So that means I need to be checking internal_state_
-  // somewhere instead of just deleting it.
   tcp->internal_state_ &= ~kWriting;
   if (tcp->internal_state_ & kClosing) {
     tcp->do_delete();
