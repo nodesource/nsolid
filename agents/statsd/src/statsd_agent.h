@@ -36,7 +36,7 @@ static const nlohmann::json default_agent_config = {
   { "pauseMetrics", false }
 };
 
-class StatsDTcp {
+class StatsDConnection {
  public:
   // StatsDTcp will attempt to connect to all IPs returned from the endpoint.
   // While attempting each of these it'll have the Connecting Status. If all
@@ -49,26 +49,48 @@ class StatsDTcp {
     ConnectionError,
   };
 
+  virtual ~StatsDConnection() {}
+
+  // The only APIs that need access to the endpoint are tcp_ip() and udp_ip().
+  // Perhaps we can switch it so the type is stored on the connection, but it
+  // seems messy to have the enum in this virtual class.
+  virtual StatsDEndpoint* endpoint() = 0;
+  virtual Status status() const = 0;
+  virtual void status(const Status& status) = 0;
+  virtual int write(const std::vector<std::string>& messages) = 0;
+  virtual void setup(StatsDEndpoint* endpoint) = 0;
+  virtual const std::string addr_str() = 0;
+  virtual void addr_str(const std::string& addr) = 0;
+  virtual void close_and_delete() = 0;
+};
+
+
+class StatsDTcp : public StatsDConnection {
+ public:
   StatsDTcp(uv_loop_t*, nsuv::ns_async*);
 
-  void close_and_delete();
+  void close_and_delete() override;
 
-  Status status() const { return status_; }
+  StatsDEndpoint* endpoint() override {
+    return endpoint_.get();
+  }
 
-  void status(const Status& status);
+  Status status() const override { return status_; }
 
-  int write(const std::vector<std::string>& messages);
+  void status(const Status& status) override;
+
+  int write(const std::vector<std::string>& messages) override;
 
   // If setup() is called again with a new StatsDEndpoint then the previous
   // connection will be closed and deleted.
-  void setup(StatsDEndpoint* endpoint);
+  void setup(StatsDEndpoint* endpoint) override;
 
-  const std::string addr_str() {
+  const std::string addr_str() override {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
     return addr_str_;
   }
 
-  void addr_str(const std::string& addr) {
+  void addr_str(const std::string& addr) override {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
     addr_str_ = addr;
   }
@@ -111,26 +133,39 @@ class StatsDTcp {
 };
 
 
-class StatsDUdp {
+class StatsDUdp : public StatsDConnection {
  public:
   StatsDUdp(uv_loop_t*, nsuv::ns_async*);
 
   ~StatsDUdp();
 
-  bool connected() const { return connected_; }
+  void close_and_delete() override {
+    delete this;
+  }
 
-  void connected(bool conn);
+  StatsDEndpoint* endpoint() override {
+    return endpoint_.get();
+  }
 
-  int write(const std::vector<std::string>& messages);
+  void status(const Status& status) override {
+    status_ = status;
+    ASSERT_EQ(0, update_state_msg_->send());
+  }
 
-  void setup(StatsDEndpoint* endpoint);
+  Status status() const override {
+    return status_;
+  }
 
-  const std::string addr_str() {
+  int write(const std::vector<std::string>& messages) override;
+
+  void setup(StatsDEndpoint* endpoint) override;
+
+  const std::string addr_str() override {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
     return addr_str_;
   }
 
-  void addr_str(const std::string& addr) {
+  void addr_str(const std::string& addr) override {
     nsuv::ns_mutex::scoped_lock lock(&addr_str_lock_);
     addr_str_ = addr;
   }
@@ -148,7 +183,7 @@ class StatsDUdp {
   nsuv::ns_timer* retry_timer_ = nullptr;
   nsuv::ns_udp* udp_ = nullptr;
   nsuv::ns_async* update_state_msg_;
-  bool connected_;
+  Status status_ = Initial;
   std::string addr_str_;
   nsuv::ns_mutex addr_str_lock_;
   size_t addr_index_ = 0;
@@ -205,13 +240,9 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
     return tags_;
   }
 
-  const std::string tcp_ip() {
-    return tcp_ ? tcp_->addr_str() : std::string();
-  }
+  const std::string tcp_ip();
 
-  const std::string udp_ip() const {
-    return udp_ ? udp_->addr_str() : std::string();
-  }
+  const std::string udp_ip();
 
   void set_status_cb(status_cb);
 
@@ -284,10 +315,7 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
   nsuv::ns_async env_msg_;
   TSQueue<std::tuple<SharedEnvInst, bool>> env_msg_q_;
 
-  StatsDTcp* tcp_;
-  std::unique_ptr<StatsDUdp> udp_;
-  std::unique_ptr<StatsDEndpoint> endpoint_;
-  nsuv::ns_timer retry_timer_;
+  StatsDConnection* connection_ = nullptr;
 
   // For the Metrics API
   std::map<uint64_t, SharedThreadMetrics> env_metrics_map_;

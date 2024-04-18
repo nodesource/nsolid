@@ -112,7 +112,8 @@ StatsDEndpoint::StatsDEndpoint(const std::string& protocol,
   : protocol_(protocol),
     hostname_(hostname),
     port_(port),
-    addresses_(addresses) {
+    addresses_(addresses),
+    type_(protocol == "udp" ? Type::Udp : Type::Tcp) {
 }
 
 }  // namespace statsd

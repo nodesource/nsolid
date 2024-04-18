@@ -49,6 +49,13 @@ class StatsDEndpoint {
  public:
   NSOLID_DELETE_UNUSED_CONSTRUCTORS(StatsDEndpoint)
 
+  enum class Type {
+    Tcp,
+    Udp,
+  };
+
+  constexpr Type type() const { return type_; }
+
   static StatsDEndpoint* create(const std::string& addr);
 
   const std::string& protocol() const { return protocol_; }
@@ -78,6 +85,7 @@ class StatsDEndpoint {
   std::string hostname_;
   unsigned int port_;
   std::vector<struct sockaddr_storage> addresses_;
+  Type type_;
 };
 }  // namespace statsd
 }  // namespace nsolid
