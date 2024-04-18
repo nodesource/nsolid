@@ -9,6 +9,7 @@ on:
       - src/**/*.h
       - tools/gyp/**
       - .github/workflows/build-windows.yml
+      - agents/**
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
@@ -23,6 +24,7 @@ on:
       - src/**/*.h
       - tools/gyp/**
       - .github/workflows/build-windows.yml
+      - agents/**
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
