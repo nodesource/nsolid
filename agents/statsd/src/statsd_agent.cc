@@ -180,6 +180,9 @@ void StatsDTcp::write_cb_(nsuv::ns_write<nsuv::ns_tcp>* req,
   delete sv;
   delete req;
 
+  // TODO(trevnorris): Valgrind had a failure here accessing tcp. It must have
+  // become invalid. So that means I need to be checking internal_state_
+  // somewhere instead of just deleting it.
   tcp->internal_state_ &= ~kWriting;
   if (tcp->internal_state_ & kClosing) {
     tcp->do_delete();
@@ -221,6 +224,7 @@ void StatsDTcp::connect_() {
   auto* ss = &endpoint_->addresses()[addr_index_];
   const struct sockaddr* addr = reinterpret_cast<const struct sockaddr*>(ss);
   addr_str("");
+  status(Connecting);
 
 #ifdef DEBUG
   Debug("Connecting to: tcp://%s\n", addr_to_string(addr).c_str());
@@ -229,7 +233,6 @@ void StatsDTcp::connect_() {
   int r = tcp_->connect(&connect_req_, addr, connect_cb_, this);
   if (r == 0) {
     addr_str(addr_to_string(addr));
-    status(Connecting);
     internal_state_ |= kConnecting;
     return;
   }
@@ -255,7 +258,7 @@ StatsDUdp::StatsDUdp(uv_loop_t* loop,
                      nsuv::ns_async* update_state_msg)
   : loop_(loop),
     update_state_msg_(update_state_msg),
-    connected_(false) {
+    status_(Initial) {
   ASSERT_EQ(0, addr_str_lock_.init());
 }
 
@@ -267,11 +270,6 @@ StatsDUdp::~StatsDUdp() {
   }
 }
 
-void StatsDUdp::connected(bool conn) {
-  connected_ = conn;
-  ASSERT_EQ(0, update_state_msg_->send());
-}
-
 int StatsDUdp::write(const string_vector& messages) {
   int r;
 
@@ -279,7 +277,7 @@ int StatsDUdp::write(const string_vector& messages) {
     return UV_EINVAL;
   }
 
-  if (!connected_) {
+  if (status_ != Connected) {
     return UV_ENOTCONN;
   }
 
@@ -415,6 +413,7 @@ void StatsDUdp::prep_retry_timer_() {
 void StatsDUdp::connect_() {
   auto* ss = &endpoint_->addresses()[addr_index_];
   const struct sockaddr* addr = reinterpret_cast<const struct sockaddr*>(ss);
+  status(Connecting);
 
 #ifdef DEBUG
   Debug("Connecting to: udp://%s\n", addr_to_string(addr).c_str());
@@ -423,7 +422,7 @@ void StatsDUdp::connect_() {
   int r = udp_->connect(addr);
   if (r == 0) {
     addr_str(addr_to_string(addr));
-    connected(true);
+    status(Connected);
     if (retry_timer_) {
       retry_timer_->close_and_delete();
       retry_timer_ = nullptr;
@@ -435,6 +434,7 @@ void StatsDUdp::connect_() {
 
   if (++addr_index_ > endpoint_->addresses().size()) {
     Debug("Error connecting to all addresses. Retry in 3 seconds...\n");
+    status(ConnectionError);
     // Reattempt all IP addresses after 3 seconds.
     addr_index_ = 0;
     ASSERT_EQ(0, retry_timer_->start(retry_timer_cb_, 3000, 0, this));
@@ -458,9 +458,6 @@ SharedStatsDAgent StatsDAgent::Inst() {
 }
 
 StatsDAgent::StatsDAgent(): hooks_init_(false),
-                            tcp_(nullptr),
-                            udp_(nullptr),
-                            endpoint_(nullptr),
                             proc_metrics_(),
                             config_(default_agent_config),
                             status_(Unconfigured),
@@ -515,8 +512,6 @@ void StatsDAgent::do_start() {
 
   ASSERT_EQ(0, env_msg_.init(&loop_, env_msg_cb, weak_from_this()));
 
-  ASSERT_EQ(0, retry_timer_.init(&loop_));
-
   ASSERT_EQ(0, metrics_msg_.init(&loop_, metrics_msg_cb_, weak_from_this()));
 
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, weak_from_this()));
@@ -566,11 +561,10 @@ void StatsDAgent::do_stop() {
     nsuv::ns_rwlock::scoped_wrlock lock(stop_lock_);
     status(Unconfigured);
   }
-  if (tcp_) {
-    tcp_->close_and_delete();
-    tcp_ = nullptr;
+  if (connection_) {
+    connection_->close_and_delete();
+    connection_ = nullptr;
   }
-  udp_.reset(nullptr);
   send_stats_msg_.close();
   update_state_msg_.close();
   config_msg_.close();
@@ -578,7 +572,6 @@ void StatsDAgent::do_stop() {
   env_msg_.close();
   shutdown_.close();
   metrics_timer_.close();
-  retry_timer_.close();
 }
 
 void StatsDAgent::run_(nsuv::ns_thread*, WeakStatsDAgent agent_wp) {
@@ -765,11 +758,7 @@ void StatsDAgent::send_stats_msg_cb_(nsuv::ns_async*,
 
   string_vector sv;
   while (agent->send_stats_msg_q_.dequeue(sv)) {
-    if (agent->tcp_) {
-      agent->tcp_->write(sv);
-    } else if (agent->udp_) {
-      agent->udp_->write(sv);
-    }
+    agent->connection_->write(sv);
   }
 }
 
@@ -790,6 +779,20 @@ std::string StatsDAgent::status() const {
   default:
     ASSERT(false);
   }
+}
+
+const std::string StatsDAgent::tcp_ip() {
+  if (!connection_ ||
+      connection_->endpoint()->type() != StatsDEndpoint::Type::Tcp)
+    return std::string();
+  return connection_->addr_str();
+}
+
+const std::string StatsDAgent::udp_ip() {
+  if (!connection_ ||
+      connection_->endpoint()->type() != StatsDEndpoint::Type::Udp)
+    return std::string();
+  return connection_->addr_str();
 }
 
 void StatsDAgent::set_status_cb(status_cb cb) {
@@ -838,18 +841,17 @@ int StatsDAgent::config_handles() {
     return UV_EINVAL;
   }
 
+  if (connection_) {
+    connection_->close_and_delete();
+    connection_ = nullptr;
+  }
+
   if (endpoint->protocol() == "tcp") {
-    // TODO(trevnorris): If a timer is only created when needed, then this
-    // should always be nullptr. Should replace if with ASSERT_NULL.
-    if (tcp_ == nullptr) {
-      tcp_ = new StatsDTcp(&loop_, &update_state_msg_);
-    }
-    tcp_->setup(endpoint);
+    connection_ = new StatsDTcp(&loop_, &update_state_msg_);
+    connection_->setup(endpoint);
   } else if (endpoint->protocol() == "udp") {
-    if (udp_.get() == nullptr) {
-      udp_.reset(new StatsDUdp(&loop_, &update_state_msg_));
-    }
-    udp_->setup(endpoint);
+    connection_ = new StatsDUdp(&loop_, &update_state_msg_);
+    connection_->setup(endpoint);
   } else {
     abort();  // UNREACHABLE
   }
@@ -938,6 +940,8 @@ int StatsDAgent::config(const json& config) {
     // if "statsd" changed, reset the corresponding handle
     ret = config_handles();
     if (ret != 0) {
+      // TODO(trevnorris): Should this return early, or still continue
+      // processing the other config changes?
       return ret;
     }
   }
@@ -1034,7 +1038,7 @@ int StatsDAgent::send_metrics(const json& metrics,
     return -1;
   }
 
-  ASSERT(tcp_ || udp_);
+  ASSERT_NOT_NULL(connection_);
   Debug("send_metrics: \t%s\n", metrics.dump(4).c_str());
   // stringify metrics
   string_vector serialized_metrics;
@@ -1060,14 +1064,7 @@ int StatsDAgent::send_metrics(const json& metrics,
     }
   }
 
-  if (tcp_) {
-    return tcp_->write(serialized_metrics);
-  }
-  if (udp_) {
-    return udp_->write(serialized_metrics);
-  }
-
-  abort();  // UNREACHABLE
+  return connection_->write(serialized_metrics);
 }
 
 void StatsDAgent::status_command_cb_(SharedEnvInst, WeakStatsDAgent agent_wp) {
@@ -1092,12 +1089,11 @@ void StatsDAgent::status(const Status& st) {
 }
 
 StatsDAgent::Status StatsDAgent::calculate_status() const {
-  if (tcp_ == nullptr && udp_ == nullptr) {
+  if (connection_ == nullptr) {
     return Initializing;
   }
 
-  if ((tcp_ && tcp_->status() != StatsDTcp::Connected) ||
-      (udp_ && !udp_->connected())) {
+  if (connection_->status() != StatsDConnection::Connected) {
     return Connecting;
   }
 
