@@ -22,6 +22,7 @@ using nlohmann::json;
 using string_vector = std::vector<std::string>;
 using udp_req_data_tup = std::tuple<string_vector*, bool>;
 
+
 template <typename... Args>
 inline void Debug(Args&&... args) {
   per_process::Debug(DebugCategory::NSOLID_STATSD_AGENT,
@@ -455,6 +456,17 @@ SharedStatsDAgent StatsDAgent::Inst() {
   return agent;
 }
 
+SharedStatsDAgent StatsDAgent::Create() {
+  SharedStatsDAgent agent(new StatsDAgent(), [](StatsDAgent* agent) {
+    delete agent;
+  });
+  // TODO(trevnorris): For now we'll assume that a StatsDAgent instance will
+  // be alive for the entire life of the process. So not going to worry about
+  // cleaning up the hooks that are added for this instance.
+  agent->start();
+  return agent;
+}
+
 StatsDAgent::StatsDAgent(): hooks_init_(false),
                             proc_metrics_(),
                             config_(default_agent_config),
@@ -536,7 +548,10 @@ void StatsDAgent::do_start() {
   status(Initializing);
 
   if (hooks_init_ == false) {
-    ASSERT_EQ(0, OnConfigurationHook(config_agent_cb, weak_from_this()));
+    // Only add the OnConfigurationHook if this is the global instance.
+    if (Inst().get() == this) {
+      ASSERT_EQ(0, OnConfigurationHook(config_agent_cb, weak_from_this()));
+    }
     ASSERT_EQ(0, ThreadAddedHook(env_creation_cb, weak_from_this()));
     ASSERT_EQ(0, ThreadRemovedHook(env_deletion_cb, weak_from_this()));
     hooks_init_ = true;
@@ -669,6 +684,11 @@ void StatsDAgent::metrics_msg_cb_(nsuv::ns_async*, WeakStatsDAgent agent_wp) {
 
   ThreadMetrics::MetricsStor stor;
   while (agent->metrics_msg_q_.dequeue(stor)) {
+    if (agent->t_transform_cb_ != nullptr) {
+      agent->connection_->write(agent->t_transform_cb_(stor));
+      continue;
+    }
+
     json body = {
 #define V(Type, CName, JSName, MType, Unit) \
       { #JSName, stor.CName },
@@ -711,7 +731,7 @@ void StatsDAgent::config_msg_cb_(nsuv::ns_async*, WeakStatsDAgent agent_wp) {
   json config_msg;
 
   while (agent->config_msg_q_.dequeue(config_msg)) {
-    r = agent->config(config_msg);
+    r = agent->config_cb_(config_msg);
     if (agent->status_ != Unconfigured) {
       ASSERT_EQ(0, agent->update_state_msg_.send());
     }
@@ -755,6 +775,14 @@ void StatsDAgent::send_stats_msg_cb_(nsuv::ns_async*,
 int StatsDAgent::send(const std::vector<std::string>& sv, size_t len) {
   send_stats_msg_q_.enqueue(sv);
   return send_stats_msg_.send();
+}
+
+void StatsDAgent::set_pmetrics_transform_cb(pmetrics_transform_cb cb) {
+  p_transform_cb_ = cb;
+}
+
+void StatsDAgent::set_tmetrics_transform_cb(tmetrics_transform_cb cb) {
+  t_transform_cb_ = cb;
 }
 
 std::string StatsDAgent::status() const {
@@ -918,6 +946,12 @@ void StatsDAgent::config_tags() {
 }
 
 int StatsDAgent::config(const json& config) {
+  config_msg_q_.enqueue(config);
+  ASSERT_EQ(0, config_msg_.send());
+  return 0;
+}
+
+int StatsDAgent::config_cb_(const json& config) {
   int ret;
 
   json old_config = config_;
@@ -993,6 +1027,12 @@ void StatsDAgent::metrics_timer_cb_(nsuv::ns_timer*, WeakStatsDAgent agent_wp) {
   // Get and send proc metrics
   ASSERT_EQ(0, agent->proc_metrics_.Update());
   proc_stor = agent->proc_metrics_.Get();
+
+  if (agent->p_transform_cb_ != nullptr) {
+    agent->connection_->write(agent->p_transform_cb_(proc_stor));
+    return;
+  }
+
   json body = {
 #define V(Type, CName, JSName, MType, Unit) \
     { #JSName, proc_stor.CName },

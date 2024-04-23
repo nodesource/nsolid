@@ -195,6 +195,11 @@ using WeakStatsDAgent = std::weak_ptr<StatsDAgent>;
 
 class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
  public:
+  using pmetrics_transform_cb = std::vector<std::string>(*)(
+      ProcessMetrics::MetricsStor);
+  using tmetrics_transform_cb = std::vector<std::string>(*)(
+      ThreadMetrics::MetricsStor);
+
   enum Status {
 #define X(type, str)                                                          \
     type,
@@ -203,6 +208,10 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
   };
 
   static SharedStatsDAgent Inst();
+
+  // Need to run config() to start the metrics timer and receive runtime
+  // metrics. Problem is do_start() needs to run first...
+  static SharedStatsDAgent Create();
 
   int setup_metrics_timer(uint64_t period);
 
@@ -233,6 +242,11 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
   nsuv::ns_async* update_state_msg() { return &update_state_msg_; }
 
   int send(const std::vector<std::string>& sv, size_t len);
+
+  // Whatever string is returned by metrics_transform_cb will override the
+  // statsdBucket and statsdTags config.
+  void set_pmetrics_transform_cb(pmetrics_transform_cb cb);
+  void set_tmetrics_transform_cb(tmetrics_transform_cb cb);
 
   std::string status() const;
 
@@ -283,6 +297,8 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
   std::string calculate_bucket(const std::string& tpl) const;
 
   std::string calculate_tags(const std::string& tpl) const;
+
+  int config_cb_(const nlohmann::json& message);
 
   void config_bucket();
 
@@ -343,6 +359,9 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
   nsuv::ns_mutex bucket_lock_;
   std::string tags_;
   nsuv::ns_mutex tags_lock_;
+
+  pmetrics_transform_cb p_transform_cb_ = nullptr;
+  tmetrics_transform_cb t_transform_cb_ = nullptr;
 
   // For status testing
   status_cb status_cb_;
