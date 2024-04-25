@@ -97,8 +97,10 @@ nlohmann::ordered_json build_sampling_heap_profile_node(
   result["id"] = node->node_id;
 
   // Add children if there are any
-  if (node->children.empty())
+  if (node->children.empty()) {
+    result["children"] = nlohmann::ordered_json::array();
     return result;
+  }
 
   // Recursively build children
   nlohmann::ordered_json children;
