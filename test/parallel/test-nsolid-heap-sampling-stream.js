@@ -102,10 +102,45 @@ const {
 {
   let profile = '';
   const stream = nsolid.heapSamplingStream(0, 1200);
+  // Do some allocations to make sure we have some data to sample
+  const arr = [];
+  for (let i = 0; i < 1000; i++) {
+    arr.push(new Array(1000));
+  }
   stream.on('data', (data) => {
     profile += data;
   });
   stream.on('end', common.mustCall(() => {
     assert(JSON.parse(profile));
+    testProfileSchema(JSON.parse(profile));
   }));
+}
+
+function testProfileSchema(profile) {
+  // Basic object schema test
+  assert(profile.head);
+  assert(profile.samples);
+
+  testCallFrame(profile.head);
+
+  // Recursive schema test per sample callframe
+  function testCallFrame(head) {
+    assert(Number.isInteger(head.callFrame.columnNumber));
+    assert(Number.isInteger(head.callFrame.lineNumber));
+    assert(Number.isInteger(head.selfSize));
+    assert(Number.isInteger(head.callFrame.scriptId));
+    assert(Number.isInteger(head.id));
+    assert(head.callFrame.functionName === '' ||
+           typeof head.callFrame.functionName === 'string');
+    assert(head.callFrame.url === '' || typeof head.callFrame.url === 'string');
+    assert(Array.isArray(head.children));
+    testChildren(head.children);
+  }
+
+  // Recursive children schema test
+  function testChildren(children) {
+    const isTestDone = children.length === 0;
+    if (!isTestDone) return testCallFrame(children[0]);
+    assert(isTestDone);
+  }
 }
