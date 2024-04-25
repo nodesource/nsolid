@@ -1231,6 +1231,14 @@ void EnvList::UpdateTracingFlags(uint32_t flags) {
 }
 
 
+void EnvList::getAllEnvInst(std::function<void(SharedEnvInst)> cb) {
+  ns_mutex::scoped_lock lock(map_lock_);
+  for (const auto& pair : env_map_) {
+    cb(pair.second);
+  }
+}
+
+
 void EnvList::datapoint_cb_(std::queue<MetricsStream::Datapoint>&& q) {
   // It runs in the nsolid thread
   if (q.empty()) {

@@ -358,6 +358,12 @@ NODE_EXTERN void thread_removed_hook_(void*,
 NODE_EXTERN SharedEnvInst GetEnvInst(uint64_t thread_id);
 
 /**
+ * @brief Call cb synchronously with each existing SharedEnvInst instance
+ * currently alive. This call is thread-safe.
+ */
+NODE_EXTERN void GetAllEnvInst(std::function<void(SharedEnvInst)>);
+
+/**
  * @brief Retrieve the SharedEnvInst for the current v8::Context. Must be
  * run from a valid Isolate. This call is not thread-safe.
  *

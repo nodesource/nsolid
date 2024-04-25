@@ -35,6 +35,11 @@ SharedEnvInst GetEnvInst(uint64_t thread_id) {
 }
 
 
+void GetAllEnvInst(std::function<void(SharedEnvInst)> cb) {
+  EnvList::Inst()->getAllEnvInst(cb);
+}
+
+
 SharedEnvInst GetLocalEnvInst(v8::Local<v8::Context> context) {
   return EnvInst::GetCurrent(context);
 }
