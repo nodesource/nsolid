@@ -542,6 +542,8 @@ class EnvList {
 
   void UpdateTracingFlags(uint32_t flags);
 
+  void getAllEnvInst(std::function<void(SharedEnvInst)>);
+
   inline uv_thread_t thread();
   inline size_t env_map_size();
   inline nsuv::ns_mutex* command_lock();
