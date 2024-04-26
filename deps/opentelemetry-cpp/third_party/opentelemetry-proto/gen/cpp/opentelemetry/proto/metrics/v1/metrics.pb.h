@@ -852,6 +852,7 @@ class Metric final :
   // accessors -------------------------------------------------------
 
   enum : int {
+    kMetadataFieldNumber = 12,
     kNameFieldNumber = 1,
     kDescriptionFieldNumber = 2,
     kUnitFieldNumber = 3,
@@ -861,6 +862,24 @@ class Metric final :
     kExponentialHistogramFieldNumber = 10,
     kSummaryFieldNumber = 11,
   };
+  // repeated .opentelemetry.proto.common.v1.KeyValue metadata = 12;
+  int metadata_size() const;
+  private:
+  int _internal_metadata_size() const;
+  public:
+  void clear_metadata();
+  ::opentelemetry::proto::common::v1::KeyValue* mutable_metadata(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::KeyValue >*
+      mutable_metadata();
+  private:
+  const ::opentelemetry::proto::common::v1::KeyValue& _internal_metadata(int index) const;
+  ::opentelemetry::proto::common::v1::KeyValue* _internal_add_metadata();
+  public:
+  const ::opentelemetry::proto::common::v1::KeyValue& metadata(int index) const;
+  ::opentelemetry::proto::common::v1::KeyValue* add_metadata();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::KeyValue >&
+      metadata() const;
+
   // string name = 1;
   void clear_name();
   const std::string& name() const;
@@ -1011,6 +1030,7 @@ class Metric final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::KeyValue > metadata_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr name_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr description_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr unit_;
@@ -4521,6 +4541,43 @@ inline ::opentelemetry::proto::metrics::v1::Summary* Metric::mutable_summary() {
   ::opentelemetry::proto::metrics::v1::Summary* _msg = _internal_mutable_summary();
   // @@protoc_insertion_point(field_mutable:opentelemetry.proto.metrics.v1.Metric.summary)
   return _msg;
+}
+
+// repeated .opentelemetry.proto.common.v1.KeyValue metadata = 12;
+inline int Metric::_internal_metadata_size() const {
+  return _impl_.metadata_.size();
+}
+inline int Metric::metadata_size() const {
+  return _internal_metadata_size();
+}
+inline ::opentelemetry::proto::common::v1::KeyValue* Metric::mutable_metadata(int index) {
+  // @@protoc_insertion_point(field_mutable:opentelemetry.proto.metrics.v1.Metric.metadata)
+  return _impl_.metadata_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::KeyValue >*
+Metric::mutable_metadata() {
+  // @@protoc_insertion_point(field_mutable_list:opentelemetry.proto.metrics.v1.Metric.metadata)
+  return &_impl_.metadata_;
+}
+inline const ::opentelemetry::proto::common::v1::KeyValue& Metric::_internal_metadata(int index) const {
+  return _impl_.metadata_.Get(index);
+}
+inline const ::opentelemetry::proto::common::v1::KeyValue& Metric::metadata(int index) const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.metrics.v1.Metric.metadata)
+  return _internal_metadata(index);
+}
+inline ::opentelemetry::proto::common::v1::KeyValue* Metric::_internal_add_metadata() {
+  return _impl_.metadata_.Add();
+}
+inline ::opentelemetry::proto::common::v1::KeyValue* Metric::add_metadata() {
+  ::opentelemetry::proto::common::v1::KeyValue* _add = _internal_add_metadata();
+  // @@protoc_insertion_point(field_add:opentelemetry.proto.metrics.v1.Metric.metadata)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::KeyValue >&
+Metric::metadata() const {
+  // @@protoc_insertion_point(field_list:opentelemetry.proto.metrics.v1.Metric.metadata)
+  return _impl_.metadata_;
 }
 
 inline bool Metric::has_data() const {
