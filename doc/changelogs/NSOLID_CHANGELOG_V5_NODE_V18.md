@@ -1,6 +1,14 @@
 # N|Solid Changelog
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
+## 2024-04-10, Version 5.2.0 'Hydrogen'
+
+### Commits
+
+* [150d4c5347] - src: fix the base case in the heap profiler JSON generation (Juan José Arboleda) https://github.com/nodesource/nsolid/pull/125
+* [1c192a295c] - lib: add nsolid JS API for heap sampling (Santiago Gimeno) https://github.com/nodesource/nsolid/pull/107
+* [c6e496094f] - Working on v5.1.3 Hydrogen (Trevor Norris)
+* [b86fc3caf0] - Merge branch 'node-v18.20.2-nsolid-v5.1.2-release' into node-v18.x-nsolid-v5.x (Trevor Norris)
 
 ## 2024-04-10, Version 5.1.2 'Hydrogen'
 
