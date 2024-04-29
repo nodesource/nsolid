@@ -2,6 +2,10 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-04-29, Version 20.12.2-nsolid-v5.2.0 'Iron'
+
+* [78e6453747] - src: fix the base case in the heap profiler JSON generation (Juan José Arboleda) https://github.com/nodesource/nsolid/pull/125
+
 ## 2024-04-10, Version 20.12.2-nsolid-v5.1.2 'Iron'
 
 * \[[`ea4b14d82b`](https://github.com/nodesource/nsolid/commit/ea4b14d82b)] - Merge tag 'v20.12.2' (Trevor Norris)
