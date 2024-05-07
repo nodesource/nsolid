@@ -4,7 +4,7 @@
 
 ## 2024-04-29, Version 20.12.2-nsolid-v5.2.0 'Iron'
 
-* [78e6453747] - src: fix the base case in the heap profiler JSON generation (Juan José Arboleda) https://github.com/nodesource/nsolid/pull/125
+* \[[`78e6453747`](https://github.com/nodesource/nsolid/commit/78e6453747)] - **src**: fix the base case in the heap profiler JSON generation (Juan José Arboleda) [nodesource/nsolid#125](https://github.com/nodesource/nsolid/pull/125)
 
 ## 2024-04-10, Version 20.12.2-nsolid-v5.1.2 'Iron'
 
