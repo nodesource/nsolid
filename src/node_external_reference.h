@@ -27,6 +27,11 @@ using CFunctionCallbackWithStrings =
     bool (*)(v8::Local<v8::Value>,
              const v8::FastOneByteString& input,
              const v8::FastOneByteString& base);
+using CFunctionCallbackWithTwoUint8ArraysFallback =
+    bool (*)(v8::Local<v8::Value>,
+             const v8::FastApiTypedArray<uint8_t>&,
+             const v8::FastApiTypedArray<uint8_t>&,
+             v8::FastApiCallbackOptions&);
 using CFunctionWithUint32 = uint32_t (*)(v8::Local<v8::Value>,
                                          const uint32_t input);
 using CFunctionCallbackDouble =
@@ -58,6 +63,7 @@ class ExternalReferenceRegistry {
   V(CFunctionCallbackWithBool)                                                 \
   V(CFunctionCallbackWithString)                                               \
   V(CFunctionCallbackWithStrings)                                              \
+  V(CFunctionCallbackWithTwoUint8ArraysFallback)                               \
   V(CFunctionWithUint32)                                                       \
   V(CFunctionCallbackDouble)                                                   \
   V(CFunctionCallbackUint32Uint32Uint64)                                       \
@@ -119,6 +125,7 @@ class ExternalReferenceRegistry {
   V(fs_event_wrap)                                                             \
   V(handle_wrap)                                                               \
   V(heap_utils)                                                                \
+  V(internal_only_v8)                                                          \
   V(messaging)                                                                 \
   V(mksnapshot)                                                                \
   V(module_wrap)                                                               \

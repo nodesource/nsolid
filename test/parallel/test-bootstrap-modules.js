@@ -101,6 +101,7 @@ expected.beforePreExec = new Set([
   'Internal Binding worker',
   'NativeModule internal/nsolid_module',
   'Internal Binding wasm_web_api',
+  'NativeModule internal/events/abort_listener',
 ]);
 
 expected.atRunTime = new Set([
