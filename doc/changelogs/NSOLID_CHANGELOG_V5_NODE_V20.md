@@ -2,6 +2,18 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-05-09, Version 20.13.0-nsolid-v5.2.1 'Iron'
+
+* \[[`6f0974c684`](https://github.com/nodesource/nsolid/commit/6f0974c684)] - Merge tag 'v20.13.1' (Trevor Norris)
+* \[[`3f022bd43c`](https://github.com/nodesource/nsolid/commit/3f022bd43c)] - Merge tag 'v20.13.0' (Trevor Norris)
+* \[[`91dcac7bac`](https://github.com/nodesource/nsolid/commit/91dcac7bac)] - **agents**: set state when writing (Trevor Norris) [nodesource/nsolid#122](https://github.com/nodesource/nsolid/pull/122)
+* \[[`c667ebf576`](https://github.com/nodesource/nsolid/commit/c667ebf576)] - **tools**: add agents path to workflow (Trevor Norris) [nodesource/nsolid#122](https://github.com/nodesource/nsolid/pull/122)
+* \[[`509a1d5372`](https://github.com/nodesource/nsolid/commit/509a1d5372)] - **agents**: make tcp/udp inherit from virtual class (Trevor Norris) [nodesource/nsolid#122](https://github.com/nodesource/nsolid/pull/122)
+* \[[`150bd4a9c4`](https://github.com/nodesource/nsolid/commit/150bd4a9c4)] - **agents**: remove Disconnected (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`06e5bd77f9`](https://github.com/nodesource/nsolid/commit/06e5bd77f9)] - **agents**: have tcp/udp retry in statsd (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`b30a1966f7`](https://github.com/nodesource/nsolid/commit/b30a1966f7)] - **agents**: only create on correct protocol (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`6c4162ddae`](https://github.com/nodesource/nsolid/commit/6c4162ddae)] - **agents**: remove need for loop on create() (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+
 ## 2024-04-29, Version 20.12.2-nsolid-v5.2.0 'Iron'
 
 * \[[`78e6453747`](https://github.com/nodesource/nsolid/commit/78e6453747)] - **src**: fix the base case in the heap profiler JSON generation (Juan José Arboleda) [nodesource/nsolid#125](https://github.com/nodesource/nsolid/pull/125)
