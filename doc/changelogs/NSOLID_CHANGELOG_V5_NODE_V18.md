@@ -2,6 +2,18 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-05-09, Version 5.2.1 'Hydrogen'
+
+### Commits
+
+* \[[`605a64d326`](https://github.com/nodesource/nsolid/commit/605a64d326)] - **agents**: set state when writing (Trevor Norris)
+* \[[`df49a91802`](https://github.com/nodesource/nsolid/commit/df49a91802)] - **agents**: make tcp/udp inherit from virtual class (Trevor Norris)
+* \[[`034dca465f`](https://github.com/nodesource/nsolid/commit/034dca465f)] - **agents**: remove Disconnected (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`4904b06c9d`](https://github.com/nodesource/nsolid/commit/4904b06c9d)] - **agents**: have tcp/udp retry in statsd (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`db53362c8a`](https://github.com/nodesource/nsolid/commit/db53362c8a)] - **agents**: only create on correct protocol (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`073f5c75e4`](https://github.com/nodesource/nsolid/commit/073f5c75e4)] - **agents**: remove need for loop on create() (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`44957cdc32`](https://github.com/nodesource/nsolid/commit/44957cdc32)] - **misc**: lint fixes (Trevor Norris)
+
 ## 2024-04-10, Version 5.2.0 'Hydrogen'
 
 ### Commits
