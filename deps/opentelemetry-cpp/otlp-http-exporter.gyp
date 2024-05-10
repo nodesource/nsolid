@@ -5,6 +5,7 @@
       'type': 'static_library',
       'sources': [
         'exporters/otlp/src/otlp_environment.cc',
+        'exporters/otlp/src/otlp_http.cc',
         'exporters/otlp/src/otlp_http_client.cc',
         'exporters/otlp/src/otlp_http_exporter.cc',
         'exporters/otlp/src/otlp_http_exporter_options.cc',

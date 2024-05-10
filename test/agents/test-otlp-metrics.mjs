@@ -413,7 +413,7 @@ if (isMainThread) {
     assert.strictEqual(resource.attributes.length, 5);
 
     const expectedAttributes = {
-      'telemetry.sdk.version': '1.14.2',
+      'telemetry.sdk.version': '1.15.0',
       'telemetry.sdk.language': 'cpp',
       'telemetry.sdk.name': 'opentelemetry',
       'service.instance.id': nsolid.id,

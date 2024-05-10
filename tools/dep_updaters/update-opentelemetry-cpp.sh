@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set -ex
 # Shell script to update opentelemetry-cpp in the source tree to specific version
 
 BASE_DIR=$(cd "$(dirname "$0")/../.." && pwd)
@@ -79,7 +79,7 @@ curl -sL -o "$PROTOC_ZIP" "https://github.com/protocolbuffers/protobuf/releases/
 unzip -o "$PROTOC_ZIP" -d ./protoc/
 
 echo "Getting opentelemetry-proto files"
-OTEL_PROTO_VERSION="1.1.0"
+OTEL_PROTO_VERSION="1.3.0"
 OTEL_PROTO_TARBALL=v$OTEL_PROTO_VERSION.tar.gz
 
 curl -sL -o "$OTEL_PROTO_TARBALL" "https://github.com/open-telemetry/opentelemetry-proto/archive/refs/tags/$OTEL_PROTO_TARBALL"
@@ -88,9 +88,20 @@ log_and_verify_sha256sum "opentelemetry-proto" "$OTEL_PROTO_TARBALL"
 
 gzip -dc "$OTEL_PROTO_TARBALL" | tar xf -
 rm "$OTEL_PROTO_TARBALL"
+
+echo "Generating grpc_cpp_plugin"
+cd "$BASE_DIR"
+./configure && make -C out grpc_cpp_plugin
+cp out/Release/grpc_cpp_plugin "$WORKSPACE/protoc/bin/"
+cd "$WORKSPACE"
+
+echo "Building protobuf files"
 cd opentelemetry-proto-$OTEL_PROTO_VERSION
 mkdir -p "$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp"
-"$WORKSPACE/protoc/bin/protoc" --cpp_out="$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp" \
+"$WORKSPACE/protoc/bin/protoc" \
+    --cpp_out="$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp" \
+    --grpc-cpp_out="$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp" \
+    --plugin="protoc-gen-grpc-cpp=$WORKSPACE/protoc/bin/grpc_cpp_plugin" \
     opentelemetry/proto/common/v1/common.proto \
     opentelemetry/proto/logs/v1/logs.proto \
     opentelemetry/proto/metrics/v1/metrics.proto \
