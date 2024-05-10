@@ -24,6 +24,7 @@
     'node_shared_sodium%': 'false',
     'node_shared_zmq%': 'false',
     'node_shared_curl%': 'false',
+    'node_shared_grpc%': 'false',
     'node_shared_protobuf%': 'false',
     'node_shared_otlp_http_exporter': 'false',
     'node_use_openssl%': 'true',
@@ -114,6 +115,7 @@
         '-Wno-unused-parameter',
         '-Werror=undefined-inline',
         '-Werror=extra-semi',
+        '-Wno-c++98-compat-extra-semi',
       ],
     },
 
