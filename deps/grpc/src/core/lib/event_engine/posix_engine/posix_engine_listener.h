@@ -11,10 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_POSIX_ENGINE_LISTENER_H
-#define GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_POSIX_ENGINE_LISTENER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_POSIX_ENGINE_LISTENER_H
+#define GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_POSIX_ENGINE_LISTENER_H
 
 #include <string.h>
 
@@ -28,12 +26,15 @@
 #include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/synchronization/mutex.h"
 
 #include <grpc/event_engine/endpoint_config.h>
 #include <grpc/event_engine/event_engine.h>
 #include <grpc/event_engine/memory_allocator.h>
+#include <grpc/event_engine/slice_buffer.h>
+#include <grpc/support/port_platform.h>
 
+#include "src/core/lib/event_engine/posix.h"
+#include "src/core/lib/gprpp/sync.h"
 #include "src/core/lib/iomgr/port.h"
 
 #ifdef GRPC_POSIX_SOCKET_TCP
@@ -52,7 +53,7 @@ class PosixEngineListenerImpl
     : public std::enable_shared_from_this<PosixEngineListenerImpl> {
  public:
   PosixEngineListenerImpl(
-      EventEngine::Listener::AcceptCallback on_accept,
+      PosixEventEngineWithFdSupport::PosixAcceptCallback on_accept,
       absl::AnyInvocable<void(absl::Status)> on_shutdown,
       const grpc_event_engine::experimental::EndpointConfig& config,
       std::unique_ptr<grpc_event_engine::experimental::MemoryAllocatorFactory>
@@ -60,11 +61,16 @@ class PosixEngineListenerImpl
       PosixEventPoller* poller, std::shared_ptr<EventEngine> engine);
   // Binds an address to the listener. This creates a ListenerSocket
   // and sets its fields appropriately.
-  absl::StatusOr<int> Bind(const EventEngine::ResolvedAddress& addr);
+  absl::StatusOr<int> Bind(
+      const EventEngine::ResolvedAddress& addr,
+      PosixListenerWithFdSupport::OnPosixBindNewFdCallback on_bind_new_fd);
   // Signals event manager to listen for connections on all created sockets.
   absl::Status Start();
   // Trigger graceful shutdown of all asynchronous accept operations.
   void TriggerShutdown();
+
+  absl::Status HandleExternalConnection(int listener_fd, int fd,
+                                        SliceBuffer* pending_data);
 
   ~PosixEngineListenerImpl();
 
@@ -72,7 +78,7 @@ class PosixEngineListenerImpl
   // This class represents accepting for one bind fd belonging to the listener.
   // Each AsyncConnectionAcceptor takes a ref to the parent
   // PosixEngineListenerImpl object. So the PosixEngineListenerImpl can be
-  // deleted only after all AsyncConnectionAcceptor's get destroyed.
+  // deleted only after all AsyncConnectionAcceptors get destroyed.
   class AsyncConnectionAcceptor {
    public:
     AsyncConnectionAcceptor(std::shared_ptr<EventEngine> engine,
@@ -103,6 +109,8 @@ class PosixEngineListenerImpl
     }
     ListenerSocketsContainer::ListenerSocket& Socket() { return socket_; }
     ~AsyncConnectionAcceptor() {
+      // If uds socket, unlink it so that the corresponding file is deleted.
+      UnlinkIfUnixDomainSocket(*socket_.sock.LocalAddress());
       handle_->OrphanHandle(nullptr, nullptr, "");
       delete notify_on_accept_;
     }
@@ -114,25 +122,36 @@ class PosixEngineListenerImpl
     ListenerSocketsContainer::ListenerSocket socket_;
     EventHandle* handle_;
     PosixEngineClosure* notify_on_accept_;
+    // Tracks the status of a backup timer to retry accept4 calls after file
+    // descriptor exhaustion.
+    std::atomic<bool> retry_timer_armed_{false};
   };
   class ListenerAsyncAcceptors : public ListenerSocketsContainer {
    public:
     explicit ListenerAsyncAcceptors(PosixEngineListenerImpl* listener)
         : listener_(listener){};
+
+    void UpdateOnAppendCallback(
+        PosixListenerWithFdSupport::OnPosixBindNewFdCallback on_append) {
+      on_append_ = std::move(on_append);
+    }
+
     void Append(ListenerSocket socket) override {
       acceptors_.push_back(new AsyncConnectionAcceptor(
           listener_->engine_, listener_->shared_from_this(), socket));
+      if (on_append_) {
+        on_append_(socket.sock.Fd());
+      }
     }
 
     absl::StatusOr<ListenerSocket> Find(
         const grpc_event_engine::experimental::EventEngine::ResolvedAddress&
             addr) override {
-      for (auto acceptor = acceptors_.begin(); acceptor != acceptors_.end();
-           ++acceptor) {
-        if ((*acceptor)->Socket().addr.size() == addr.size() &&
-            memcmp((*acceptor)->Socket().addr.address(), addr.address(),
+      for (auto* acceptor : acceptors_) {
+        if (acceptor->Socket().addr.size() == addr.size() &&
+            memcmp(acceptor->Socket().addr.address(), addr.address(),
                    addr.size()) == 0) {
-          return (*acceptor)->Socket();
+          return acceptor->Socket();
         }
       }
       return absl::NotFoundError("Socket not found!");
@@ -148,6 +167,7 @@ class PosixEngineListenerImpl
     }
 
    private:
+    PosixListenerWithFdSupport::OnPosixBindNewFdCallback on_append_;
     std::list<AsyncConnectionAcceptor*> acceptors_;
     PosixEngineListenerImpl* listener_;
   };
@@ -155,7 +175,7 @@ class PosixEngineListenerImpl
   friend class AsyncConnectionAcceptor;
   // The mutex ensures thread safety when multiple threads try to call Bind
   // and Start in parallel.
-  absl::Mutex mu_;
+  grpc_core::Mutex mu_;
   PosixEventPoller* poller_;
   PosixTcpOptions options_;
   std::shared_ptr<EventEngine> engine_;
@@ -163,7 +183,7 @@ class PosixEngineListenerImpl
   // operation.
   ListenerAsyncAcceptors acceptors_ ABSL_GUARDED_BY(mu_);
   // Callback to be invoked upon accepting a connection.
-  EventEngine::Listener::AcceptCallback on_accept_;
+  PosixEventEngineWithFdSupport::PosixAcceptCallback on_accept_;
   // Callback to be invoked upon shutdown of listener.
   absl::AnyInvocable<void(absl::Status)> on_shutdown_;
   // Set to true when the listener has started listening for new connections.
@@ -175,12 +195,10 @@ class PosixEngineListenerImpl
       memory_allocator_factory_;
 };
 
-class PosixEngineListener
-    : public grpc_event_engine::experimental::EventEngine::Listener {
+class PosixEngineListener : public PosixListenerWithFdSupport {
  public:
   PosixEngineListener(
-      grpc_event_engine::experimental::EventEngine::Listener::AcceptCallback
-          on_accept,
+      PosixEventEngineWithFdSupport::PosixAcceptCallback on_accept,
       absl::AnyInvocable<void(absl::Status)> on_shutdown,
       const grpc_event_engine::experimental::EndpointConfig& config,
       std::unique_ptr<grpc_event_engine::experimental::MemoryAllocatorFactory>
@@ -189,24 +207,41 @@ class PosixEngineListener
       : impl_(std::make_shared<PosixEngineListenerImpl>(
             std::move(on_accept), std::move(on_shutdown), config,
             std::move(memory_allocator_factory), poller, std::move(engine))) {}
-  ~PosixEngineListener() override { impl_->TriggerShutdown(); };
+  ~PosixEngineListener() override { ShutdownListeningFds(); };
   absl::StatusOr<int> Bind(
       const grpc_event_engine::experimental::EventEngine::ResolvedAddress& addr)
       override {
-    return impl_->Bind(addr);
+    return impl_->Bind(addr, nullptr);
+  }
+  absl::StatusOr<int> BindWithFd(
+      const EventEngine::ResolvedAddress& addr,
+      PosixListenerWithFdSupport::OnPosixBindNewFdCallback on_bind_new_fd)
+      override {
+    return impl_->Bind(addr, std::move(on_bind_new_fd));
+  }
+  absl::Status HandleExternalConnection(int listener_fd, int fd,
+                                        SliceBuffer* pending_data) override {
+    return impl_->HandleExternalConnection(listener_fd, fd, pending_data);
   }
   absl::Status Start() override { return impl_->Start(); }
 
+  void ShutdownListeningFds() override {
+    if (!shutdown_.exchange(true, std::memory_order_acq_rel)) {
+      impl_->TriggerShutdown();
+    }
+  }
+
  private:
   std::shared_ptr<PosixEngineListenerImpl> impl_;
+  // Set to true when the listener had been explicitly shutdown.
+  std::atomic<bool> shutdown_{false};
 };
 
 #else  // GRPC_POSIX_SOCKET_TCP
 
 #include "src/core/lib/gprpp/crash.h"
 
-class PosixEngineListener
-    : public grpc_event_engine::experimental::EventEngine::Listener {
+class PosixEngineListener : public PosixListenerWithFdSupport {
  public:
   PosixEngineListener() = default;
   ~PosixEngineListener() override = default;
@@ -219,10 +254,29 @@ class PosixEngineListener
     grpc_core::Crash(
         "EventEngine::Listener::Start not supported on this platform");
   }
+  absl::StatusOr<int> BindWithFd(
+      const EventEngine::ResolvedAddress& /*addr*/,
+      PosixListenerWithFdSupport::OnPosixBindNewFdCallback
+      /*on_bind_new_fd*/) override {
+    grpc_core::Crash(
+        "PosixEngineListener::BindWithFd not supported on this "
+        "platform");
+  }
+  absl::Status HandleExternalConnection(
+      int /*listener_fd*/, int /*fd*/, SliceBuffer* /*pending_data*/) override {
+    grpc_core::Crash(
+        "PosixEngineListener::HandleExternalConnection not "
+        "supported on this platform");
+  }
+  void ShutdownListeningFds() override {
+    grpc_core::Crash(
+        "PosixEngineListener::ShutdownListeningFds not supported on "
+        "this platform");
+  }
 };
 
 #endif
 
 }  // namespace experimental
 }  // namespace grpc_event_engine
-#endif  // GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_POSIX_ENGINE_LISTENER_H
+#endif  // GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_POSIX_ENGINE_LISTENER_H

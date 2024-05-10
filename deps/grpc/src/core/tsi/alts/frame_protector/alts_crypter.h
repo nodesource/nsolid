@@ -16,15 +16,14 @@
 //
 //
 
-#ifndef GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_CRYPTER_H
-#define GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_CRYPTER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_CRYPTER_H
+#define GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_CRYPTER_H
 
 #include <stdbool.h>
 #include <string.h>
 
 #include <grpc/grpc.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/tsi/alts/crypt/gsec.h"
 
@@ -252,4 +251,4 @@ grpc_status_code alts_unseal_crypter_create(gsec_aead_crypter* gc,
 ///
 void alts_crypter_destroy(alts_crypter* crypter);
 
-#endif  // GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_CRYPTER_H
+#endif  // GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_CRYPTER_H

@@ -11,20 +11,27 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef GRPC_CORE_LIB_EVENT_ENGINE_TRACE_H
-#define GRPC_CORE_LIB_EVENT_ENGINE_TRACE_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_EVENT_ENGINE_TRACE_H
+#define GRPC_SRC_CORE_LIB_EVENT_ENGINE_TRACE_H
 
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/debug/trace.h"
 
-extern grpc_core::TraceFlag grpc_event_engine_trace;
-
 #define GRPC_EVENT_ENGINE_TRACE(format, ...)                   \
-  if (GRPC_TRACE_FLAG_ENABLED(grpc_event_engine_trace)) {      \
-    gpr_log(GPR_DEBUG, "(event_engine) " format, __VA_ARGS__); \
+  if (GRPC_TRACE_FLAG_ENABLED(event_engine)) {                 \
+    gpr_log(GPR_ERROR, "(event_engine) " format, __VA_ARGS__); \
   }
 
-#endif  // GRPC_CORE_LIB_EVENT_ENGINE_TRACE_H
+#define GRPC_EVENT_ENGINE_ENDPOINT_TRACE(format, ...)                   \
+  if (GRPC_TRACE_FLAG_ENABLED(event_engine_endpoint)) {                 \
+    gpr_log(GPR_ERROR, "(event_engine endpoint) " format, __VA_ARGS__); \
+  }
+
+#define GRPC_EVENT_ENGINE_POLLER_TRACE(format, ...)                   \
+  if (GRPC_TRACE_FLAG_ENABLED(event_engine_poller)) {                 \
+    gpr_log(GPR_ERROR, "(event_engine poller) " format, __VA_ARGS__); \
+  }
+
+#endif  // GRPC_SRC_CORE_LIB_EVENT_ENGINE_TRACE_H

@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_PROMISE_DETAIL_PROMISE_LIKE_H
-#define GRPC_CORE_LIB_PROMISE_DETAIL_PROMISE_LIKE_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_PROMISE_DETAIL_PROMISE_LIKE_H
+#define GRPC_SRC_CORE_LIB_PROMISE_DETAIL_PROMISE_LIKE_H
 
 #include <utility>
 
+#include "absl/functional/any_invocable.h"
 #include "absl/meta/type_traits.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/promise/poll.h"
 
@@ -63,10 +64,27 @@ auto WrapInPoll(T&& x) -> decltype(PollWrapper<T>::Wrap(std::forward<T>(x))) {
   return PollWrapper<T>::Wrap(std::forward<T>(x));
 }
 
+// T -> T, const T& -> T
+template <typename T>
+using RemoveCVRef = absl::remove_cv_t<absl::remove_reference_t<T>>;
+
+template <typename F, typename SfinaeVoid = void>
+class PromiseLike;
+
+template <>
+class PromiseLike<void>;
+
 template <typename F>
-class PromiseLike {
+class PromiseLike<F, absl::enable_if_t<!std::is_void<
+#if (defined(__cpp_lib_is_invocable) && __cpp_lib_is_invocable >= 201703L) || \
+    (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+                         std::invoke_result_t<F>
+#else
+                         typename std::result_of<F()>::type
+#endif
+                         >::value>> {
  private:
-  GPR_NO_UNIQUE_ADDRESS F f_;
+  GPR_NO_UNIQUE_ADDRESS RemoveCVRef<F> f_;
 
  public:
   // NOLINTNEXTLINE - internal detail that drastically simplifies calling code.
@@ -75,11 +93,7 @@ class PromiseLike {
   using Result = typename PollTraits<decltype(WrapInPoll(f_()))>::Type;
 };
 
-// T -> T, const T& -> T
-template <typename T>
-using RemoveCVRef = absl::remove_cv_t<absl::remove_reference_t<T>>;
-
 }  // namespace promise_detail
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_PROMISE_DETAIL_PROMISE_LIKE_H
+#endif  // GRPC_SRC_CORE_LIB_PROMISE_DETAIL_PROMISE_LIKE_H

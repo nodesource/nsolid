@@ -14,12 +14,12 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_WINDOWS_H
-#define GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_WINDOWS_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_WINDOWS_H
+#define GRPC_SRC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_WINDOWS_H
 
 #include <functional>
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/port.h"
 #include "src/core/lib/iomgr/resolve_address.h"
@@ -60,4 +60,4 @@ class NativeDNSResolver : public DNSResolver {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_WINDOWS_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_WINDOWS_H

@@ -16,18 +16,17 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JWT_VERIFIER_H
-#define GRPC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JWT_VERIFIER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JWT_VERIFIER_H
+#define GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JWT_VERIFIER_H
 
 #include <stddef.h>
 
+#include <grpc/support/port_platform.h>
 #include <grpc/support/time.h>
 
 #include "src/core/lib/gprpp/time.h"
 #include "src/core/lib/iomgr/iomgr_fwd.h"
-#include "src/core/lib/json/json.h"
+#include "src/core/util/json/json.h"
 
 // --- Constants. ---
 
@@ -121,4 +120,4 @@ grpc_jwt_verifier_status grpc_jwt_claims_check(const grpc_jwt_claims* claims,
                                                const char* audience);
 const char* grpc_jwt_issuer_email_domain(const char* issuer);
 
-#endif  // GRPC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JWT_VERIFIER_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JWT_VERIFIER_H

@@ -12,31 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_CONFIG_CORE_CONFIGURATION_H
-#define GRPC_CORE_LIB_CONFIG_CORE_CONFIGURATION_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_CONFIG_CORE_CONFIGURATION_H
+#define GRPC_SRC_CORE_LIB_CONFIG_CORE_CONFIGURATION_H
 
 #include <atomic>
-#include <functional>
+
+#include "absl/functional/any_invocable.h"
+#include "absl/log/check.h"
 
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
+#include "src/core/handshaker/handshaker_registry.h"
+#include "src/core/handshaker/proxy_mapper_registry.h"
 #include "src/core/lib/channel/channel_args_preconditioning.h"
-#include "src/core/lib/handshaker/proxy_mapper_registry.h"
-#include "src/core/lib/load_balancing/lb_policy_registry.h"
-#include "src/core/lib/resolver/resolver_registry.h"
 #include "src/core/lib/security/certificate_provider/certificate_provider_registry.h"
 #include "src/core/lib/security/credentials/channel_creds_registry.h"
-#include "src/core/lib/service_config/service_config_parser.h"
 #include "src/core/lib/surface/channel_init.h"
-#include "src/core/lib/transport/handshaker_registry.h"
+#include "src/core/load_balancing/lb_policy_registry.h"
+#include "src/core/resolver/resolver_registry.h"
+#include "src/core/service_config/service_config_parser.h"
 
 namespace grpc_core {
 
 // Global singleton that stores library configuration - factories, etc...
 // that plugins might choose to extend.
-class CoreConfiguration {
+class GRPC_DLL CoreConfiguration {
  public:
   CoreConfiguration(const CoreConfiguration&) = delete;
   CoreConfiguration& operator=(const CoreConfiguration&) = delete;
@@ -98,7 +99,7 @@ class CoreConfiguration {
 
   // Stores a builder for RegisterBuilder
   struct RegisteredBuilder {
-    std::function<void(Builder*)> builder;
+    absl::AnyInvocable<void(Builder*)> builder;
     RegisteredBuilder* next;
   };
 
@@ -129,10 +130,10 @@ class CoreConfiguration {
     ~WithSubstituteBuilder() {
       // Reset and restore.
       Reset();
-      GPR_ASSERT(CoreConfiguration::config_.exchange(
-                     config_restore_, std::memory_order_acquire) == nullptr);
-      GPR_ASSERT(CoreConfiguration::builders_.exchange(
-                     builders_restore_, std::memory_order_acquire) == nullptr);
+      CHECK(CoreConfiguration::config_.exchange(
+                config_restore_, std::memory_order_acquire) == nullptr);
+      CHECK(CoreConfiguration::builders_.exchange(
+                builders_restore_, std::memory_order_acquire) == nullptr);
     }
 
    private:
@@ -154,7 +155,7 @@ class CoreConfiguration {
   // Attach a registration function globally.
   // Each registration function is called *in addition to*
   // BuildCoreConfiguration for the default core configuration.
-  static void RegisterBuilder(std::function<void(Builder*)> builder);
+  static void RegisterBuilder(absl::AnyInvocable<void(Builder*)> builder);
 
   // Drop the core configuration. Users must ensure no other threads are
   // accessing the configuration.
@@ -240,4 +241,4 @@ extern void BuildCoreConfiguration(CoreConfiguration::Builder* builder);
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_CONFIG_CORE_CONFIGURATION_H
+#endif  // GRPC_SRC_CORE_LIB_CONFIG_CORE_CONFIGURATION_H

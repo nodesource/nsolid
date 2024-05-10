@@ -16,13 +16,13 @@
 //
 //
 
-#ifndef GRPC_SRC_CPP_SERVER_LOAD_REPORTER_UTIL_H
-#define GRPC_SRC_CPP_SERVER_LOAD_REPORTER_UTIL_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CPP_SERVER_LOAD_REPORTER_CONSTANTS_H
+#define GRPC_SRC_CPP_SERVER_LOAD_REPORTER_CONSTANTS_H
 
 #include <stddef.h>
 #include <stdint.h>
+
+#include <grpc/support/port_platform.h>
 
 namespace grpc {
 namespace load_reporter {
@@ -81,4 +81,4 @@ constexpr char kViewOtherCallMetricValue[] =
 }  // namespace load_reporter
 }  // namespace grpc
 
-#endif  // GRPC_SRC_CPP_SERVER_LOAD_REPORTER_UTIL_H
+#endif  // GRPC_SRC_CPP_SERVER_LOAD_REPORTER_CONSTANTS_H

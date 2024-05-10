@@ -43,16 +43,20 @@
 
 #include <string>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
+#include "absl/strings/str_cat.h"
+
 #include <grpc/event_engine/endpoint_config.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
 #include <grpc/support/sync.h>
 
 #include "src/core/lib/address_utils/sockaddr_utils.h"
-#include "src/core/lib/gpr/string.h"
 #include "src/core/lib/gprpp/crash.h"
 #include "src/core/lib/gprpp/strerror.h"
 #include "src/core/lib/iomgr/sockaddr.h"
+#include "src/core/util/string.h"
 
 // set a socket to use zerocopy
 grpc_error_handle grpc_set_socket_zerocopy(int fd) {
@@ -249,6 +253,35 @@ grpc_error_handle grpc_set_socket_low_latency(int fd, int low_latency) {
   return absl::OkStatus();
 }
 
+/* Set Differentiated Services Code Point (DSCP) */
+grpc_error_handle grpc_set_socket_dscp(int fd, int dscp) {
+  if (dscp == grpc_core::PosixTcpOptions::kDscpNotSet) {
+    return absl::OkStatus();
+  }
+  // The TOS/TrafficClass byte consists of following bits:
+  // | 7 6 5 4 3 2 | 1 0 |
+  // |    DSCP     | ECN |
+  int value = dscp << 2;
+
+  int optval;
+  socklen_t optlen = sizeof(optval);
+  // Get ECN bits from current IP_TOS value unless IPv6 only
+  if (0 == getsockopt(fd, IPPROTO_IP, IP_TOS, &optval, &optlen)) {
+    value |= (optval & 0x3);
+    if (0 != setsockopt(fd, IPPROTO_IP, IP_TOS, &value, sizeof(value))) {
+      return GRPC_OS_ERROR(errno, "setsockopt(IP_TOS)");
+    }
+  }
+  // Get ECN from current Traffic Class value if IPv6 is available
+  if (0 == getsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &optval, &optlen)) {
+    value |= (optval & 0x3);
+    if (0 != setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &value, sizeof(value))) {
+      return GRPC_OS_ERROR(errno, "setsockopt(IPV6_TCLASS)");
+    }
+  }
+  return absl::OkStatus();
+}
+
 // The default values for TCP_USER_TIMEOUT are currently configured to be in
 // line with the default values of KEEPALIVE_TIMEOUT as proposed in
 // https://github.com/grpc/proposal/blob/master/A18-tcp-user-timeout.md
@@ -298,12 +331,24 @@ void config_default_tcp_user_timeout(bool enable, int timeout, bool is_client) {
 }
 
 // Set TCP_USER_TIMEOUT
+// As documented in
+// https://github.com/grpc/proposal/blob/master/A18-tcp-user-timeout.md, the
+// default values for TCP_USER_TIMEOUT are currently configured to be in line
+// with the default values of KEEPALIVE_TIMEOUT as proposed in
+// https://github.com/grpc/proposal/blob/master/A18-tcp-user-timeout.md. In
+// other words, by default, TCP_USER_TIMEOUT is disabled on clients (since
+// keepalive is disabled on clients by default), and enabled on servers. To
+// override the default settings of enabling/disabling TCP_USER_TIMEOUT, the
+// value of KEEPALIVE_TIME on channel args is used. If present, a value of
+// INT_MAX means that TCP_USER_TIMEOUT would be disabled, while any other value
+// would enable TCP_USER_TIMEOUT. If TCP_USER_TIMEOUT is enabled, the default
+// setting is 20 seconds (aligning with the default of KEEPALIVE_TIMEOUT). The
+// KEEPALIVE_TIMEOUT channel arg overrides the value used for TCP_USER_TIMEOUT.
 grpc_error_handle grpc_set_socket_tcp_user_timeout(
     int fd, const grpc_core::PosixTcpOptions& options, bool is_client) {
   // Use conditionally-important parameter to avoid warning
   (void)fd;
   (void)is_client;
-  extern grpc_core::TraceFlag grpc_tcp_trace;
   if (g_socket_supports_tcp_user_timeout.load() >= 0) {
     bool enable;
     int timeout;
@@ -341,7 +386,7 @@ grpc_error_handle grpc_set_socket_tcp_user_timeout(
         }
       }
       if (g_socket_supports_tcp_user_timeout.load() > 0) {
-        if (GRPC_TRACE_FLAG_ENABLED(grpc_tcp_trace)) {
+        if (GRPC_TRACE_FLAG_ENABLED(tcp)) {
           gpr_log(GPR_INFO, "Enabling TCP_USER_TIMEOUT with a timeout of %d ms",
                   timeout);
         }
@@ -357,16 +402,17 @@ grpc_error_handle grpc_set_socket_tcp_user_timeout(
           return absl::OkStatus();
         }
         if (newval != timeout) {
-          // Do not fail on failing to set TCP_USER_TIMEOUT for now.
-          gpr_log(GPR_ERROR, "Failed to set TCP_USER_TIMEOUT");
+          gpr_log(GPR_INFO,
+                  "Setting TCP_USER_TIMEOUT to value %d ms. Actual "
+                  "TCP_USER_TIMEOUT value is %d ms",
+                  timeout, newval);
           return absl::OkStatus();
         }
       }
     }
   } else {
-    if (GRPC_TRACE_FLAG_ENABLED(grpc_tcp_trace)) {
-      gpr_log(GPR_INFO, "TCP_USER_TIMEOUT not supported for this platform");
-    }
+    GRPC_TRACE_LOG(tcp, INFO)
+        << "TCP_USER_TIMEOUT not supported for this platform";
   }
   return absl::OkStatus();
 }
@@ -374,7 +420,7 @@ grpc_error_handle grpc_set_socket_tcp_user_timeout(
 // set a socket using a grpc_socket_mutator
 grpc_error_handle grpc_set_socket_with_mutator(int fd, grpc_fd_usage usage,
                                                grpc_socket_mutator* mutator) {
-  GPR_ASSERT(mutator);
+  CHECK(mutator);
   if (!grpc_socket_mutator_mutate_fd(mutator, fd, usage)) {
     return GRPC_ERROR_CREATE("grpc_socket_mutator failed.");
   }
@@ -396,7 +442,7 @@ static void probe_ipv6_once(void) {
   int fd = socket(AF_INET6, SOCK_STREAM, 0);
   g_ipv6_loopback_available = 0;
   if (fd < 0) {
-    gpr_log(GPR_INFO, "Disabling AF_INET6 sockets because socket() failed.");
+    LOG(INFO) << "Disabling AF_INET6 sockets because socket() failed.";
   } else {
     grpc_sockaddr_in6 addr;
     memset(&addr, 0, sizeof(addr));
@@ -417,15 +463,9 @@ int grpc_ipv6_loopback_available(void) {
   return g_ipv6_loopback_available;
 }
 
-static grpc_error_handle error_for_fd(int fd,
-                                      const grpc_resolved_address* addr) {
+static grpc_error_handle error_for_fd(int fd) {
   if (fd >= 0) return absl::OkStatus();
-  auto addr_str = grpc_sockaddr_to_string(addr, false);
-  grpc_error_handle err = grpc_error_set_str(
-      GRPC_OS_ERROR(errno, "socket"),
-      grpc_core::StatusStrProperty::kTargetAddress,
-      addr_str.ok() ? addr_str.value() : addr_str.status().ToString());
-  return err;
+  return GRPC_OS_ERROR(errno, "socket");
 }
 
 grpc_error_handle grpc_create_dualstack_socket(
@@ -437,9 +477,22 @@ grpc_error_handle grpc_create_dualstack_socket(
 
 static int create_socket(grpc_socket_factory* factory, int domain, int type,
                          int protocol) {
-  return (factory != nullptr)
-             ? grpc_socket_factory_socket(factory, domain, type, protocol)
-             : socket(domain, type, protocol);
+  int res = (factory != nullptr)
+                ? grpc_socket_factory_socket(factory, domain, type, protocol)
+                : socket(domain, type, protocol);
+  if (res < 0 && errno == EMFILE) {
+    int saved_errno = errno;
+    GRPC_LOG_EVERY_N_SEC(
+        10, GPR_ERROR,
+        "socket(%d, %d, %d) returned %d with error: |%s|. This process "
+        "might not have a sufficient file descriptor limit for the number "
+        "of connections grpc wants to open (which is generally a function of "
+        "the number of grpc channels, the lb policy of each channel, and the "
+        "number of backends each channel is load balancing across).",
+        domain, type, protocol, res, grpc_core::StrError(errno).c_str());
+    errno = saved_errno;
+  }
+  return res;
 }
 
 grpc_error_handle grpc_create_dualstack_socket_using_factory(
@@ -463,7 +516,7 @@ grpc_error_handle grpc_create_dualstack_socket_using_factory(
     // If this isn't an IPv4 address, then return whatever we've got.
     if (!grpc_sockaddr_is_v4mapped(resolved_addr, nullptr)) {
       *dsmode = GRPC_DSMODE_IPV6;
-      return error_for_fd(*newfd, resolved_addr);
+      return error_for_fd(*newfd);
     }
     // Fall back to AF_INET.
     if (*newfd >= 0) {
@@ -473,7 +526,7 @@ grpc_error_handle grpc_create_dualstack_socket_using_factory(
   }
   *dsmode = family == AF_INET ? GRPC_DSMODE_IPV4 : GRPC_DSMODE_NONE;
   *newfd = create_socket(factory, family, type, protocol);
-  return error_for_fd(*newfd, resolved_addr);
+  return error_for_fd(*newfd);
 }
 
 #endif

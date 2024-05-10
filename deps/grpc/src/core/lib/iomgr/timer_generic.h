@@ -16,11 +16,10 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_TIMER_GENERIC_H
-#define GRPC_CORE_LIB_IOMGR_TIMER_GENERIC_H
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_TIMER_GENERIC_H
+#define GRPC_SRC_CORE_LIB_IOMGR_TIMER_GENERIC_H
 
 #include <grpc/support/port_platform.h>
-
 #include <grpc/support/time.h>
 
 #include "src/core/lib/iomgr/exec_ctx.h"
@@ -37,4 +36,4 @@ struct grpc_timer {
 #endif
 };
 
-#endif  // GRPC_CORE_LIB_IOMGR_TIMER_GENERIC_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_TIMER_GENERIC_H

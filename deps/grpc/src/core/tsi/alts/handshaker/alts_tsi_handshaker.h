@@ -16,12 +16,11 @@
 //
 //
 
-#ifndef GRPC_CORE_TSI_ALTS_HANDSHAKER_ALTS_TSI_HANDSHAKER_H
-#define GRPC_CORE_TSI_ALTS_HANDSHAKER_ALTS_TSI_HANDSHAKER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_TSI_ALTS_HANDSHAKER_ALTS_TSI_HANDSHAKER_H
+#define GRPC_SRC_CORE_TSI_ALTS_HANDSHAKER_ALTS_TSI_HANDSHAKER_H
 
 #include <grpc/grpc.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/pollset_set.h"
 #include "src/core/lib/security/credentials/alts/grpc_alts_credentials_options.h"
@@ -101,4 +100,4 @@ void alts_tsi_handshaker_result_set_unused_bytes(tsi_handshaker_result* result,
 ///
 bool alts_tsi_handshaker_has_shutdown(alts_tsi_handshaker* handshaker);
 
-#endif  // GRPC_CORE_TSI_ALTS_HANDSHAKER_ALTS_TSI_HANDSHAKER_H
+#endif  // GRPC_SRC_CORE_TSI_ALTS_HANDSHAKER_ALTS_TSI_HANDSHAKER_H

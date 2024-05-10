@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_GPRPP_CRASH_H
-#define GRPC_CORE_LIB_GPRPP_CRASH_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_CRASH_H
+#define GRPC_SRC_CORE_LIB_GPRPP_CRASH_H
 
 #include "absl/strings/string_view.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/debug_location.h"
 
@@ -29,6 +29,9 @@ namespace grpc_core {
 [[noreturn]] void Crash(absl::string_view message,
                         ::grpc_core::SourceLocation location = {});
 
+[[noreturn]] void CrashWithStdio(absl::string_view message,
+                                 ::grpc_core::SourceLocation location = {});
+
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_CRASH_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_CRASH_H

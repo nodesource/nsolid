@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_H
-#define GRPC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_H
+#define GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_H
 
 #include <cstdint>
 #include <functional>
@@ -24,6 +22,8 @@
 
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/ext/transport/binder/wire_format/binder_constants.h"
 #include "src/core/lib/gprpp/orphanable.h"
@@ -102,4 +102,4 @@ class Binder : public HasRawBinder {
 
 }  // namespace grpc_binder
 
-#endif  // GRPC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_H
+#endif  // GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_H

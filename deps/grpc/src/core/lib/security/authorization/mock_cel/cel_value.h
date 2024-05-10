@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_VALUE_H
-#define GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_VALUE_H
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_VALUE_H
+#define GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_VALUE_H
 
 // CelValue is a holder, capable of storing all kinds of data
 // supported by CEL.
@@ -30,8 +30,6 @@
 //    std::string* msg("test");
 //    CelValue value = CelValue::CreateString(msg);
 
-#include <grpc/support/port_platform.h>
-
 #include <stdint.h>
 
 #include <memory>
@@ -40,6 +38,8 @@
 
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+
+#include <grpc/support/port_platform.h>
 
 namespace grpc_core {
 namespace mock_cel {
@@ -99,4 +99,4 @@ class ContainerBackedMapImpl : public CelMap {
 }  // namespace mock_cel
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_VALUE_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_VALUE_H

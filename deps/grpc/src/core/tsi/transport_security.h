@@ -16,17 +16,15 @@
 //
 //
 
-#ifndef GRPC_CORE_TSI_TRANSPORT_SECURITY_H
-#define GRPC_CORE_TSI_TRANSPORT_SECURITY_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_TSI_TRANSPORT_SECURITY_H
+#define GRPC_SRC_CORE_TSI_TRANSPORT_SECURITY_H
 
 #include <stdbool.h>
 
+#include <grpc/support/port_platform.h>
+
 #include "src/core/lib/debug/trace.h"
 #include "src/core/tsi/transport_security_interface.h"
-
-extern grpc_core::TraceFlag tsi_tracing_enabled;
 
 // Base for tsi_frame_protector implementations.
 // See transport_security_interface.h for documentation.
@@ -140,4 +138,4 @@ const tsi_peer_property* tsi_peer_get_property_by_name(const tsi_peer* peer,
 // Utils.
 char* tsi_strdup(const char* src);  // Sadly, no strdup in C89.
 
-#endif  // GRPC_CORE_TSI_TRANSPORT_SECURITY_H
+#endif  // GRPC_SRC_CORE_TSI_TRANSPORT_SECURITY_H

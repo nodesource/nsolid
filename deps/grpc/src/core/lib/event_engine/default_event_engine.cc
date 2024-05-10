@@ -11,8 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include <grpc/support/port_platform.h>
-
 #include "src/core/lib/event_engine/default_event_engine.h"
 
 #include <atomic>
@@ -22,14 +20,20 @@
 #include "absl/functional/any_invocable.h"
 
 #include <grpc/event_engine/event_engine.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/config/core_configuration.h"
 #include "src/core/lib/debug/trace.h"
 #include "src/core/lib/event_engine/default_event_engine_factory.h"
 #include "src/core/lib/event_engine/trace.h"
+#include "src/core/lib/gprpp/debug_location.h"
 #include "src/core/lib/gprpp/no_destruct.h"
 #include "src/core/lib/gprpp/sync.h"
+
+#ifdef GRPC_MAXIMIZE_THREADYNESS
+#include "src/core/lib/event_engine/thready_event_engine/thready_event_engine.h"  // IWYU pragma: keep
+#endif
 
 namespace grpc_event_engine {
 namespace experimental {
@@ -56,22 +60,34 @@ void EventEngineFactoryReset() {
   g_event_engine->reset();
 }
 
-std::unique_ptr<EventEngine> CreateEventEngine() {
+std::unique_ptr<EventEngine> CreateEventEngineInner() {
   if (auto* factory = g_event_engine_factory.load()) {
     return (*factory)();
   }
   return DefaultEventEngineFactory();
 }
 
-std::shared_ptr<EventEngine> GetDefaultEventEngine() {
+std::unique_ptr<EventEngine> CreateEventEngine() {
+#ifdef GRPC_MAXIMIZE_THREADYNESS
+  return std::make_unique<ThreadyEventEngine>(CreateEventEngineInner());
+#else
+  return CreateEventEngineInner();
+#endif
+}
+
+std::shared_ptr<EventEngine> GetDefaultEventEngine(
+    grpc_core::SourceLocation location) {
   grpc_core::MutexLock lock(&*g_mu);
   if (std::shared_ptr<EventEngine> engine = g_event_engine->lock()) {
-    GRPC_EVENT_ENGINE_TRACE("DefaultEventEngine::%p use_count:%ld",
-                            engine.get(), engine.use_count());
+    GRPC_EVENT_ENGINE_TRACE(
+        "Returning existing EventEngine::%p. use_count:%ld. Called from "
+        "[%s:%d]",
+        engine.get(), engine.use_count(), location.file(), location.line());
     return engine;
   }
   std::shared_ptr<EventEngine> engine{CreateEventEngine()};
-  GRPC_EVENT_ENGINE_TRACE("Created DefaultEventEngine::%p", engine.get());
+  GRPC_EVENT_ENGINE_TRACE("Created DefaultEventEngine::%p. Called from [%s:%d]",
+                          engine.get(), location.file(), location.line());
   *g_event_engine = engine;
   return engine;
 }
