@@ -361,6 +361,35 @@
       ],
     }],
 
+    [ 'node_shared_grpc=="false"', {
+      'dependencies': [ 'deps/grpc/grpc.gyp:grpc' ],
+      'conditions': [
+        [ 'force_load=="true"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)grpc<(STATIC_LIB_SUFFIX)',
+            ],
+          },
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'AdditionalOptions': [
+                '/WHOLEARCHIVE:grpc<(STATIC_LIB_SUFFIX)',
+              ],
+            },
+          },
+          'conditions': [
+            ['OS!="aix" and node_shared=="false"', {
+              'ldflags': [
+                '-Wl,--whole-archive',
+                '<(obj_dir)/deps/grpc/<(STATIC_LIB_PREFIX)grpc<(STATIC_LIB_SUFFIX)',
+                '-Wl,--no-whole-archive',
+              ],
+            }],
+          ],
+        }],
+      ],
+    }],
+
     [ 'OS=="mac"', {
       # linking Corefoundation is needed since certain OSX debugging tools
       # like Instruments require it for some features
