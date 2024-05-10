@@ -69,7 +69,8 @@ struct ScopeMetricsDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ScopeMetricsDefaultTypeInternal _ScopeMetrics_default_instance_;
 PROTOBUF_CONSTEXPR Metric::Metric(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+    /*decltype(_impl_.metadata_)*/{}
+  , /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.description_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.unit_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.data_)*/{}
@@ -337,6 +338,7 @@ const uint32_t TableStruct_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eprot
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
+  PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::metrics::v1::Metric, _impl_.metadata_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::metrics::v1::Metric, _impl_.data_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::metrics::v1::Gauge, _internal_metadata_),
@@ -501,18 +503,18 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 7, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::ResourceMetrics)},
   { 16, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::ScopeMetrics)},
   { 25, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Metric)},
-  { 40, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Gauge)},
-  { 47, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Sum)},
-  { 56, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Histogram)},
-  { 64, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::ExponentialHistogram)},
-  { 72, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Summary)},
-  { 79, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::NumberDataPoint)},
-  { 93, 110, -1, sizeof(::opentelemetry::proto::metrics::v1::HistogramDataPoint)},
-  { 121, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets)},
-  { 129, 149, -1, sizeof(::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint)},
-  { 163, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::SummaryDataPoint_ValueAtQuantile)},
-  { 171, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::SummaryDataPoint)},
-  { 184, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Exemplar)},
+  { 41, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Gauge)},
+  { 48, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Sum)},
+  { 57, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Histogram)},
+  { 65, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::ExponentialHistogram)},
+  { 73, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Summary)},
+  { 80, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::NumberDataPoint)},
+  { 94, 111, -1, sizeof(::opentelemetry::proto::metrics::v1::HistogramDataPoint)},
+  { 122, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint_Buckets)},
+  { 130, 150, -1, sizeof(::opentelemetry::proto::metrics::v1::ExponentialHistogramDataPoint)},
+  { 164, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::SummaryDataPoint_ValueAtQuantile)},
+  { 172, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::SummaryDataPoint)},
+  { 185, -1, -1, sizeof(::opentelemetry::proto::metrics::v1::Exemplar)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -550,7 +552,7 @@ const char descriptor_table_protodef_opentelemetry_2fproto_2fmetrics_2fv1_2fmetr
   "emetry.proto.common.v1.InstrumentationSc"
   "ope\0227\n\007metrics\030\002 \003(\0132&.opentelemetry.pro"
   "to.metrics.v1.Metric\022\022\n\nschema_url\030\003 \001(\t"
-  "\"\222\003\n\006Metric\022\014\n\004name\030\001 \001(\t\022\023\n\013description"
+  "\"\315\003\n\006Metric\022\014\n\004name\030\001 \001(\t\022\023\n\013description"
   "\030\002 \001(\t\022\014\n\004unit\030\003 \001(\t\0226\n\005gauge\030\005 \001(\0132%.op"
   "entelemetry.proto.metrics.v1.GaugeH\000\0222\n\003"
   "sum\030\007 \001(\0132#.opentelemetry.proto.metrics."
@@ -559,79 +561,80 @@ const char descriptor_table_protodef_opentelemetry_2fproto_2fmetrics_2fv1_2fmetr
   "nential_histogram\030\n \001(\01324.opentelemetry."
   "proto.metrics.v1.ExponentialHistogramH\000\022"
   ":\n\007summary\030\013 \001(\0132\'.opentelemetry.proto.m"
-  "etrics.v1.SummaryH\000B\006\n\004dataJ\004\010\004\020\005J\004\010\006\020\007J"
-  "\004\010\010\020\t\"M\n\005Gauge\022D\n\013data_points\030\001 \003(\0132/.op"
-  "entelemetry.proto.metrics.v1.NumberDataP"
-  "oint\"\272\001\n\003Sum\022D\n\013data_points\030\001 \003(\0132/.open"
-  "telemetry.proto.metrics.v1.NumberDataPoi"
-  "nt\022W\n\027aggregation_temporality\030\002 \001(\01626.op"
-  "entelemetry.proto.metrics.v1.Aggregation"
-  "Temporality\022\024\n\014is_monotonic\030\003 \001(\010\"\255\001\n\tHi"
-  "stogram\022G\n\013data_points\030\001 \003(\01322.opentelem"
-  "etry.proto.metrics.v1.HistogramDataPoint"
-  "\022W\n\027aggregation_temporality\030\002 \001(\01626.open"
-  "telemetry.proto.metrics.v1.AggregationTe"
-  "mporality\"\303\001\n\024ExponentialHistogram\022R\n\013da"
-  "ta_points\030\001 \003(\0132=.opentelemetry.proto.me"
-  "trics.v1.ExponentialHistogramDataPoint\022W"
-  "\n\027aggregation_temporality\030\002 \001(\01626.opente"
-  "lemetry.proto.metrics.v1.AggregationTemp"
-  "orality\"P\n\007Summary\022E\n\013data_points\030\001 \003(\0132"
-  "0.opentelemetry.proto.metrics.v1.Summary"
-  "DataPoint\"\206\002\n\017NumberDataPoint\022;\n\nattribu"
-  "tes\030\007 \003(\0132\'.opentelemetry.proto.common.v"
-  "1.KeyValue\022\034\n\024start_time_unix_nano\030\002 \001(\006"
-  "\022\026\n\016time_unix_nano\030\003 \001(\006\022\023\n\tas_double\030\004 "
-  "\001(\001H\000\022\020\n\006as_int\030\006 \001(\020H\000\022;\n\texemplars\030\005 \003"
-  "(\0132(.opentelemetry.proto.metrics.v1.Exem"
-  "plar\022\r\n\005flags\030\010 \001(\rB\007\n\005valueJ\004\010\001\020\002\"\346\002\n\022H"
-  "istogramDataPoint\022;\n\nattributes\030\t \003(\0132\'."
-  "opentelemetry.proto.common.v1.KeyValue\022\034"
-  "\n\024start_time_unix_nano\030\002 \001(\006\022\026\n\016time_uni"
-  "x_nano\030\003 \001(\006\022\r\n\005count\030\004 \001(\006\022\020\n\003sum\030\005 \001(\001"
-  "H\000\210\001\001\022\025\n\rbucket_counts\030\006 \003(\006\022\027\n\017explicit"
-  "_bounds\030\007 \003(\001\022;\n\texemplars\030\010 \003(\0132(.opent"
-  "elemetry.proto.metrics.v1.Exemplar\022\r\n\005fl"
-  "ags\030\n \001(\r\022\020\n\003min\030\013 \001(\001H\001\210\001\001\022\020\n\003max\030\014 \001(\001"
-  "H\002\210\001\001B\006\n\004_sumB\006\n\004_minB\006\n\004_maxJ\004\010\001\020\002\"\332\004\n\035"
-  "ExponentialHistogramDataPoint\022;\n\nattribu"
-  "tes\030\001 \003(\0132\'.opentelemetry.proto.common.v"
-  "1.KeyValue\022\034\n\024start_time_unix_nano\030\002 \001(\006"
-  "\022\026\n\016time_unix_nano\030\003 \001(\006\022\r\n\005count\030\004 \001(\006\022"
-  "\020\n\003sum\030\005 \001(\001H\000\210\001\001\022\r\n\005scale\030\006 \001(\021\022\022\n\nzero"
-  "_count\030\007 \001(\006\022W\n\010positive\030\010 \001(\0132E.opentel"
-  "emetry.proto.metrics.v1.ExponentialHisto"
-  "gramDataPoint.Buckets\022W\n\010negative\030\t \001(\0132"
-  "E.opentelemetry.proto.metrics.v1.Exponen"
-  "tialHistogramDataPoint.Buckets\022\r\n\005flags\030"
-  "\n \001(\r\022;\n\texemplars\030\013 \003(\0132(.opentelemetry"
-  ".proto.metrics.v1.Exemplar\022\020\n\003min\030\014 \001(\001H"
-  "\001\210\001\001\022\020\n\003max\030\r \001(\001H\002\210\001\001\022\026\n\016zero_threshold"
-  "\030\016 \001(\001\0320\n\007Buckets\022\016\n\006offset\030\001 \001(\021\022\025\n\rbuc"
-  "ket_counts\030\002 \003(\004B\006\n\004_sumB\006\n\004_minB\006\n\004_max"
-  "\"\305\002\n\020SummaryDataPoint\022;\n\nattributes\030\007 \003("
-  "\0132\'.opentelemetry.proto.common.v1.KeyVal"
-  "ue\022\034\n\024start_time_unix_nano\030\002 \001(\006\022\026\n\016time"
-  "_unix_nano\030\003 \001(\006\022\r\n\005count\030\004 \001(\006\022\013\n\003sum\030\005"
-  " \001(\001\022Y\n\017quantile_values\030\006 \003(\0132@.opentele"
-  "metry.proto.metrics.v1.SummaryDataPoint."
-  "ValueAtQuantile\022\r\n\005flags\030\010 \001(\r\0322\n\017ValueA"
-  "tQuantile\022\020\n\010quantile\030\001 \001(\001\022\r\n\005value\030\002 \001"
-  "(\001J\004\010\001\020\002\"\301\001\n\010Exemplar\022D\n\023filtered_attrib"
-  "utes\030\007 \003(\0132\'.opentelemetry.proto.common."
-  "v1.KeyValue\022\026\n\016time_unix_nano\030\002 \001(\006\022\023\n\ta"
-  "s_double\030\003 \001(\001H\000\022\020\n\006as_int\030\006 \001(\020H\000\022\017\n\007sp"
-  "an_id\030\004 \001(\014\022\020\n\010trace_id\030\005 \001(\014B\007\n\005valueJ\004"
-  "\010\001\020\002*\214\001\n\026AggregationTemporality\022\'\n#AGGRE"
-  "GATION_TEMPORALITY_UNSPECIFIED\020\000\022!\n\035AGGR"
-  "EGATION_TEMPORALITY_DELTA\020\001\022&\n\"AGGREGATI"
-  "ON_TEMPORALITY_CUMULATIVE\020\002*^\n\016DataPoint"
-  "Flags\022\037\n\033DATA_POINT_FLAGS_DO_NOT_USE\020\000\022+"
-  "\n\'DATA_POINT_FLAGS_NO_RECORDED_VALUE_MAS"
-  "K\020\001B\177\n!io.opentelemetry.proto.metrics.v1"
-  "B\014MetricsProtoP\001Z)go.opentelemetry.io/pr"
-  "oto/otlp/metrics/v1\252\002\036OpenTelemetry.Prot"
-  "o.Metrics.V1b\006proto3"
+  "etrics.v1.SummaryH\000\0229\n\010metadata\030\014 \003(\0132\'."
+  "opentelemetry.proto.common.v1.KeyValueB\006"
+  "\n\004dataJ\004\010\004\020\005J\004\010\006\020\007J\004\010\010\020\t\"M\n\005Gauge\022D\n\013dat"
+  "a_points\030\001 \003(\0132/.opentelemetry.proto.met"
+  "rics.v1.NumberDataPoint\"\272\001\n\003Sum\022D\n\013data_"
+  "points\030\001 \003(\0132/.opentelemetry.proto.metri"
+  "cs.v1.NumberDataPoint\022W\n\027aggregation_tem"
+  "porality\030\002 \001(\01626.opentelemetry.proto.met"
+  "rics.v1.AggregationTemporality\022\024\n\014is_mon"
+  "otonic\030\003 \001(\010\"\255\001\n\tHistogram\022G\n\013data_point"
+  "s\030\001 \003(\01322.opentelemetry.proto.metrics.v1"
+  ".HistogramDataPoint\022W\n\027aggregation_tempo"
+  "rality\030\002 \001(\01626.opentelemetry.proto.metri"
+  "cs.v1.AggregationTemporality\"\303\001\n\024Exponen"
+  "tialHistogram\022R\n\013data_points\030\001 \003(\0132=.ope"
+  "ntelemetry.proto.metrics.v1.ExponentialH"
+  "istogramDataPoint\022W\n\027aggregation_tempora"
+  "lity\030\002 \001(\01626.opentelemetry.proto.metrics"
+  ".v1.AggregationTemporality\"P\n\007Summary\022E\n"
+  "\013data_points\030\001 \003(\01320.opentelemetry.proto"
+  ".metrics.v1.SummaryDataPoint\"\206\002\n\017NumberD"
+  "ataPoint\022;\n\nattributes\030\007 \003(\0132\'.opentelem"
+  "etry.proto.common.v1.KeyValue\022\034\n\024start_t"
+  "ime_unix_nano\030\002 \001(\006\022\026\n\016time_unix_nano\030\003 "
+  "\001(\006\022\023\n\tas_double\030\004 \001(\001H\000\022\020\n\006as_int\030\006 \001(\020"
+  "H\000\022;\n\texemplars\030\005 \003(\0132(.opentelemetry.pr"
+  "oto.metrics.v1.Exemplar\022\r\n\005flags\030\010 \001(\rB\007"
+  "\n\005valueJ\004\010\001\020\002\"\346\002\n\022HistogramDataPoint\022;\n\n"
+  "attributes\030\t \003(\0132\'.opentelemetry.proto.c"
+  "ommon.v1.KeyValue\022\034\n\024start_time_unix_nan"
+  "o\030\002 \001(\006\022\026\n\016time_unix_nano\030\003 \001(\006\022\r\n\005count"
+  "\030\004 \001(\006\022\020\n\003sum\030\005 \001(\001H\000\210\001\001\022\025\n\rbucket_count"
+  "s\030\006 \003(\006\022\027\n\017explicit_bounds\030\007 \003(\001\022;\n\texem"
+  "plars\030\010 \003(\0132(.opentelemetry.proto.metric"
+  "s.v1.Exemplar\022\r\n\005flags\030\n \001(\r\022\020\n\003min\030\013 \001("
+  "\001H\001\210\001\001\022\020\n\003max\030\014 \001(\001H\002\210\001\001B\006\n\004_sumB\006\n\004_min"
+  "B\006\n\004_maxJ\004\010\001\020\002\"\332\004\n\035ExponentialHistogramD"
+  "ataPoint\022;\n\nattributes\030\001 \003(\0132\'.opentelem"
+  "etry.proto.common.v1.KeyValue\022\034\n\024start_t"
+  "ime_unix_nano\030\002 \001(\006\022\026\n\016time_unix_nano\030\003 "
+  "\001(\006\022\r\n\005count\030\004 \001(\006\022\020\n\003sum\030\005 \001(\001H\000\210\001\001\022\r\n\005"
+  "scale\030\006 \001(\021\022\022\n\nzero_count\030\007 \001(\006\022W\n\010posit"
+  "ive\030\010 \001(\0132E.opentelemetry.proto.metrics."
+  "v1.ExponentialHistogramDataPoint.Buckets"
+  "\022W\n\010negative\030\t \001(\0132E.opentelemetry.proto"
+  ".metrics.v1.ExponentialHistogramDataPoin"
+  "t.Buckets\022\r\n\005flags\030\n \001(\r\022;\n\texemplars\030\013 "
+  "\003(\0132(.opentelemetry.proto.metrics.v1.Exe"
+  "mplar\022\020\n\003min\030\014 \001(\001H\001\210\001\001\022\020\n\003max\030\r \001(\001H\002\210\001"
+  "\001\022\026\n\016zero_threshold\030\016 \001(\001\0320\n\007Buckets\022\016\n\006"
+  "offset\030\001 \001(\021\022\025\n\rbucket_counts\030\002 \003(\004B\006\n\004_"
+  "sumB\006\n\004_minB\006\n\004_max\"\305\002\n\020SummaryDataPoint"
+  "\022;\n\nattributes\030\007 \003(\0132\'.opentelemetry.pro"
+  "to.common.v1.KeyValue\022\034\n\024start_time_unix"
+  "_nano\030\002 \001(\006\022\026\n\016time_unix_nano\030\003 \001(\006\022\r\n\005c"
+  "ount\030\004 \001(\006\022\013\n\003sum\030\005 \001(\001\022Y\n\017quantile_valu"
+  "es\030\006 \003(\0132@.opentelemetry.proto.metrics.v"
+  "1.SummaryDataPoint.ValueAtQuantile\022\r\n\005fl"
+  "ags\030\010 \001(\r\0322\n\017ValueAtQuantile\022\020\n\010quantile"
+  "\030\001 \001(\001\022\r\n\005value\030\002 \001(\001J\004\010\001\020\002\"\301\001\n\010Exemplar"
+  "\022D\n\023filtered_attributes\030\007 \003(\0132\'.opentele"
+  "metry.proto.common.v1.KeyValue\022\026\n\016time_u"
+  "nix_nano\030\002 \001(\006\022\023\n\tas_double\030\003 \001(\001H\000\022\020\n\006a"
+  "s_int\030\006 \001(\020H\000\022\017\n\007span_id\030\004 \001(\014\022\020\n\010trace_"
+  "id\030\005 \001(\014B\007\n\005valueJ\004\010\001\020\002*\214\001\n\026AggregationT"
+  "emporality\022\'\n#AGGREGATION_TEMPORALITY_UN"
+  "SPECIFIED\020\000\022!\n\035AGGREGATION_TEMPORALITY_D"
+  "ELTA\020\001\022&\n\"AGGREGATION_TEMPORALITY_CUMULA"
+  "TIVE\020\002*^\n\016DataPointFlags\022\037\n\033DATA_POINT_F"
+  "LAGS_DO_NOT_USE\020\000\022+\n\'DATA_POINT_FLAGS_NO"
+  "_RECORDED_VALUE_MASK\020\001B\177\n!io.opentelemet"
+  "ry.proto.metrics.v1B\014MetricsProtoP\001Z)go."
+  "opentelemetry.io/proto/otlp/metrics/v1\252\002"
+  "\036OpenTelemetry.Proto.Metrics.V1b\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eproto_deps[2] = {
   &::descriptor_table_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto,
@@ -639,7 +642,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_opentelemetry_2fpro
 };
 static ::_pbi::once_flag descriptor_table_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eproto = {
-    false, false, 3860, descriptor_table_protodef_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eproto,
+    false, false, 3919, descriptor_table_protodef_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eproto,
     "opentelemetry/proto/metrics/v1/metrics.proto",
     &descriptor_table_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eproto_once, descriptor_table_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eproto_deps, 2, 16,
     schemas, file_default_instances, TableStruct_opentelemetry_2fproto_2fmetrics_2fv1_2fmetrics_2eproto::offsets,
@@ -1547,6 +1550,9 @@ void Metric::set_allocated_summary(::opentelemetry::proto::metrics::v1::Summary*
   }
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.metrics.v1.Metric.summary)
 }
+void Metric::clear_metadata() {
+  _impl_.metadata_.Clear();
+}
 Metric::Metric(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
@@ -1557,7 +1563,8 @@ Metric::Metric(const Metric& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   Metric* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.name_){}
+      decltype(_impl_.metadata_){from._impl_.metadata_}
+    , decltype(_impl_.name_){}
     , decltype(_impl_.description_){}
     , decltype(_impl_.unit_){}
     , decltype(_impl_.data_){}
@@ -1628,7 +1635,8 @@ inline void Metric::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.name_){}
+      decltype(_impl_.metadata_){arena}
+    , decltype(_impl_.name_){}
     , decltype(_impl_.description_){}
     , decltype(_impl_.unit_){}
     , decltype(_impl_.data_){}
@@ -1661,6 +1669,7 @@ Metric::~Metric() {
 
 inline void Metric::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.metadata_.~RepeatedPtrField();
   _impl_.name_.Destroy();
   _impl_.description_.Destroy();
   _impl_.unit_.Destroy();
@@ -1720,6 +1729,7 @@ void Metric::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
+  _impl_.metadata_.Clear();
   _impl_.name_.ClearToEmpty();
   _impl_.description_.ClearToEmpty();
   _impl_.unit_.ClearToEmpty();
@@ -1800,6 +1810,19 @@ const char* Metric::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 90)) {
           ptr = ctx->ParseMessage(_internal_mutable_summary(), ptr);
           CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated .opentelemetry.proto.common.v1.KeyValue metadata = 12;
+      case 12:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 98)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            ptr = ctx->ParseMessage(_internal_add_metadata(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<98>(ptr));
         } else
           goto handle_unusual;
         continue;
@@ -1897,6 +1920,14 @@ uint8_t* Metric::_InternalSerialize(
         _Internal::summary(this).GetCachedSize(), target, stream);
   }
 
+  // repeated .opentelemetry.proto.common.v1.KeyValue metadata = 12;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_metadata_size()); i < n; i++) {
+    const auto& repfield = this->_internal_metadata(i);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+        InternalWriteMessage(12, repfield, repfield.GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -1912,6 +1943,13 @@ size_t Metric::ByteSizeLong() const {
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
+
+  // repeated .opentelemetry.proto.common.v1.KeyValue metadata = 12;
+  total_size += 1UL * this->_internal_metadata_size();
+  for (const auto& msg : this->_impl_.metadata_) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
+  }
 
   // string name = 1;
   if (!this->_internal_name().empty()) {
@@ -1992,6 +2030,7 @@ void Metric::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBU
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
+  _this->_impl_.metadata_.MergeFrom(from._impl_.metadata_);
   if (!from._internal_name().empty()) {
     _this->_internal_set_name(from._internal_name());
   }
@@ -2050,6 +2089,7 @@ void Metric::InternalSwap(Metric* other) {
   auto* lhs_arena = GetArenaForAllocation();
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.metadata_.InternalSwap(&other->_impl_.metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.name_, lhs_arena,
       &other->_impl_.name_, rhs_arena

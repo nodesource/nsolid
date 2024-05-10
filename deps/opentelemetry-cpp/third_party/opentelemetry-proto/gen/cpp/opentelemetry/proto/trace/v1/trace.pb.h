@@ -148,12 +148,14 @@ inline bool Status_StatusCode_Parse(
 enum SpanFlags : int {
   SPAN_FLAGS_DO_NOT_USE = 0,
   SPAN_FLAGS_TRACE_FLAGS_MASK = 255,
+  SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK = 256,
+  SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK = 512,
   SpanFlags_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::min(),
   SpanFlags_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::max()
 };
 bool SpanFlags_IsValid(int value);
 constexpr SpanFlags SpanFlags_MIN = SPAN_FLAGS_DO_NOT_USE;
-constexpr SpanFlags SpanFlags_MAX = SPAN_FLAGS_TRACE_FLAGS_MASK;
+constexpr SpanFlags SpanFlags_MAX = SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK;
 constexpr int SpanFlags_ARRAYSIZE = SpanFlags_MAX + 1;
 
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* SpanFlags_descriptor();
