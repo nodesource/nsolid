@@ -5,14 +5,20 @@
       'type': 'static_library',
       'sources': [
         'exporters/otlp/src/otlp_environment.cc',
+        'exporters/otlp/src/otlp_grpc_client.cc',
+        'exporters/otlp/src/otlp_grpc_exporter_options.cc',
+        'exporters/otlp/src/otlp_grpc_exporter.cc',
+        'exporters/otlp/src/otlp_grpc_metric_exporter_options.cc',
+        'exporters/otlp/src/otlp_grpc_metric_exporter.cc',
+        'exporters/otlp/src/otlp_grpc_utils.cc',
         'exporters/otlp/src/otlp_http.cc',
         'exporters/otlp/src/otlp_http_client.cc',
         'exporters/otlp/src/otlp_http_exporter.cc',
         'exporters/otlp/src/otlp_http_exporter_options.cc',
         'exporters/otlp/src/otlp_http_metric_exporter.cc',
         'exporters/otlp/src/otlp_http_metric_exporter_options.cc',
-        'exporters/otlp/src/otlp_metric_utils.cc',
         'exporters/otlp/src/otlp_log_recordable.cc',
+        'exporters/otlp/src/otlp_metric_utils.cc',
         'exporters/otlp/src/otlp_populate_attribute_utils.cc',
         'exporters/otlp/src/otlp_recordable_utils.cc',
         'exporters/otlp/src/otlp_recordable.cc',
@@ -31,8 +37,12 @@
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/metrics/v1/metrics.pb.cc',
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/resource/v1/resource.pb.cc',
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/trace/v1/trace.pb.cc',
+        'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/logs/v1/logs_service.pb.cc',
+        'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/logs/v1/logs_service.grpc.pb.cc',
         'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/metrics/v1/metrics_service.pb.cc',
-        'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/trace/v1/trace_service.pb.cc'
+        'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/metrics/v1/metrics_service.grpc.pb.cc',
+        'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/trace/v1/trace_service.pb.cc',
+        'third_party/opentelemetry-proto/gen/cpp/opentelemetry/proto/collector/trace/v1/trace_service.grpc.pb.cc'
       ],
       'include_dirs': [
         'api/include',
@@ -47,7 +57,8 @@
       ],
       'dependencies': [
         '../protobuf/protobuf.gyp:protobuf',
-        '../curl/curl.gyp:curl'
+        '../curl/curl.gyp:curl',
+        '../grpc/grpc.gyp:grpc++',
       ],
       'direct_dependent_settings': {
         'include_dirs': [
@@ -56,7 +67,6 @@
           'ext/include',
           'sdk/include',
           'third_party/opentelemetry-proto/gen/cpp',
-          '../protobuf/src'
         ]
       },
       'cflags_cc': [

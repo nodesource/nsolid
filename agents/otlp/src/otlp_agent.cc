@@ -1,3 +1,7 @@
+// This header needs to be included before any other grpc header otherwise there
+// will be a compilation error because of abseil.
+// Refs: https://github.com/open-telemetry/opentelemetry-cpp/blob/32cd66b62333e84aa8e92a4447e0aa667b6735e5/examples/otlp/README.md#additional-notes-regarding-abseil-library
+#include "opentelemetry/exporters/otlp/otlp_grpc_exporter.h"
 #include "otlp_agent.h"
 #include "nsolid/nsolid_api.h"
 #include "env-inl.h"
@@ -597,6 +601,12 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
   const std::string url = it->get<std::string>();
   opts.url = url + "/v1/traces";
   setup_trace_otlp_exporter(opts);
+
+  // TODO(santi) Add support for GRPC too. This is an example:
+  // exporter::otlp::OtlpGrpcExporterOptions opts;
+  // opts.endpoint += "/v1/traces";
+  // setup_trace_grpc_otlp_exporter(opts);
+
   metrics_exporter_.reset(new OTLPMetrics(&loop_, url, "", *this));
 }
 
@@ -636,6 +646,12 @@ void OTLPAgent::setup_trace_otlp_exporter(
   opts.content_type  = exporter::otlp::HttpRequestContentType::kBinary;
   opts.console_debug = true;
   otlp_http_exporter_.reset(new exporter::otlp::OtlpHttpExporter(opts));
+}
+
+
+void OTLPAgent::setup_trace_grpc_otlp_exporter(
+    exporter::otlp::OtlpGrpcExporterOptions& opts) {
+  otlp_http_exporter_.reset(new exporter::otlp::OtlpGrpcExporter(opts));
 }
 
 

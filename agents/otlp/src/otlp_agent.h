@@ -15,13 +15,16 @@
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace exporter {
 namespace otlp {
-class OtlpHttpExporter;
 struct OtlpHttpExporterOptions;
+struct OtlpGrpcExporterOptions;
 }
 }
 namespace sdk {
 namespace instrumentationscope {
 class InstrumentationScope;
+}
+namespace trace {
+class SpanExporter;
 }
 }
 OPENTELEMETRY_END_NAMESPACE
@@ -104,6 +107,9 @@ class OTLPAgent {
   void setup_trace_otlp_exporter(  // NOLINTNEXTLINE(runtime/references)
     OPENTELEMETRY_NAMESPACE::exporter::otlp::OtlpHttpExporterOptions& opts);
 
+  void setup_trace_grpc_otlp_exporter(  // NOLINTNEXTLINE(runtime/references)
+    OPENTELEMETRY_NAMESPACE::exporter::otlp::OtlpGrpcExporterOptions& opts);
+
   int setup_metrics_timer(uint64_t period);
 
   void update_tracer(uint32_t flags);
@@ -128,7 +134,7 @@ class OTLPAgent {
   TSQueue<Tracer::SpanStor> span_msg_q_;
   uint32_t trace_flags_;
 
-  std::unique_ptr<OPENTELEMETRY_NAMESPACE::exporter::otlp::OtlpHttpExporter>
+  std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::trace::SpanExporter>
     otlp_http_exporter_;
   OPENTELEMETRY_NAMESPACE::sdk::resource::Resource resource_;
   std::unique_ptr
