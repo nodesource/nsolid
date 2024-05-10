@@ -1,9 +1,20 @@
 #ifndef AGENTS_OTLP_SRC_OTLP_METRICS_H_
 #define AGENTS_OTLP_SRC_OTLP_METRICS_H_
 
-#include "metrics_exporter.h"
-#include "opentelemetry/exporters/otlp/otlp_http_metric_exporter.h"
+// NOLINTNEXTLINE(build/c++11)
+#include <chrono>
 
+#include "metrics_exporter.h"
+#include "opentelemetry/version.h"
+
+// Class pre-declaration
+OPENTELEMETRY_BEGIN_NAMESPACE
+namespace sdk {
+namespace metrics {
+class PushMetricExporter;
+}
+}
+OPENTELEMETRY_END_NAMESPACE
 
 namespace node {
 namespace nsolid {
@@ -27,14 +38,8 @@ class OTLPMetrics final: public MetricsExporter {
       const std::vector<MetricsExporter::ThrMetricsStor>&);
 
  private:
-  // NOLINTNEXTLINE(runtime/references)
-  void got_env_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>& m,
-                       const ThreadMetrics::MetricsStor& stor,
-                       const ThreadMetrics::MetricsStor& prev_stor,
-                       double loop_start);
-
-  std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpHttpMetricExporter>
-    otlp_http_metric_exporter_;
+  std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::metrics::PushMetricExporter>
+    otlp_metric_exporter_;
   std::string key_;
   std::string url_;
   std::chrono::system_clock::time_point start_;

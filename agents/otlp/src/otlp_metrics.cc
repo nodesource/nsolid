@@ -1,7 +1,12 @@
+// This header needs to be included before any other grpc header otherwise there
+// will be a compilation error because of abseil.
+// Refs: https://github.com/open-telemetry/opentelemetry-cpp/blob/32cd66b62333e84aa8e92a4447e0aa667b6735e5/examples/otlp/README.md#additional-notes-regarding-abseil-library
+#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
 #include "otlp_metrics.h"
 #include "debug_utils-inl.h"
 #include "env-inl.h"
 #include "otlp_agent.h"
+#include "opentelemetry/exporters/otlp/otlp_http_metric_exporter.h"
 #include "opentelemetry/trace/semantic_conventions.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
@@ -29,6 +34,8 @@ using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::metrics::SumPointData;
 using opentelemetry::sdk::metrics::ValueType;
+using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
+using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpHttpMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpHttpMetricExporterOptions;
 using opentelemetry::v1::trace::SemanticConventions::kThreadId;
@@ -61,7 +68,12 @@ OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
   opts.url = url + "/v1/metrics";
   opts.content_type = HttpRequestContentType::kBinary;
   opts.console_debug = true;
-  otlp_http_metric_exporter_ = std::make_unique<OtlpHttpMetricExporter>(opts);
+  otlp_metric_exporter_ = std::make_unique<OtlpHttpMetricExporter>(opts);
+
+  // TODO(santi) Add support for GRPC too. This is an example:
+  // OtlpGrpcMetricExporterOptions opts;
+  // opts.endpoint += "/v1/traces";
+  // otlp_metric_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
 }
 
 /*virtual*/
@@ -163,18 +175,15 @@ NSOLID_PROCESS_METRICS_DOUBLE(V)
 
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{agent_.scope_.get(), metrics}};
-  auto result = otlp_http_metric_exporter_->Export(data);
+  auto result = otlp_metric_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
 
 // NOLINTNEXTLINE(runtime/references)
-void OTLPMetrics::got_env_metrics(std::vector<MetricData>& metrics,
-                                  const ThreadMetricsStor& stor,
-                                  const ThreadMetricsStor& prev_stor,
-                                  double loop_start) {
-  time_point start{
-        duration_cast<time_point::duration>(
-          microseconds(static_cast<uint64_t>(loop_start)))};
+static void got_env_metrics(std::vector<MetricData>& metrics,
+                            const ThreadMetricsStor& stor,
+                            const ThreadMetricsStor& prev_stor,
+                            time_point start) {
   time_point end{
         duration_cast<time_point::duration>(
           milliseconds(static_cast<uint64_t>(stor.timestamp)))};
@@ -207,12 +216,12 @@ void OTLPMetrics::got_env_metrics(std::vector<MetricData>& metrics,
     switch (MetricsType::MType) {                                              \
       case MetricsType::ECounter:                                              \
       {                                                                        \
-        add_counter(metrics, start_, end, #CName, Unit, type, value, attrs);   \
+        add_counter(metrics, start, end, #CName, Unit, type, value, attrs);    \
       }                                                                        \
       break;                                                                   \
-      case MetricsType::EGauge:                                               \
+      case MetricsType::EGauge:                                                \
       {                                                                        \
-        add_gauge(metrics, start_, end, #CName, Unit, type, value, attrs);     \
+        add_gauge(metrics, start, end, #CName, Unit, type, value, attrs);      \
       }                                                                        \
       break;                                                                   \
       default:                                                                 \
@@ -232,12 +241,12 @@ void OTLPMetrics::got_thr_metrics(
   std::vector<MetricData> metrics;
 
   for (const auto& tm : thr_metrics) {
-    got_env_metrics(metrics, tm.stor, tm.prev_stor, tm.loop_start);
+    got_env_metrics(metrics, tm.stor, tm.prev_stor, start_);
   }
 
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{agent_.scope_.get(), metrics}};
-  auto result = otlp_http_metric_exporter_->Export(data);
+  auto result = otlp_metric_exporter_->Export(data);
   Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
 }  // namespace otlp
