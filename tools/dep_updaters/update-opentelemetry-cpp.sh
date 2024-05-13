@@ -111,6 +111,8 @@ mkdir -p "$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp"
     opentelemetry/proto/collector/metrics/v1/metrics_service.proto \
     opentelemetry/proto/collector/trace/v1/trace_service.proto
 
+echo "Copying protobuf files to opentelemetry-cpp for testing purposes"
+cp -r opentelemetry "$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/."
 
 
 echo "Replacing existing opentelemetry-cpp"

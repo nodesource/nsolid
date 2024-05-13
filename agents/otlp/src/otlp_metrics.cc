@@ -57,6 +57,7 @@ static std::vector<std::string> discarded_metrics = {
 OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
                          const std::string& url,
                          const std::string& key,
+                         bool is_http,
                          const OTLPAgent& agent):
     key_(key),
     url_(url),
@@ -64,16 +65,17 @@ OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
               microseconds(static_cast<uint64_t>(
                   performance::performance_process_start_timestamp)))),
     agent_(agent) {
-  OtlpHttpMetricExporterOptions opts;
-  opts.url = url + "/v1/metrics";
-  opts.content_type = HttpRequestContentType::kBinary;
-  opts.console_debug = true;
-  otlp_metric_exporter_ = std::make_unique<OtlpHttpMetricExporter>(opts);
-
-  // TODO(santi) Add support for GRPC too. This is an example:
-  // OtlpGrpcMetricExporterOptions opts;
-  // opts.endpoint += "/v1/traces";
-  // otlp_metric_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
+  if (is_http) {
+    OtlpHttpMetricExporterOptions opts;
+    opts.url = url + "/v1/metrics";
+    opts.content_type = HttpRequestContentType::kBinary;
+    opts.console_debug = true;
+    otlp_metric_exporter_ = std::make_unique<OtlpHttpMetricExporter>(opts);
+  } else {
+    OtlpGrpcMetricExporterOptions opts;
+    opts.endpoint = url + "/v1/metrics";
+    otlp_metric_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
+  }
 }
 
 /*virtual*/

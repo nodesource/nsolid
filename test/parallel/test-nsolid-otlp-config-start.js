@@ -285,7 +285,8 @@ const tests = [
     expected: {
       otlp: 'otlp',
       otlpConfig: {
-        url: 'http://localhost:9999'
+        url: 'http://localhost:9999',
+        protocol: 'http'
       }
     }
   },
@@ -311,6 +312,51 @@ const tests = [
     expected: {
       otlp: undefined,
       otlpConfig: undefined
+    }
+  },
+  {
+    config: {
+      otlp: 'otlp',
+      otlpConfig: {
+        url: 'http://localhost:9999',
+        protocol: 'nothing'
+      }
+    },
+    expected: {
+      otlp: undefined,
+      otlpConfig: undefined
+    }
+  },
+  {
+    config: {
+      otlp: 'otlp',
+      otlpConfig: {
+        url: 'http://localhost:9999',
+        protocol: 'http'
+      }
+    },
+    expected: {
+      otlp: 'otlp',
+      otlpConfig: {
+        url: 'http://localhost:9999',
+        protocol: 'http'
+      }
+    }
+  },
+  {
+    config: {
+      otlp: 'otlp',
+      otlpConfig: {
+        url: 'http://localhost:9999',
+        protocol: 'grpc'
+      }
+    },
+    expected: {
+      otlp: 'otlp',
+      otlpConfig: {
+        url: 'http://localhost:9999',
+        protocol: 'grpc'
+      }
     }
   },
 ];
