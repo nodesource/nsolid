@@ -28,6 +28,7 @@ class OTLPMetrics final: public MetricsExporter {
   OTLPMetrics(uv_loop_t* loop,
               const std::string& url,
               const std::string& key,
+              bool is_http,
               const OTLPAgent& agent);
   virtual ~OTLPMetrics();
 

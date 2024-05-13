@@ -597,17 +597,24 @@ void OTLPAgent::config_otlp_agent(const json& config) {
 void OTLPAgent::config_otlp_endpoint(const json& config) {
   auto it = config.find("url");
   ASSERT(it != config.end());
-  exporter::otlp::OtlpHttpExporterOptions opts;
-  const std::string url = it->get<std::string>();
-  opts.url = url + "/v1/traces";
-  setup_trace_otlp_exporter(opts);
+  bool is_http = true;
+  it = config.find("protocol");
+  if (it != config.end()) {
+    is_http = *it == "http";
+  }
 
-  // TODO(santi) Add support for GRPC too. This is an example:
-  // exporter::otlp::OtlpGrpcExporterOptions opts;
-  // opts.endpoint += "/v1/traces";
-  // setup_trace_grpc_otlp_exporter(opts);
+  const std::string url = config["url"].get<std::string>() + "/v1/traces";
+  if (is_http) {
+    exporter::otlp::OtlpHttpExporterOptions opts;
+    opts.url = url;
+    setup_trace_otlp_exporter(opts);
+  } else {
+    exporter::otlp::OtlpGrpcExporterOptions opts;
+    opts.endpoint = url;
+    setup_trace_grpc_otlp_exporter(opts);
+  }
 
-  metrics_exporter_.reset(new OTLPMetrics(&loop_, url, "", *this));
+  metrics_exporter_.reset(new OTLPMetrics(&loop_, url, "", is_http, *this));
 }
 
 resource::Resource OTLPAgent::create_resource() const {
