@@ -26,6 +26,7 @@ namespace node {
 namespace nsolid {
 
 class EnvInst;
+struct LogWriteInfo;
 
 #define kNSByte "byte"
 #define kNSMhz "MHz"
@@ -280,6 +281,7 @@ using on_block_loop_hook_proxy_sig = void(*)(SharedEnvInst,
                                              void*);
 using on_unblock_loop_hook_proxy_sig = on_block_loop_hook_proxy_sig;
 using on_configuration_hook_proxy_sig = void(*)(std::string, void*);
+using on_log_write_hook_proxy_sig = void(*)(SharedEnvInst, LogWriteInfo, void*);
 using at_exit_hook_proxy_sig = void(*)(bool, bool, void*);
 using thread_added_hook_proxy_sig = void(*)(SharedEnvInst, void*);
 using thread_removed_hook_proxy_sig = thread_added_hook_proxy_sig;
@@ -305,6 +307,8 @@ template <typename G>
 void on_unblock_loop_hook_proxy_(SharedEnvInst, std::string, void*);
 template <typename G>
 void on_configuration_hook_proxy_(std::string, void*);
+template <typename G>
+void on_log_write_hook_proxy_(SharedEnvInst, LogWriteInfo, void*);
 template <typename G>
 void thread_added_hook_proxy_(SharedEnvInst, void* data);
 template <typename G>
@@ -335,6 +339,9 @@ NODE_EXTERN void on_unblock_loop_hook_(void*,
 NODE_EXTERN void on_configuration_hook_(void*,
                                         on_configuration_hook_proxy_sig,
                                         deleter_sig);
+NODE_EXTERN void on_log_write_hook_(void*,
+                                    on_log_write_hook_proxy_sig,
+                                    deleter_sig);
 NODE_EXTERN void thread_added_hook_(void*,
                                     thread_added_hook_proxy_sig,
                                     deleter_sig);
@@ -588,6 +595,31 @@ NODE_EXTERN int OnUnblockedLoopHook(Cb&& cb, Data&&... data);
  */
 template <typename Cb, typename... Data>
 NODE_EXTERN int OnConfigurationHook(Cb&& cb, Data&&... data);
+
+/**
+ * @brief The struct containing log info that's passed to the OnLogWriteHook
+ * callback.
+ */
+struct LogWriteInfo {
+  std::string msg;
+  uint32_t severity;
+  uint64_t timestamp;     // nanoseconds since unix epoch
+  std::string trace_id;   // byte sequence
+  std::string span_id;    // byte sequence
+  uint32_t trace_flags;
+};
+
+/**
+ * @brief Register a hook(function) to be called when a log line is written.
+ * The callback is called from N|Solid thread.
+ * @param cb hook function with the following signature:
+ * `cb(SharedEnvInst, LogWriteInfo, ...Data)`
+ * @param data variable number of arguments to be propagated to the callback.
+ * @return NSOLID_E_SUCCESS in case of success or a different NSOLID_E_
+ * error value otherwise.
+ */
+template <typename Cb, typename... Data>
+NODE_EXTERN int OnLogWriteHook(Cb&& cb, Data&&... data);
 
 /**
  * @brief Register a hook(function) to be called any time a JS thread is
@@ -1679,6 +1711,29 @@ int OnConfigurationHook(Cb&& cb, Data&&... data) {
 
 
 template <typename Cb, typename... Data>
+int OnLogWriteHook(Cb&& cb, Data&&... data) {
+  // NOLINTNEXTLINE(build/namespaces)
+  using namespace std::placeholders;
+  using UserData = decltype(std::bind(
+        std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+
+  // _1 - SharedEnvInst
+  // _2 - LogWriteInfo
+  UserData* user_data = new (std::nothrow) UserData(std::bind(
+        std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
+  if (user_data == nullptr) {
+    return UV_ENOMEM;
+  }
+
+  internal::on_log_write_hook_(
+    user_data,
+    internal::on_log_write_hook_proxy_<UserData>,
+    internal::delete_proxy_<UserData>);
+  return 0;
+}
+
+
+template <typename Cb, typename... Data>
 int ThreadAddedHook(Cb&& cb, Data&&... data) {
   // NOLINTNEXTLINE(build/namespaces)
   using namespace std::placeholders;
@@ -1768,6 +1823,13 @@ void on_unblock_loop_hook_proxy_(SharedEnvInst envinst,
 template <typename G>
 void on_configuration_hook_proxy_(std::string info, void* data) {
   (*static_cast<G*>(data))(info);
+}
+
+template <typename G>
+void on_log_write_hook_proxy_(SharedEnvInst inst,
+                              LogWriteInfo info,
+                              void* data) {
+  (*static_cast<G*>(data))(inst, std::move(info));
 }
 
 template <typename G>
