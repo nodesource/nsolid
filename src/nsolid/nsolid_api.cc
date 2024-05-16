@@ -758,6 +758,8 @@ EnvList::EnvList(): info_(nlohmann::json::object()) {
   uv_loop_init(&thread_loop_);
   er = process_callbacks_msg_.init(&thread_loop_, process_callbacks_, this);
   CHECK_EQ(er, 0);
+  er = log_written_msg_.init(&thread_loop_, log_written_cb_, this);
+  CHECK_EQ(er, 0);
   er = removed_env_msg_.init(&thread_loop_, removed_env_cb_, this);
   CHECK_EQ(er, 0);
   er = fill_tracing_ids_msg_.init(&thread_loop_, fill_tracing_ids_cb_, this);
@@ -814,6 +816,15 @@ void EnvList::OnConfigurationHook(
     { proxy, nsolid::internal::user_data(data, deleter) });
   if (!config.is_null())
     nsolid::QueueCallback(proxy, config.dump(), data);
+}
+
+
+void EnvList::OnLogWriteHook(
+      void* data,
+      internal::on_log_write_hook_proxy_sig proxy,
+      internal::deleter_sig deleter) {
+  on_log_write_hook_list_.push_back(
+    { proxy, nsolid::internal::user_data(data, deleter) });
 }
 
 
@@ -1210,6 +1221,18 @@ void EnvList::PromiseTracking(bool promiseTracking) {
 }
 
 
+void EnvList::WriteLogLine(SharedEnvInst envinst, LogWriteInfo info) {
+  size_t s =
+    EnvList::Inst()->on_log_write_q_.enqueue({ envinst, std::move(info) });
+  // Might call send() when logs are being processed, but false positives
+  // are okay.
+  if (s == 1) {
+    int er = EnvList::Inst()->log_written_msg_.send();
+    CHECK_EQ(er, 0);
+  }
+}
+
+
 void EnvList::UpdateTracingFlags(uint32_t flags) {
   decltype(env_map_) env_map;
   {
@@ -1456,12 +1479,24 @@ void EnvList::process_callbacks_(ns_async*, EnvList* envlist) {
 }
 
 
+void EnvList::log_written_cb_(ns_async*, EnvList* envlist) {
+  // Process written logs
+  std::pair<SharedEnvInst, LogWriteInfo> log_line;
+  while (envlist->on_log_write_q_.dequeue(log_line)) {
+    envlist->on_log_write_hook_list_.for_each([&log_line](auto& stor) {
+      stor.cb(log_line.first, log_line.second, stor.data.get());
+    });
+  }
+}
+
+
 // It's important to know when the the thread needs to shutdown b/c any
 // registered users will need to receive their last set of metrics and a
 // notification that it'll be their last.
 void EnvList::removed_env_cb_(ns_async*, EnvList* envlist) {
   envlist->removed_env_msg_.close();
   envlist->process_callbacks_msg_.close();
+  envlist->log_written_msg_.close();
   envlist->fill_tracing_ids_msg_.close();
   envlist->blocked_loop_timer_.close();
   envlist->gen_ptiles_timer_.close();
@@ -2047,6 +2082,24 @@ void EnvInst::get_event_loop_stats_(EnvInst* envinst,
 static void AgentId(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(
       OneByteString(args.GetIsolate(), EnvList::Inst()->AgentId().c_str()));
+}
+
+
+static void WriteLog(const FunctionCallbackInfo<Value>& args) {
+  DCHECK(args[0]->IsString());
+  DCHECK(args[1]->IsUint32());
+  String::Utf8Value s(args.GetIsolate(), args[0]);
+  std::string ss = *s;
+  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+  // TODO(trevnorris): Allow tracing through this at some point?
+  EnvList::Inst()->WriteLogLine(GetLocalEnvInst(args.GetIsolate()),
+                                { ss,
+                                  args[1].As<v8::Uint32>()->Value(),
+                                  nanoseconds,
+                                  "",
+                                  "",
+                                  0});
 }
 
 
@@ -2805,6 +2858,7 @@ void BindingData::Initialize(Local<Object> target,
                 &fast_push_span_data_uint64_);
 
   SetMethod(context, target, "agentId", AgentId);
+  SetMethod(context, target, "writeLog", WriteLog);
   SetMethod(context, target, "pushSpanDataString", PushSpanDataString);
   SetMethod(context, target, "getEnvMetrics", GetEnvMetrics);
   SetMethod(context, target, "getProcessMetrics", GetProcessMetrics);
@@ -2936,6 +2990,7 @@ void BindingData::RegisterExternalReferences(
   registry->Register(fast_push_span_data_uint64_.GetTypeInfo());
 
   registry->Register(AgentId);
+  registry->Register(WriteLog);
   registry->Register(PushSpanDataString);
   registry->Register(GetEnvMetrics);
   registry->Register(GetProcessMetrics);

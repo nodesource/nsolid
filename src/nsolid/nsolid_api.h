@@ -412,6 +412,7 @@ class EnvList {
   using env_creation_sig = void(*)(SharedEnvInst, void*);
   using env_deletion_sig = env_creation_sig;
   using on_config_sig = void(*)(std::string, void*);
+  using on_log_write_sig = void(*)(SharedEnvInst, LogWriteInfo, void*);
   using on_config_void_cb_sig = void(*)(void(*)(), std::string, void*);
   using on_blocked_loop_sig = void(*)(SharedEnvInst,
                                       std::string,
@@ -447,6 +448,11 @@ class EnvList {
     nsolid::internal::user_data data;
   };
 
+  struct OnLogWriteHookStor {
+    on_log_write_sig cb;
+    nsolid::internal::user_data data;
+  };
+
   struct BlockedLoopStor {
     uint64_t threshold;
     on_blocked_loop_sig cb;
@@ -474,6 +480,11 @@ class EnvList {
   void OnConfigurationHook(
       void* data,
       internal::on_configuration_hook_proxy_sig proxy,
+      internal::deleter_sig deleter);
+
+  void OnLogWriteHook(
+      void* data,
+      internal::on_log_write_hook_proxy_sig proxy,
       internal::deleter_sig deleter);
 
   void EnvironmentCreationHook(
@@ -533,6 +544,8 @@ class EnvList {
   std::tuple<std::string, std::string>* GetExitError();
 
   void PromiseTracking(bool promiseTracking);
+
+  void WriteLogLine(SharedEnvInst, LogWriteInfo);
 
   void popSpanId(std::string&);
 
@@ -598,6 +611,7 @@ class EnvList {
 
   static void get_blocked_loop_body_(SharedEnvInst envinst_sp, void*);
   static void process_callbacks_(nsuv::ns_async*, EnvList* envlist);
+  static void log_written_cb_(nsuv::ns_async*, EnvList* envlist);
   static void removed_env_cb_(nsuv::ns_async*, EnvList* envlist);
   static void env_list_routine_(nsuv::ns_thread*, EnvList* envlist);
   static void blocked_loop_timer_cb_(nsuv::ns_timer*);
@@ -618,6 +632,7 @@ class EnvList {
   // The thread that EnvList is running on.
   uv_loop_t thread_loop_;
   nsuv::ns_async process_callbacks_msg_;
+  nsuv::ns_async log_written_msg_;
   nsuv::ns_async removed_env_msg_;
   nsuv::ns_thread thread_;
   // Used to access env_map.
@@ -636,6 +651,9 @@ class EnvList {
   // strings that will be passed to the user's hooks.
   TSList<OnConfigHookStor> on_config_hook_list_;
   TSQueue<std::string> on_config_string_q_;
+  // List for OnLogWriteHook callbacks.
+  TSList<OnLogWriteHookStor> on_log_write_hook_list_;
+  TSQueue<std::pair<SharedEnvInst, LogWriteInfo>> on_log_write_q_;
   // Queue for QueueCallback with timer to create the timer from the EnvList
   // thread.
   TSQueue<QCbTimeoutStor*> q_cb_create_timeout_;

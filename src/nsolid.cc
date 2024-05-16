@@ -616,6 +616,12 @@ void on_configuration_hook_(void* data,
   EnvList::Inst()->OnConfigurationHook(data, proxy, deleter);
 }
 
+void on_log_write_hook_(void* data,
+                        on_log_write_hook_proxy_sig proxy,
+                        deleter_sig deleter) {
+  EnvList::Inst()->OnLogWriteHook(data, proxy, deleter);
+}
+
 void thread_added_hook_(void* data,
                         thread_added_hook_proxy_sig proxy,
                         deleter_sig deleter) {
