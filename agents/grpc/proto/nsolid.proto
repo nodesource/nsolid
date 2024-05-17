@@ -5,6 +5,8 @@
 
 syntax = "proto3";
 
+package grpcagent;
+
 message RuntimeRequest {
   string requestId = 1;
   int32 version = 2;

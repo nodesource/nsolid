@@ -3,6 +3,8 @@
 
 #include <nsolid/nsolid_api.h>
 #include <memory>
+#include <grpcpp/channel.h>
+#include "nsolid_service.grpc.pb.h"
 
 namespace node {
 namespace nsolid {
@@ -13,6 +15,16 @@ class GrpcAgent;
 
 using SharedGrpcAgent = std::shared_ptr<GrpcAgent>;
 using WeakGrpcAgent = std::weak_ptr<GrpcAgent>;
+
+class NSolidServiceClient {
+ public:
+  NSolidServiceClient() {};
+  ~NSolidServiceClient() = default;
+
+ private:
+  std::unique_ptr<::grpc::Channel> channel_;
+  std::unique_ptr<grpcagent::NSolidService::Stub> stub_;
+};
 
 class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
  public:
@@ -61,6 +73,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   nsuv::ns_async config_msg_;
   TSQueue<nlohmann::json> config_msg_q_;
   nlohmann::json config_;
+
+  // For the grpc client
+  std::unique_ptr<NSolidServiceClient> client_;
 };
 
 }  // namespace grpc
