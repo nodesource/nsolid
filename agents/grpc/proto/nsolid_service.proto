@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+import "nsolid.proto";
+
+service NSolidService {
+  rpc ReqRespStream (stream RuntimeResponse) returns (stream RuntimeRequest) {}
+}
