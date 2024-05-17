@@ -6,8 +6,10 @@ namespace nsolid {
 namespace grpc {
 
 /*static*/ SharedGrpcAgent GrpcAgent::Inst() {
-  static SharedGrpcAgent inst = std::make_shared<GrpcAgent>();
-  return inst;
+  static SharedGrpcAgent agent(new GrpcAgent(), [](GrpcAgent* agent) {
+    delete agent;
+  });
+  return agent;
 }
 
 GrpcAgent::GrpcAgent(): ready_(false) {
@@ -24,7 +26,7 @@ int GrpcAgent::start() {
   int r = 0;
   if (ready_ == false) {
     uv_mutex_lock(&start_lock_);
-    r = thread_.create(run_, this);
+    r = thread_.create(run_, weak_from_this());
     if (r == 0) {
       while (ready_ == false) {
         uv_cond_wait(&start_cond_, &start_lock_);
@@ -48,7 +50,7 @@ int GrpcAgent::stop() {
   return 0;
 }
 
-/*static*/ void SharedGrpcAgent::run_(nsuv::ns_thread*,
+/*static*/ void GrpcAgent::run_(nsuv::ns_thread*,
                                       WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
   if (agent == nullptr) {
@@ -61,15 +63,19 @@ int GrpcAgent::stop() {
   } while (uv_loop_alive(&agent->loop_));
 }
 
-/*static*/ void SharedGrpcAgent::shutdown_cb_(nsuv::ns_async*,
+/*static*/ void GrpcAgent::env_msg_cb(nsuv::ns_async*, WeakGrpcAgent) {
+
+}
+
+/*static*/ void GrpcAgent::shutdown_cb_(nsuv::ns_async*,
                                               WeakGrpcAgent agent_wp) {
 }
 
-/*static*/ void SharedGrpcAgent::config_msg_cb_(nsuv::ns_async*,
+/*static*/ void GrpcAgent::config_msg_cb_(nsuv::ns_async*,
                                                 WeakGrpcAgent agent_wp) {
 }
 
-void SharedGrpcAgent::do_start() {
+void GrpcAgent::do_start() {
   uv_mutex_lock(&start_lock_);
 
   ASSERT_EQ(0, shutdown_.init(&loop_, shutdown_cb_, weak_from_this()));
@@ -82,7 +88,7 @@ void SharedGrpcAgent::do_start() {
   uv_mutex_unlock(&start_lock_);
 }
 
-void SharedGrpcAgent::do_stop() {
+void GrpcAgent::do_stop() {
   config_msg_.close();
   env_msg_.close();
   shutdown_.close();

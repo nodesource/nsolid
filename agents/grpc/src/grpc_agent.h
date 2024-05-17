@@ -29,6 +29,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static void run_(nsuv::ns_thread*, WeakGrpcAgent);
 
+  static void env_msg_cb(nsuv::ns_async*, WeakGrpcAgent);
+
   static void shutdown_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
   static void config_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
