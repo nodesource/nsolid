@@ -12,6 +12,18 @@ NSolidMessenger::NSolidMessenger(grpcagent::NSolidService::Stub* stub) {
   StartCall();
 };
 
+void NSolidMessenger::OnReadDone(bool ok) {
+  if (!ok) {
+    return;
+  }
+
+  if (server_request_.command() == "info") {
+    WriteInfoMsg(server_request_.requestid().c_str());
+  }
+
+  StartRead(&server_request_);
+}
+
 void NSolidMessenger::OnWriteDone(bool /*ok*/) {
   write_state_.write_done = true;
   NextWrite();

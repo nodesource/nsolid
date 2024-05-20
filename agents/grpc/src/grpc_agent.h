@@ -39,6 +39,8 @@ class NSolidMessenger: public ::grpc::ClientBidiReactor<grpcagent::RuntimeRespon
 
   ~NSolidMessenger() = default;
 
+  void OnReadDone(bool ok) override;
+
   void OnWriteDone(bool /*ok*/) override;
 
   void WriteInfoMsg(const char* req_id = nullptr);
