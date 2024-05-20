@@ -4,6 +4,7 @@
 #include <nsolid/nsolid_api.h>
 #include <memory>
 #include <grpcpp/channel.h>
+#include <grpcpp/client_context.h>
 #include "nsolid_service.grpc.pb.h"
 
 namespace node {
@@ -24,6 +25,20 @@ class NSolidServiceClient {
  private:
   std::unique_ptr<::grpc::Channel> channel_;
   std::unique_ptr<grpcagent::NSolidService::Stub> stub_;
+};
+
+class NSolidMessenger: public ::grpc::ClientBidiReactor<grpcagent::RuntimeResponse, grpcagent::RuntimeRequest> {
+ public:
+  explicit NSolidMessenger(grpcagent::NSolidService::Stub* stub, uv_loop_t* loop);
+
+  ~NSolidMessenger() = default;
+
+ private:
+  ::grpc::ClientContext context_;
+  grpcagent::RuntimeRequest server_request_;
+
+  nsuv::ns_async response_msg_;
+  TSQueue<grpcagent::RuntimeResponse> response_q_;
 };
 
 class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
@@ -47,8 +62,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static void config_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
-  static void receiver_(nsuv::ns_thread*, WeakGrpcAgent);
-
   void do_start();
 
   void do_stop();
@@ -57,9 +70,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   uv_loop_t loop_;
   nsuv::ns_thread thread_;
   nsuv::ns_async shutdown_;
-
-  // For the grpc response handling
-  nsuv::ns_async grpc_receiver_thread_;
 
   // For thread start/stop synchronization
   std::atomic<bool> ready_;

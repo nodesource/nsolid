@@ -5,6 +5,13 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
+NSolidMessenger::NSolidMessenger(grpcagent::NSolidService::Stub* stub, uv_loop_t* loop) {
+  stub->async()->ReqRespStream(&context_, this);
+  // NextWrite();
+  StartRead(&server_request_);
+  StartCall();
+};
+
 /*static*/ SharedGrpcAgent GrpcAgent::Inst() {
   static SharedGrpcAgent agent(new GrpcAgent(), [](GrpcAgent* agent) {
     delete agent;
