@@ -91,10 +91,12 @@ void NSolidMessenger::Write(grpcagent::RuntimeResponse&& resp) {
   return agent;
 }
 
-GrpcAgent::GrpcAgent(): ready_(false) {
+GrpcAgent::GrpcAgent(): hooks_init_(false),
+                        ready_(false) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
+  ASSERT_EQ(0, stop_lock_.init(true));
 }
 
 GrpcAgent::~GrpcAgent() {
@@ -142,16 +144,72 @@ int GrpcAgent::stop() {
   } while (uv_loop_alive(&agent->loop_));
 }
 
-/*static*/ void GrpcAgent::env_msg_cb(nsuv::ns_async*, WeakGrpcAgent) {
-
+/*static*/ void GrpcAgent::shutdown_cb_(nsuv::ns_async*,
+                                        WeakGrpcAgent agent_wp) {
 }
 
-/*static*/ void GrpcAgent::shutdown_cb_(nsuv::ns_async*,
-                                              WeakGrpcAgent agent_wp) {
+/*static*/ void GrpcAgent::config_agent_cb(std::string config,
+                                           WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  // if (agent->status_ == Unconfigured) {
+  //   return;
+  // }
+
+  json cfg = json::parse(config, nullptr, false);
+  // assert because the runtime should never send me an invalid JSON config
+  ASSERT(!cfg.is_discarded());
+  agent->config_msg_q_.enqueue(cfg);
+  ASSERT_EQ(0, agent->config_msg_.send());
 }
 
 /*static*/ void GrpcAgent::config_msg_cb_(nsuv::ns_async*,
-                                                WeakGrpcAgent agent_wp) {
+                                          WeakGrpcAgent agent_wp) {
+}
+
+void GrpcAgent::env_creation_cb(SharedEnvInst envinst,
+                                WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  // if (agent->status_ == Unconfigured) {
+  //   return;
+  // }
+
+  agent->env_msg_q_.enqueue({ envinst, true });
+  ASSERT_EQ(0, agent->env_msg_.send());
+}
+
+void GrpcAgent::env_deletion_cb(SharedEnvInst envinst,
+                                WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  // Check if the agent is closing
+  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
+  // if (agent->status_ == Unconfigured) {
+  //   return;
+  // }
+
+  agent->env_msg_q_.enqueue({ envinst, false });
+  if (!agent->env_msg_.is_closing()) {
+    ASSERT_EQ(0, agent->env_msg_.send());
+  }
+}
+
+/*static*/ void GrpcAgent::env_msg_cb(nsuv::ns_async*, WeakGrpcAgent) {
+
 }
 
 void GrpcAgent::do_start() {
@@ -163,11 +221,21 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, weak_from_this()));
 
+  ready_ = true;
+
+  if (hooks_init_ == false) {
+    ASSERT_EQ(0, OnConfigurationHook(config_agent_cb, weak_from_this()));
+    ASSERT_EQ(0, ThreadAddedHook(env_creation_cb, weak_from_this()));
+    ASSERT_EQ(0, ThreadRemovedHook(env_deletion_cb, weak_from_this()));
+    hooks_init_ = true;
+  }
+
   uv_cond_signal(&start_cond_);
   uv_mutex_unlock(&start_lock_);
 }
 
 void GrpcAgent::do_stop() {
+  ready_ = false;
   config_msg_.close();
   env_msg_.close();
   shutdown_.close();
