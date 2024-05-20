@@ -23,7 +23,6 @@ void NSolidMessenger::WriteInfoMsg(const char* req_id) {
 }
 
 grpcagent::RuntimeResponse NSolidMessenger::CreateInfoMsg(const char* req_id) {
-
   nlohmann::json info = json::parse(GetProcessInfo().c_str(), nullptr, false);
   ASSERT(!info.is_discarded());
 
@@ -42,7 +41,27 @@ grpcagent::RuntimeResponse NSolidMessenger::CreateInfoMsg(const char* req_id) {
   grpcagent::InfoBody* body = new grpcagent::InfoBody();
   body->set_app(info["app"].get<std::string>());
   body->set_arch(info["arch"].get<std::string>());
+  body->set_cpucores(info["set_cpuCores"].get<uint64_t>());
+  body->set_cpumodel(info["cpuModel"].get<std::string>());
+  body->set_execpath(info["execPath"].get<std::string>());
+  body->set_hostname(info["hostname"].get<std::string>());
+  body->set_id(info["id"].get<std::string>());
+  body->set_main(info["main"].get<std::string>());
+  body->set_nodeenv(info["nodeEnv"].get<std::string>());
+  body->set_pid(info["pid"].get<uint32_t>());
+  body->set_platform(info["platform"].get<std::string>());
+  body->set_processstart(info["processStart"].get<uint64_t>());
+  body->set_totalmem(info["totalMem"].get<uint64_t>());
   // Fill in other fields...
+  // add tags
+  for (const auto& tag : info["tags"]) {
+    body->add_tags(tag.get<std::string>());
+  }
+
+  // add versions
+  for (const auto& [key, value] : info["versions"].items()) {
+    (*body->mutable_versions())[key] = value.get<std::string>();
+  }
 
   info_response->set_allocated_common(common);
   info_response->set_allocated_body(body);
