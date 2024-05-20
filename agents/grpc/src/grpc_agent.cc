@@ -5,12 +5,65 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
-NSolidMessenger::NSolidMessenger(grpcagent::NSolidService::Stub* stub, uv_loop_t* loop) {
+NSolidMessenger::NSolidMessenger(grpcagent::NSolidService::Stub* stub) {
   stub->async()->ReqRespStream(&context_, this);
-  // NextWrite();
+  NextWrite();
   StartRead(&server_request_);
   StartCall();
 };
+
+void NSolidMessenger::OnWriteDone(bool /*ok*/) {
+  write_state_.write_done = true;
+  NextWrite();
+}
+
+void NSolidMessenger::WriteInfoMsg(const char* req_id) {
+  grpcagent::RuntimeResponse resp = CreateInfoMsg(req_id);
+  Write(std::move(resp));
+}
+
+grpcagent::RuntimeResponse NSolidMessenger::CreateInfoMsg(const char* req_id) {
+
+  nlohmann::json info = json::parse(GetProcessInfo().c_str(), nullptr, false);
+  ASSERT(!info.is_discarded());
+
+  grpcagent::RuntimeResponse resp;
+
+  // Create an InfoResponse.
+  grpcagent::InfoResponse* info_response = new grpcagent::InfoResponse();
+
+  // Fill in the fields of the InfoResponse.
+  grpcagent::CommonResponse* common = new grpcagent::CommonResponse();
+  common->set_agentid(GetAgentId());
+  common->set_requestid(req_id);
+  common->set_command("info");
+  // Fill in other fields...
+
+  grpcagent::InfoBody* body = new grpcagent::InfoBody();
+  body->set_app(info["app"].get<std::string>());
+  body->set_arch(info["arch"].get<std::string>());
+  // Fill in other fields...
+
+  info_response->set_allocated_common(common);
+  info_response->set_allocated_body(body);
+
+  // Set the InfoResponse in the RuntimeResponse.
+  resp.set_allocated_info_response(info_response);
+
+  return resp;
+}
+
+void NSolidMessenger::NextWrite() {
+  if (write_state_.write_done && response_q_.dequeue(write_state_.resp)) {
+    StartWrite(&write_state_.resp);
+    write_state_.write_done = false;
+  }
+}
+
+void NSolidMessenger::Write(grpcagent::RuntimeResponse&& resp) {
+  response_q_.enqueue(std::move(resp));
+  NextWrite();
+}
 
 /*static*/ SharedGrpcAgent GrpcAgent::Inst() {
   static SharedGrpcAgent agent(new GrpcAgent(), [](GrpcAgent* agent) {

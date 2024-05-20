@@ -28,17 +28,34 @@ class NSolidServiceClient {
 };
 
 class NSolidMessenger: public ::grpc::ClientBidiReactor<grpcagent::RuntimeResponse, grpcagent::RuntimeRequest> {
+
+  struct WriteState {
+    grpcagent::RuntimeResponse resp;
+    bool write_done = true;
+  };
+
  public:
-  explicit NSolidMessenger(grpcagent::NSolidService::Stub* stub, uv_loop_t* loop);
+  explicit NSolidMessenger(grpcagent::NSolidService::Stub* stub);
 
   ~NSolidMessenger() = default;
+
+  void OnWriteDone(bool /*ok*/) override;
+
+  void WriteInfoMsg(const char* req_id = nullptr);
+
+private:
+  grpcagent::RuntimeResponse CreateInfoMsg(const char* req_id);
+
+  void NextWrite();
+
+  void Write(grpcagent::RuntimeResponse&& resp);
 
  private:
   ::grpc::ClientContext context_;
   grpcagent::RuntimeRequest server_request_;
 
-  nsuv::ns_async response_msg_;
   TSQueue<grpcagent::RuntimeResponse> response_q_;
+  WriteState write_state_;
 };
 
 class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
