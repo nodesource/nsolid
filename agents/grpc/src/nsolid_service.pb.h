@@ -28,7 +28,9 @@
 #include <google/protobuf/generated_message_reflection.h>
 #include <google/protobuf/repeated_field.h>  // IWYU pragma: export
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
-#include "nsolid.pb.h"
+#include <google/protobuf/empty.pb.h>
+#include "event.pb.h"
+#include "req_resp.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_nsolid_5fservice_2eproto

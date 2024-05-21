@@ -1,9 +1,12 @@
 syntax = "proto3";
 
-import "nsolid.proto";
+import "google/protobuf/empty.proto";
+import "event.proto";
+import "req_resp.proto";
 
 package grpcagent;
 
 service NSolidService {
   rpc ReqRespStream (stream RuntimeResponse) returns (stream RuntimeRequest) {}
+  rpc EventsStream (stream Event) returns (google.protobuf.Empty) {}
 }

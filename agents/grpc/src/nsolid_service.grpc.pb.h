@@ -44,10 +44,20 @@ class NSolidService final {
     std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>> PrepareAsyncReqRespStream(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>>(PrepareAsyncReqRespStreamRaw(context, cq));
     }
+    std::unique_ptr< ::grpc::ClientWriterInterface< ::grpcagent::Event>> EventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response) {
+      return std::unique_ptr< ::grpc::ClientWriterInterface< ::grpcagent::Event>>(EventsStreamRaw(context, response));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncWriterInterface< ::grpcagent::Event>> AsyncEventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq, void* tag) {
+      return std::unique_ptr< ::grpc::ClientAsyncWriterInterface< ::grpcagent::Event>>(AsyncEventsStreamRaw(context, response, cq, tag));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncWriterInterface< ::grpcagent::Event>> PrepareAsyncEventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncWriterInterface< ::grpcagent::Event>>(PrepareAsyncEventsStreamRaw(context, response, cq));
+    }
     class async_interface {
      public:
       virtual ~async_interface() {}
       virtual void ReqRespStream(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::grpcagent::RuntimeResponse,::grpcagent::RuntimeRequest>* reactor) = 0;
+      virtual void EventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::ClientWriteReactor< ::grpcagent::Event>* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
@@ -56,6 +66,9 @@ class NSolidService final {
     virtual ::grpc::ClientReaderWriterInterface< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>* ReqRespStreamRaw(::grpc::ClientContext* context) = 0;
     virtual ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>* AsyncReqRespStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) = 0;
     virtual ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>* PrepareAsyncReqRespStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientWriterInterface< ::grpcagent::Event>* EventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response) = 0;
+    virtual ::grpc::ClientAsyncWriterInterface< ::grpcagent::Event>* AsyncEventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq, void* tag) = 0;
+    virtual ::grpc::ClientAsyncWriterInterface< ::grpcagent::Event>* PrepareAsyncEventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -69,10 +82,20 @@ class NSolidService final {
     std::unique_ptr<  ::grpc::ClientAsyncReaderWriter< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>> PrepareAsyncReqRespStream(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncReaderWriter< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>>(PrepareAsyncReqRespStreamRaw(context, cq));
     }
+    std::unique_ptr< ::grpc::ClientWriter< ::grpcagent::Event>> EventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response) {
+      return std::unique_ptr< ::grpc::ClientWriter< ::grpcagent::Event>>(EventsStreamRaw(context, response));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncWriter< ::grpcagent::Event>> AsyncEventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq, void* tag) {
+      return std::unique_ptr< ::grpc::ClientAsyncWriter< ::grpcagent::Event>>(AsyncEventsStreamRaw(context, response, cq, tag));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncWriter< ::grpcagent::Event>> PrepareAsyncEventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncWriter< ::grpcagent::Event>>(PrepareAsyncEventsStreamRaw(context, response, cq));
+    }
     class async final :
       public StubInterface::async_interface {
      public:
       void ReqRespStream(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::grpcagent::RuntimeResponse,::grpcagent::RuntimeRequest>* reactor) override;
+      void EventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::ClientWriteReactor< ::grpcagent::Event>* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -87,7 +110,11 @@ class NSolidService final {
     ::grpc::ClientReaderWriter< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>* ReqRespStreamRaw(::grpc::ClientContext* context) override;
     ::grpc::ClientAsyncReaderWriter< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>* AsyncReqRespStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) override;
     ::grpc::ClientAsyncReaderWriter< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>* PrepareAsyncReqRespStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientWriter< ::grpcagent::Event>* EventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response) override;
+    ::grpc::ClientAsyncWriter< ::grpcagent::Event>* AsyncEventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq, void* tag) override;
+    ::grpc::ClientAsyncWriter< ::grpcagent::Event>* PrepareAsyncEventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_ReqRespStream_;
+    const ::grpc::internal::RpcMethod rpcmethod_EventsStream_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -96,6 +123,7 @@ class NSolidService final {
     Service();
     virtual ~Service();
     virtual ::grpc::Status ReqRespStream(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::grpcagent::RuntimeRequest, ::grpcagent::RuntimeResponse>* stream);
+    virtual ::grpc::Status EventsStream(::grpc::ServerContext* context, ::grpc::ServerReader< ::grpcagent::Event>* reader, ::google::protobuf::Empty* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_ReqRespStream : public BaseClass {
@@ -117,7 +145,27 @@ class NSolidService final {
       ::grpc::Service::RequestAsyncBidiStreaming(0, context, stream, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_ReqRespStream<Service > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_EventsStream : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_EventsStream() {
+      ::grpc::Service::MarkMethodAsync(1);
+    }
+    ~WithAsyncMethod_EventsStream() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status EventsStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Event>* /*reader*/, ::google::protobuf::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestEventsStream(::grpc::ServerContext* context, ::grpc::ServerAsyncReader< ::google::protobuf::Empty, ::grpcagent::Event>* reader, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncClientStreaming(1, context, reader, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_ReqRespStream<WithAsyncMethod_EventsStream<Service > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_ReqRespStream : public BaseClass {
    private:
@@ -141,7 +189,29 @@ class NSolidService final {
       ::grpc::CallbackServerContext* /*context*/)
       { return nullptr; }
   };
-  typedef WithCallbackMethod_ReqRespStream<Service > CallbackService;
+  template <class BaseClass>
+  class WithCallbackMethod_EventsStream : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_EventsStream() {
+      ::grpc::Service::MarkMethodCallback(1,
+          new ::grpc::internal::CallbackClientStreamingHandler< ::grpcagent::Event, ::google::protobuf::Empty>(
+            [this](
+                   ::grpc::CallbackServerContext* context, ::google::protobuf::Empty* response) { return this->EventsStream(context, response); }));
+    }
+    ~WithCallbackMethod_EventsStream() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status EventsStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Event>* /*reader*/, ::google::protobuf::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerReadReactor< ::grpcagent::Event>* EventsStream(
+      ::grpc::CallbackServerContext* /*context*/, ::google::protobuf::Empty* /*response*/)  { return nullptr; }
+  };
+  typedef WithCallbackMethod_ReqRespStream<WithCallbackMethod_EventsStream<Service > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_ReqRespStream : public BaseClass {
@@ -156,6 +226,23 @@ class NSolidService final {
     }
     // disable synchronous version of this method
     ::grpc::Status ReqRespStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::grpcagent::RuntimeRequest, ::grpcagent::RuntimeResponse>* /*stream*/)  override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_EventsStream : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_EventsStream() {
+      ::grpc::Service::MarkMethodGeneric(1);
+    }
+    ~WithGenericMethod_EventsStream() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status EventsStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Event>* /*reader*/, ::google::protobuf::Empty* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -181,6 +268,26 @@ class NSolidService final {
     }
   };
   template <class BaseClass>
+  class WithRawMethod_EventsStream : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_EventsStream() {
+      ::grpc::Service::MarkMethodRaw(1);
+    }
+    ~WithRawMethod_EventsStream() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status EventsStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Event>* /*reader*/, ::google::protobuf::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestEventsStream(::grpc::ServerContext* context, ::grpc::ServerAsyncReader< ::grpc::ByteBuffer, ::grpc::ByteBuffer>* reader, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncClientStreaming(1, context, reader, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithRawCallbackMethod_ReqRespStream : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
@@ -202,6 +309,28 @@ class NSolidService final {
     virtual ::grpc::ServerBidiReactor< ::grpc::ByteBuffer, ::grpc::ByteBuffer>* ReqRespStream(
       ::grpc::CallbackServerContext* /*context*/)
       { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_EventsStream : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_EventsStream() {
+      ::grpc::Service::MarkMethodRawCallback(1,
+          new ::grpc::internal::CallbackClientStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, ::grpc::ByteBuffer* response) { return this->EventsStream(context, response); }));
+    }
+    ~WithRawCallbackMethod_EventsStream() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status EventsStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Event>* /*reader*/, ::google::protobuf::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerReadReactor< ::grpc::ByteBuffer>* EventsStream(
+      ::grpc::CallbackServerContext* /*context*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   typedef Service StreamedUnaryService;
   typedef Service SplitStreamedService;

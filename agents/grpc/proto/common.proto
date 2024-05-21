@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package grpcagent;
+
+message Time {
+  uint64 seconds = 1;
+  uint32 nanoseconds = 2;
+}
+
+message CommonResponse {
+  string agentId = 1;
+  string requestId = 2;
+  string command = 3;
+  Time recorded = 4;
+  uint32 duration = 5;
+  uint32 interval = 6;
+  uint32 version = 7;
+  int64 time = 8;
+  string timeNS = 9;
+}

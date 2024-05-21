@@ -1,0 +1,33 @@
+// I want to define here RuntimeResponse message which will be oneOf many other types of messages
+// For example:
+// - InfoResponse
+// - PackagesResponse
+
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message InfoBody {
+  string app = 1;
+  string arch = 2;
+  uint32 cpuCores = 3;
+  string cpuModel = 4;
+  string execPath = 5;
+  string hostname = 6;
+  string id = 7;
+  string main = 8;
+  string nodeEnv = 9;
+  uint32 pid = 10;
+  string platform = 11;
+  uint64 processStart = 12;
+  repeated string tags = 13;
+  uint64 totalMem = 14;
+  map<string, string> versions = 15;
+}
+
+message InfoResponse {
+  CommonResponse common = 1;
+  InfoBody body = 2;
+}

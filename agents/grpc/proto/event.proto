@@ -1,0 +1,20 @@
+// I want to define here RuntimeResponse message which will be oneOf many other types of messages
+// For example:
+// - InfoResponse
+// - PackagesResponse
+
+syntax = "proto3";
+
+import "blocked_loop.proto";
+import "metrics.proto";
+
+package grpcagent;
+
+message Event {
+  oneof response_type {
+    BlockedLoop blocked_loop = 1;
+    UnblockedLoop unblocked_loop = 2;
+    Metrics metrics = 3;
+  }
+}
+

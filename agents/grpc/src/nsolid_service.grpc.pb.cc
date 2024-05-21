@@ -23,6 +23,7 @@ namespace grpcagent {
 
 static const char* NSolidService_method_names[] = {
   "/grpcagent.NSolidService/ReqRespStream",
+  "/grpcagent.NSolidService/EventsStream",
 };
 
 std::unique_ptr< NSolidService::Stub> NSolidService::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -33,6 +34,7 @@ std::unique_ptr< NSolidService::Stub> NSolidService::NewStub(const std::shared_p
 
 NSolidService::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options)
   : channel_(channel), rpcmethod_ReqRespStream_(NSolidService_method_names[0], options.suffix_for_stats(),::grpc::internal::RpcMethod::BIDI_STREAMING, channel)
+  , rpcmethod_EventsStream_(NSolidService_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::CLIENT_STREAMING, channel)
   {}
 
 ::grpc::ClientReaderWriter< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>* NSolidService::Stub::ReqRespStreamRaw(::grpc::ClientContext* context) {
@@ -51,6 +53,22 @@ void NSolidService::Stub::async::ReqRespStream(::grpc::ClientContext* context, :
   return ::grpc::internal::ClientAsyncReaderWriterFactory< ::grpcagent::RuntimeResponse, ::grpcagent::RuntimeRequest>::Create(channel_.get(), cq, rpcmethod_ReqRespStream_, context, false, nullptr);
 }
 
+::grpc::ClientWriter< ::grpcagent::Event>* NSolidService::Stub::EventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response) {
+  return ::grpc::internal::ClientWriterFactory< ::grpcagent::Event>::Create(channel_.get(), rpcmethod_EventsStream_, context, response);
+}
+
+void NSolidService::Stub::async::EventsStream(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::ClientWriteReactor< ::grpcagent::Event>* reactor) {
+  ::grpc::internal::ClientCallbackWriterFactory< ::grpcagent::Event>::Create(stub_->channel_.get(), stub_->rpcmethod_EventsStream_, context, response, reactor);
+}
+
+::grpc::ClientAsyncWriter< ::grpcagent::Event>* NSolidService::Stub::AsyncEventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq, void* tag) {
+  return ::grpc::internal::ClientAsyncWriterFactory< ::grpcagent::Event>::Create(channel_.get(), cq, rpcmethod_EventsStream_, context, response, true, tag);
+}
+
+::grpc::ClientAsyncWriter< ::grpcagent::Event>* NSolidService::Stub::PrepareAsyncEventsStreamRaw(::grpc::ClientContext* context, ::google::protobuf::Empty* response, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncWriterFactory< ::grpcagent::Event>::Create(channel_.get(), cq, rpcmethod_EventsStream_, context, response, false, nullptr);
+}
+
 NSolidService::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NSolidService_method_names[0],
@@ -62,6 +80,16 @@ NSolidService::Service::Service() {
              ::grpcagent::RuntimeResponse>* stream) {
                return service->ReqRespStream(ctx, stream);
              }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      NSolidService_method_names[1],
+      ::grpc::internal::RpcMethod::CLIENT_STREAMING,
+      new ::grpc::internal::ClientStreamingHandler< NSolidService::Service, ::grpcagent::Event, ::google::protobuf::Empty>(
+          [](NSolidService::Service* service,
+             ::grpc::ServerContext* ctx,
+             ::grpc::ServerReader<::grpcagent::Event>* reader,
+             ::google::protobuf::Empty* resp) {
+               return service->EventsStream(ctx, reader, resp);
+             }, this)));
 }
 
 NSolidService::Service::~Service() {
@@ -70,6 +98,13 @@ NSolidService::Service::~Service() {
 ::grpc::Status NSolidService::Service::ReqRespStream(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::grpcagent::RuntimeRequest, ::grpcagent::RuntimeResponse>* stream) {
   (void) context;
   (void) stream;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status NSolidService::Service::EventsStream(::grpc::ServerContext* context, ::grpc::ServerReader< ::grpcagent::Event>* reader, ::google::protobuf::Empty* response) {
+  (void) context;
+  (void) reader;
+  (void) response;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 

@@ -1,0 +1,26 @@
+// I want to define here RuntimeResponse message which will be oneOf many other types of messages
+// For example:
+// - InfoResponse
+// - PackagesResponse
+
+syntax = "proto3";
+
+import "info.proto";
+import "packages.proto";
+
+package grpcagent;
+
+message RuntimeRequest {
+  string requestId = 1;
+  uint32 version = 2;
+  string id = 3;
+  string command = 4;
+}
+
+message RuntimeResponse {
+  oneof response_type {
+    InfoResponse info_response = 1;
+    PackagesResponse metrics_response = 2;
+    // Add other message types here...
+  }
+}
