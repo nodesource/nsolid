@@ -9,7 +9,7 @@ package grpcagent;
 
 message RuntimeRequest {
   string requestId = 1;
-  int32 version = 2;
+  uint32 version = 2;
   string id = 3;
   string command = 4;
 }
@@ -23,8 +23,8 @@ message RuntimeResponse {
 }
 
 message Time {
-  int64 seconds = 1;
-  int32 nanoseconds = 2;
+  uint64 seconds = 1;
+  uint32 nanoseconds = 2;
 }
 
 message CommonResponse {
@@ -32,9 +32,9 @@ message CommonResponse {
   string requestId = 2;
   string command = 3;
   Time recorded = 4;
-  int32 duration = 5;
-  int32 interval = 6;
-  int32 version = 7;
+  uint32 duration = 5;
+  uint32 interval = 6;
+  uint32 version = 7;
   int64 time = 8;
   string timeNS = 9;
 }
@@ -42,18 +42,18 @@ message CommonResponse {
 message InfoBody {
   string app = 1;
   string arch = 2;
-  int32 cpuCores = 3;
+  uint32 cpuCores = 3;
   string cpuModel = 4;
   string execPath = 5;
   string hostname = 6;
   string id = 7;
   string main = 8;
   string nodeEnv = 9;
-  int32 pid = 10;
+  uint32 pid = 10;
   string platform = 11;
-  int64 processStart = 12;
+  uint64 processStart = 12;
   repeated string tags = 13;
-  int64 totalMem = 14;
+  uint64 totalMem = 14;
   map<string, string> versions = 15;
 }
 

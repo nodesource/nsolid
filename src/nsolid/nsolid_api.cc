@@ -753,7 +753,7 @@ int EnvInst::CustomCommandResponse(const std::string& req_id,
 }
 
 
-EnvList::EnvList(): info_(nlohmann::json::object()) {
+EnvList::EnvList(): info_(nlohmann::json()) {
   int er;
   // Create event loop and new thread to run EnvList commands.
   uv_loop_init(&thread_loop_);
