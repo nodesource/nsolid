@@ -58,6 +58,7 @@ const server = await startServer((err, type, data) => {
 process.send({ type: 'port', port: server.address().port });
 process.on('message', (message) => {
   if (message.type === 'close') {
+    server.closeIdleConnections();
     server.close(() => {
       process.exit(0);
     });
