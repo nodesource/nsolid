@@ -3,6 +3,7 @@
 #include "nsolid_bindings.h"
 #include "node_buffer.h"
 #include "nsolid_cpu_profiler.h"
+#include "grpc/src/grpc_agent.h"
 #include "otlp/src/otlp_agent.h"
 #include "statsd/src/statsd_agent.h"
 #include "util.h"
@@ -1063,6 +1064,10 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
       statsd::StatsDAgent::Inst()->start();
     }
 
+    it = config.find("grpc");
+    if (it != config.end() && !it->is_null()) {
+      grpc::GrpcAgent::Inst()->start();
+    }
     // If tags have changed, update info_ accordingly
     it = config.find("tags");
     if (it != config.end()) {

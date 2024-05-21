@@ -1,9 +1,34 @@
 #include "grpc_agent.h"
+
+#include <grpcpp/create_channel.h>
+
 #include "asserts-cpp/asserts.h"
+#include "debug_utils-inl.h"
 
 namespace node {
 namespace nsolid {
 namespace grpc {
+
+template <typename... Args>
+inline void Debug(Args&&... args) {
+  per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
+                     std::forward<Args>(args)...);
+}
+
+
+inline void DebugJSON(const char* str, const json& msg) {
+  if (UNLIKELY(per_process::enabled_debug_list.enabled(
+        DebugCategory::NSOLID_GRPC_AGENT))) {
+    Debug(str, msg.dump(4).c_str());
+  }
+}
+
+NSolidServiceClient::NSolidServiceClient():
+  channel_(::grpc::CreateChannel("localhost:50051",
+                      ::grpc::InsecureChannelCredentials())),
+  stub_(grpcagent::NSolidService::NewStub(channel_)),
+  messenger_(std::make_unique<NSolidMessenger>(stub_.get())) {
+};
 
 NSolidMessenger::NSolidMessenger(grpcagent::NSolidService::Stub* stub) {
   stub->async()->ReqRespStream(&context_, this);
@@ -38,6 +63,8 @@ grpcagent::RuntimeResponse NSolidMessenger::CreateInfoMsg(const char* req_id) {
   nlohmann::json info = json::parse(GetProcessInfo().c_str(), nullptr, false);
   ASSERT(!info.is_discarded());
 
+  DebugJSON("INFO: \n%s\n", info);
+
   grpcagent::RuntimeResponse resp;
 
   // Create an InfoResponse.
@@ -53,7 +80,7 @@ grpcagent::RuntimeResponse NSolidMessenger::CreateInfoMsg(const char* req_id) {
   grpcagent::InfoBody* body = new grpcagent::InfoBody();
   body->set_app(info["app"].get<std::string>());
   body->set_arch(info["arch"].get<std::string>());
-  body->set_cpucores(info["set_cpuCores"].get<uint64_t>());
+  body->set_cpucores(info["cpuCores"].get<uint64_t>());
   body->set_cpumodel(info["cpuModel"].get<std::string>());
   body->set_execpath(info["execPath"].get<std::string>());
   body->set_hostname(info["hostname"].get<std::string>());
@@ -182,6 +209,21 @@ int GrpcAgent::stop() {
 
 /*static*/ void GrpcAgent::config_msg_cb_(nsuv::ns_async*,
                                           WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  int r = 0;
+  json config_msg;
+
+  while (agent->config_msg_q_.dequeue(config_msg)) {
+    r = agent->config(config_msg);
+  }
+
+  if (r != 0) {
+    agent->do_stop();
+  }
 }
 
 void GrpcAgent::env_creation_cb(SharedEnvInst envinst,
@@ -224,6 +266,41 @@ void GrpcAgent::env_deletion_cb(SharedEnvInst envinst,
 
 }
 
+int GrpcAgent::config(const json& config) {
+  int ret;
+
+  json old_config = config_;
+  config_ = config;
+  json diff = json::diff(old_config, config_);
+  DebugJSON("Old Config: \n%s\n", old_config);
+  DebugJSON("NewConfig: \n%s\n", config_);
+  DebugJSON("Diff: \n%s\n", diff);
+  if (utils::find_any_fields_in_diff(diff, { "/grpc" })) {
+    // if "grpc" changed,
+  }
+
+  // // If metrics timer is not active or if the diff contains metrics fields,
+  // // recalculate the metrics status. (stop/start/what period)
+  // if (!metrics_timer_.is_active() ||
+  //     utils::find_any_fields_in_diff(diff, { "/interval", "/pauseMetrics" })) {
+  //   uint64_t period = 0;
+  //   auto it = config_.find("pauseMetrics");
+  //   if (it != config_.end()) {
+  //     bool pause = *it;
+  //     if (!pause) {
+  //       it = config_.find("interval");
+  //       if (it != config_.end()) {
+  //         period = *it;
+  //       }
+  //     }
+  //   }
+
+  //   return setup_metrics_timer(period);
+  // }
+
+  return 0;
+}
+
 void GrpcAgent::do_start() {
   uv_mutex_lock(&start_lock_);
 
@@ -241,6 +318,8 @@ void GrpcAgent::do_start() {
     ASSERT_EQ(0, ThreadRemovedHook(env_deletion_cb, weak_from_this()));
     hooks_init_ = true;
   }
+
+  auto client = new NSolidServiceClient();
 
   uv_cond_signal(&start_cond_);
   uv_mutex_unlock(&start_lock_);

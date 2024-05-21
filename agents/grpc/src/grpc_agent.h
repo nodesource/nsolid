@@ -13,18 +13,21 @@ namespace grpc {
 
 // predeclarations
 class GrpcAgent;
+class NSolidMessenger;
 
 using SharedGrpcAgent = std::shared_ptr<GrpcAgent>;
 using WeakGrpcAgent = std::weak_ptr<GrpcAgent>;
 
 class NSolidServiceClient {
  public:
-  NSolidServiceClient() {};
+  NSolidServiceClient();
+
   ~NSolidServiceClient() = default;
 
  private:
-  std::unique_ptr<::grpc::Channel> channel_;
+  std::shared_ptr<::grpc::Channel> channel_;
   std::unique_ptr<grpcagent::NSolidService::Stub> stub_;
+  std::unique_ptr<NSolidMessenger> messenger_;
 };
 
 class NSolidMessenger: public ::grpc::ClientBidiReactor<grpcagent::RuntimeResponse, grpcagent::RuntimeRequest> {
@@ -86,6 +89,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   static void env_msg_cb(nsuv::ns_async*, WeakGrpcAgent);
 
   static void shutdown_cb_(nsuv::ns_async*, WeakGrpcAgent);
+
+  int config(const json& config);
 
   void do_start();
 
