@@ -27,17 +27,21 @@ NSolidServiceClient::NSolidServiceClient():
   channel_(::grpc::CreateChannel("localhost:50051",
                       ::grpc::InsecureChannelCredentials())),
   stub_(grpcagent::NSolidService::NewStub(channel_)),
-  messenger_(std::make_unique<NSolidMessenger>(stub_.get())) {
+  messenger_(std::make_unique<ReqRespStream>(stub_.get())) {
 };
 
-NSolidMessenger::NSolidMessenger(grpcagent::NSolidService::Stub* stub) {
+ReqRespStream::ReqRespStream(grpcagent::NSolidService::Stub* stub) {
   stub->async()->ReqRespStream(&context_, this);
   NextWrite();
   StartRead(&server_request_);
   StartCall();
 };
 
-void NSolidMessenger::OnReadDone(bool ok) {
+void ReqRespStream::OnDone(const ::grpc::Status& /*s*/) {
+  fprintf(stderr, "ReqRespStream::OnDone\n");
+}
+
+void ReqRespStream::OnReadDone(bool ok) {
   if (!ok) {
     return;
   }
@@ -49,17 +53,18 @@ void NSolidMessenger::OnReadDone(bool ok) {
   StartRead(&server_request_);
 }
 
-void NSolidMessenger::OnWriteDone(bool /*ok*/) {
+void ReqRespStream::OnWriteDone(bool /*ok*/) {
   write_state_.write_done = true;
   NextWrite();
 }
 
-void NSolidMessenger::WriteInfoMsg(const char* req_id) {
+void ReqRespStream::WriteInfoMsg(const char* req_id) {
   grpcagent::RuntimeResponse resp = CreateInfoMsg(req_id);
-  Write(std::move(resp));
+  // Write(std::move(resp));
+  StartWriteLast(&resp, ::grpc::WriteOptions());
 }
 
-grpcagent::RuntimeResponse NSolidMessenger::CreateInfoMsg(const char* req_id) {
+grpcagent::RuntimeResponse ReqRespStream::CreateInfoMsg(const char* req_id) {
   nlohmann::json info = json::parse(GetProcessInfo().c_str(), nullptr, false);
   ASSERT(!info.is_discarded());
 
@@ -108,14 +113,14 @@ grpcagent::RuntimeResponse NSolidMessenger::CreateInfoMsg(const char* req_id) {
   return resp;
 }
 
-void NSolidMessenger::NextWrite() {
+void ReqRespStream::NextWrite() {
   if (write_state_.write_done && response_q_.dequeue(write_state_.resp)) {
     StartWrite(&write_state_.resp);
     write_state_.write_done = false;
   }
 }
 
-void NSolidMessenger::Write(grpcagent::RuntimeResponse&& resp) {
+void ReqRespStream::Write(grpcagent::RuntimeResponse&& resp) {
   response_q_.enqueue(std::move(resp));
   NextWrite();
 }

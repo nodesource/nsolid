@@ -14,7 +14,4 @@ message CommonResponse {
   Time recorded = 4;
   uint32 duration = 5;
   uint32 interval = 6;
-  uint32 version = 7;
-  int64 time = 8;
-  string timeNS = 9;
 }

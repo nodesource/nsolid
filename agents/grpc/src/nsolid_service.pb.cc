@@ -31,11 +31,11 @@ static constexpr ::_pb::Message* const* file_default_instances = nullptr;
 const char descriptor_table_protodef_nsolid_5fservice_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\024nsolid_service.proto\022\tgrpcagent\032\033googl"
   "e/protobuf/empty.proto\032\013event.proto\032\016req"
-  "_resp.proto2\233\001\n\rNSolidService\022L\n\rReqResp"
+  "_resp.proto2\223\001\n\rNSolidService\022L\n\rReqResp"
   "Stream\022\032.grpcagent.RuntimeResponse\032\031.grp"
-  "cagent.RuntimeRequest\"\000(\0010\001\022<\n\014EventsStr"
-  "eam\022\020.grpcagent.Event\032\026.google.protobuf."
-  "Empty\"\000(\001b\006proto3"
+  "cagent.RuntimeRequest\"\000(\0010\001\0224\n\006Events\022\020."
+  "grpcagent.Event\032\026.google.protobuf.Empty\""
+  "\000b\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_nsolid_5fservice_2eproto_deps[3] = {
   &::descriptor_table_event_2eproto,
@@ -44,7 +44,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_nsolid_5fservice_2e
 };
 static ::_pbi::once_flag descriptor_table_nsolid_5fservice_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_nsolid_5fservice_2eproto = {
-    false, false, 257, descriptor_table_protodef_nsolid_5fservice_2eproto,
+    false, false, 249, descriptor_table_protodef_nsolid_5fservice_2eproto,
     "nsolid_service.proto",
     &descriptor_table_nsolid_5fservice_2eproto_once, descriptor_table_nsolid_5fservice_2eproto_deps, 3, 0,
     schemas, file_default_instances, TableStruct_nsolid_5fservice_2eproto::offsets,

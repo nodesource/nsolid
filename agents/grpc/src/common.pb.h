@@ -343,12 +343,9 @@ class CommonResponse final :
     kAgentIdFieldNumber = 1,
     kRequestIdFieldNumber = 2,
     kCommandFieldNumber = 3,
-    kTimeNSFieldNumber = 9,
     kRecordedFieldNumber = 4,
     kDurationFieldNumber = 5,
     kIntervalFieldNumber = 6,
-    kTimeFieldNumber = 8,
-    kVersionFieldNumber = 7,
   };
   // string agentId = 1;
   void clear_agentid();
@@ -392,20 +389,6 @@ class CommonResponse final :
   std::string* _internal_mutable_command();
   public:
 
-  // string timeNS = 9;
-  void clear_timens();
-  const std::string& timens() const;
-  template <typename ArgT0 = const std::string&, typename... ArgT>
-  void set_timens(ArgT0&& arg0, ArgT... args);
-  std::string* mutable_timens();
-  PROTOBUF_NODISCARD std::string* release_timens();
-  void set_allocated_timens(std::string* timens);
-  private:
-  const std::string& _internal_timens() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_timens(const std::string& value);
-  std::string* _internal_mutable_timens();
-  public:
-
   // .grpcagent.Time recorded = 4;
   bool has_recorded() const;
   private:
@@ -442,24 +425,6 @@ class CommonResponse final :
   void _internal_set_interval(uint32_t value);
   public:
 
-  // int64 time = 8;
-  void clear_time();
-  int64_t time() const;
-  void set_time(int64_t value);
-  private:
-  int64_t _internal_time() const;
-  void _internal_set_time(int64_t value);
-  public:
-
-  // uint32 version = 7;
-  void clear_version();
-  uint32_t version() const;
-  void set_version(uint32_t value);
-  private:
-  uint32_t _internal_version() const;
-  void _internal_set_version(uint32_t value);
-  public:
-
   // @@protoc_insertion_point(class_scope:grpcagent.CommonResponse)
  private:
   class _Internal;
@@ -471,12 +436,9 @@ class CommonResponse final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr agentid_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr requestid_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr command_;
-    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr timens_;
     ::grpcagent::Time* recorded_;
     uint32_t duration_;
     uint32_t interval_;
-    int64_t time_;
-    uint32_t version_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -815,96 +777,6 @@ inline void CommonResponse::_internal_set_interval(uint32_t value) {
 inline void CommonResponse::set_interval(uint32_t value) {
   _internal_set_interval(value);
   // @@protoc_insertion_point(field_set:grpcagent.CommonResponse.interval)
-}
-
-// uint32 version = 7;
-inline void CommonResponse::clear_version() {
-  _impl_.version_ = 0u;
-}
-inline uint32_t CommonResponse::_internal_version() const {
-  return _impl_.version_;
-}
-inline uint32_t CommonResponse::version() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommonResponse.version)
-  return _internal_version();
-}
-inline void CommonResponse::_internal_set_version(uint32_t value) {
-  
-  _impl_.version_ = value;
-}
-inline void CommonResponse::set_version(uint32_t value) {
-  _internal_set_version(value);
-  // @@protoc_insertion_point(field_set:grpcagent.CommonResponse.version)
-}
-
-// int64 time = 8;
-inline void CommonResponse::clear_time() {
-  _impl_.time_ = int64_t{0};
-}
-inline int64_t CommonResponse::_internal_time() const {
-  return _impl_.time_;
-}
-inline int64_t CommonResponse::time() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommonResponse.time)
-  return _internal_time();
-}
-inline void CommonResponse::_internal_set_time(int64_t value) {
-  
-  _impl_.time_ = value;
-}
-inline void CommonResponse::set_time(int64_t value) {
-  _internal_set_time(value);
-  // @@protoc_insertion_point(field_set:grpcagent.CommonResponse.time)
-}
-
-// string timeNS = 9;
-inline void CommonResponse::clear_timens() {
-  _impl_.timens_.ClearToEmpty();
-}
-inline const std::string& CommonResponse::timens() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommonResponse.timeNS)
-  return _internal_timens();
-}
-template <typename ArgT0, typename... ArgT>
-inline PROTOBUF_ALWAYS_INLINE
-void CommonResponse::set_timens(ArgT0&& arg0, ArgT... args) {
- 
- _impl_.timens_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:grpcagent.CommonResponse.timeNS)
-}
-inline std::string* CommonResponse::mutable_timens() {
-  std::string* _s = _internal_mutable_timens();
-  // @@protoc_insertion_point(field_mutable:grpcagent.CommonResponse.timeNS)
-  return _s;
-}
-inline const std::string& CommonResponse::_internal_timens() const {
-  return _impl_.timens_.Get();
-}
-inline void CommonResponse::_internal_set_timens(const std::string& value) {
-  
-  _impl_.timens_.Set(value, GetArenaForAllocation());
-}
-inline std::string* CommonResponse::_internal_mutable_timens() {
-  
-  return _impl_.timens_.Mutable(GetArenaForAllocation());
-}
-inline std::string* CommonResponse::release_timens() {
-  // @@protoc_insertion_point(field_release:grpcagent.CommonResponse.timeNS)
-  return _impl_.timens_.Release();
-}
-inline void CommonResponse::set_allocated_timens(std::string* timens) {
-  if (timens != nullptr) {
-    
-  } else {
-    
-  }
-  _impl_.timens_.SetAllocated(timens, GetArenaForAllocation());
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (_impl_.timens_.IsDefault()) {
-    _impl_.timens_.Set("", GetArenaForAllocation());
-  }
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommonResponse.timeNS)
 }
 
 #ifdef __GNUC__

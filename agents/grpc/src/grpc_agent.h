@@ -13,7 +13,7 @@ namespace grpc {
 
 // predeclarations
 class GrpcAgent;
-class NSolidMessenger;
+class ReqRespStream;
 
 using SharedGrpcAgent = std::shared_ptr<GrpcAgent>;
 using WeakGrpcAgent = std::weak_ptr<GrpcAgent>;
@@ -27,10 +27,10 @@ class NSolidServiceClient {
  private:
   std::shared_ptr<::grpc::Channel> channel_;
   std::unique_ptr<grpcagent::NSolidService::Stub> stub_;
-  std::unique_ptr<NSolidMessenger> messenger_;
+  std::unique_ptr<ReqRespStream> messenger_;
 };
 
-class NSolidMessenger: public ::grpc::ClientBidiReactor<grpcagent::RuntimeResponse, grpcagent::RuntimeRequest> {
+class ReqRespStream: public ::grpc::ClientBidiReactor<grpcagent::RuntimeResponse, grpcagent::RuntimeRequest> {
 
   struct WriteState {
     grpcagent::RuntimeResponse resp;
@@ -38,9 +38,11 @@ class NSolidMessenger: public ::grpc::ClientBidiReactor<grpcagent::RuntimeRespon
   };
 
  public:
-  explicit NSolidMessenger(grpcagent::NSolidService::Stub* stub);
+  explicit ReqRespStream(grpcagent::NSolidService::Stub* stub);
 
-  ~NSolidMessenger() = default;
+  ~ReqRespStream() = default;
+
+  void OnDone(const ::grpc::Status& /*s*/) override;
 
   void OnReadDone(bool ok) override;
 

@@ -8,5 +8,5 @@ package grpcagent;
 
 service NSolidService {
   rpc ReqRespStream (stream RuntimeResponse) returns (stream RuntimeRequest) {}
-  rpc EventsStream (stream Event) returns (google.protobuf.Empty) {}
+  rpc Events (Event) returns (google.protobuf.Empty) {}
 }
