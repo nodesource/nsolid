@@ -50,6 +50,8 @@ const uint32_t TableStruct_event_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
+  ::_pbi::kInvalidFieldOffsetTag,
+  ::_pbi::kInvalidFieldOffsetTag,
   PROTOBUF_FIELD_OFFSET(::grpcagent::Event, _impl_.response_type_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
@@ -62,21 +64,26 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_event_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\013event.proto\022\tgrpcagent\032\022blocked_loop.p"
-  "roto\032\rmetrics.proto\"\243\001\n\005Event\022.\n\014blocked"
-  "_loop\030\001 \001(\0132\026.grpcagent.BlockedLoopH\000\0222\n"
-  "\016unblocked_loop\030\002 \001(\0132\030.grpcagent.Unbloc"
-  "kedLoopH\000\022%\n\007metrics\030\003 \001(\0132\022.grpcagent.M"
-  "etricsH\000B\017\n\rresponse_typeb\006proto3"
+  "roto\032\ninfo.proto\032\rmetrics.proto\032\016package"
+  "s.proto\"\375\001\n\005Event\022.\n\014blocked_loop\030\001 \001(\0132"
+  "\026.grpcagent.BlockedLoopH\000\0222\n\016unblocked_l"
+  "oop\030\002 \001(\0132\030.grpcagent.UnblockedLoopH\000\022\'\n"
+  "\004info\030\003 \001(\0132\027.grpcagent.InfoResponseH\000\022%"
+  "\n\007metrics\030\004 \001(\0132\022.grpcagent.MetricsH\000\022/\n"
+  "\010packages\030\005 \001(\0132\033.grpcagent.PackagesResp"
+  "onseH\000B\017\n\rresponse_typeb\006proto3"
   ;
-static const ::_pbi::DescriptorTable* const descriptor_table_event_2eproto_deps[2] = {
+static const ::_pbi::DescriptorTable* const descriptor_table_event_2eproto_deps[4] = {
   &::descriptor_table_blocked_5floop_2eproto,
+  &::descriptor_table_info_2eproto,
   &::descriptor_table_metrics_2eproto,
+  &::descriptor_table_packages_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_event_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_event_2eproto = {
-    false, false, 233, descriptor_table_protodef_event_2eproto,
+    false, false, 351, descriptor_table_protodef_event_2eproto,
     "event.proto",
-    &descriptor_table_event_2eproto_once, descriptor_table_event_2eproto_deps, 2, 1,
+    &descriptor_table_event_2eproto_once, descriptor_table_event_2eproto_deps, 4, 1,
     schemas, file_default_instances, TableStruct_event_2eproto::offsets,
     file_level_metadata_event_2eproto, file_level_enum_descriptors_event_2eproto,
     file_level_service_descriptors_event_2eproto,
@@ -95,7 +102,9 @@ class Event::_Internal {
  public:
   static const ::grpcagent::BlockedLoop& blocked_loop(const Event* msg);
   static const ::grpcagent::UnblockedLoop& unblocked_loop(const Event* msg);
+  static const ::grpcagent::InfoResponse& info(const Event* msg);
   static const ::grpcagent::Metrics& metrics(const Event* msg);
+  static const ::grpcagent::PackagesResponse& packages(const Event* msg);
 };
 
 const ::grpcagent::BlockedLoop&
@@ -106,9 +115,17 @@ const ::grpcagent::UnblockedLoop&
 Event::_Internal::unblocked_loop(const Event* msg) {
   return *msg->_impl_.response_type_.unblocked_loop_;
 }
+const ::grpcagent::InfoResponse&
+Event::_Internal::info(const Event* msg) {
+  return *msg->_impl_.response_type_.info_;
+}
 const ::grpcagent::Metrics&
 Event::_Internal::metrics(const Event* msg) {
   return *msg->_impl_.response_type_.metrics_;
+}
+const ::grpcagent::PackagesResponse&
+Event::_Internal::packages(const Event* msg) {
+  return *msg->_impl_.response_type_.packages_;
 }
 void Event::set_allocated_blocked_loop(::grpcagent::BlockedLoop* blocked_loop) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
@@ -158,6 +175,30 @@ void Event::clear_unblocked_loop() {
     clear_has_response_type();
   }
 }
+void Event::set_allocated_info(::grpcagent::InfoResponse* info) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_response_type();
+  if (info) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(info));
+    if (message_arena != submessage_arena) {
+      info = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, info, submessage_arena);
+    }
+    set_has_info();
+    _impl_.response_type_.info_ = info;
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.Event.info)
+}
+void Event::clear_info() {
+  if (_internal_has_info()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.response_type_.info_;
+    }
+    clear_has_response_type();
+  }
+}
 void Event::set_allocated_metrics(::grpcagent::Metrics* metrics) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   clear_response_type();
@@ -178,6 +219,30 @@ void Event::clear_metrics() {
   if (_internal_has_metrics()) {
     if (GetArenaForAllocation() == nullptr) {
       delete _impl_.response_type_.metrics_;
+    }
+    clear_has_response_type();
+  }
+}
+void Event::set_allocated_packages(::grpcagent::PackagesResponse* packages) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_response_type();
+  if (packages) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(packages));
+    if (message_arena != submessage_arena) {
+      packages = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, packages, submessage_arena);
+    }
+    set_has_packages();
+    _impl_.response_type_.packages_ = packages;
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.Event.packages)
+}
+void Event::clear_packages() {
+  if (_internal_has_packages()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.response_type_.packages_;
     }
     clear_has_response_type();
   }
@@ -209,9 +274,19 @@ Event::Event(const Event& from)
           from._internal_unblocked_loop());
       break;
     }
+    case kInfo: {
+      _this->_internal_mutable_info()->::grpcagent::InfoResponse::MergeFrom(
+          from._internal_info());
+      break;
+    }
     case kMetrics: {
       _this->_internal_mutable_metrics()->::grpcagent::Metrics::MergeFrom(
           from._internal_metrics());
+      break;
+    }
+    case kPackages: {
+      _this->_internal_mutable_packages()->::grpcagent::PackagesResponse::MergeFrom(
+          from._internal_packages());
       break;
     }
     case RESPONSE_TYPE_NOT_SET: {
@@ -268,9 +343,21 @@ void Event::clear_response_type() {
       }
       break;
     }
+    case kInfo: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.response_type_.info_;
+      }
+      break;
+    }
     case kMetrics: {
       if (GetArenaForAllocation() == nullptr) {
         delete _impl_.response_type_.metrics_;
+      }
+      break;
+    }
+    case kPackages: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.response_type_.packages_;
       }
       break;
     }
@@ -314,10 +401,26 @@ const char* Event::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
         } else
           goto handle_unusual;
         continue;
-      // .grpcagent.Metrics metrics = 3;
+      // .grpcagent.InfoResponse info = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+          ptr = ctx->ParseMessage(_internal_mutable_info(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .grpcagent.Metrics metrics = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
           ptr = ctx->ParseMessage(_internal_mutable_metrics(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .grpcagent.PackagesResponse packages = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+          ptr = ctx->ParseMessage(_internal_mutable_packages(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -365,11 +468,25 @@ uint8_t* Event::_InternalSerialize(
         _Internal::unblocked_loop(this).GetCachedSize(), target, stream);
   }
 
-  // .grpcagent.Metrics metrics = 3;
+  // .grpcagent.InfoResponse info = 3;
+  if (_internal_has_info()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(3, _Internal::info(this),
+        _Internal::info(this).GetCachedSize(), target, stream);
+  }
+
+  // .grpcagent.Metrics metrics = 4;
   if (_internal_has_metrics()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(3, _Internal::metrics(this),
+      InternalWriteMessage(4, _Internal::metrics(this),
         _Internal::metrics(this).GetCachedSize(), target, stream);
+  }
+
+  // .grpcagent.PackagesResponse packages = 5;
+  if (_internal_has_packages()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(5, _Internal::packages(this),
+        _Internal::packages(this).GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -403,11 +520,25 @@ size_t Event::ByteSizeLong() const {
           *_impl_.response_type_.unblocked_loop_);
       break;
     }
-    // .grpcagent.Metrics metrics = 3;
+    // .grpcagent.InfoResponse info = 3;
+    case kInfo: {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.response_type_.info_);
+      break;
+    }
+    // .grpcagent.Metrics metrics = 4;
     case kMetrics: {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
           *_impl_.response_type_.metrics_);
+      break;
+    }
+    // .grpcagent.PackagesResponse packages = 5;
+    case kPackages: {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.response_type_.packages_);
       break;
     }
     case RESPONSE_TYPE_NOT_SET: {
@@ -443,9 +574,19 @@ void Event::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
           from._internal_unblocked_loop());
       break;
     }
+    case kInfo: {
+      _this->_internal_mutable_info()->::grpcagent::InfoResponse::MergeFrom(
+          from._internal_info());
+      break;
+    }
     case kMetrics: {
       _this->_internal_mutable_metrics()->::grpcagent::Metrics::MergeFrom(
           from._internal_metrics());
+      break;
+    }
+    case kPackages: {
+      _this->_internal_mutable_packages()->::grpcagent::PackagesResponse::MergeFrom(
+          from._internal_packages());
       break;
     }
     case RESPONSE_TYPE_NOT_SET: {

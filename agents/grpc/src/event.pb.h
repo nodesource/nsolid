@@ -31,7 +31,9 @@
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/unknown_field_set.h>
 #include "blocked_loop.pb.h"
+#include "info.pb.h"
 #include "metrics.pb.h"
+#include "packages.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_event_2eproto
@@ -104,7 +106,9 @@ class Event final :
   enum ResponseTypeCase {
     kBlockedLoop = 1,
     kUnblockedLoop = 2,
-    kMetrics = 3,
+    kInfo = 3,
+    kMetrics = 4,
+    kPackages = 5,
     RESPONSE_TYPE_NOT_SET = 0,
   };
 
@@ -188,7 +192,9 @@ class Event final :
   enum : int {
     kBlockedLoopFieldNumber = 1,
     kUnblockedLoopFieldNumber = 2,
-    kMetricsFieldNumber = 3,
+    kInfoFieldNumber = 3,
+    kMetricsFieldNumber = 4,
+    kPackagesFieldNumber = 5,
   };
   // .grpcagent.BlockedLoop blocked_loop = 1;
   bool has_blocked_loop() const;
@@ -226,7 +232,25 @@ class Event final :
       ::grpcagent::UnblockedLoop* unblocked_loop);
   ::grpcagent::UnblockedLoop* unsafe_arena_release_unblocked_loop();
 
-  // .grpcagent.Metrics metrics = 3;
+  // .grpcagent.InfoResponse info = 3;
+  bool has_info() const;
+  private:
+  bool _internal_has_info() const;
+  public:
+  void clear_info();
+  const ::grpcagent::InfoResponse& info() const;
+  PROTOBUF_NODISCARD ::grpcagent::InfoResponse* release_info();
+  ::grpcagent::InfoResponse* mutable_info();
+  void set_allocated_info(::grpcagent::InfoResponse* info);
+  private:
+  const ::grpcagent::InfoResponse& _internal_info() const;
+  ::grpcagent::InfoResponse* _internal_mutable_info();
+  public:
+  void unsafe_arena_set_allocated_info(
+      ::grpcagent::InfoResponse* info);
+  ::grpcagent::InfoResponse* unsafe_arena_release_info();
+
+  // .grpcagent.Metrics metrics = 4;
   bool has_metrics() const;
   private:
   bool _internal_has_metrics() const;
@@ -244,6 +268,24 @@ class Event final :
       ::grpcagent::Metrics* metrics);
   ::grpcagent::Metrics* unsafe_arena_release_metrics();
 
+  // .grpcagent.PackagesResponse packages = 5;
+  bool has_packages() const;
+  private:
+  bool _internal_has_packages() const;
+  public:
+  void clear_packages();
+  const ::grpcagent::PackagesResponse& packages() const;
+  PROTOBUF_NODISCARD ::grpcagent::PackagesResponse* release_packages();
+  ::grpcagent::PackagesResponse* mutable_packages();
+  void set_allocated_packages(::grpcagent::PackagesResponse* packages);
+  private:
+  const ::grpcagent::PackagesResponse& _internal_packages() const;
+  ::grpcagent::PackagesResponse* _internal_mutable_packages();
+  public:
+  void unsafe_arena_set_allocated_packages(
+      ::grpcagent::PackagesResponse* packages);
+  ::grpcagent::PackagesResponse* unsafe_arena_release_packages();
+
   void clear_response_type();
   ResponseTypeCase response_type_case() const;
   // @@protoc_insertion_point(class_scope:grpcagent.Event)
@@ -251,7 +293,9 @@ class Event final :
   class _Internal;
   void set_has_blocked_loop();
   void set_has_unblocked_loop();
+  void set_has_info();
   void set_has_metrics();
+  void set_has_packages();
 
   inline bool has_response_type() const;
   inline void clear_has_response_type();
@@ -265,7 +309,9 @@ class Event final :
         ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized _constinit_;
       ::grpcagent::BlockedLoop* blocked_loop_;
       ::grpcagent::UnblockedLoop* unblocked_loop_;
+      ::grpcagent::InfoResponse* info_;
       ::grpcagent::Metrics* metrics_;
+      ::grpcagent::PackagesResponse* packages_;
     } response_type_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     uint32_t _oneof_case_[1];
@@ -417,7 +463,73 @@ inline ::grpcagent::UnblockedLoop* Event::mutable_unblocked_loop() {
   return _msg;
 }
 
-// .grpcagent.Metrics metrics = 3;
+// .grpcagent.InfoResponse info = 3;
+inline bool Event::_internal_has_info() const {
+  return response_type_case() == kInfo;
+}
+inline bool Event::has_info() const {
+  return _internal_has_info();
+}
+inline void Event::set_has_info() {
+  _impl_._oneof_case_[0] = kInfo;
+}
+inline ::grpcagent::InfoResponse* Event::release_info() {
+  // @@protoc_insertion_point(field_release:grpcagent.Event.info)
+  if (_internal_has_info()) {
+    clear_has_response_type();
+    ::grpcagent::InfoResponse* temp = _impl_.response_type_.info_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.response_type_.info_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::grpcagent::InfoResponse& Event::_internal_info() const {
+  return _internal_has_info()
+      ? *_impl_.response_type_.info_
+      : reinterpret_cast< ::grpcagent::InfoResponse&>(::grpcagent::_InfoResponse_default_instance_);
+}
+inline const ::grpcagent::InfoResponse& Event::info() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Event.info)
+  return _internal_info();
+}
+inline ::grpcagent::InfoResponse* Event::unsafe_arena_release_info() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.Event.info)
+  if (_internal_has_info()) {
+    clear_has_response_type();
+    ::grpcagent::InfoResponse* temp = _impl_.response_type_.info_;
+    _impl_.response_type_.info_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void Event::unsafe_arena_set_allocated_info(::grpcagent::InfoResponse* info) {
+  clear_response_type();
+  if (info) {
+    set_has_info();
+    _impl_.response_type_.info_ = info;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.Event.info)
+}
+inline ::grpcagent::InfoResponse* Event::_internal_mutable_info() {
+  if (!_internal_has_info()) {
+    clear_response_type();
+    set_has_info();
+    _impl_.response_type_.info_ = CreateMaybeMessage< ::grpcagent::InfoResponse >(GetArenaForAllocation());
+  }
+  return _impl_.response_type_.info_;
+}
+inline ::grpcagent::InfoResponse* Event::mutable_info() {
+  ::grpcagent::InfoResponse* _msg = _internal_mutable_info();
+  // @@protoc_insertion_point(field_mutable:grpcagent.Event.info)
+  return _msg;
+}
+
+// .grpcagent.Metrics metrics = 4;
 inline bool Event::_internal_has_metrics() const {
   return response_type_case() == kMetrics;
 }
@@ -480,6 +592,72 @@ inline ::grpcagent::Metrics* Event::_internal_mutable_metrics() {
 inline ::grpcagent::Metrics* Event::mutable_metrics() {
   ::grpcagent::Metrics* _msg = _internal_mutable_metrics();
   // @@protoc_insertion_point(field_mutable:grpcagent.Event.metrics)
+  return _msg;
+}
+
+// .grpcagent.PackagesResponse packages = 5;
+inline bool Event::_internal_has_packages() const {
+  return response_type_case() == kPackages;
+}
+inline bool Event::has_packages() const {
+  return _internal_has_packages();
+}
+inline void Event::set_has_packages() {
+  _impl_._oneof_case_[0] = kPackages;
+}
+inline ::grpcagent::PackagesResponse* Event::release_packages() {
+  // @@protoc_insertion_point(field_release:grpcagent.Event.packages)
+  if (_internal_has_packages()) {
+    clear_has_response_type();
+    ::grpcagent::PackagesResponse* temp = _impl_.response_type_.packages_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.response_type_.packages_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::grpcagent::PackagesResponse& Event::_internal_packages() const {
+  return _internal_has_packages()
+      ? *_impl_.response_type_.packages_
+      : reinterpret_cast< ::grpcagent::PackagesResponse&>(::grpcagent::_PackagesResponse_default_instance_);
+}
+inline const ::grpcagent::PackagesResponse& Event::packages() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Event.packages)
+  return _internal_packages();
+}
+inline ::grpcagent::PackagesResponse* Event::unsafe_arena_release_packages() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.Event.packages)
+  if (_internal_has_packages()) {
+    clear_has_response_type();
+    ::grpcagent::PackagesResponse* temp = _impl_.response_type_.packages_;
+    _impl_.response_type_.packages_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void Event::unsafe_arena_set_allocated_packages(::grpcagent::PackagesResponse* packages) {
+  clear_response_type();
+  if (packages) {
+    set_has_packages();
+    _impl_.response_type_.packages_ = packages;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.Event.packages)
+}
+inline ::grpcagent::PackagesResponse* Event::_internal_mutable_packages() {
+  if (!_internal_has_packages()) {
+    clear_response_type();
+    set_has_packages();
+    _impl_.response_type_.packages_ = CreateMaybeMessage< ::grpcagent::PackagesResponse >(GetArenaForAllocation());
+  }
+  return _impl_.response_type_.packages_;
+}
+inline ::grpcagent::PackagesResponse* Event::mutable_packages() {
+  ::grpcagent::PackagesResponse* _msg = _internal_mutable_packages();
+  // @@protoc_insertion_point(field_mutable:grpcagent.Event.packages)
   return _msg;
 }
 

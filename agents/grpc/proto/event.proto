@@ -6,7 +6,9 @@
 syntax = "proto3";
 
 import "blocked_loop.proto";
+import "info.proto";
 import "metrics.proto";
+import "packages.proto";
 
 package grpcagent;
 
@@ -14,7 +16,8 @@ message Event {
   oneof response_type {
     BlockedLoop blocked_loop = 1;
     UnblockedLoop unblocked_loop = 2;
-    Metrics metrics = 3;
+    InfoResponse info = 3;
+    Metrics metrics = 4;
+    PackagesResponse packages = 5;
   }
 }
-
