@@ -24,6 +24,8 @@ class NSolidServiceClient {
 
   ~NSolidServiceClient() = default;
 
+  int exportEvent(const std::string& type);
+
  private:
   std::shared_ptr<::grpc::Channel> channel_;
   std::unique_ptr<grpcagent::NSolidService::Stub> stub_;

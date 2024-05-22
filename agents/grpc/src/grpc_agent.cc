@@ -23,12 +23,72 @@ inline void DebugJSON(const char* str, const json& msg) {
   }
 }
 
+static grpcagent::InfoResponse* CreateInfoResponse(const std::string& processInfo, const char* req_id) {
+  nlohmann::json info = json::parse(processInfo.c_str(), nullptr, false);
+  ASSERT(!info.is_discarded());
+
+  grpcagent::InfoResponse* info_response = new grpcagent::InfoResponse();
+
+  // Fill in the fields of the InfoResponse.
+  grpcagent::CommonResponse* common = new grpcagent::CommonResponse();
+  common->set_agentid(GetAgentId());
+  common->set_requestid(req_id);
+  common->set_command("info");
+
+  grpcagent::InfoBody* body = new grpcagent::InfoBody();
+  body->set_app(info["app"].get<std::string>());
+  body->set_arch(info["arch"].get<std::string>());
+  body->set_cpucores(info["cpuCores"].get<uint32_t>());
+  body->set_cpumodel(info["cpuModel"].get<std::string>());
+  body->set_execpath(info["execPath"].get<std::string>());
+  body->set_hostname(info["hostname"].get<std::string>());
+  body->set_id(info["id"].get<std::string>());
+  body->set_main(info["main"].get<std::string>());
+  body->set_nodeenv(info["nodeEnv"].get<std::string>());
+  body->set_pid(info["pid"].get<uint32_t>());
+  body->set_platform(info["platform"].get<std::string>());
+  body->set_processstart(info["processStart"].get<uint64_t>());
+  body->set_totalmem(info["totalMem"].get<uint64_t>());
+
+  // add tags
+  for (const auto& tag : info["tags"]) {
+    body->add_tags(tag.get<std::string>());
+  }
+
+  // add versions
+  for (const auto& [key, value] : info["versions"].items()) {
+    (*body->mutable_versions())[key] = value.get<std::string>();
+  }
+
+  info_response->set_allocated_common(common);
+  info_response->set_allocated_body(body);
+
+  return info_response;
+}
+
 NSolidServiceClient::NSolidServiceClient():
   channel_(::grpc::CreateChannel("localhost:50051",
                       ::grpc::InsecureChannelCredentials())),
   stub_(grpcagent::NSolidService::NewStub(channel_)),
   messenger_(std::make_unique<ReqRespStream>(stub_.get())) {
 };
+
+int NSolidServiceClient::exportEvent(const std::string& type) {
+  auto context = std::make_shared<::grpc::ClientContext>();
+  grpcagent::Event event;
+  // Create an InfoResponse.
+  grpcagent::InfoResponse* info = CreateInfoResponse(GetProcessInfo(), nullptr);
+  // Set the InfoResponse in the Event to be exported.
+  event.set_allocated_info(info);
+  // Create a response object and a callback function.
+  google::protobuf::Empty response;
+  std::function<void(::grpc::Status)> callback = [context](::grpc::Status status) {
+    // Handle the status here.
+    // The context will be kept alive until this lambda function is destroyed.
+  };
+
+  stub_->async()->Events(context.get(), &event, &response, callback);
+}
 
 ReqRespStream::ReqRespStream(grpcagent::NSolidService::Stub* stub) {
   stub->async()->ReqRespStream(&context_, this);
@@ -65,47 +125,10 @@ void ReqRespStream::WriteInfoMsg(const char* req_id) {
 }
 
 grpcagent::RuntimeResponse ReqRespStream::CreateInfoMsg(const char* req_id) {
-  nlohmann::json info = json::parse(GetProcessInfo().c_str(), nullptr, false);
-  ASSERT(!info.is_discarded());
-
   grpcagent::RuntimeResponse resp;
 
   // Create an InfoResponse.
-  grpcagent::InfoResponse* info_response = new grpcagent::InfoResponse();
-
-  // Fill in the fields of the InfoResponse.
-  grpcagent::CommonResponse* common = new grpcagent::CommonResponse();
-  common->set_agentid(GetAgentId());
-  common->set_requestid(req_id);
-  common->set_command("info");
-  // Fill in other fields...
-
-  grpcagent::InfoBody* body = new grpcagent::InfoBody();
-  body->set_app(info["app"].get<std::string>());
-  body->set_arch(info["arch"].get<std::string>());
-  body->set_cpucores(info["cpuCores"].get<uint32_t>());
-  body->set_cpumodel(info["cpuModel"].get<std::string>());
-  body->set_execpath(info["execPath"].get<std::string>());
-  body->set_hostname(info["hostname"].get<std::string>());
-  body->set_id(info["id"].get<std::string>());
-  body->set_main(info["main"].get<std::string>());
-  body->set_nodeenv(info["nodeEnv"].get<std::string>());
-  body->set_pid(info["pid"].get<uint32_t>());
-  body->set_platform(info["platform"].get<std::string>());
-  body->set_processstart(info["processStart"].get<uint64_t>());
-  body->set_totalmem(info["totalMem"].get<uint64_t>());
-  // add tags
-  for (const auto& tag : info["tags"]) {
-    body->add_tags(tag.get<std::string>());
-  }
-
-  // add versions
-  for (const auto& [key, value] : info["versions"].items()) {
-    (*body->mutable_versions())[key] = value.get<std::string>();
-  }
-
-  info_response->set_allocated_common(common);
-  info_response->set_allocated_body(body);
+  grpcagent::InfoResponse* info_response = node::nsolid::grpc::CreateInfoResponse(GetProcessInfo(), req_id);
 
   // Set the InfoResponse in the RuntimeResponse.
   resp.set_allocated_info_response(info_response);
