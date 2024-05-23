@@ -32,7 +32,10 @@ static grpcagent::InfoResponse* CreateInfoResponse(const std::string& processInf
   // Fill in the fields of the InfoResponse.
   grpcagent::CommonResponse* common = new grpcagent::CommonResponse();
   common->set_agentid(GetAgentId());
-  common->set_requestid(req_id);
+  if (req_id) {
+    common->set_requestid(req_id);
+  }
+
   common->set_command("info");
 
   grpcagent::InfoBody* body = new grpcagent::InfoBody();
@@ -71,23 +74,27 @@ NSolidServiceClient::NSolidServiceClient():
                       ::grpc::InsecureChannelCredentials())),
   stub_(grpcagent::NSolidService::NewStub(channel_)),
   messenger_(std::make_unique<ReqRespStream>(stub_.get())) {
+
+  exportEvent("info");
 };
 
 int NSolidServiceClient::exportEvent(const std::string& type) {
   auto context = std::make_shared<::grpc::ClientContext>();
-  grpcagent::Event event;
+  auto event = std::make_shared<grpcagent::Event>();
   // Create an InfoResponse.
   grpcagent::InfoResponse* info = CreateInfoResponse(GetProcessInfo(), nullptr);
   // Set the InfoResponse in the Event to be exported.
-  event.set_allocated_info(info);
+  event->set_allocated_info(info);
   // Create a response object and a callback function.
-  google::protobuf::Empty response;
-  std::function<void(::grpc::Status)> callback = [context](::grpc::Status status) {
+  auto response = std::make_shared<google::protobuf::Empty>();
+  std::function<void(::grpc::Status)> callback = [context, event, response](::grpc::Status status) {
     // Handle the status here.
     // The context will be kept alive until this lambda function is destroyed.
+    fprintf(stderr, "exportEvent callback\n");
   };
 
-  stub_->async()->Events(context.get(), &event, &response, callback);
+  stub_->async()->Events(context.get(), event.get(), response.get(), callback);
+  fprintf(stderr, "exportEvent\n");
 }
 
 ReqRespStream::ReqRespStream(grpcagent::NSolidService::Stub* stub) {
@@ -329,25 +336,39 @@ int GrpcAgent::config(const json& config) {
 void GrpcAgent::do_start() {
   uv_mutex_lock(&start_lock_);
 
+  fprintf(stderr, "GrpcAgent::do_start1\n");
+
   ASSERT_EQ(0, shutdown_.init(&loop_, shutdown_cb_, weak_from_this()));
+
+  fprintf(stderr, "GrpcAgent::do_start2\n");
 
   ASSERT_EQ(0, env_msg_.init(&loop_, env_msg_cb, weak_from_this()));
 
+  fprintf(stderr, "GrpcAgent::do_start3\n");
+
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, weak_from_this()));
+
+  fprintf(stderr, "GrpcAgent::do_start4\n");
 
   ready_ = true;
 
-  if (hooks_init_ == false) {
-    ASSERT_EQ(0, OnConfigurationHook(config_agent_cb, weak_from_this()));
-    ASSERT_EQ(0, ThreadAddedHook(env_creation_cb, weak_from_this()));
-    ASSERT_EQ(0, ThreadRemovedHook(env_deletion_cb, weak_from_this()));
-    hooks_init_ = true;
-  }
+  // if (hooks_init_ == false) {
+  //   ASSERT_EQ(0, OnConfigurationHook(config_agent_cb, weak_from_this()));
+  //   ASSERT_EQ(0, ThreadAddedHook(env_creation_cb, weak_from_this()));
+  //   ASSERT_EQ(0, ThreadRemovedHook(env_deletion_cb, weak_from_this()));
+  //   hooks_init_ = true;
+  // }
+
+  fprintf(stderr, "GrpcAgent::do_start5\n");
 
   auto client = new NSolidServiceClient();
 
+  fprintf(stderr, "GrpcAgent::do_start5.5\n");
+
   uv_cond_signal(&start_cond_);
   uv_mutex_unlock(&start_lock_);
+
+  fprintf(stderr, "GrpcAgent::do_start6\n");
 }
 
 void GrpcAgent::do_stop() {
