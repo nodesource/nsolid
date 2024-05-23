@@ -206,9 +206,10 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
 
   int setup_metrics_timer(uint64_t period);
 
+  // TODO(trevnorris): This is only meant to be used by the global instance,
+  // not by the public. Change the way the global instance works so that this
+  // isn't necessary.
   int start();
-
-  int stop();
 
   // Dynamically set the current configuration of the agent.
   // The JSON schema of the currently supported configuration with its

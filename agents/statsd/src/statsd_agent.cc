@@ -472,7 +472,16 @@ StatsDAgent::StatsDAgent(): hooks_init_(false),
 
 StatsDAgent::~StatsDAgent() {
   int r;
-  ASSERT_EQ(0, stop());
+
+  if (status_ != Unconfigured) {
+    if (utils::are_threads_equal(thread_.base(), uv_thread_self())) {
+      do_stop();
+    } else {
+      ASSERT_EQ(0, shutdown_.send());
+      ASSERT_EQ(0, thread_.join());
+    }
+  }
+
   uv_mutex_destroy(&start_lock_);
   uv_cond_destroy(&start_cond_);
   // The destructor will be called from the main thread, being StatsDAgent a
@@ -535,23 +544,6 @@ void StatsDAgent::do_start() {
 
   uv_cond_signal(&start_cond_);
   uv_mutex_unlock(&start_lock_);
-}
-
-// This method can only be called:
-// 1) From the StatsDAgent thread when disabling the agent via configuration.
-// 2) From the main JS thread on exit as this is a static Singleton.
-int StatsDAgent::stop() {
-  int r = 0;
-  if (status_ != Unconfigured) {
-    if (utils::are_threads_equal(thread_.base(), uv_thread_self())) {
-      do_stop();
-    } else {
-      ASSERT_EQ(0, shutdown_.send());
-      ASSERT_EQ(0, thread_.join());
-    }
-  }
-
-  return r;
 }
 
 void StatsDAgent::do_stop() {

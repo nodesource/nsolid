@@ -68,14 +68,6 @@ static void Send(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(StatsDAgent::Inst()->send(sv, full_size));
 }
 
-static void Start(const FunctionCallbackInfo<Value>& args) {
-  args.GetReturnValue().Set(StatsDAgent::Inst()->start());
-}
-
-static void Stop(const FunctionCallbackInfo<Value>& args) {
-  args.GetReturnValue().Set(StatsDAgent::Inst()->stop());
-}
-
 static void Tags(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   std::string tags = StatsDAgent::Inst()->tags();
@@ -156,9 +148,7 @@ static void RegisterStatusCb(const FunctionCallbackInfo<Value>& args) {
 static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(Bucket);
   registry->Register(Send);
-  registry->Register(Start);
   registry->Register(Status);
-  registry->Register(Stop);
   registry->Register(Tags);
   registry->Register(TcpIp);
   registry->Register(UdpIp);
@@ -178,8 +168,6 @@ void InitStatsDAgent(Local<Object> exports,
 
   NODE_SET_METHOD(exports, "bucket", Bucket);
   NODE_SET_METHOD(exports, "send", Send);
-  NODE_SET_METHOD(exports, "start", Start);
-  NODE_SET_METHOD(exports, "stop", Stop);
   NODE_SET_METHOD(exports, "tags", Tags);
   NODE_SET_METHOD(exports, "tcpIp", TcpIp);
   NODE_SET_METHOD(exports, "udpIp", UdpIp);
