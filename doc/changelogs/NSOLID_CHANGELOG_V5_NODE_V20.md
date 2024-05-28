@@ -2,7 +2,17 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-05-28, Version 20.14.0-nsolid-v5.2.3 'Iron'
+
+### Commits
+
+* \[[`bda292a068`](https://github.com/nodesource/nsolid/commit/bda292a068)] - Merge tag 'v20.14.0' (Trevor Norris)
+
+## 2024-05-21, Version 20.13.1-nsolid-v5.2.2 'Iron'
+
 ## 2024-05-09, Version 20.13.0-nsolid-v5.2.1 'Iron'
+
+### Commits
 
 * \[[`6f0974c684`](https://github.com/nodesource/nsolid/commit/6f0974c684)] - Merge tag 'v20.13.1' (Trevor Norris)
 * \[[`3f022bd43c`](https://github.com/nodesource/nsolid/commit/3f022bd43c)] - Merge tag 'v20.13.0' (Trevor Norris)
@@ -16,9 +26,13 @@
 
 ## 2024-04-29, Version 20.12.2-nsolid-v5.2.0 'Iron'
 
+### Commits
+
 * \[[`78e6453747`](https://github.com/nodesource/nsolid/commit/78e6453747)] - **src**: fix the base case in the heap profiler JSON generation (Juan José Arboleda) [nodesource/nsolid#125](https://github.com/nodesource/nsolid/pull/125)
 
 ## 2024-04-10, Version 20.12.2-nsolid-v5.1.2 'Iron'
+
+### Commits
 
 * \[[`ea4b14d82b`](https://github.com/nodesource/nsolid/commit/ea4b14d82b)] - Merge tag 'v20.12.2' (Trevor Norris)
 
