@@ -2,6 +2,8 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-05-28, Version 5.2.3 'Hydrogen'
+
 ## 2024-05-21, Version 5.2.2 'Hydrogen'
 
 ### Commits
