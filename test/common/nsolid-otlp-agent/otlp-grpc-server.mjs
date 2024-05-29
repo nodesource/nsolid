@@ -24,7 +24,8 @@ async function startServer(cb) {
   const packageObjectMetrics = grpc.loadPackageDefinition(packageDefinitionMetrics);
   server.addService(packageObjectMetrics.opentelemetry.proto.collector.metrics.v1.MetricsService.service, {
     Export: (data, callback) => {
-      console.dir(data, { depth: null });
+      // console.dir(data, { depth: null });
+      console.log('Metrics received');
       callback(null, { message: 'Metrics received' });
       cb(null, 'metrics', data.request);
     },

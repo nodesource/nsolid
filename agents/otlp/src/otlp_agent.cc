@@ -13,6 +13,7 @@
 #include "otlp_metrics.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "opentelemetry/sdk/trace/recordable.h"
+#include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
 #include "opentelemetry/ext/http/client/curl/http_client_curl.h"
 #include "opentelemetry/trace/propagation/detail/hex.h"
@@ -584,8 +585,7 @@ void OTLPAgent::config_otlp_agent(const json& config) {
     metrics_exporter_.reset(nullptr);
     std::string type = *it;
     it = config.find("otlpConfig");
-    ASSERT(it != config.end());
-    const nlohmann::json& otlp = it.value();
+    const nlohmann::json otlp = it == config.end() ? json::object() : *it;
     config_endpoint(type, otlp);
   } else {
     Debug("No otlp agent configuration. Stopping the agent\n");
@@ -595,6 +595,20 @@ void OTLPAgent::config_otlp_agent(const json& config) {
 
 
 void OTLPAgent::config_otlp_endpoint(const json& config) {
+  if (config.empty()) {
+    const std::string prot = exporter::otlp::GetOtlpDefaultHttpTracesProtocol();
+    if (prot == "grpc") {
+      exporter::otlp::OtlpGrpcExporterOptions opts;
+      setup_trace_grpc_otlp_exporter(opts);
+    } else {
+      exporter::otlp::OtlpHttpExporterOptions opts;
+      setup_trace_otlp_exporter(opts);
+    }
+
+    metrics_exporter_.reset(new OTLPMetrics(&loop_, *this));
+    return;
+  }
+
   auto it = config.find("url");
   ASSERT(it != config.end());
   bool is_http = true;
