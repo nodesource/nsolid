@@ -6,6 +6,7 @@
 #include "debug_utils-inl.h"
 #include "env-inl.h"
 #include "otlp_agent.h"
+#include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/exporters/otlp/otlp_http_metric_exporter.h"
 #include "opentelemetry/trace/semantic_conventions.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
@@ -34,6 +35,7 @@ using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::metrics::SumPointData;
 using opentelemetry::sdk::metrics::ValueType;
+using opentelemetry::v1::exporter::otlp::GetOtlpDefaultHttpMetricsProtocol;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpHttpMetricExporter;
@@ -53,6 +55,22 @@ inline void Debug(Args&&... args) {
 static std::vector<std::string> discarded_metrics = {
   "thread_id", "timestamp"
 };
+
+OTLPMetrics::OTLPMetrics(uv_loop_t* loop, const OTLPAgent& agent):
+    start_(duration_cast<time_point::duration>(
+              microseconds(static_cast<uint64_t>(
+                  performance::performance_process_start_timestamp)))),
+    agent_(agent) {
+  const std::string prot = GetOtlpDefaultHttpMetricsProtocol();
+  if (prot == "grpc") {
+    OtlpGrpcMetricExporterOptions opts;
+    otlp_metric_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
+  } else {
+    OtlpHttpMetricExporterOptions opts;
+    opts.console_debug = true;
+    otlp_metric_exporter_ = std::make_unique<OtlpHttpMetricExporter>(opts);
+  }
+}
 
 OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
                          const std::string& url,

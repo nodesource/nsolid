@@ -25,11 +25,13 @@ class OTLPAgent;
 
 class OTLPMetrics final: public MetricsExporter {
  public:
-  OTLPMetrics(uv_loop_t* loop,
-              const std::string& url,
-              const std::string& key,
-              bool is_http,
-              const OTLPAgent& agent);
+  explicit OTLPMetrics(uv_loop_t* loop,
+                       const OTLPAgent& agent);
+  explicit OTLPMetrics(uv_loop_t* loop,
+                       const std::string& url,
+                       const std::string& key,
+                       bool is_http,
+                       const OTLPAgent& agent);
   virtual ~OTLPMetrics();
 
   virtual void got_proc_metrics(const ProcessMetrics::MetricsStor& stor,

@@ -1,6 +1,7 @@
 // Flags: --expose-internals
 import { mustCallAtLeast, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { fork } from 'node:child_process';
 import { fileURLToPath } from 'url';
 import { isMainThread, threadId, Worker } from 'node:worker_threads';
 import nsolid from 'nsolid';
@@ -17,396 +18,420 @@ const {
 
 const __filename = fileURLToPath(import.meta.url);
 
-const expectedProcMetrics = [
-  [ 'uptime', 's', 'asInt', 'sum' ],
-  [ 'system_uptime', 's', 'asInt', 'sum' ],
-  [ 'free_mem', 'byte', 'asInt', 'gauge' ],
-  [ 'block_input_op_count', undefined, 'asInt', 'sum' ],
-  [ 'block_output_op_count', undefined, 'asInt', 'sum' ],
-  [ 'ctx_switch_involuntary_count', undefined, 'asInt', 'sum' ],
-  [ 'ctx_switch_voluntary_count', undefined, 'asInt', 'sum' ],
-  [ 'ipc_received_count', undefined, 'asInt', 'sum' ],
-  [ 'ipc_sent_count', undefined, 'asInt', 'sum' ],
-  [ 'page_fault_hard_count', undefined, 'asInt', 'sum' ],
-  [ 'page_fault_soft_count', undefined, 'asInt', 'sum' ],
-  [ 'signal_count', undefined, 'asInt', 'sum' ],
-  [ 'swap_count', undefined, 'asInt', 'sum' ],
-  [ 'rss', 'byte', 'asInt', 'gauge' ],
-  [ 'load_1m', undefined, 'asDouble', 'gauge' ],
-  [ 'load_5m', undefined, 'asDouble', 'gauge' ],
-  [ 'load_15m', undefined, 'asDouble', 'gauge' ],
-  [ 'cpu_user_percent', undefined, 'asDouble', 'gauge' ],
-  [ 'cpu_system_percent', undefined, 'asDouble', 'gauge' ],
-  [ 'cpu_percent', undefined, 'asDouble', 'gauge' ],
-];
+if (process.argv[2] === 'child') {
+  // Just to keep the worker alive.
+  setInterval(() => {
+  }, 1000);
 
-const expectedThreadMetrics = [
-  ['active_handles', undefined, 'asInt', 'gauge'],
-  ['active_requests', undefined, 'asInt', 'gauge'],
-  ['total_heap_size', 'byte', 'asInt', 'gauge'],
-  ['total_heap_size_executable', 'byte', 'asInt', 'gauge'],
-  ['total_physical_size', 'byte', 'asInt', 'gauge'],
-  ['total_available_size', 'byte', 'asInt', 'gauge'],
-  ['used_heap_size', 'byte', 'asInt', 'gauge'],
-  ['heap_size_limit', 'byte', 'asInt', 'gauge'],
-  ['malloced_memory', 'byte', 'asInt', 'gauge'],
-  ['external_memory', 'byte', 'asInt', 'gauge'],
-  ['peak_malloced_memory', 'byte', 'asInt', 'gauge'],
-  ['number_of_native_contexts', undefined, 'asInt', 'gauge'],
-  ['number_of_detached_contexts', undefined, 'asInt', 'gauge'],
-  ['gc_count', undefined, 'asInt', 'sum'],
-  ['gc_forced_count', undefined, 'asInt', 'sum'],
-  ['gc_full_count', undefined, 'asInt', 'sum'],
-  ['gc_major_count', undefined, 'asInt', 'sum'],
-  ['dns_count', undefined, 'asInt', 'sum'],
-  ['http_client_abort_count', undefined, 'asInt', 'sum'],
-  ['http_client_count', undefined, 'asInt', 'sum'],
-  ['http_server_abort_count', undefined, 'asInt', 'sum'],
-  ['http_server_count', undefined, 'asInt', 'sum'],
-  ['loop_idle_time', 'ms', 'asInt', 'gauge'],
-  ['loop_iterations', undefined, 'asInt', 'sum'],
-  ['loop_iter_with_events', undefined, 'asInt', 'sum'],
-  ['events_processed', undefined, 'asInt', 'sum'],
-  ['events_waiting', undefined, 'asInt', 'gauge'],
-  ['provider_delay', 'ms', 'asInt', 'gauge'],
-  ['processing_delay', 'ms', 'asInt', 'gauge'],
-  ['loop_total_count', undefined, 'asInt', 'sum'],
-  ['pipe_server_created_count', undefined, 'asInt', 'sum'],
-  ['pipe_server_destroyed_count', undefined, 'asInt', 'sum'],
-  ['pipe_socket_created_count', undefined, 'asInt', 'sum'],
-  ['pipe_socket_destroyed_count', undefined, 'asInt', 'sum'],
-  ['tcp_server_created_count', undefined, 'asInt', 'sum'],
-  ['tcp_server_destroyed_count', undefined, 'asInt', 'sum'],
-  ['tcp_client_created_count', undefined, 'asInt', 'sum'],
-  ['tcp_client_destroyed_count', undefined, 'asInt', 'sum'],
-  ['udp_socket_created_count', undefined, 'asInt', 'sum'],
-  ['udp_socket_destroyed_count', undefined, 'asInt', 'sum'],
-  ['promise_created_count', undefined, 'asInt', 'sum'],
-  ['promise_resolved_count', undefined, 'asInt', 'sum'],
-  ['fs_handles_opened', undefined, 'asInt', 'sum'],
-  ['fs_handles_closed', undefined, 'asInt', 'sum'],
-  ['loop_utilization', undefined, 'asDouble', 'gauge'],
-  ['res_5s', undefined, 'asDouble', 'gauge'],
-  ['res_1m', undefined, 'asDouble', 'gauge'],
-  ['res_5m', undefined, 'asDouble', 'gauge'],
-  ['res_15m', undefined, 'asDouble', 'gauge'],
-  ['loop_avg_tasks', undefined, 'asDouble', 'gauge'],
-  ['loop_estimated_lag', 'ms', 'asDouble', 'gauge'],
-  ['loop_idle_percent', undefined, 'asDouble', 'gauge'],
-];
+  if (isMainThread) {
+    nsolid.start({
+      tracingEnabled: false
+    });
 
-// The format of the metrics is as follows:
-// resourceMetrics: [
-//   {
-//     resource: {
-//       attributes: [
-//         {
-//           key: 'telemetry.sdk.version',
-//           value: { stringValue: '1.14.2' }
-//         },
-//         {
-//           key: 'telemetry.sdk.language',
-//           value: { stringValue: 'cpp' }
-//         },
-//         {
-//           key: 'telemetry.sdk.name',
-//           value: { stringValue: 'opentelemetry' }
-//         },
-//         {
-//           key: 'service.instance.id',
-//           value: { stringValue: '9a5264ea230a7e001a11c865c943ba008bd633da' }
-//         },
-//         {
-//           key: 'service.name',
-//           value: { stringValue: 'untitled application' }
-//         }
-//       ]
-//     },
-//     scopeMetrics: [
-//       {
-//         scope: { name: 'nsolid', version: 'v20.11.1+nsv5.0.6-pre' },
-//         metrics: [
-//           {
-//             name: 'uptime',
-//             unit: 's',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '1'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'system_uptime',
-//             unit: 's',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '273691'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'free_mem',
-//             unit: 'byte',
-//             gauge: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '19899891712'
-//                 }
-//               ]
-//             }
-//           },
-//           {
-//             name: 'block_input_op_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '0'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'block_output_op_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '8'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'ctx_switch_involuntary_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '0'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'ctx_switch_voluntary_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '140'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'ipc_received_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '0'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'ipc_sent_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '0'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'page_fault_hard_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '0'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'page_fault_soft_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '7067'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'signal_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '0'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'swap_count',
-//             sum: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '0'
-//                 }
-//               ],
-//               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-//               isMonotonic: true
-//             }
-//           },
-//           {
-//             name: 'rss',
-//             unit: 'byte',
-//             gauge: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asInt: '69115904'
-//                 }
-//               ]
-//             }
-//           },
-//           {
-//             name: 'load_1m',
-//             gauge: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asDouble: 0.32
-//                 }
-//               ]
-//             }
-//           },
-//           {
-//             name: 'load_5m',
-//             gauge: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asDouble: 0.57
-//                 }
-//               ]
-//             }
-//           },
-//           {
-//             name: 'load_15m',
-//             gauge: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asDouble: 0.58
-//                 }
-//               ]
-//             }
-//           },
-//           {
-//             name: 'cpu_user_percent',
-//             gauge: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asDouble: 5.0957949606688135
-//                 }
-//               ]
-//             }
-//           },
-//           {
-//             name: 'cpu_system_percent',
-//             gauge: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asDouble: 0.36796747000516117
-//                 }
-//               ]
-//             }
-//           },
-//           {
-//             name: 'cpu_percent',
-//             gauge: {
-//               dataPoints: [
-//                 {
-//                   startTimeUnixNano: '1711743360185112000',
-//                   timeUnixNano: '1711743361584000000',
-//                   asDouble: 5.463762430673975
-//                 }
-//               ]
-//             }
-//           }
-//         ]
-//       }
-//     ]
-//   }
-// ]
+    const worker = new Worker(__filename, { argv: ['child'] });
+    process.send({ type: 'workerThreadId', id: worker.threadId });
+    process.send({
+      type: 'nsolid',
+      id: nsolid.id,
+      appName: nsolid.appName,
+    });
+    process.on('message', (message) => {
+      assert.strictEqual(message, 'exit');
+      process.exit(0);
+    });
+  }
+} else {
+  const expectedProcMetrics = [
+    [ 'uptime', 's', 'asInt', 'sum' ],
+    [ 'system_uptime', 's', 'asInt', 'sum' ],
+    [ 'free_mem', 'byte', 'asInt', 'gauge' ],
+    [ 'block_input_op_count', undefined, 'asInt', 'sum' ],
+    [ 'block_output_op_count', undefined, 'asInt', 'sum' ],
+    [ 'ctx_switch_involuntary_count', undefined, 'asInt', 'sum' ],
+    [ 'ctx_switch_voluntary_count', undefined, 'asInt', 'sum' ],
+    [ 'ipc_received_count', undefined, 'asInt', 'sum' ],
+    [ 'ipc_sent_count', undefined, 'asInt', 'sum' ],
+    [ 'page_fault_hard_count', undefined, 'asInt', 'sum' ],
+    [ 'page_fault_soft_count', undefined, 'asInt', 'sum' ],
+    [ 'signal_count', undefined, 'asInt', 'sum' ],
+    [ 'swap_count', undefined, 'asInt', 'sum' ],
+    [ 'rss', 'byte', 'asInt', 'gauge' ],
+    [ 'load_1m', undefined, 'asDouble', 'gauge' ],
+    [ 'load_5m', undefined, 'asDouble', 'gauge' ],
+    [ 'load_15m', undefined, 'asDouble', 'gauge' ],
+    [ 'cpu_user_percent', undefined, 'asDouble', 'gauge' ],
+    [ 'cpu_system_percent', undefined, 'asDouble', 'gauge' ],
+    [ 'cpu_percent', undefined, 'asDouble', 'gauge' ],
+  ];
 
-if (isMainThread) {
+  const expectedThreadMetrics = [
+    ['active_handles', undefined, 'asInt', 'gauge'],
+    ['active_requests', undefined, 'asInt', 'gauge'],
+    ['total_heap_size', 'byte', 'asInt', 'gauge'],
+    ['total_heap_size_executable', 'byte', 'asInt', 'gauge'],
+    ['total_physical_size', 'byte', 'asInt', 'gauge'],
+    ['total_available_size', 'byte', 'asInt', 'gauge'],
+    ['used_heap_size', 'byte', 'asInt', 'gauge'],
+    ['heap_size_limit', 'byte', 'asInt', 'gauge'],
+    ['malloced_memory', 'byte', 'asInt', 'gauge'],
+    ['external_memory', 'byte', 'asInt', 'gauge'],
+    ['peak_malloced_memory', 'byte', 'asInt', 'gauge'],
+    ['number_of_native_contexts', undefined, 'asInt', 'gauge'],
+    ['number_of_detached_contexts', undefined, 'asInt', 'gauge'],
+    ['gc_count', undefined, 'asInt', 'sum'],
+    ['gc_forced_count', undefined, 'asInt', 'sum'],
+    ['gc_full_count', undefined, 'asInt', 'sum'],
+    ['gc_major_count', undefined, 'asInt', 'sum'],
+    ['dns_count', undefined, 'asInt', 'sum'],
+    ['http_client_abort_count', undefined, 'asInt', 'sum'],
+    ['http_client_count', undefined, 'asInt', 'sum'],
+    ['http_server_abort_count', undefined, 'asInt', 'sum'],
+    ['http_server_count', undefined, 'asInt', 'sum'],
+    ['loop_idle_time', 'ms', 'asInt', 'gauge'],
+    ['loop_iterations', undefined, 'asInt', 'sum'],
+    ['loop_iter_with_events', undefined, 'asInt', 'sum'],
+    ['events_processed', undefined, 'asInt', 'sum'],
+    ['events_waiting', undefined, 'asInt', 'gauge'],
+    ['provider_delay', 'ms', 'asInt', 'gauge'],
+    ['processing_delay', 'ms', 'asInt', 'gauge'],
+    ['loop_total_count', undefined, 'asInt', 'sum'],
+    ['pipe_server_created_count', undefined, 'asInt', 'sum'],
+    ['pipe_server_destroyed_count', undefined, 'asInt', 'sum'],
+    ['pipe_socket_created_count', undefined, 'asInt', 'sum'],
+    ['pipe_socket_destroyed_count', undefined, 'asInt', 'sum'],
+    ['tcp_server_created_count', undefined, 'asInt', 'sum'],
+    ['tcp_server_destroyed_count', undefined, 'asInt', 'sum'],
+    ['tcp_client_created_count', undefined, 'asInt', 'sum'],
+    ['tcp_client_destroyed_count', undefined, 'asInt', 'sum'],
+    ['udp_socket_created_count', undefined, 'asInt', 'sum'],
+    ['udp_socket_destroyed_count', undefined, 'asInt', 'sum'],
+    ['promise_created_count', undefined, 'asInt', 'sum'],
+    ['promise_resolved_count', undefined, 'asInt', 'sum'],
+    ['fs_handles_opened', undefined, 'asInt', 'sum'],
+    ['fs_handles_closed', undefined, 'asInt', 'sum'],
+    ['loop_utilization', undefined, 'asDouble', 'gauge'],
+    ['res_5s', undefined, 'asDouble', 'gauge'],
+    ['res_1m', undefined, 'asDouble', 'gauge'],
+    ['res_5m', undefined, 'asDouble', 'gauge'],
+    ['res_15m', undefined, 'asDouble', 'gauge'],
+    ['loop_avg_tasks', undefined, 'asDouble', 'gauge'],
+    ['loop_estimated_lag', 'ms', 'asDouble', 'gauge'],
+    ['loop_idle_percent', undefined, 'asDouble', 'gauge'],
+  ];
+
+  // The format of the metrics is as follows:
+  // resourceMetrics: [
+  //   {
+  //     resource: {
+  //       attributes: [
+  //         {
+  //           key: 'telemetry.sdk.version',
+  //           value: { stringValue: '1.14.2' }
+  //         },
+  //         {
+  //           key: 'telemetry.sdk.language',
+  //           value: { stringValue: 'cpp' }
+  //         },
+  //         {
+  //           key: 'telemetry.sdk.name',
+  //           value: { stringValue: 'opentelemetry' }
+  //         },
+  //         {
+  //           key: 'service.instance.id',
+  //           value: { stringValue: '9a5264ea230a7e001a11c865c943ba008bd633da' }
+  //         },
+  //         {
+  //           key: 'service.name',
+  //           value: { stringValue: 'untitled application' }
+  //         }
+  //       ]
+  //     },
+  //     scopeMetrics: [
+  //       {
+  //         scope: { name: 'nsolid', version: 'v20.11.1+nsv5.0.6-pre' },
+  //         metrics: [
+  //           {
+  //             name: 'uptime',
+  //             unit: 's',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '1'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'system_uptime',
+  //             unit: 's',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '273691'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'free_mem',
+  //             unit: 'byte',
+  //             gauge: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '19899891712'
+  //                 }
+  //               ]
+  //             }
+  //           },
+  //           {
+  //             name: 'block_input_op_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '0'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'block_output_op_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '8'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'ctx_switch_involuntary_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '0'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'ctx_switch_voluntary_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '140'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'ipc_received_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '0'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'ipc_sent_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '0'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'page_fault_hard_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '0'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'page_fault_soft_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '7067'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'signal_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '0'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'swap_count',
+  //             sum: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '0'
+  //                 }
+  //               ],
+  //               aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
+  //               isMonotonic: true
+  //             }
+  //           },
+  //           {
+  //             name: 'rss',
+  //             unit: 'byte',
+  //             gauge: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asInt: '69115904'
+  //                 }
+  //               ]
+  //             }
+  //           },
+  //           {
+  //             name: 'load_1m',
+  //             gauge: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asDouble: 0.32
+  //                 }
+  //               ]
+  //             }
+  //           },
+  //           {
+  //             name: 'load_5m',
+  //             gauge: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asDouble: 0.57
+  //                 }
+  //               ]
+  //             }
+  //           },
+  //           {
+  //             name: 'load_15m',
+  //             gauge: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asDouble: 0.58
+  //                 }
+  //               ]
+  //             }
+  //           },
+  //           {
+  //             name: 'cpu_user_percent',
+  //             gauge: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asDouble: 5.0957949606688135
+  //                 }
+  //               ]
+  //             }
+  //           },
+  //           {
+  //             name: 'cpu_system_percent',
+  //             gauge: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asDouble: 0.36796747000516117
+  //                 }
+  //               ]
+  //             }
+  //           },
+  //           {
+  //             name: 'cpu_percent',
+  //             gauge: {
+  //               dataPoints: [
+  //                 {
+  //                   startTimeUnixNano: '1711743360185112000',
+  //                   timeUnixNano: '1711743361584000000',
+  //                   asDouble: 5.463762430673975
+  //                 }
+  //               ]
+  //             }
+  //           }
+  //         ]
+  //       }
+  //     ]
+  //   }
+  // ]
 
   const State = {
     None: 0,
     ProcMetrics: 1,
     ThreadMetrics: 2
   };
+
+  let nsolidId;
+  let nsolidAppName;
 
   function checkResource(resource) {
     validateArray(resource.attributes, 'attributes');
@@ -416,8 +441,8 @@ if (isMainThread) {
       'telemetry.sdk.version': '1.15.0',
       'telemetry.sdk.language': 'cpp',
       'telemetry.sdk.name': 'opentelemetry',
-      'service.instance.id': nsolid.id,
-      'service.name': nsolid.appName
+      'service.instance.id': nsolidId,
+      'service.name': nsolidAppName
     };
 
     resource.attributes.forEach((attribute) => {
@@ -514,8 +539,6 @@ if (isMainThread) {
     }
   }
 
-  let worker;
-
   const context = {
     state: State.None,
     metrics: [],
@@ -524,32 +547,70 @@ if (isMainThread) {
     threadList: [ threadId ]
   };
 
-  const otlpServer = new OTLPGRPCServer();
-  otlpServer.start(mustSucceed(async (port) => {
-    console.log('OTLP server started', port);
-    nsolid.start({
-      otlp: 'otlp',
-      otlpConfig: {
-        url: `http://localhost:${port}`,
-        protocol: 'grpc',
-      },
-      tracingEnabled: false,
-      interval: 1000
+  async function runTest(getEnv) {
+    return new Promise((resolve, reject) => {
+      const otlpServer = new OTLPGRPCServer();
+      otlpServer.start(mustSucceed(async (port) => {
+        otlpServer.on('metrics', mustCallAtLeast((metrics) => {
+          checkMetrics(metrics, context);
+          if (context.state === State.ThreadMetrics) {
+            child.send('exit');
+          }
+        }, 1));
+
+        console.log('OTLP server started', port);
+        const env = getEnv(port);
+        const opts = { env };
+        const child = fork(__filename, ['child'], opts);
+        child.on('message', (message) => {
+          if (message.type === 'nsolid') {
+            nsolidId = message.id;
+            nsolidAppName = message.appName;
+          } else if (message.type === 'workerThreadId') {
+            context.threadList.push(message.id);
+          }
+        });
+
+        child.on('exit', (code, signal) => {
+          console.log(`child process exited with code ${code} and signal ${signal}`);
+          otlpServer.close();
+          resolve();
+        });
+      }));
     });
+  }
 
-    worker = new Worker(__filename);
-    context.threadList.push(worker.threadId);
-  }));
+  const getEnvs = [
+    (port) => {
+      return {
+        NSOLID_INTERVAL: 1000,
+        NSOLID_OTLP: 'otlp',
+        NSOLID_OTLP_CONFIG: JSON.stringify({
+          url: `http://localhost:${port}`,
+          protocol: 'grpc',
+        }),
+      };
+    },
+    (port) => {
+      return {
+        NSOLID_INTERVAL: 1000,
+        NSOLID_OTLP: 'otlp',
+        OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc',
+        OTEL_EXPORTER_OTLP_ENDPOINT: `http://localhost:${port}/v1/metrics`,
+      };
+    },
+    (port) => {
+      return {
+        NSOLID_INTERVAL: 1000,
+        NSOLID_OTLP: 'otlp',
+        OTEL_EXPORTER_OTLP_METRICS_PROTOCOL: 'grpc',
+        OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: `http://localhost:${port}/v1/metrics`,
+      };
+    },
+  ];
 
-  otlpServer.on('metrics', mustCallAtLeast((metrics) => {
-    checkMetrics(metrics, context);
-    if (context.state === State.ThreadMetrics) {
-      worker.terminate();
-      otlpServer.close();
-    }
-  }, 1));
-} else {
-  // Just to keep the worker alive.
-  setInterval(() => {
-  }, 1000);
+  for (const getEnv of getEnvs) {
+    await runTest(getEnv);
+    console.log('run test!');
+  }
 }

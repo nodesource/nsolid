@@ -270,7 +270,7 @@ const tests = [
       otlp: 'otlp'
     },
     expected: {
-      otlp: undefined,
+      otlp: 'otlp',
       otlpConfig: undefined
     }
   },
