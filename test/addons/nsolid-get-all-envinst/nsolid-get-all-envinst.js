@@ -1,6 +1,6 @@
 'use strict';
 
-const { buildType, mustCall, skip } = require('../../common');
+const { buildType, skip } = require('../../common');
 const assert = require('assert');
 const bindingPath = require.resolve(`./build/${buildType}/binding`);
 const binding = require(bindingPath);
@@ -21,7 +21,7 @@ if (isMainThread) {
 
 function spawnWorker() {
   if (workerList.length > 4) {
-    for (let w of workerList)
+    for (const w of workerList)
       w.postMessage('bye');
     return;
   }
