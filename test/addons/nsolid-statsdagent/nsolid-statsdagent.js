@@ -5,7 +5,7 @@ const assert = require('assert');
 const bindingPath = require.resolve(`./build/${buildType}/binding`);
 const binding = require(bindingPath);
 const net = require('net');
-const { Worker, isMainThread } = require('worker_threads');
+const { isMainThread } = require('worker_threads');
 
 let expectedProcMetrics = [
   'timestamp',
@@ -107,9 +107,9 @@ const server = net.createServer(mustCall((socket) => {
   socket.on('data', mustCallAtLeast((d) => {
     const lines = d.toString()
       .split('\n')
-      .filter(e => e.length > 0)
-      .map(e => e.split('|'));
-    for (let e of lines) {
+      .filter((e) => e.length > 0)
+      .map((e) => e.split('|'));
+    for (const e of lines) {
       const s = e[0].split('.');
       const m = s[1].split(':')[0];
       if (s[0] === 'proc') {
