@@ -1434,26 +1434,24 @@ int ZmqAgent::config(const json& config) {
     setup_blocked_loop_hooks();
   }
 
-  // Return early if command handle is not to be configured
-  if (command_handle_ == nullptr) {
-    return 0;
-  }
-
-  if (ZmqHandle::needs_reset(diff, ZmqDataHandle::restart_fields)) {
-    data_handle_.reset(nullptr);
-    auto data = ZmqDataHandle::create(*this, config_);
-    ret = std::get<int>(data);
-    if (ret == 0) {
-      data_handle_.reset(std::get<ZmqDataHandle*>(data));
+  // Don't config other endpoints if command handle is not to be configured
+  if (command_handle_ != nullptr) {
+    if (ZmqHandle::needs_reset(diff, ZmqDataHandle::restart_fields)) {
+      data_handle_.reset(nullptr);
+      auto data = ZmqDataHandle::create(*this, config_);
+      ret = std::get<int>(data);
+      if (ret == 0) {
+        data_handle_.reset(std::get<ZmqDataHandle*>(data));
+      }
     }
-  }
 
-  if (ZmqHandle::needs_reset(diff, ZmqBulkHandle::restart_fields)) {
-    bulk_handle_.reset(nullptr);
-    auto bulk = ZmqBulkHandle::create(*this, config_);
-    ret = std::get<int>(bulk);
-    if (ret == 0) {
-      bulk_handle_.reset(std::get<ZmqBulkHandle*>(bulk));
+    if (ZmqHandle::needs_reset(diff, ZmqBulkHandle::restart_fields)) {
+      bulk_handle_.reset(nullptr);
+      auto bulk = ZmqBulkHandle::create(*this, config_);
+      ret = std::get<int>(bulk);
+      if (ret == 0) {
+        bulk_handle_.reset(std::get<ZmqBulkHandle*>(bulk));
+      }
     }
   }
 
