@@ -198,6 +198,34 @@ tests.push({
 });
 
 tests.push({
+  name: 'should work for http transactions immediately on startup',
+  test: async (playground) => {
+    return new Promise((resolve) => {
+      let totalSpans = 0;
+      const opts = {
+        args: [ '-t', 'http' ],
+        opts: { env: { NSOLID_TRACING_ENABLED: 1 } }
+      };
+
+      playground.bootstrap(opts, mustSucceed(() => {
+      }), mustCallAtLeast((eventType, agentId, data) => {
+        console.log(`${eventType}, ${agentId}`);
+        assert.strictEqual(eventType, 'agent-tracing');
+        checkTracingData(data, null, agentId, threadId);
+        const spanTypes = [ 'http_server', 'http_client'];
+        for (const span of data.body.spans) {
+          validateSpan(span, spanTypes[totalSpans], threadId);
+          totalSpans++;
+        }
+        if (totalSpans === 2) {
+          resolve();
+        }
+      }, 1));
+    });
+  }
+});
+
+tests.push({
   name: 'should work for http transactions on a worker',
   test: async (playground) => {
     return new Promise((resolve) => {

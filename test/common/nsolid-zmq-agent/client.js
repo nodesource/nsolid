@@ -7,6 +7,10 @@ const nsolid = require('nsolid');
 const { fixturesDir } = require('../fixtures');
 
 const options = {
+  trace: {
+    type: 'string',
+    short: 't',
+  },
   workers: {
     type: 'string',
     short: 'w',
@@ -140,6 +144,20 @@ if (isMainThread) {
         const worker = new Worker(__filename);
         workers.set(worker.threadId, worker);
       }
+    }
+  }
+
+  if (args.values.trace) {
+    const trace = args.values.trace;
+    if (trace === 'http') {
+      // TODO(santigimeno): ideally we should be able to collect traces
+      // immediately without the need of calling nsolid.start()
+      nsolid.start();
+      execHttpTransaction();
+    } else if (trace === 'dns') {
+      execDnsTransaction();
+    } else if (trace === 'custom') {
+      execCustomTrace();
     }
   }
 } else {
