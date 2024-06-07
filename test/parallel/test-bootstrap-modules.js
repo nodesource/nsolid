@@ -116,6 +116,7 @@ expected.atRunTime = new Set([
   'NativeModule internal/agents/statsd/lib/nsolid',
   'NativeModule internal/agents/zmq/lib/agent',
   'NativeModule internal/agents/zmq/lib/nsolid',
+  'NativeModule internal/nsolid_agents',
   'NativeModule internal/nsolid_loader',
   'NativeModule internal/nsolid_promise_tracking',
 ]);

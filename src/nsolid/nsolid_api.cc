@@ -82,6 +82,8 @@ uint64_t gen_ptiles_interval = 3000;
 constexpr uint64_t datapoints_q_interval = 100;
 constexpr size_t datapoints_q_max_size = 100;
 
+static statsd::SharedStatsDAgent statsd_agent;
+
 static const char* get_startuptime_name(const char* name);
 
 
@@ -2774,6 +2776,62 @@ static void SetupArrayBuffers(const FunctionCallbackInfo<Value>& args) {
 }
 
 
+#define ADD_METRIC(sv, a, b, c)                                                \
+  do {                                                                         \
+    std::string t = "runtime.node." a ":" + std::to_string(b) + c "\n";        \
+    sv.push_back(t);                                                           \
+  } while (0)
+
+
+static std::vector<std::string> ddstatsd_pm(ProcessMetrics::MetricsStor stor) {
+  std::vector<std::string> sv;
+
+  ADD_METRIC(sv, "cpu.user", stor.cpu_user_percent, "|g");
+  ADD_METRIC(sv, "cpu.system", stor.cpu_system_percent, "|g");
+  ADD_METRIC(sv, "cpu.total", stor.cpu_percent, "|g");
+  ADD_METRIC(sv, "mem.rss", stor.rss, "|g");
+  ADD_METRIC(sv, "process.uptime", stor.uptime, "|g");
+
+  return sv;
+}
+
+
+static std::vector<std::string> ddstatsd_tm(ThreadMetrics::MetricsStor stor) {
+  std::vector<std::string> sv;
+
+  ADD_METRIC(sv, "mem.heap_total", stor.total_heap_size, "|g");
+  ADD_METRIC(sv, "mem.heap_used", stor.used_heap_size, "|g");
+  ADD_METRIC(sv, "mem.external", stor.external_memory, "|g");
+  ADD_METRIC(sv, "heap.total_heap_size", stor.total_heap_size, "|g");
+  ADD_METRIC(sv,
+             "heap.total_heap_size_executable",
+             stor.total_heap_size_executable, "|g");
+  ADD_METRIC(sv, "heap.total_physical_size", stor.total_physical_size, "|g");
+  ADD_METRIC(sv, "heap.used_heap_size", stor.used_heap_size, "|g");
+  ADD_METRIC(sv, "heap.heap_size_limit", stor.heap_size_limit, "|g");
+  ADD_METRIC(sv, "heap.malloced_memory", stor.malloced_memory, "|g");
+  ADD_METRIC(sv, "heap.peak_malloced_memory", stor.peak_malloced_memory, "|g");
+  ADD_METRIC(sv, "event_loop.utilization", stor.loop_utilization, "|g");
+
+  return sv;
+}
+
+#undef ADD_METRIC
+
+
+static void SetupDogStatsD(const FunctionCallbackInfo<Value>& args) {
+  DCHECK(args[0]->IsString());
+  const String::Utf8Value url(args.GetIsolate(), args[0]);
+  // TODO(trevnorris): Where to store this?
+  statsd_agent = node::nsolid::statsd::StatsDAgent::Create();
+  statsd_agent->config({{"statsd", *url},
+                        {"interval", 3000},
+                        {"pauseMetrics", false}});
+  statsd_agent->set_pmetrics_transform_cb(ddstatsd_pm);
+  statsd_agent->set_tmetrics_transform_cb(ddstatsd_tm);
+}
+
+
 BindingData::BindingData(Realm* realm, Local<Object> object)
     : SnapshotableObject(realm, object, type_int) {
 }
@@ -2894,6 +2952,7 @@ void BindingData::Initialize(Local<Object> target,
 
   SetMethod(context, target, "_getOnBlockedBody", GetOnBlockedBody);
   SetMethod(context, target, "_setupArrayBuffers", SetupArrayBuffers);
+  SetMethod(context, target, "_setupDogStatsD", SetupDogStatsD);
 
   Local<Object> consts_enum = Object::New(isolate);
 
@@ -3022,6 +3081,7 @@ void BindingData::RegisterExternalReferences(
   registry->Register(HeapSamplingEnd);
   registry->Register(GetOnBlockedBody);
   registry->Register(SetupArrayBuffers);
+  registry->Register(SetupDogStatsD);
 }
 
 }  // namespace nsolid
