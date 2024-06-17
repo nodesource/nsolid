@@ -549,12 +549,14 @@ if (process.argv[2] === 'child') {
 
   async function runTest(getEnv) {
     return new Promise((resolve, reject) => {
+      let exitCalled = false;
       const otlpServer = new OTLPServer();
       otlpServer.start(mustSucceed(async (port) => {
         otlpServer.on('metrics', mustCallAtLeast((metrics) => {
           checkMetrics(metrics, context);
-          if (context.state === State.ThreadMetrics) {
+          if (context.state === State.ThreadMetrics && !exitCalled) {
             child.send('exit');
+            exitCalled = true;
           }
         }, 1));
 
