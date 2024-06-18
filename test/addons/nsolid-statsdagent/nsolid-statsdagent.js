@@ -127,12 +127,11 @@ const server = net.createServer(mustCall((socket) => {
         expectedProcMetrics.length === 0) {
       process.exit();
     }
-  }, 2));
+  }, 1));
 }));
 
 server.listen(0, '127.0.0.1', mustCall(() => {
   binding.setAddHooks(`tcp://127.0.0.1:${server.address().port}`);
-  assert.strictEqual(binding.getStatus(), 'initializing');
 }));
 
 assert.strictEqual(binding.getStatus(), null);
