@@ -53,13 +53,16 @@ GRPC_TARBALL="v$NEW_VERSION.tar.gz"
 cd "$WORKSPACE"
 
 echo "Cloning grpc repository"
-git clone -b "v$NEW_VERSION" --depth=1 --recurse-submodules https://github.com/grpc/grpc
+git clone -b "v$NEW_VERSION" --depth=1 --no-recurse-submodules https://github.com/grpc/grpc
 
 cd grpc
 
+git submodule init third_party/abseil-cpp third_party/address_sorting third_party/re2 third_party/upb third_party/xxhash
+git submodule update --depth 1 third_party/abseil-cpp third_party/address_sorting third_party/re2 third_party/upb third_party/xxhash
+
 echo "Removing everything, except source files and LICENSE"
 for dir in *; do
-  if [ "$dir" = "src" ] || [ "$dir" = "spm-cpp-include" ] || [ "$dir" = "spm-core-include" ] || [ "$dir" = "third_party" ] || [ "$dir" = "Makefile" ] || [ "$dir" = "LICENSE" ]; then
+  if [ "$dir" = "include" ] || [ "$dir" = "src" ] || [ "$dir" = "spm-cpp-include" ] || [ "$dir" = "spm-core-include" ] || [ "$dir" = "third_party" ] || [ "$dir" = "Makefile" ] || [ "$dir" = "LICENSE" ]; then
     continue
   fi
   rm -rf "$dir"
