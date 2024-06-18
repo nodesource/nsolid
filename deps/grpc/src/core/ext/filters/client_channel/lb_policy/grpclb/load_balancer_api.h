@@ -16,15 +16,16 @@
 //
 //
 
-#ifndef GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_GRPCLB_LOAD_BALANCER_API_H
-#define GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_GRPCLB_LOAD_BALANCER_API_H
+#ifndef GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_GRPCLB_LOAD_BALANCER_API_H
+#define GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_GRPCLB_LOAD_BALANCER_API_H
 #include <grpc/support/port_platform.h>
 
 #include <stdint.h>
 
 #include <vector>
 
-#include "upb/arena.h"
+#include "absl/strings/string_view.h"
+#include "upb/mem/arena.h"
 
 #include <grpc/slice.h>
 
@@ -56,7 +57,8 @@ struct GrpcLbResponse {
 };
 
 // Creates a serialized grpclb request.
-grpc_slice GrpcLbRequestCreate(const char* lb_service_name, upb_Arena* arena);
+grpc_slice GrpcLbRequestCreate(absl::string_view lb_service_name,
+                               upb_Arena* arena);
 
 // Creates a serialized grpclb load report request.
 grpc_slice GrpcLbLoadReportRequestCreate(
@@ -72,4 +74,4 @@ bool GrpcLbResponseParse(const grpc_slice& serialized_response,
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_GRPCLB_LOAD_BALANCER_API_H
+#endif  // GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_GRPCLB_LOAD_BALANCER_API_H

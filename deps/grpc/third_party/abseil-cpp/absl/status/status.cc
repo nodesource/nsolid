@@ -16,9 +16,11 @@
 #include <errno.h>
 
 #include <cassert>
+#include <utility>
 
 #include "absl/base/internal/raw_logging.h"
 #include "absl/base/internal/strerror.h"
+#include "absl/base/macros.h"
 #include "absl/debugging/stacktrace.h"
 #include "absl/debugging/symbolize.h"
 #include "absl/status/status_payload_printer.h"
@@ -77,15 +79,15 @@ std::ostream& operator<<(std::ostream& os, StatusCode code) {
 
 namespace status_internal {
 
-static int FindPayloadIndexByUrl(const Payloads* payloads,
-                                 absl::string_view type_url) {
-  if (payloads == nullptr) return -1;
+static absl::optional<size_t> FindPayloadIndexByUrl(
+    const Payloads* payloads, absl::string_view type_url) {
+  if (payloads == nullptr) return absl::nullopt;
 
   for (size_t i = 0; i < payloads->size(); ++i) {
     if ((*payloads)[i].type_url == type_url) return i;
   }
 
-  return -1;
+  return absl::nullopt;
 }
 
 // Convert canonical code to a value known to this binary.
@@ -119,8 +121,9 @@ absl::StatusCode MapToLocalCode(int value) {
 absl::optional<absl::Cord> Status::GetPayload(
     absl::string_view type_url) const {
   const auto* payloads = GetPayloads();
-  int index = status_internal::FindPayloadIndexByUrl(payloads, type_url);
-  if (index != -1) return (*payloads)[index].payload;
+  absl::optional<size_t> index =
+      status_internal::FindPayloadIndexByUrl(payloads, type_url);
+  if (index.has_value()) return (*payloads)[index.value()].payload;
 
   return absl::nullopt;
 }
@@ -135,10 +138,10 @@ void Status::SetPayload(absl::string_view type_url, absl::Cord payload) {
     rep->payloads = absl::make_unique<status_internal::Payloads>();
   }
 
-  int index =
+  absl::optional<size_t> index =
       status_internal::FindPayloadIndexByUrl(rep->payloads.get(), type_url);
-  if (index != -1) {
-    (*rep->payloads)[index].payload = std::move(payload);
+  if (index.has_value()) {
+    (*rep->payloads)[index.value()].payload = std::move(payload);
     return;
   }
 
@@ -146,10 +149,11 @@ void Status::SetPayload(absl::string_view type_url, absl::Cord payload) {
 }
 
 bool Status::ErasePayload(absl::string_view type_url) {
-  int index = status_internal::FindPayloadIndexByUrl(GetPayloads(), type_url);
-  if (index != -1) {
+  absl::optional<size_t> index =
+      status_internal::FindPayloadIndexByUrl(GetPayloads(), type_url);
+  if (index.has_value()) {
     PrepareToModify();
-    GetPayloads()->erase(GetPayloads()->begin() + index);
+    GetPayloads()->erase(GetPayloads()->begin() + index.value());
     if (GetPayloads()->empty() && message().empty()) {
       // Special case: If this can be represented inlined, it MUST be
       // inlined (EqualsSlow depends on this behavior).
@@ -296,7 +300,7 @@ std::string Status::ToStringSlow(StatusToStringMode mode) const {
   absl::StrAppend(&text, absl::StatusCodeToString(code()), ": ", message());
 
   const bool with_payload = (mode & StatusToStringMode::kWithPayload) ==
-                      StatusToStringMode::kWithPayload;
+                            StatusToStringMode::kWithPayload;
 
   if (with_payload) {
     status_internal::StatusPayloadPrinter printer =
@@ -611,6 +615,13 @@ std::string* MakeCheckFailString(const absl::Status* status,
 }
 
 }  // namespace status_internal
+
+const char* StatusMessageAsCStr(const Status& status) {
+  // As an internal implementation detail, we guarantee that if status.message()
+  // is non-empty, then the resulting string_view is null terminated.
+  auto sv_message = status.message();
+  return sv_message.empty() ? "" : sv_message.data();
+}
 
 ABSL_NAMESPACE_END
 }  // namespace absl

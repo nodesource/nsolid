@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_CORE_EXT_XDS_XDS_CLIENT_H
-#define GRPC_CORE_EXT_XDS_XDS_CLIENT_H
+#ifndef GRPC_SRC_CORE_EXT_XDS_XDS_CLIENT_H
+#define GRPC_SRC_CORE_EXT_XDS_XDS_CLIENT_H
 
 #include <grpc/support/port_platform.h>
 
@@ -30,7 +30,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "upb/def.hpp"
+#include "upb/reflection/def.hpp"
 
 #include <grpc/event_engine/event_engine.h>
 
@@ -63,7 +63,7 @@ class XdsClient : public DualRefCounted<XdsClient> {
   class ResourceWatcherInterface : public RefCounted<ResourceWatcherInterface> {
    public:
     virtual void OnGenericResourceChanged(
-        const XdsResourceType::ResourceData* resource)
+        std::shared_ptr<const XdsResourceType::ResourceData> resource)
         ABSL_EXCLUSIVE_LOCKS_REQUIRED(&work_serializer_) = 0;
     virtual void OnError(absl::Status status)
         ABSL_EXCLUSIVE_LOCKS_REQUIRED(&work_serializer_) = 0;
@@ -238,7 +238,7 @@ class XdsClient : public DualRefCounted<XdsClient> {
     std::map<ResourceWatcherInterface*, RefCountedPtr<ResourceWatcherInterface>>
         watchers;
     // The latest data seen for the resource.
-    std::unique_ptr<XdsResourceType::ResourceData> resource;
+    std::shared_ptr<const XdsResourceType::ResourceData> resource;
     XdsApi::ResourceMetadata meta;
     bool ignored_deletion = false;
   };
@@ -341,4 +341,4 @@ class XdsClient : public DualRefCounted<XdsClient> {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_EXT_XDS_XDS_CLIENT_H
+#endif  // GRPC_SRC_CORE_EXT_XDS_XDS_CLIENT_H

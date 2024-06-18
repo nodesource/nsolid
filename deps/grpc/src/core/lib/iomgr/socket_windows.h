@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_SOCKET_WINDOWS_H
-#define GRPC_CORE_LIB_IOMGR_SOCKET_WINDOWS_H
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_SOCKET_WINDOWS_H
+#define GRPC_SRC_CORE_LIB_IOMGR_SOCKET_WINDOWS_H
 
 #include <grpc/support/port_platform.h>
 
@@ -61,6 +61,9 @@ typedef struct grpc_winsocket_callback_info {
   // The results of the overlapped operation.
   DWORD bytes_transferred;
   int wsa_error;
+  // Tracks whether the final closure has already been run when the socket is
+  // shut down. This allows closures to be run immediately upon socket shutdown.
+  bool closure_already_executed_at_shutdown = false;
 } grpc_winsocket_callback_info;
 
 // This is a wrapper to a Windows socket. A socket can have one outstanding
@@ -81,6 +84,7 @@ typedef struct grpc_winsocket {
 
   gpr_mu state_mu;
   bool shutdown_called;
+  bool shutdown_registered;
 
   // You can't add the same socket twice to the same IO Completion Port.
   // This prevents that.
@@ -109,8 +113,8 @@ void grpc_socket_notify_on_write(grpc_winsocket* winsocket,
 void grpc_socket_notify_on_read(grpc_winsocket* winsocket,
                                 grpc_closure* closure);
 
-void grpc_socket_become_ready(grpc_winsocket* winsocket,
-                              grpc_winsocket_callback_info* ci);
+bool grpc_socket_become_ready(grpc_winsocket* socket,
+                              grpc_winsocket_callback_info* info);
 
 // Returns true if this system can create AF_INET6 sockets bound to ::1.
 // The value is probed once, and cached for the life of the process.
@@ -120,6 +124,9 @@ void grpc_wsa_socket_flags_init();
 
 DWORD grpc_get_default_wsa_socket_flags();
 
+// Final cleanup operations on the socket prior to deletion.
+void grpc_winsocket_finish(grpc_winsocket*);
+
 #endif
 
-#endif  // GRPC_CORE_LIB_IOMGR_SOCKET_WINDOWS_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_SOCKET_WINDOWS_H

@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_PROMISE_SEQ_H
-#define GRPC_CORE_LIB_PROMISE_SEQ_H
+#ifndef GRPC_SRC_CORE_LIB_PROMISE_SEQ_H
+#define GRPC_SRC_CORE_LIB_PROMISE_SEQ_H
 
 #include <grpc/support/port_platform.h>
+
+#include <stdlib.h>
 
 #include <type_traits>
 #include <utility>
 
 #include "src/core/lib/promise/detail/basic_seq.h"
 #include "src/core/lib/promise/detail/promise_like.h"
+#include "src/core/lib/promise/detail/seq_state.h"
 #include "src/core/lib/promise/poll.h"
 
 namespace grpc_core {
@@ -36,6 +39,11 @@ struct SeqTraits {
   static auto CallFactory(Next* next, T&& value) {
     return next->Make(std::forward<T>(value));
   }
+  static bool IsOk(const T&) { return true; }
+  template <typename R>
+  static R ReturnValue(T&&) {
+    abort();
+  }
   template <typename F, typename Elem>
   static auto CallSeqFactory(F& f, Elem&& elem, T&& value) {
     return f(std::forward<Elem>(elem), std::forward<T>(value));
@@ -47,8 +55,17 @@ struct SeqTraits {
   }
 };
 
-template <typename... Fs>
-using Seq = BasicSeq<SeqTraits, Fs...>;
+template <typename P, typename... Fs>
+class Seq {
+ public:
+  explicit Seq(P&& promise, Fs&&... factories)
+      : state_(std::forward<P>(promise), std::forward<Fs>(factories)...) {}
+
+  auto operator()() { return state_.PollOnce(); }
+
+ private:
+  SeqState<SeqTraits, P, Fs...> state_;
+};
 
 template <typename I, typename F, typename Arg>
 struct SeqIterTraits {
@@ -104,4 +121,4 @@ SeqIter(Iter begin, Iter end, Argument argument, Factory factory) {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_PROMISE_SEQ_H
+#endif  // GRPC_SRC_CORE_LIB_PROMISE_SEQ_H

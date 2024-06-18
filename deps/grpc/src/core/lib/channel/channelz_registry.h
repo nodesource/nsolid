@@ -16,14 +16,16 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_CHANNEL_CHANNELZ_REGISTRY_H
-#define GRPC_CORE_LIB_CHANNEL_CHANNELZ_REGISTRY_H
+#ifndef GRPC_SRC_CORE_LIB_CHANNEL_CHANNELZ_REGISTRY_H
+#define GRPC_SRC_CORE_LIB_CHANNEL_CHANNELZ_REGISTRY_H
 
 #include <grpc/support/port_platform.h>
 
 #include <cstdint>
 #include <map>
 #include <string>
+
+#include "absl/base/thread_annotations.h"
 
 #include "src/core/lib/channel/channelz.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
@@ -90,11 +92,11 @@ class ChannelzRegistry {
 
   // protects members
   Mutex mu_;
-  std::map<intptr_t, BaseNode*> node_map_;
-  intptr_t uuid_generator_ = 0;
+  std::map<intptr_t, BaseNode*> node_map_ ABSL_GUARDED_BY(mu_);
+  intptr_t uuid_generator_ ABSL_GUARDED_BY(mu_) = 0;
 };
 
 }  // namespace channelz
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_CHANNEL_CHANNELZ_REGISTRY_H
+#endif  // GRPC_SRC_CORE_LIB_CHANNEL_CHANNELZ_REGISTRY_H

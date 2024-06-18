@@ -16,21 +16,18 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_EV_POSIX_H
-#define GRPC_CORE_LIB_IOMGR_EV_POSIX_H
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_EV_POSIX_H
+#define GRPC_SRC_CORE_LIB_IOMGR_EV_POSIX_H
 
 #include <grpc/support/port_platform.h>
 
 #include <poll.h>
 
 #include "src/core/lib/debug/trace.h"
-#include "src/core/lib/gprpp/global_config.h"
 #include "src/core/lib/iomgr/exec_ctx.h"
 #include "src/core/lib/iomgr/pollset.h"
 #include "src/core/lib/iomgr/pollset_set.h"
 #include "src/core/lib/iomgr/wakeup_fd_posix.h"
-
-GPR_GLOBAL_CONFIG_DECLARE_STRING(grpc_poll_strategy);
 
 extern grpc_core::DebugOnlyTraceFlag grpc_fd_trace;       // Disabled by default
 extern grpc_core::DebugOnlyTraceFlag grpc_polling_trace;  // Disabled by default
@@ -210,4 +207,4 @@ void grpc_shutdown_background_closure();
 typedef int (*grpc_poll_function_type)(struct pollfd*, nfds_t, int);
 extern grpc_poll_function_type grpc_poll_function;
 
-#endif  // GRPC_CORE_LIB_IOMGR_EV_POSIX_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_EV_POSIX_H

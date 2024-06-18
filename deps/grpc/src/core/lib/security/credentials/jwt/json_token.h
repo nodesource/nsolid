@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JSON_TOKEN_H
-#define GRPC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JSON_TOKEN_H
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JSON_TOKEN_H
+#define GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JSON_TOKEN_H
 
 #include <grpc/support/port_platform.h>
 
@@ -38,7 +38,11 @@ struct grpc_auth_json_key {
   char* private_key_id;
   char* client_id;
   char* client_email;
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
   RSA* private_key;
+#else
+  EVP_PKEY* private_key;
+#endif
 };
 // Returns 1 if the object is valid, 0 otherwise.
 int grpc_auth_json_key_is_valid(const grpc_auth_json_key* json_key);
@@ -73,4 +77,4 @@ typedef char* (*grpc_jwt_encode_and_sign_override)(
 void grpc_jwt_encode_and_sign_set_override(
     grpc_jwt_encode_and_sign_override func);
 
-#endif  // GRPC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JSON_TOKEN_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_JWT_JSON_TOKEN_H

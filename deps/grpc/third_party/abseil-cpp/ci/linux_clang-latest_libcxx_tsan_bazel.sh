@@ -25,7 +25,7 @@ if [[ -z ${ABSEIL_ROOT:-} ]]; then
 fi
 
 if [[ -z ${STD:-} ]]; then
-  STD="c++11 c++14 c++17 c++20"
+  STD="c++14 c++17 c++20"
 fi
 
 if [[ -z ${COMPILATION_MODE:-} ]]; then
@@ -83,10 +83,10 @@ for std in ${STD}; do
           --copt="-fno-sanitize-blacklist" \
           --copt=-Werror \
           --distdir="/bazel-distdir" \
+          --features=external_include_paths \
           --keep_going \
           --linkopt="-fsanitize=thread" \
           --show_timestamps \
-          --test_env="TSAN_OPTIONS=report_atomic_races=0" \
           --test_env="TSAN_SYMBOLIZER_PATH=/opt/llvm/clang/bin/llvm-symbolizer" \
           --test_env="TZDIR=/abseil-cpp/absl/time/internal/cctz/testdata/zoneinfo" \
           --test_output=errors \

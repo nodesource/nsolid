@@ -20,7 +20,6 @@
 
 #include <grpc/impl/grpc_types.h>
 
-#include "src/core/lib/gprpp/global_config_generic.h"
 #include "src/core/lib/iomgr/exec_ctx.h"
 #include "src/core/lib/iomgr/port.h"
 
@@ -61,6 +60,7 @@
 #include "src/core/lib/gprpp/sync.h"
 #include "src/core/lib/iomgr/buffer_list.h"
 #include "src/core/lib/iomgr/ev_posix.h"
+#include "src/core/lib/iomgr/event_engine_shims/endpoint.h"
 #include "src/core/lib/iomgr/executor.h"
 #include "src/core/lib/iomgr/socket_utils_posix.h"
 #include "src/core/lib/iomgr/tcp_posix.h"
@@ -459,7 +459,7 @@ class TcpZerocopySendCtx {
   std::unordered_map<uint32_t, TcpZerocopySendRecord*> ctx_lookup_;
   bool memory_limited_ = false;
   bool is_in_write_ = false;
-  OMemState zcopy_enobuf_state_;
+  OMemState zcopy_enobuf_state_ = OMemState::OPEN;
 };
 
 }  // namespace grpc_core
@@ -479,10 +479,7 @@ struct grpc_tcp {
   grpc_endpoint base;
   grpc_fd* em_fd;
   int fd;
-  // Used by the endpoint read function to distinguish the very first read call
-  // from the rest
-  bool is_first_read;
-  bool has_posted_reclaimer ABSL_GUARDED_BY(read_mu) = false;
+  int inq;  // bytes pending on the socket from the last read.
   double target_length;
   double bytes_read_this_round;
   grpc_core::RefCount refcount;
@@ -490,15 +487,12 @@ struct grpc_tcp {
 
   int min_read_chunk_size;
   int max_read_chunk_size;
-  int set_rcvlowat = 0;
 
   // garbage after the last read
   grpc_slice_buffer last_read_buffer;
 
   grpc_core::Mutex read_mu;
   grpc_slice_buffer* incoming_buffer ABSL_GUARDED_BY(read_mu) = nullptr;
-  int inq;           // bytes pending on the socket from the last read.
-  bool inq_capable;  // cache whether kernel supports inq
 
   grpc_slice_buffer* outgoing_buffer;
   // byte within outgoing_buffer->slices[0] to write next
@@ -535,17 +529,26 @@ struct grpc_tcp {
   // options for collecting timestamps are set, and is incremented with each
   // byte sent.
   int bytes_counter;
-  bool socket_ts_enabled;  // True if timestamping options are set on the socket
-                           //
-  bool ts_capable;         // Cache whether we can set timestamping options
+
+  int min_progress_size;  // A hint from upper layers specifying the minimum
+                          // number of bytes that need to be read to make
+                          // meaningful progress
+
   gpr_atm stop_error_notification;  // Set to 1 if we do not want to be notified
                                     // on errors anymore
   TcpZerocopySendCtx tcp_zerocopy_send_ctx;
   TcpZerocopySendRecord* current_zerocopy_send = nullptr;
 
-  int min_progress_size;  // A hint from upper layers specifying the minimum
-                          // number of bytes that need to be read to make
-                          // meaningful progress
+  int set_rcvlowat = 0;
+
+  // Used by the endpoint read function to distinguish the very first read call
+  // from the rest
+  bool is_first_read;
+  bool has_posted_reclaimer ABSL_GUARDED_BY(read_mu) = false;
+  bool inq_capable;        // cache whether kernel supports inq
+  bool socket_ts_enabled;  // True if timestamping options are set on the socket
+                           //
+  bool ts_capable;         // Cache whether we can set timestamping options
 };
 
 struct backup_poller {
@@ -729,6 +732,9 @@ static void tcp_shutdown(grpc_endpoint* ep, grpc_error_handle why) {
   grpc_tcp* tcp = reinterpret_cast<grpc_tcp*>(ep);
   ZerocopyDisableAndWaitForRemaining(tcp);
   grpc_fd_shutdown(tcp->em_fd, why);
+  tcp->read_mu.Lock();
+  tcp->memory_owner.Reset();
+  tcp->read_mu.Unlock();
 }
 
 static void tcp_free(grpc_tcp* tcp) {
@@ -775,6 +781,9 @@ static void tcp_destroy(grpc_endpoint* ep) {
     gpr_atm_no_barrier_store(&tcp->stop_error_notification, true);
     grpc_fd_set_error(tcp->em_fd);
   }
+  tcp->read_mu.Lock();
+  tcp->memory_owner.Reset();
+  tcp->read_mu.Unlock();
   TCP_UNREF(tcp, "destroy");
 }
 
@@ -795,11 +804,14 @@ static void maybe_post_reclaimer(grpc_tcp* tcp)
     ABSL_EXCLUSIVE_LOCKS_REQUIRED(tcp->read_mu) {
   if (!tcp->has_posted_reclaimer) {
     tcp->has_posted_reclaimer = true;
+    TCP_REF(tcp, "posted_reclaimer");
     tcp->memory_owner.PostReclaimer(
         grpc_core::ReclamationPass::kBenign,
         [tcp](absl::optional<grpc_core::ReclamationSweep> sweep) {
-          if (!sweep.has_value()) return;
-          perform_reclamation(tcp);
+          if (sweep.has_value()) {
+            perform_reclamation(tcp);
+          }
+          TCP_UNREF(tcp, "posted_reclaimer");
         });
   }
 }
@@ -835,17 +847,18 @@ static void update_rcvlowat(grpc_tcp* tcp)
 
   int remaining = std::min(static_cast<int>(tcp->incoming_buffer->length),
                            tcp->min_progress_size);
+
   remaining = std::min(remaining, kRcvLowatMax);
 
   // Setting SO_RCVLOWAT for small quantities does not save on CPU.
-  if (remaining < kRcvLowatThreshold) {
+  if (remaining < 2 * kRcvLowatThreshold) {
     remaining = 0;
   }
 
-  // If zerocopy is off, wake shortly before the full RPC is here. More can
-  // show up partway through recvmsg() since it takes a while to copy data.
-  // So an early wakeup aids latency.
-  if (!tcp->tcp_zerocopy_send_ctx.enabled() && remaining > 0) {
+  // Decrement remaining by kRcvLowatThreshold. This would have the effect of
+  // waking up a little early. It would help with latency because some bytes
+  // may arrive while we execute the recvmsg syscall after waking up.
+  if (remaining > 0) {
     remaining -= kRcvLowatThreshold;
   }
 
@@ -1044,66 +1057,38 @@ static bool tcp_do_read(grpc_tcp* tcp, grpc_error_handle* error)
 
 static void maybe_make_read_slices(grpc_tcp* tcp)
     ABSL_EXCLUSIVE_LOCKS_REQUIRED(tcp->read_mu) {
-  if (grpc_core::IsTcpReadChunksEnabled()) {
-    static const int kBigAlloc = 64 * 1024;
-    static const int kSmallAlloc = 8 * 1024;
-    if (tcp->incoming_buffer->length <
-        static_cast<size_t>(tcp->min_progress_size)) {
-      size_t allocate_length = tcp->min_progress_size;
-      const size_t target_length = static_cast<size_t>(tcp->target_length);
-      // If memory pressure is low and we think there will be more than
-      // min_progress_size bytes to read, allocate a bit more.
-      const bool low_memory_pressure =
-          tcp->memory_owner.GetPressureInfo().pressure_control_value < 0.8;
-      if (low_memory_pressure && target_length > allocate_length) {
-        allocate_length = target_length;
-      }
-      int extra_wanted =
-          allocate_length - static_cast<int>(tcp->incoming_buffer->length);
-      if (extra_wanted >=
-          (low_memory_pressure ? kSmallAlloc * 3 / 2 : kBigAlloc)) {
-        while (extra_wanted > 0) {
-          extra_wanted -= kBigAlloc;
-          grpc_slice_buffer_add_indexed(tcp->incoming_buffer,
-                                        tcp->memory_owner.MakeSlice(kBigAlloc));
-          grpc_core::global_stats().IncrementTcpReadAlloc64k();
-        }
-      } else {
-        while (extra_wanted > 0) {
-          extra_wanted -= kSmallAlloc;
-          grpc_slice_buffer_add_indexed(
-              tcp->incoming_buffer, tcp->memory_owner.MakeSlice(kSmallAlloc));
-          grpc_core::global_stats().IncrementTcpReadAlloc8k();
-        }
-      }
-      maybe_post_reclaimer(tcp);
+  static const int kBigAlloc = 64 * 1024;
+  static const int kSmallAlloc = 8 * 1024;
+  if (tcp->incoming_buffer->length <
+      std::max<size_t>(tcp->min_progress_size, 1)) {
+    size_t allocate_length = tcp->min_progress_size;
+    const size_t target_length = static_cast<size_t>(tcp->target_length);
+    // If memory pressure is low and we think there will be more than
+    // min_progress_size bytes to read, allocate a bit more.
+    const bool low_memory_pressure =
+        tcp->memory_owner.GetPressureInfo().pressure_control_value < 0.8;
+    if (low_memory_pressure && target_length > allocate_length) {
+      allocate_length = target_length;
     }
-  } else {
-    if (tcp->incoming_buffer->length <
-            static_cast<size_t>(tcp->min_progress_size) &&
-        tcp->incoming_buffer->count < MAX_READ_IOVEC) {
-      if (GRPC_TRACE_FLAG_ENABLED(grpc_tcp_trace)) {
-        gpr_log(GPR_INFO,
-                "TCP:%p alloc_slices; min_chunk=%d max_chunk=%d target=%lf "
-                "buf_len=%" PRIdPTR,
-                tcp, tcp->min_read_chunk_size, tcp->max_read_chunk_size,
-                tcp->target_length, tcp->incoming_buffer->length);
+    int extra_wanted = std::max<int>(
+        1, allocate_length - static_cast<int>(tcp->incoming_buffer->length));
+    if (extra_wanted >=
+        (low_memory_pressure ? kSmallAlloc * 3 / 2 : kBigAlloc)) {
+      while (extra_wanted > 0) {
+        extra_wanted -= kBigAlloc;
+        grpc_slice_buffer_add_indexed(tcp->incoming_buffer,
+                                      tcp->memory_owner.MakeSlice(kBigAlloc));
+        grpc_core::global_stats().IncrementTcpReadAlloc64k();
       }
-      int target_length = std::max(static_cast<int>(tcp->target_length),
-                                   tcp->min_progress_size);
-      int extra_wanted =
-          target_length - static_cast<int>(tcp->incoming_buffer->length);
-      int min_read_chunk_size =
-          std::max(tcp->min_read_chunk_size, tcp->min_progress_size);
-      int max_read_chunk_size =
-          std::max(tcp->max_read_chunk_size, tcp->min_progress_size);
-      grpc_slice slice = tcp->memory_owner.MakeSlice(grpc_core::MemoryRequest(
-          min_read_chunk_size,
-          grpc_core::Clamp(extra_wanted, min_read_chunk_size,
-                           max_read_chunk_size)));
-      grpc_slice_buffer_add_indexed(tcp->incoming_buffer, slice);
-      maybe_post_reclaimer(tcp);
+    } else {
+      while (extra_wanted > 0) {
+        extra_wanted -= kSmallAlloc;
+        grpc_slice_buffer_add_indexed(tcp->incoming_buffer,
+                                      tcp->memory_owner.MakeSlice(kSmallAlloc));
+        grpc_core::global_stats().IncrementTcpReadAlloc8k();
+      }
     }
+    maybe_post_reclaimer(tcp);
   }
 }
 
@@ -1115,21 +1100,34 @@ static void tcp_handle_read(void* arg /* grpc_tcp */, grpc_error_handle error) {
   }
   tcp->read_mu.Lock();
   grpc_error_handle tcp_read_error;
-  if (GPR_LIKELY(error.ok())) {
+  if (GPR_LIKELY(error.ok()) && tcp->memory_owner.is_valid()) {
     maybe_make_read_slices(tcp);
     if (!tcp_do_read(tcp, &tcp_read_error)) {
-      // We've consumed the edge, request a new one
+      // Maybe update rcv lowat value based on the number of bytes read in this
+      // round.
       update_rcvlowat(tcp);
       tcp->read_mu.Unlock();
+      // We've consumed the edge, request a new one
       notify_on_read(tcp);
       return;
     }
     tcp_trace_read(tcp, tcp_read_error);
   } else {
-    tcp_read_error = error;
+    if (!tcp->memory_owner.is_valid() && error.ok()) {
+      tcp_read_error =
+          tcp_annotate_error(absl::InternalError("Socket closed"), tcp);
+    } else {
+      tcp_read_error = error;
+    }
     grpc_slice_buffer_reset_and_unref(tcp->incoming_buffer);
     grpc_slice_buffer_reset_and_unref(&tcp->last_read_buffer);
   }
+  // Update rcv lowat needs to be called at the end of the current read
+  // operation to ensure the right SO_RCVLOWAT value is set for the next read.
+  // Otherwise the next endpoint read operation may get stuck indefinitely
+  // because the previously set rcv lowat value will persist and the socket may
+  // erroneously considered to not be ready for read.
+  update_rcvlowat(tcp);
   grpc_closure* cb = tcp->read_cb;
   tcp->read_cb = nullptr;
   tcp->incoming_buffer = nullptr;
@@ -1152,14 +1150,12 @@ static void tcp_read(grpc_endpoint* ep, grpc_slice_buffer* incoming_buffer,
   grpc_slice_buffer_swap(incoming_buffer, &tcp->last_read_buffer);
   TCP_REF(tcp, "read");
   if (tcp->is_first_read) {
-    update_rcvlowat(tcp);
     tcp->read_mu.Unlock();
     // Endpoint read called for the very first time. Register read callback with
     // the polling engine
     tcp->is_first_read = false;
     notify_on_read(tcp);
   } else if (!urgent && tcp->inq == 0) {
-    update_rcvlowat(tcp);
     tcp->read_mu.Unlock();
     // Upper layer asked to read more but we know there is no pending data
     // to read from previous reads. So, wait for POLLIN.
@@ -2037,6 +2033,10 @@ int grpc_tcp_fd(grpc_endpoint* ep) {
 
 void grpc_tcp_destroy_and_release_fd(grpc_endpoint* ep, int* fd,
                                      grpc_closure* done) {
+  if (grpc_event_engine::experimental::grpc_is_event_engine_endpoint(ep)) {
+    return grpc_event_engine::experimental::
+        grpc_event_engine_endpoint_destroy_and_release_fd(ep, fd, done);
+  }
   grpc_tcp* tcp = reinterpret_cast<grpc_tcp*>(ep);
   GPR_ASSERT(ep->vtable == &vtable);
   tcp->release_fd = fd;
@@ -2048,6 +2048,9 @@ void grpc_tcp_destroy_and_release_fd(grpc_endpoint* ep, int* fd,
     gpr_atm_no_barrier_store(&tcp->stop_error_notification, true);
     grpc_fd_set_error(tcp->em_fd);
   }
+  tcp->read_mu.Lock();
+  tcp->memory_owner.Reset();
+  tcp->read_mu.Unlock();
   TCP_UNREF(tcp, "destroy");
 }
 

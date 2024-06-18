@@ -27,6 +27,7 @@
 #include <grpc/fork.h>
 #include <grpc/grpc.h>
 #include <grpc/grpc_security.h>
+#include <grpc/impl/channel_arg_names.h>
 #include <grpc/support/log.h>
 #include <grpc/support/sync.h>
 #include <grpc/support/time.h>
@@ -80,7 +81,7 @@ static bool maybe_prepend_client_auth_filter(
 static bool maybe_prepend_server_auth_filter(
     grpc_core::ChannelStackBuilder* builder) {
   if (builder->channel_args().Contains(GRPC_SERVER_CREDENTIALS_ARG)) {
-    builder->PrependFilter(&grpc_server_auth_filter);
+    builder->PrependFilter(&grpc_core::ServerAuthFilter::kFilter);
   }
   return true;
 }

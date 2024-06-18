@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_EXT_TRANSPORT_BINDER_TRANSPORT_BINDER_TRANSPORT_H
-#define GRPC_CORE_EXT_TRANSPORT_BINDER_TRANSPORT_BINDER_TRANSPORT_H
+#ifndef GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_TRANSPORT_BINDER_TRANSPORT_H
+#define GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_TRANSPORT_BINDER_TRANSPORT_H
 
 #include <grpc/support/port_platform.h>
 
@@ -71,9 +71,12 @@ struct grpc_binder_transport {
   grpc_core::Combiner* combiner;
 
   // The callback and the data for the callback when the stream is connected
-  // between client and server.
+  // between client and server. registered_method_matcher_cb is called before
+  // invoking the recv initial metadata callback.
   void (*accept_stream_fn)(void* user_data, grpc_transport* transport,
                            const void* server_data) = nullptr;
+  void (*registered_method_matcher_cb)(
+      void* user_data, grpc_core::ServerMetadata* metadata) = nullptr;
   void* accept_stream_user_data = nullptr;
   // `accept_stream_locked()` could be called before `accept_stream_fn` has been
   // set, we need to remember those requests that comes too early and call them
@@ -96,4 +99,4 @@ grpc_transport* grpc_create_binder_transport_server(
     std::shared_ptr<grpc::experimental::binder::SecurityPolicy>
         security_policy);
 
-#endif  // GRPC_CORE_EXT_TRANSPORT_BINDER_TRANSPORT_BINDER_TRANSPORT_H
+#endif  // GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_TRANSPORT_BINDER_TRANSPORT_H
