@@ -107,6 +107,7 @@ sign() {
     exit 1
   fi
 
+  # /home/dist/${site}/release
   # shellcheck disable=SC2086,SC2029
   shapath=$(ssh ${customsshkey} "${webuser}@${webhost}" $signcmd $1 $project)
 
@@ -139,7 +140,7 @@ sign() {
   echo ""
 
   while true; do
-    printf "Upload files? [y/n] "
+    printf "Upload files to %s? [y/n] " "$webhost"
     yorn=""
     read -r yorn
 
