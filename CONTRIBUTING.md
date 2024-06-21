@@ -36,11 +36,6 @@ as follows:
 | v20.x.x         | v5.x.x                      |
 | v22.x.x         | v5.x.x                      |
 
-[^*]: Significant breaking changes or the introduction of substantial features
-    will drive the MAJOR version increments in N|Solid. Pre v5.0.0 versions of
-    N|Solid are proprietary, and there will be no further enhancements to these
-    closed versions.
-
 When there is a Node.js release, there will always be an associated N|Solid
 release. This typically is made within 24 hours of the upstream Node.js release.
 See the next section for more details on how the versions work and the
@@ -248,3 +243,8 @@ By making a contribution to this project, I certify that:
      maintained indefinitely and may be redistributed consistent with
      this project or the open source license(s) involved.
 </pre>
+
+[^*]: Significant breaking changes or the introduction of substantial features
+    will drive the MAJOR version increments in N|Solid. Pre v5.0.0 versions of
+    N|Solid are proprietary, and there will be no further enhancements to these
+    closed versions.
