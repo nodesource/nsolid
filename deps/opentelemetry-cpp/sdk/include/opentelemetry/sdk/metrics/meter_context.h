@@ -12,9 +12,19 @@
 #include "opentelemetry/common/timestamp.h"
 #include "opentelemetry/nostd/function_ref.h"
 #include "opentelemetry/nostd/span.h"
+#include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/sdk/metrics/metric_reader.h"
+#include "opentelemetry/sdk/metrics/state/metric_collector.h"
+#include "opentelemetry/sdk/metrics/view/instrument_selector.h"
+#include "opentelemetry/sdk/metrics/view/meter_selector.h"
+#include "opentelemetry/sdk/metrics/view/view.h"
 #include "opentelemetry/sdk/metrics/view/view_registry.h"
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/version.h"
+
+#ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
+#  include "opentelemetry/sdk/metrics/exemplar/filter_type.h"
+#endif
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace sdk
@@ -107,6 +117,14 @@ public:
                std::unique_ptr<MeterSelector> meter_selector,
                std::unique_ptr<View> view) noexcept;
 
+#ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
+
+  void SetExemplarFilter(ExemplarFilterType exemplar_filter_type) noexcept;
+
+  ExemplarFilterType GetExemplarFilter() const noexcept;
+
+#endif
+
   /**
    * NOTE - INTERNAL method, can change in future.
    * Adds a meter to the list of configured meters in thread safe manner.
@@ -137,6 +155,10 @@ private:
   std::unique_ptr<ViewRegistry> views_;
   opentelemetry::common::SystemTimestamp sdk_start_ts_;
   std::vector<std::shared_ptr<Meter>> meters_;
+
+#ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
+  metrics::ExemplarFilterType exemplar_filter_type_ = metrics::ExemplarFilterType::kAlwaysOff;
+#endif
 
 #if defined(__cpp_lib_atomic_value_initialization) && \
     __cpp_lib_atomic_value_initialization >= 201911L
