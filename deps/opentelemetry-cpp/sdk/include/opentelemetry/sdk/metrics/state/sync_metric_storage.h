@@ -3,28 +3,36 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
 #include <functional>
-#include <list>
 #include <memory>
 #include <mutex>
-#include <unordered_map>
-#include <utility>
 
+#include "opentelemetry/common/key_value_iterable.h"
 #include "opentelemetry/common/spin_lock_mutex.h"
+#include "opentelemetry/common/timestamp.h"
+#include "opentelemetry/context/context.h"
 #include "opentelemetry/nostd/function_ref.h"
-#include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/span.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/sdk/common/attributemap_hash.h"
+#include "opentelemetry/sdk/metrics/aggregation/aggregation.h"
 #include "opentelemetry/sdk/metrics/aggregation/default_aggregation.h"
-#include "opentelemetry/sdk/metrics/exemplar/reservoir.h"
+#include "opentelemetry/sdk/metrics/aggregation/histogram_aggregation.h"
+#include "opentelemetry/sdk/metrics/data/metric_data.h"
+#include "opentelemetry/sdk/metrics/instruments.h"
 #include "opentelemetry/sdk/metrics/state/attributes_hashmap.h"
 #include "opentelemetry/sdk/metrics/state/metric_collector.h"
 #include "opentelemetry/sdk/metrics/state/metric_storage.h"
-
 #include "opentelemetry/sdk/metrics/state/temporal_metric_storage.h"
 #include "opentelemetry/sdk/metrics/view/attributes_processor.h"
 #include "opentelemetry/version.h"
+
+#ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
+#  include "opentelemetry/sdk/metrics/exemplar/filter_type.h"
+#  include "opentelemetry/sdk/metrics/exemplar/reservoir.h"
+#endif
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace sdk
@@ -34,18 +42,34 @@ namespace metrics
 class SyncMetricStorage : public MetricStorage, public SyncWritableMetricStorage
 {
 
+#ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
+
+  static inline bool EnableExamplarFilter(ExemplarFilterType filter_type,
+                                          const opentelemetry::context::Context &context)
+  {
+    return filter_type == ExemplarFilterType::kAlwaysOn ||
+           (filter_type == ExemplarFilterType::kTraceBased &&
+            opentelemetry::trace::GetSpan(context)->GetContext().IsValid() &&
+            opentelemetry::trace::GetSpan(context)->GetContext().IsSampled());
+  }
+
+#endif  // ENABLE_METRICS_EXEMPLAR_PREVIEW
+
 public:
   SyncMetricStorage(InstrumentDescriptor instrument_descriptor,
                     const AggregationType aggregation_type,
                     const AttributesProcessor *attributes_processor,
-                    nostd::shared_ptr<ExemplarReservoir> &&exemplar_reservoir
-                        OPENTELEMETRY_MAYBE_UNUSED,
+#ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
+                    ExemplarFilterType exempler_filter_type,
+                    nostd::shared_ptr<ExemplarReservoir> &&exemplar_reservoir,
+#endif
                     const AggregationConfig *aggregation_config,
                     size_t attributes_limit = kAggregationCardinalityLimit)
       : instrument_descriptor_(instrument_descriptor),
         attributes_hashmap_(new AttributesHashMap(attributes_limit)),
         attributes_processor_(attributes_processor),
 #ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
+        exemplar_filter_type_(exempler_filter_type),
         exemplar_reservoir_(exemplar_reservoir),
 #endif
         temporal_metric_storage_(instrument_descriptor, aggregation_type, aggregation_config)
@@ -66,7 +90,10 @@ public:
       return;
     }
 #ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
-    exemplar_reservoir_->OfferMeasurement(value, {}, context, std::chrono::system_clock::now());
+    if (EnableExamplarFilter(exemplar_filter_type_, context))
+    {
+      exemplar_reservoir_->OfferMeasurement(value, {}, context, std::chrono::system_clock::now());
+    }
 #endif
     static size_t hash = opentelemetry::sdk::common::GetHash("");
     std::lock_guard<opentelemetry::common::SpinLockMutex> guard(attribute_hashmap_lock_);
@@ -83,8 +110,11 @@ public:
       return;
     }
 #ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
-    exemplar_reservoir_->OfferMeasurement(value, attributes, context,
-                                          std::chrono::system_clock::now());
+    if (EnableExamplarFilter(exemplar_filter_type_, context))
+    {
+      exemplar_reservoir_->OfferMeasurement(value, attributes, context,
+                                            std::chrono::system_clock::now());
+    }
 #endif
     auto hash = opentelemetry::sdk::common::GetHashForAttributeMap(
         attributes, [this](nostd::string_view key) {
@@ -113,7 +143,10 @@ public:
       return;
     }
 #ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
-    exemplar_reservoir_->OfferMeasurement(value, {}, context, std::chrono::system_clock::now());
+    if (EnableExamplarFilter(exemplar_filter_type_, context))
+    {
+      exemplar_reservoir_->OfferMeasurement(value, {}, context, std::chrono::system_clock::now());
+    }
 #endif
     static size_t hash = opentelemetry::sdk::common::GetHash("");
     std::lock_guard<opentelemetry::common::SpinLockMutex> guard(attribute_hashmap_lock_);
@@ -130,8 +163,11 @@ public:
       return;
     }
 #ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
-    exemplar_reservoir_->OfferMeasurement(value, attributes, context,
-                                          std::chrono::system_clock::now());
+    if (EnableExamplarFilter(exemplar_filter_type_, context))
+    {
+      exemplar_reservoir_->OfferMeasurement(value, attributes, context,
+                                            std::chrono::system_clock::now());
+    }
 #endif
     auto hash = opentelemetry::sdk::common::GetHashForAttributeMap(
         attributes, [this](nostd::string_view key) {
@@ -163,6 +199,7 @@ private:
   std::function<std::unique_ptr<Aggregation>()> create_default_aggregation_;
   const AttributesProcessor *attributes_processor_;
 #ifdef ENABLE_METRICS_EXEMPLAR_PREVIEW
+  ExemplarFilterType exemplar_filter_type_;
   nostd::shared_ptr<ExemplarReservoir> exemplar_reservoir_;
 #endif
   TemporalMetricStorage temporal_metric_storage_;

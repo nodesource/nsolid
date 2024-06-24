@@ -1,19 +1,35 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#include "opentelemetry/exporters/ostream/metric_exporter.h"
-#include "opentelemetry/exporters/ostream/common_utils.h"
-#include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
-#include "opentelemetry/sdk/metrics/aggregation/default_aggregation.h"
-#include "opentelemetry/sdk/metrics/aggregation/histogram_aggregation.h"
-#include "opentelemetry/sdk/resource/resource.h"
-#include "opentelemetry/sdk_config.h"
-
+#include <stdint.h>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <ctime>
+#include <iterator>
 #include <map>
 #include <mutex>
+#include <ostream>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "opentelemetry/common/timestamp.h"
+#include "opentelemetry/exporters/ostream/common_utils.h"
+#include "opentelemetry/exporters/ostream/metric_exporter.h"
+#include "opentelemetry/nostd/variant.h"
+#include "opentelemetry/sdk/common/attribute_utils.h"
+#include "opentelemetry/sdk/common/exporter_utils.h"
+#include "opentelemetry/sdk/common/global_log_handler.h"
+#include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
+#include "opentelemetry/sdk/metrics/data/metric_data.h"
+#include "opentelemetry/sdk/metrics/data/point_data.h"
+#include "opentelemetry/sdk/metrics/export/metric_producer.h"
+#include "opentelemetry/sdk/metrics/instruments.h"
+#include "opentelemetry/sdk/resource/resource.h"
+#include "opentelemetry/version.h"
 
 namespace
 {
@@ -129,7 +145,7 @@ void OStreamMetricExporter::printInstrumentationInfoMetricData(
     const sdk::metrics::ResourceMetrics &data)
 {
   // sout_ is shared
-  const std::lock_guard<opentelemetry::common::SpinLockMutex> locked(lock_);
+  const std::lock_guard<std::mutex> serialize(serialize_lock_);
   sout_ << "{";
   sout_ << "\n  scope name\t: " << info_metric.scope_->GetName()
         << "\n  schema url\t: " << info_metric.scope_->GetSchemaURL()
@@ -246,20 +262,19 @@ void OStreamMetricExporter::printPointAttributes(
 
 bool OStreamMetricExporter::ForceFlush(std::chrono::microseconds /* timeout */) noexcept
 {
-  const std::lock_guard<opentelemetry::common::SpinLockMutex> locked(lock_);
+  const std::lock_guard<std::mutex> serialize(serialize_lock_);
+  sout_.flush();
   return true;
 }
 
 bool OStreamMetricExporter::Shutdown(std::chrono::microseconds /* timeout */) noexcept
 {
-  const std::lock_guard<opentelemetry::common::SpinLockMutex> locked(lock_);
   is_shutdown_ = true;
   return true;
 }
 
 bool OStreamMetricExporter::isShutdown() const noexcept
 {
-  const std::lock_guard<opentelemetry::common::SpinLockMutex> locked(lock_);
   return is_shutdown_;
 }
 
