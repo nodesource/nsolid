@@ -2,6 +2,23 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-06-24, Version 20.15.0-nsolid-v5.3.0 'Iron'
+
+### Commits
+
+* \[[`77fcac9e15`](https://github.com/nodesource/nsolid/commit/77fcac9e15)] - **doc**: fix 20.14.0-nsolid-v5.2.3 changelog (Santiago Gimeno)
+* \[[`4af9fcff83`](https://github.com/nodesource/nsolid/commit/4af9fcff83)] - **doc**: fix lint error (Trevor Norris)
+* \[[`e63c49b50e`](https://github.com/nodesource/nsolid/commit/e63c49b50e)] - Merge tag 'v20.15.0' into node-v20.15.0-nsolid-v5.3.0-release (Trevor Norris)
+* \[[`c6e2cd42da`](https://github.com/nodesource/nsolid/commit/c6e2cd42da)] - **test**: fix flaky test when run under load (Trevor Norris) [nodesource/nsolid#144](https://github.com/nodesource/nsolid/pull/144)
+* \[[`a184544cf1`](https://github.com/nodesource/nsolid/commit/a184544cf1)] - **test**: fix flaky test-otlp-metrics.mjs (Santiago Gimeno) [nodesource/nsolid#143](https://github.com/nodesource/nsolid/pull/143)
+* \[[`418669b334`](https://github.com/nodesource/nsolid/commit/418669b334)] - **agents**: get telemetry data even if no cmd handle (Santiago Gimeno) [nodesource/nsolid#140](https://github.com/nodesource/nsolid/pull/140)
+* \[[`1fb0168dc4`](https://github.com/nodesource/nsolid/commit/1fb0168dc4)] - **agents**: allow using OTLP env variable in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#138](https://github.com/nodesource/nsolid/pull/138)
+* \[[`babc9711f2`](https://github.com/nodesource/nsolid/commit/babc9711f2)] - **meta**: lint fixes (Trevor Norris) [nodesource/nsolid#139](https://github.com/nodesource/nsolid/pull/139)
+* \[[`9c79696ac0`](https://github.com/nodesource/nsolid/commit/9c79696ac0)] - **src**: add log native and JS APIs (Trevor Norris)
+* \[[`9b03aaad75`](https://github.com/nodesource/nsolid/commit/9b03aaad75)] - **agents**: add metrics transform API to agent (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+* \[[`deb325c863`](https://github.com/nodesource/nsolid/commit/deb325c863)] - **agents**: remove start/stop from JS API (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+* \[[`9533effafe`](https://github.com/nodesource/nsolid/commit/9533effafe)] - **src**: add GetAllEnvInst API (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+
 ## 2024-05-28, Version 20.14.0-nsolid-v5.2.3 'Iron'
 
 ### Commits
