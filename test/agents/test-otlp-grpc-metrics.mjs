@@ -438,7 +438,7 @@ if (process.argv[2] === 'child') {
     assert.strictEqual(resource.attributes.length, 5);
 
     const expectedAttributes = {
-      'telemetry.sdk.version': '1.15.0',
+      'telemetry.sdk.version': '1.16.0',
       'telemetry.sdk.language': 'cpp',
       'telemetry.sdk.name': 'opentelemetry',
       'service.instance.id': nsolidId,
