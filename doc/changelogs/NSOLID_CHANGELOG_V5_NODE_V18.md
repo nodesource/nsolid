@@ -2,6 +2,24 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-06-24, Version 5.3.0 'Hydrogen'
+
+### Commits
+
+* \[[`de947a9d97`](https://github.com/nodesource/nsolid/commit/de947a9d97)] - **test**: fix flaky test when run under load (Trevor Norris) [nodesource/nsolid#144](https://github.com/nodesource/nsolid/pull/144)
+* \[[`dd80b8c764`](https://github.com/nodesource/nsolid/commit/dd80b8c764)] - **test**: fix flaky test-otlp-metrics.mjs (Santiago Gimeno) [nodesource/nsolid#143](https://github.com/nodesource/nsolid/pull/143)
+* \[[`e2e2084a61`](https://github.com/nodesource/nsolid/commit/e2e2084a61)] - **agents**: get telemetry data even if no cmd handle (Santiago Gimeno) [nodesource/nsolid#140](https://github.com/nodesource/nsolid/pull/140)
+* \[[`8957f175c3`](https://github.com/nodesource/nsolid/commit/8957f175c3)] - **agents**: allow using OTLP env variable in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#138](https://github.com/nodesource/nsolid/pull/138)
+* \[[`6e2e41c837`](https://github.com/nodesource/nsolid/commit/6e2e41c837)] - **meta**: lint fixes (Trevor Norris) [nodesource/nsolid#139](https://github.com/nodesource/nsolid/pull/139)
+* \[[`26c04a9c86`](https://github.com/nodesource/nsolid/commit/26c04a9c86)] - **src**: add log native and JS APIs (Trevor Norris)
+* \[[`a42753a3d9`](https://github.com/nodesource/nsolid/commit/a42753a3d9)] - **agents**: add metrics transform API to agent (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+* \[[`afbee3b15a`](https://github.com/nodesource/nsolid/commit/afbee3b15a)] - **agents**: remove start/stop from JS API (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+* \[[`d0722ecd4b`](https://github.com/nodesource/nsolid/commit/d0722ecd4b)] - **src**: add GetAllEnvInst API (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+* \[[`355e1b35eb`](https://github.com/nodesource/nsolid/commit/355e1b35eb)] - **agents**: enable gRPC support in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#134](https://github.com/nodesource/nsolid/pull/134)
+* \[[`6223134d86`](https://github.com/nodesource/nsolid/commit/6223134d86)] - **agents**: add initial gRPC support in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
+* \[[`02518e10b7`](https://github.com/nodesource/nsolid/commit/02518e10b7)] - **deps**: update opentelemetry-cpp to 1.15.0 (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
+* \[[`778c1b6440`](https://github.com/nodesource/nsolid/commit/778c1b6440)] - **deps**: add grpc\@1.52.0 (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
+
 ## 2024-05-28, Version 5.2.3 'Hydrogen'
 
 ## 2024-05-21, Version 5.2.2 'Hydrogen'
