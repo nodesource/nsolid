@@ -24,7 +24,7 @@
 ### Commits
 
 * \[[`bda292a068`](https://github.com/nodesource/nsolid/commit/bda292a068)] - Merge tag 'v20.14.0' (Trevor Norris)
-* \[[`e31b66b4ea`](https://github.com/nodesource/nsolid/commit/e31b66b4ea)] - **deps**: add grpc@1.52.0 (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
+* \[[`e31b66b4ea`](https://github.com/nodesource/nsolid/commit/e31b66b4ea)] - **deps**: add grpc\@1.52.0 (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
 * \[[`df3e8ac5d8`](https://github.com/nodesource/nsolid/commit/df3e8ac5d8)] - **deps**: update opentelemetry-cpp to 1.15.0 (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
 * \[[`438391b7ba`](https://github.com/nodesource/nsolid/commit/438391b7ba)] - **agents**: add initial gRPC support in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
 * \[[`c2e60c6752`](https://github.com/nodesource/nsolid/commit/c2e60c6752)] - **agents**: enable gRPC support in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#134](https://github.com/nodesource/nsolid/pull/134)
