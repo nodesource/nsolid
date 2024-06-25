@@ -2,6 +2,114 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-06-24, Version 20.15.0-nsolid-v5.3.0 'Iron'
+
+### Commits
+
+* \[[`77fcac9e15`](https://github.com/nodesource/nsolid/commit/77fcac9e15)] - **doc**: fix 20.14.0-nsolid-v5.2.3 changelog (Santiago Gimeno)
+* \[[`4af9fcff83`](https://github.com/nodesource/nsolid/commit/4af9fcff83)] - **doc**: fix lint error (Trevor Norris)
+* \[[`e63c49b50e`](https://github.com/nodesource/nsolid/commit/e63c49b50e)] - Merge tag 'v20.15.0' into node-v20.15.0-nsolid-v5.3.0-release (Trevor Norris)
+* \[[`c6e2cd42da`](https://github.com/nodesource/nsolid/commit/c6e2cd42da)] - **test**: fix flaky test when run under load (Trevor Norris) [nodesource/nsolid#144](https://github.com/nodesource/nsolid/pull/144)
+* \[[`a184544cf1`](https://github.com/nodesource/nsolid/commit/a184544cf1)] - **test**: fix flaky test-otlp-metrics.mjs (Santiago Gimeno) [nodesource/nsolid#143](https://github.com/nodesource/nsolid/pull/143)
+* \[[`418669b334`](https://github.com/nodesource/nsolid/commit/418669b334)] - **agents**: get telemetry data even if no cmd handle (Santiago Gimeno) [nodesource/nsolid#140](https://github.com/nodesource/nsolid/pull/140)
+* \[[`1fb0168dc4`](https://github.com/nodesource/nsolid/commit/1fb0168dc4)] - **agents**: allow using OTLP env variable in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#138](https://github.com/nodesource/nsolid/pull/138)
+* \[[`babc9711f2`](https://github.com/nodesource/nsolid/commit/babc9711f2)] - **meta**: lint fixes (Trevor Norris) [nodesource/nsolid#139](https://github.com/nodesource/nsolid/pull/139)
+* \[[`9c79696ac0`](https://github.com/nodesource/nsolid/commit/9c79696ac0)] - **src**: add log native and JS APIs (Trevor Norris)
+* \[[`9b03aaad75`](https://github.com/nodesource/nsolid/commit/9b03aaad75)] - **agents**: add metrics transform API to agent (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+* \[[`deb325c863`](https://github.com/nodesource/nsolid/commit/deb325c863)] - **agents**: remove start/stop from JS API (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+* \[[`9533effafe`](https://github.com/nodesource/nsolid/commit/9533effafe)] - **src**: add GetAllEnvInst API (Trevor Norris) [nodesource/nsolid#123](https://github.com/nodesource/nsolid/pull/123)
+
+## 2024-05-28, Version 20.14.0-nsolid-v5.2.3 'Iron'
+
+### Commits
+
+* \[[`bda292a068`](https://github.com/nodesource/nsolid/commit/bda292a068)] - Merge tag 'v20.14.0' (Trevor Norris)
+* \[[`e31b66b4ea`](https://github.com/nodesource/nsolid/commit/e31b66b4ea)] - **deps**: add grpc\@1.52.0 (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
+* \[[`df3e8ac5d8`](https://github.com/nodesource/nsolid/commit/df3e8ac5d8)] - **deps**: update opentelemetry-cpp to 1.15.0 (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
+* \[[`438391b7ba`](https://github.com/nodesource/nsolid/commit/438391b7ba)] - **agents**: add initial gRPC support in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#133](https://github.com/nodesource/nsolid/pull/133)
+* \[[`c2e60c6752`](https://github.com/nodesource/nsolid/commit/c2e60c6752)] - **agents**: enable gRPC support in OTLPAgent (Santiago Gimeno) [nodesource/nsolid#134](https://github.com/nodesource/nsolid/pull/134)
+
+## 2024-05-21, Version 20.13.1-nsolid-v5.2.2 'Iron'
+
+## 2024-05-09, Version 20.13.0-nsolid-v5.2.1 'Iron'
+
+### Commits
+
+* \[[`6f0974c684`](https://github.com/nodesource/nsolid/commit/6f0974c684)] - Merge tag 'v20.13.1' (Trevor Norris)
+* \[[`3f022bd43c`](https://github.com/nodesource/nsolid/commit/3f022bd43c)] - Merge tag 'v20.13.0' (Trevor Norris)
+* \[[`91dcac7bac`](https://github.com/nodesource/nsolid/commit/91dcac7bac)] - **agents**: set state when writing (Trevor Norris) [nodesource/nsolid#122](https://github.com/nodesource/nsolid/pull/122)
+* \[[`c667ebf576`](https://github.com/nodesource/nsolid/commit/c667ebf576)] - **tools**: add agents path to workflow (Trevor Norris) [nodesource/nsolid#122](https://github.com/nodesource/nsolid/pull/122)
+* \[[`509a1d5372`](https://github.com/nodesource/nsolid/commit/509a1d5372)] - **agents**: make tcp/udp inherit from virtual class (Trevor Norris) [nodesource/nsolid#122](https://github.com/nodesource/nsolid/pull/122)
+* \[[`150bd4a9c4`](https://github.com/nodesource/nsolid/commit/150bd4a9c4)] - **agents**: remove Disconnected (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`06e5bd77f9`](https://github.com/nodesource/nsolid/commit/06e5bd77f9)] - **agents**: have tcp/udp retry in statsd (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`b30a1966f7`](https://github.com/nodesource/nsolid/commit/b30a1966f7)] - **agents**: only create on correct protocol (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+* \[[`6c4162ddae`](https://github.com/nodesource/nsolid/commit/6c4162ddae)] - **agents**: remove need for loop on create() (Trevor Norris) [nodesource/nsolid#121](https://github.com/nodesource/nsolid/pull/121)
+
+## 2024-04-29, Version 20.12.2-nsolid-v5.2.0 'Iron'
+
+### Commits
+
+* \[[`78e6453747`](https://github.com/nodesource/nsolid/commit/78e6453747)] - **src**: fix the base case in the heap profiler JSON generation (Juan José Arboleda) [nodesource/nsolid#125](https://github.com/nodesource/nsolid/pull/125)
+
+## 2024-04-10, Version 20.12.2-nsolid-v5.1.2 'Iron'
+
+### Commits
+
+* \[[`ea4b14d82b`](https://github.com/nodesource/nsolid/commit/ea4b14d82b)] - Merge tag 'v20.12.2' (Trevor Norris)
+
+## 2024-04-03, Version 20.12.1-nsolid-v5.1.1 'Iron'
+
+### Commits
+
+* \[[`f71ed43b3f`](https://github.com/nodesource/nsolid/commit/f71ed43b3f)] - Merge tag 'v20.12.1' (Juan Arboleda)
+
+## 2024-03-27, Version 20.12.0-nsolid-v5.1.0 'Iron'
+
+### Commits
+
+* \[[`e6024de2bf`](https://github.com/nodesource/nsolid/commit/e6024de2bf)] - Merge tag 'v20.12.0' (Trevor Norris)
+* \[[`e32fecb3b0`](https://github.com/nodesource/nsolid/commit/e32fecb3b0)] - **deps**: update opentelemetry-cpp to 1.14.2 (Santiago Gimeno) [nodesource/nsolid#109](https://github.com/nodesource/nsolid/pull/109)
+* \[[`8e9bcac49e`](https://github.com/nodesource/nsolid/commit/8e9bcac49e)] - **tools**: fix opentelemetry-cpp updater (Santiago Gimeno) [nodesource/nsolid#109](https://github.com/nodesource/nsolid/pull/109)
+* \[[`71973239a6`](https://github.com/nodesource/nsolid/commit/71973239a6)] - **agents**: fix agent reconnect handshake on ZmqAgent (Santiago Gimeno) [nodesource/nsolid#105](https://github.com/nodesource/nsolid/pull/105)
+* \[[`9814c94726`](https://github.com/nodesource/nsolid/commit/9814c94726)] - **test**: fix flaky nsolid-tracing test (Santiago Gimeno) [nodesource/nsolid#104](https://github.com/nodesource/nsolid/pull/104)
+* \[[`378ac739e1`](https://github.com/nodesource/nsolid/commit/378ac739e1)] - **src**: move NSolidHeapSnapshot into EnvList (Santiago Gimeno) [nodesource/nsolid#102](https://github.com/nodesource/nsolid/pull/102)
+* \[[`7f664c0c8c`](https://github.com/nodesource/nsolid/commit/7f664c0c8c)] - **src**: trim nsolid\_heap\_snapshot headers (Santiago Gimeno) [nodesource/nsolid#102](https://github.com/nodesource/nsolid/pull/102)
+* \[[`6ece144c48`](https://github.com/nodesource/nsolid/commit/6ece144c48)] - **lib**: add nsolid JS API for heap profiling (Santiago Gimeno) [nodesource/nsolid#101](https://github.com/nodesource/nsolid/pull/101)
+* \[[`d3cb4be322`](https://github.com/nodesource/nsolid/commit/d3cb4be322)] - **deps**: fix leak in Snapshot serialization (Santiago Gimeno) [nodesource/nsolid#91](https://github.com/nodesource/nsolid/pull/91)
+* \[[`e9f2a65842`](https://github.com/nodesource/nsolid/commit/e9f2a65842)] - **agents,test**: support heap profiling in ZmqAgent (Santiago Gimeno) [nodesource/nsolid#91](https://github.com/nodesource/nsolid/pull/91)
+* \[[`d38371144e`](https://github.com/nodesource/nsolid/commit/d38371144e)] - **src,test**: multiple fixes in heap profile code (Santiago Gimeno) [nodesource/nsolid#92](https://github.com/nodesource/nsolid/pull/92)
+* \[[`78f5ecad84`](https://github.com/nodesource/nsolid/commit/78f5ecad84)] - **src**: include sync stop for heap object tracking (Juan José Arboleda) [nodesource/nsolid#92](https://github.com/nodesource/nsolid/pull/92)
+* \[[`c8fdade359`](https://github.com/nodesource/nsolid/commit/c8fdade359)] - **agents**: better StatsDAgent binding string handling (Santiago Gimeno) [nodesource/nsolid#100](https://github.com/nodesource/nsolid/pull/100)
+* \[[`395d94d3a6`](https://github.com/nodesource/nsolid/commit/395d94d3a6)] - **agents**: use nsuv weak\_ptr API's in StatsDAgent (Santiago Gimeno) [nodesource/nsolid#100](https://github.com/nodesource/nsolid/pull/100)
+* \[[`0b3347e54e`](https://github.com/nodesource/nsolid/commit/0b3347e54e)] - **deps**: nsuv update to 486821a (Santiago Gimeno) [nodesource/nsolid#100](https://github.com/nodesource/nsolid/pull/100)
+* \[[`2d2b8cec36`](https://github.com/nodesource/nsolid/commit/2d2b8cec36)] - **tools**: don't build doc upload artifacts (Trevor Norris) [nodesource/nsolid#97](https://github.com/nodesource/nsolid/pull/97)
+* \[[`0529a47688`](https://github.com/nodesource/nsolid/commit/0529a47688)] - **agents**: clear env\_metrics\_map\_ on destruction (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`9e3fb9275b`](https://github.com/nodesource/nsolid/commit/9e3fb9275b)] - **agents,test**: add StatsDAgent tests (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`17192ffc8e`](https://github.com/nodesource/nsolid/commit/17192ffc8e)] - **agents**: fix exit condition on status\_command\_cb\_ (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`3b0df1529a`](https://github.com/nodesource/nsolid/commit/3b0df1529a)] - **agents**: reset addr\_index\_ on connector setup (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`bb67444bcf`](https://github.com/nodesource/nsolid/commit/bb67444bcf)] - **agents**: stop the agent only if last config fails (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`e5efe5d69f`](https://github.com/nodesource/nsolid/commit/e5efe5d69f)] - **agents**: synchronize status in StatsDagent::do\_stop (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`e97baf7c3c`](https://github.com/nodesource/nsolid/commit/e97baf7c3c)] - **agents**: move to Initializing before setting Hooks (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`2b5c0da4a1`](https://github.com/nodesource/nsolid/commit/2b5c0da4a1)] - **agents**: fix Status binding (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`6bff219f79`](https://github.com/nodesource/nsolid/commit/6bff219f79)] - **agents**: fix StatsDTcp destruction (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`9f81e041a8`](https://github.com/nodesource/nsolid/commit/9f81e041a8)] - **src**: don't start StatsD agent if statsd is null (Santiago Gimeno) [nodesource/nsolid#87](https://github.com/nodesource/nsolid/pull/87)
+* \[[`5dd46b27f8`](https://github.com/nodesource/nsolid/commit/5dd46b27f8)] - **agents**: refactor profiling on ZmqAgent (Santiago Gimeno) [nodesource/nsolid#90](https://github.com/nodesource/nsolid/pull/90)
+* \[[`1bd9c6dc95`](https://github.com/nodesource/nsolid/commit/1bd9c6dc95)] - **lint**: use const& in push() (Trevor Norris) [nodesource/nsolid#86](https://github.com/nodesource/nsolid/pull/86)
+* \[[`e2d708721e`](https://github.com/nodesource/nsolid/commit/e2d708721e)] - **src**: make ProcessMetrics API thread-safe (Trevor Norris) [nodesource/nsolid#86](https://github.com/nodesource/nsolid/pull/86)
+* \[[`173d6baa17`](https://github.com/nodesource/nsolid/commit/173d6baa17)] - **src**: fix crash @ NSolidHeapSnapshot::take\_snapshot (Santiago Gimeno) [nodesource/nsolid#89](https://github.com/nodesource/nsolid/pull/89)
+* \[[`f7e61f6603`](https://github.com/nodesource/nsolid/commit/f7e61f6603)] - **src**: avoid double free of QCbTimeoutStor (Santiago Gimeno) [nodesource/nsolid#88](https://github.com/nodesource/nsolid/pull/88)
+* \[[`f7b4b61dac`](https://github.com/nodesource/nsolid/commit/f7b4b61dac)] - **nsolid**: add start/stopTrackingHeapObjects APIs (Juan José Arboleda) [nodesource/nsolid#48](https://github.com/nodesource/nsolid/pull/48)
+* \[[`2b043c5b84`](https://github.com/nodesource/nsolid/commit/2b043c5b84)] - **tools**: remove Report JS and format-cpp (Trevor Norris) [nodesource/nsolid#85](https://github.com/nodesource/nsolid/pull/85)
+* \[[`ebd3f8cb9a`](https://github.com/nodesource/nsolid/commit/ebd3f8cb9a)] - **agents**: implement data handle ring buffer (Santiago Gimeno) [nodesource/nsolid#69](https://github.com/nodesource/nsolid/pull/69)
+* \[[`b78755bb77`](https://github.com/nodesource/nsolid/commit/b78755bb77)] - **lib**: fix nsolid.app calculation (Santiago Gimeno) [nodesource/nsolid#81](https://github.com/nodesource/nsolid/pull/81)
+* \[[`03a390a535`](https://github.com/nodesource/nsolid/commit/03a390a535)] - **agents**: add zmq bulk channel logs (Santiago Gimeno) [nodesource/nsolid#68](https://github.com/nodesource/nsolid/pull/68)
+
+## 2024-02-14, Version 20.11.1-nsolid-v5.0.5 'Iron'
+
+### Commits
+
+* \[[`61e88a12f0`](https://github.com/nodesource/nsolid/commit/61e88a12f0)] - Merge tag 'v20.11.1' into node-v20.11.1-nsolid-v5.0.5-release (Trevor Norris)
+
 ## 2024-01-24, Version 20.11.0-nsolid-v5.0.4 'Iron'
 
 ### Commits
