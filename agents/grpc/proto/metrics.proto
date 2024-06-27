@@ -1,0 +1,112 @@
+// I want to define here RuntimeResponse message which will be oneOf many other types of messages
+// For example:
+// - InfoResponse
+// - PackagesResponse
+
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message ProcessMetrics {
+  int64 timestamp = 1;
+  int32 uptime = 2;
+  int32 systemUptime = 3;
+  int64 freeMem = 4;
+  int32 blockInputOpCount = 5;
+  int32 blockOutputOpCount = 6;
+  int32 ctxSwitchInvoluntaryCount = 7;
+  int32 ctxSwitchVoluntaryCount = 8;
+  int32 ipcReceivedCount = 9;
+  int32 ipcSentCount = 10;
+  int32 pageFaultHardCount = 11;
+  int32 pageFaultSoftCount = 12;
+  int32 signalCount = 13;
+  int32 swapCount = 14;
+  int64 rss = 15;
+  double load1m = 16;
+  double load5m = 17;
+  double load15m = 18;
+  double cpuUserPercent = 19;
+  double cpuSystemPercent = 20;
+  double cpuPercent = 21;
+  string title = 22;
+  string user = 23;
+}
+
+message ThreadMetrics {
+  int32 threadId = 1;
+  int64 timestamp = 2;
+  int32 activeHandles = 3;
+  int32 activeRequests = 4;
+  int64 heapTotal = 5;
+  int64 totalHeapSizeExecutable = 6;
+  int64 totalPhysicalSize = 7;
+  int64 totalAvailableSize = 8;
+  int64 heapUsed = 9;
+  int64 heapSizeLimit = 10;
+  int64 mallocedMemory = 11;
+  int64 externalMem = 12;
+  int64 peakMallocedMemory = 13;
+  int32 numberOfNativeContexts = 14;
+  int32 numberOfDetachedContexts = 15;
+  int32 gcCount = 16;
+  int32 gcForcedCount = 17;
+  int32 gcFullCount = 18;
+  int32 gcMajorCount = 19;
+  int32 dnsCount = 20;
+  int32 httpClientAbortCount = 21;
+  int32 httpClientCount = 22;
+  int32 httpServerAbortCount = 23;
+  int32 httpServerCount = 24;
+  int64 loopIdleTime = 25;
+  int32 loopIterations = 26;
+  int32 loopIterWithEvents = 27;
+  int32 eventsProcessed = 28;
+  int32 eventsWaiting = 29;
+  int64 providerDelay = 30;
+  int64 processingDelay = 31;
+  int32 loopTotalCount = 32;
+  int32 pipeServerCreatedCount = 33;
+  int32 pipeServerDestroyedCount = 34;
+  int32 pipeSocketCreatedCount = 35;
+  int32 pipeSocketDestroyedCount = 36;
+  int32 tcpServerCreatedCount = 37;
+  int32 tcpServerDestroyedCount = 38;
+  int32 tcpSocketCreatedCount = 39;
+  int32 tcpSocketDestroyedCount = 40;
+  int32 udpSocketCreatedCount = 41;
+  int32 udpSocketDestroyedCount = 42;
+  int32 promiseCreatedCount = 43;
+  int32 promiseResolvedCount = 44;
+  int32 fsHandlesOpenedCount = 45;
+  int32 fsHandlesClosedCount = 46;
+  int64 gcDurUs99Ptile = 47;
+  int64 gcDurUsMedian = 48;
+  int64 dns99Ptile = 49;
+  int64 dnsMedian = 50;
+  int64 httpClient99Ptile = 51;
+  int64 httpClientMedian = 52;
+  int64 httpServer99Ptile = 53;
+  int64 httpServerMedian = 54;
+  double loopUtilization = 55;
+  double res5s = 56;
+  double res1m = 57;
+  double res5m = 58;
+  double res15m = 59;
+  int32 loopAvgTasks = 60;
+  double loopEstimatedLag = 61;
+  double loopIdlePercent = 62;
+  string threadName = 63;
+}
+
+message MetricsBody {
+  ProcessMetrics processMetrics = 1;
+  repeated ThreadMetrics threadMetrics = 2;
+}
+
+message Metrics {
+  CommonResponse common = 1;
+  MetricsBody body = 2;
+}

@@ -1,0 +1,41 @@
+// I want to define here RuntimeResponse message which will be oneOf many other types of messages
+// For example:
+// - InfoResponse
+// - PackagesResponse
+
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message Stack {
+  bool is_eval = 1;
+  string script_name = 2;
+  string function_name = 3;
+  int32 line_number = 4;
+  int32 column = 5;
+}
+
+message BlockedLoopBody {
+  int32 blocked_for = 1;
+  int32 loop_id = 2;
+  int32 callback_cntr = 3;
+  repeated Stack stack = 4;
+}
+
+message BlockedLoopEvent {
+  CommonResponse common = 1;
+  BlockedLoopBody body = 2;
+}
+
+message UnblockedLoopBody {
+  int32 blocked_for = 1;
+  int32 loop_id = 2;
+  int32 callback_cntr = 3;
+}
+
+message UnblockedLoopEvent {
+  CommonResponse common = 1;
+  UnblockedLoopBody body = 2;
+}
