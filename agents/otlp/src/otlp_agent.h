@@ -8,7 +8,7 @@
 
 #include "asserts-cpp/asserts.h"
 #include "metrics_exporter.h"
-#include "opentelemetry/sdk/resource/resource.h"
+#include "opentelemetry/version.h"
 
 
 // Class pre-declaration
@@ -20,9 +20,6 @@ struct OtlpGrpcExporterOptions;
 }
 }
 namespace sdk {
-namespace instrumentationscope {
-class InstrumentationScope;
-}
 namespace trace {
 class SpanExporter;
 }
@@ -100,8 +97,6 @@ class OTLPAgent {
 
   void config_otlp_endpoint(const nlohmann::json& config);
 
-  OPENTELEMETRY_NAMESPACE::sdk::resource::Resource create_resource() const;
-
   void got_proc_metrics();
 
   void setup_trace_otlp_exporter(  // NOLINTNEXTLINE(runtime/references)
@@ -135,11 +130,7 @@ class OTLPAgent {
   uint32_t trace_flags_;
 
   std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::trace::SpanExporter>
-    otlp_http_exporter_;
-  OPENTELEMETRY_NAMESPACE::sdk::resource::Resource resource_;
-  std::unique_ptr
-    <OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope>
-      scope_;
+    otlp_exporter_;
 
   // For the Metrics API
   uint64_t metrics_interval_;

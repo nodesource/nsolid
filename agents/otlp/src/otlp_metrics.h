@@ -1,8 +1,6 @@
 #ifndef AGENTS_OTLP_SRC_OTLP_METRICS_H_
 #define AGENTS_OTLP_SRC_OTLP_METRICS_H_
 
-// NOLINTNEXTLINE(build/c++11)
-#include <chrono>
 
 #include "metrics_exporter.h"
 #include "opentelemetry/version.h"
@@ -10,10 +8,16 @@
 // Class pre-declaration
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace sdk {
+namespace instrumentationscope {
+class InstrumentationScope;
+}  // namespace instrumentationscope
 namespace metrics {
 class PushMetricExporter;
-}
-}
+}  // namespace metrics
+namespace resource {
+class Resource;
+}  // namespace resource
+}  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE
 
 namespace node {
@@ -25,13 +29,18 @@ class OTLPAgent;
 
 class OTLPMetrics final: public MetricsExporter {
  public:
-  explicit OTLPMetrics(uv_loop_t* loop,
-                       const OTLPAgent& agent);
-  explicit OTLPMetrics(uv_loop_t* loop,
-                       const std::string& url,
-                       const std::string& key,
-                       bool is_http,
-                       const OTLPAgent& agent);
+  explicit OTLPMetrics(
+    uv_loop_t* loop,
+    const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource&,
+    OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*);
+  explicit OTLPMetrics(
+    uv_loop_t* loop,
+    const std::string& url,
+    const std::string& key,
+    bool is_http,
+    const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource&,
+    OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*);
+
   virtual ~OTLPMetrics();
 
   virtual void got_proc_metrics(const ProcessMetrics::MetricsStor& stor,
@@ -43,10 +52,11 @@ class OTLPMetrics final: public MetricsExporter {
  private:
   std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::metrics::PushMetricExporter>
     otlp_metric_exporter_;
+  const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource& resource_;
+  OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*
+    scope_;
   std::string key_;
   std::string url_;
-  std::chrono::system_clock::time_point start_;
-  const OTLPAgent& agent_;
 };
 
 }  // namespace otlp
