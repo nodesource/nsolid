@@ -146,6 +146,7 @@ class ExternalReferenceRegistry {
   V(util)                                                                      \
   V(pipe_wrap)                                                                 \
   V(nsolid_api)                                                                \
+  V(nsolid_grpc_agent)                                                         \
   V(nsolid_statsd_agent)                                                       \
   V(nsolid_zmq_agent)                                                          \
   V(sea)                                                                       \

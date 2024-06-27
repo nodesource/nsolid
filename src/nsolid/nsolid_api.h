@@ -211,7 +211,8 @@ class EnvInst {
   void PushDnsBucket(double value);
 
   std::string GetModuleInfo();
-  std::string GetStartupTimes();
+  std::string GetStartupTimesJSON() const;
+  std::map<std::string, uint64_t> GetStartupTimes() const;
 
   void GetThreadMetrics(ThreadMetrics::MetricsStor* stor);
 

@@ -99,7 +99,7 @@ bool IsMainThread(SharedEnvInst envinst) {
 int GetStartupTimes(SharedEnvInst envinst_sp, std::string* times) {
   if (envinst_sp == nullptr)
     return UV_ESRCH;
-  *times = envinst_sp->GetStartupTimes();
+  *times = envinst_sp->GetStartupTimesJSON();
   return 0;
 }
 

@@ -3,6 +3,7 @@
 #include "nsolid_bindings.h"
 #include "node_buffer.h"
 #include "nsolid_cpu_profiler.h"
+#include "grpc/src/grpc_agent.h"
 #include "otlp/src/otlp_agent.h"
 #include "statsd/src/statsd_agent.h"
 #include "util.h"
@@ -240,7 +241,7 @@ static void AppendStartupTimeString(const std::string& name,
 }
 
 
-std::string EnvInst::GetStartupTimes() {
+std::string EnvInst::GetStartupTimesJSON() const {
   std::string mstr = "{";
   {
     ns_mutex::scoped_lock lock(startup_times_lock_);
@@ -253,6 +254,11 @@ std::string EnvInst::GetStartupTimes() {
   mstr.pop_back();
   mstr += "}";
   return mstr;
+}
+
+std::map<std::string, uint64_t> EnvInst::GetStartupTimes() const {
+  ns_mutex::scoped_lock lock(startup_times_lock_);
+  return startup_times_;
 }
 
 
@@ -752,7 +758,7 @@ int EnvInst::CustomCommandResponse(const std::string& req_id,
 }
 
 
-EnvList::EnvList(): info_(nlohmann::json::object()) {
+EnvList::EnvList(): info_(nlohmann::json()) {
   int er;
   // Create event loop and new thread to run EnvList commands.
   uv_loop_init(&thread_loop_);
@@ -1074,6 +1080,10 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
       statsd::StatsDAgent::Inst()->start();
     }
 
+    it = config.find("grpc");
+    if (it != config.end() && !it->is_null()) {
+      grpc::GrpcAgent::Inst()->start();
+    }
     // If tags have changed, update info_ accordingly
     it = config.find("tags");
     if (it != config.end()) {
@@ -2421,7 +2431,7 @@ static void GetStartupTimes(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   EnvInst* envinst = EnvInst::GetEnvLocalInst(isolate);
   CHECK_NE(envinst, nullptr);
-  std::string ms = envinst->GetStartupTimes();
+  std::string ms = envinst->GetStartupTimesJSON();
   Local<String> ms_str =
     String::NewFromUtf8(isolate,
                         ms.c_str(),
