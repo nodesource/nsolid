@@ -60,6 +60,7 @@
       'defines': [
         'BUILDING_LIBCURL',
         'HAVE_ABSEIL',
+        'ENABLE_ASYNC_EXPORT'
       ],
       'dependencies': [
         '../protobuf/protobuf.gyp:protobuf',
@@ -70,6 +71,7 @@
       'direct_dependent_settings': {
         'defines': [
           'HAVE_ABSEIL',
+          'ENABLE_ASYNC_EXPORT'
         ],
         'include_dirs': [
           'api/include',
