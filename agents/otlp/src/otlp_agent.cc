@@ -3,6 +3,7 @@
 // Refs: https://github.com/open-telemetry/opentelemetry-cpp/blob/32cd66b62333e84aa8e92a4447e0aa667b6735e5/examples/otlp/README.md#additional-notes-regarding-abseil-library
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter.h"
 #include "otlp_agent.h"
+#include "otlp_common.h"
 #include "nsolid/nsolid_api.h"
 #include "env-inl.h"
 #include "debug_utils-inl.h"
@@ -21,7 +22,6 @@
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
 using nlohmann::json;
 
-namespace nostd = OPENTELEMETRY_NAMESPACE::nostd;
 namespace sdk = OPENTELEMETRY_NAMESPACE::sdk;
 namespace exporter = OPENTELEMETRY_NAMESPACE::exporter;
 namespace ext = OPENTELEMETRY_NAMESPACE::ext;
@@ -32,9 +32,6 @@ namespace detail = trace::propagation::detail;
 using resource::SemanticConventions::kServiceName;
 using resource::SemanticConventions::kServiceInstanceId;
 using resource::SemanticConventions::kServiceVersion;
-
-static const size_t kTraceIdSize             = 32;
-static const size_t kSpanIdSize              = 16;
 
 static std::atomic<bool> is_running_ = { false };
 nsuv::ns_rwlock exit_lock_;
@@ -84,8 +81,7 @@ OTLPAgent* OTLPAgent::Inst() {
 OTLPAgent::OTLPAgent(): ready_(false),
                         hooks_init_(false),
                         trace_flags_(0),
-                        otlp_http_exporter_(nullptr),
-                        resource_(create_resource()),
+                        otlp_exporter_(nullptr),
                         metrics_interval_(0),
                         proc_metrics_(),
                         proc_prev_stor_(),
@@ -95,8 +91,6 @@ OTLPAgent::OTLPAgent(): ready_(false),
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
   ASSERT_EQ(0, exit_lock_.init(true));
   is_running_ = true;
-  scope_ = instrumentationscope::InstrumentationScope::Create(
-            "nsolid", NODE_VERSION "+ns" NSOLID_VERSION);
 }
 
 
@@ -176,7 +170,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
   if (trace_flags_ == 0 ||
       utils::find_any_fields_in_diff(diff, tracing_fields)) {
     trace_flags_ = 0;
-    if (otlp_http_exporter_ != nullptr) {
+    if (otlp_exporter_ != nullptr) {
       auto it = config_.find("tracingEnabled");
       if (it != config_.end()) {
         bool tracing_enabled = *it;
@@ -369,66 +363,17 @@ void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
   }
 
   using std::chrono::duration_cast;
-  using time_point = std::chrono::system_clock::time_point;
   using std::chrono::milliseconds;
   using std::chrono::nanoseconds;
   std::vector<std::unique_ptr<sdk::trace::Recordable>> recordables;
   Tracer::SpanStor s;
   while (agent->span_msg_q_.dequeue(s)) {
-    auto recordable = agent->otlp_http_exporter_->MakeRecordable();
-    recordable->SetName(s.name);
-    time_point start{
-        duration_cast<time_point::duration>(
-          milliseconds(static_cast<uint64_t>(s.start)))};
-    recordable->SetStartTime(start);
-    recordable->SetDuration(
-      nanoseconds(static_cast<uint64_t>((s.end - s.start) * 1e6)));
-
-    uint8_t span_buf[kSpanIdSize / 2];
-    detail::HexToBinary(s.span_id, span_buf, sizeof(span_buf));
-
-    uint8_t parent_buf[kSpanIdSize / 2];
-    detail::HexToBinary(s.parent_id, parent_buf, sizeof(parent_buf));
-
-    uint8_t trace_buf[kTraceIdSize / 2];
-    detail::HexToBinary(s.trace_id, trace_buf, sizeof(trace_buf));
-
-    trace::SpanContext ctx(trace::TraceId(trace_buf),
-                           trace::SpanId(span_buf),
-                           trace::TraceFlags(0),
-                           false);
-
-    trace::SpanId parent_id(parent_buf);
-
-    recordable->SetIdentity(ctx, parent_id);
-
-    recordable->SetSpanKind(static_cast<trace::SpanKind>(s.kind));
-
-    json attrs = json::parse(s.attrs);
-    ASSERT(!attrs.is_discarded());
-    for (const auto& attr : attrs.items()) {
-      const json val = attr.value();
-      if (val.is_boolean())
-        recordable->SetAttribute(attr.key(), attr.value().get<bool>());
-      else if (val.is_number_integer())
-        recordable->SetAttribute(attr.key(), attr.value().get<int64_t>());
-      else if (val.is_number_unsigned())
-        recordable->SetAttribute(attr.key(), attr.value().get<uint64_t>());
-      else if (val.is_number_float())
-        recordable->SetAttribute(attr.key(), attr.value().get<double>());
-      else if (val.is_string())
-        recordable->SetAttribute(attr.key(), attr.value().get<std::string>());
-    }
-
-    recordable->SetAttribute("thread.id", s.thread_id);
-
-    recordable->SetResource(agent->resource_);
-
+    auto recordable = agent->otlp_exporter_->MakeRecordable();
+    fill_recordable(recordable.get(), s);
     recordables.push_back(std::move(recordable));
   }
 
-  nostd::span<std::unique_ptr<sdk::trace::Recordable>> batch(recordables);
-  auto result = agent->otlp_http_exporter_->Export(batch);
+  auto result = agent->otlp_exporter_->Export(recordables);
   Debug("# Spans Exported: %ld. Result: %d\n",
         recordables.size(),
         static_cast<int>(result));
@@ -581,7 +526,7 @@ void OTLPAgent::config_otlp_agent(const json& config) {
   auto it = config.find("otlp");
   if (it != config.end()) {
     // Reset the otlp and metrics exporters and reconfigure endpoints.
-    otlp_http_exporter_.reset(nullptr);
+    otlp_exporter_.reset(nullptr);
     metrics_exporter_.reset(nullptr);
     std::string type = *it;
     it = config.find("otlpConfig");
@@ -605,7 +550,8 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
       setup_trace_otlp_exporter(opts);
     }
 
-    metrics_exporter_.reset(new OTLPMetrics(&loop_, *this));
+    metrics_exporter_.reset(
+      new OTLPMetrics(&loop_, *GetResource(), GetScope()));
     return;
   }
 
@@ -628,26 +574,8 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
     setup_trace_grpc_otlp_exporter(opts);
   }
 
-  metrics_exporter_.reset(new OTLPMetrics(&loop_, url, "", is_http, *this));
-}
-
-resource::Resource OTLPAgent::create_resource() const {
-  json config = json::parse(nsolid::GetConfig(), nullptr, false);
-  // assert because the runtime should never send me an invalid JSON config
-  ASSERT(!config.is_discarded());
-  auto it = config.find("app");
-  ASSERT(it != config.end());
-  resource::ResourceAttributes attrs({
-    {kServiceName, it->get<std::string>()},
-    {kServiceInstanceId, nsolid::GetAgentId()}
-  });
-
-  it = config.find("appVersion");
-  if (it != config.end()) {
-    attrs.SetAttribute(kServiceVersion, it->get<std::string>());
-  }
-
-  return resource::Resource::Create(attrs);
+  metrics_exporter_.reset(
+    new OTLPMetrics(&loop_, url, "", is_http, *GetResource(), GetScope()));
 }
 
 
@@ -666,13 +594,13 @@ void OTLPAgent::setup_trace_otlp_exporter(
     exporter::otlp::OtlpHttpExporterOptions& opts) {
   opts.content_type  = exporter::otlp::HttpRequestContentType::kBinary;
   opts.console_debug = true;
-  otlp_http_exporter_.reset(new exporter::otlp::OtlpHttpExporter(opts));
+  otlp_exporter_.reset(new exporter::otlp::OtlpHttpExporter(opts));
 }
 
 
 void OTLPAgent::setup_trace_grpc_otlp_exporter(
     exporter::otlp::OtlpGrpcExporterOptions& opts) {
-  otlp_http_exporter_.reset(new exporter::otlp::OtlpGrpcExporter(opts));
+  otlp_exporter_.reset(new exporter::otlp::OtlpGrpcExporter(opts));
 }
 
 
