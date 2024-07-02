@@ -19,6 +19,24 @@ class Recordable;
 }  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE
 
+// Class pre-declaration
+OPENTELEMETRY_BEGIN_NAMESPACE
+namespace sdk {
+namespace instrumentationscope {
+class InstrumentationScope;
+}
+namespace logs {
+class Recordable;
+}
+namespace resource {
+class Resource;
+}
+namespace trace {
+class Recordable;
+}
+}  // namespace sdk
+OPENTELEMETRY_END_NAMESPACE
+
 namespace node {
 namespace nsolid {
 namespace otlp {
@@ -33,6 +51,9 @@ void fill_proc_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
 
 void fill_env_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
                       const ThreadMetrics::MetricsStor& stor);
+
+void fill_log_recordable(OPENTELEMETRY_NAMESPACE::sdk::logs::Recordable*,
+                         const LogWriteInfo&);
 
 void fill_recordable(OPENTELEMETRY_NAMESPACE::sdk::trace::Recordable*,
                      const Tracer::SpanStor&);
