@@ -113,6 +113,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void handle_command_request(grpcagent::CommandRequest&& request);
 
+  void reconfigure(const grpcagent::CommandRequest& config);
+
   void send_blocked_loop_event(BlockedLoopStor&& stor);
 
   void send_info_event(const char* req_id = nullptr);
