@@ -758,34 +758,20 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
   Debug("Command: %s\n", request.command().c_str());
   command_stream_->Write(grpcagent::CommandResponse());
   const std::string cmd = request.command();
-  switch (cmd) {
-    case "info":
-      send_info_event(request.requestid().c_str());
-    break;
-    case "packages":
-      send_packages_event(request.requestid().c_str());
-    break;
-    case "reconfigure":
-      reconfigure(request.config());
-    break;
-    default:
-     break;
-  }
-  if (request.command() == "info") {
+  if (cmd == "info") {
     send_info_event(request.requestid().c_str());
-  } else if (request.command() == "packages") {
+  } else if (cmd == "packages") {
     send_packages_event(request.requestid().c_str());
+  } else if (cmd == "reconfigure") {
+    reconfigure(request);
   }
 }
 
-void GrpcAgent::reconfigure(const json& config) {
+void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
+  //  UpdateConfig(out.dump());
 }
 
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
-
-}
-
-void GrpcAgent::send_info_event(const char* req_id) {
   google::protobuf::ArenaOptions arena_options;
   // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
   arena_options.initial_block_size = 1024;
@@ -812,6 +798,33 @@ void GrpcAgent::send_info_event(const char* req_id) {
     });
 }
 
+void GrpcAgent::send_info_event(const char* req_id) {
+  google::protobuf::ArenaOptions arena_options;
+  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  arena_options.initial_block_size = 1024;
+  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
+  // block to reduce memory fragments.
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+
+  grpcagent::InfoEvent* info_event = google::protobuf::Arena::Create<grpcagent::InfoEvent>(arena.get());
+  PopulateInfoEvent(info_event, req_id);
+
+  auto context = GrpcClient::MakeClientContext();
+  grpcagent::EventResponse* event_response = google::protobuf::Arena::Create<grpcagent::EventResponse>(arena.get());
+
+  client_->DelegateAsyncExport(
+    nsolid_service_stub_.get(), std::move(context), std::move(arena),
+    std::move(*info_event),
+    [](::grpc::Status,
+        std::unique_ptr<google::protobuf::Arena>&&,
+        const grpcagent::InfoEvent& info_event,
+        grpcagent::EventResponse*) {
+      fprintf(stderr, "ExportInfo() success\n");
+      return true;
+    });
+}
+
 void GrpcAgent::send_packages_event(const char* req_id) {
   google::protobuf::ArenaOptions arena_options;
   // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
@@ -831,7 +844,7 @@ void GrpcAgent::send_packages_event(const char* req_id) {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*packages_event),
     [](::grpc::Status,
-        std::unique_ptr<google::protobuf::Arena> &&,
+        std::unique_ptr<google::protobuf::Arena>&&,
         const grpcagent::PackagesEvent& info_event,
         grpcagent::EventResponse*) {
       fprintf(stderr, "ExportPackages() success\n");
