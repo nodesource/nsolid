@@ -263,14 +263,7 @@ int GrpcAgent::stop() {
   //   return;
   // }
 
-  BlockedLoopStor stor;
-  while (agent->blocked_loop_msg_q_.dequeue(stor)) {
-    if (stor.blocked) {
-      agent->send_blocked_loop_event(std::move(stor));
-    } else {
-      agent->send_unblocked_loop_event(std::move(stor));
-    }
-  }
+  agent->got_blocked_loop_msgs();
 }
 
 /*static*/ void GrpcAgent::shutdown_cb_(nsuv::ns_async*,
@@ -719,6 +712,17 @@ void GrpcAgent::do_stop() {
   blocked_loop_msg_.close();
   env_msg_.close();
   shutdown_.close();
+}
+
+void GrpcAgent::got_blocked_loop_msgs() {
+  BlockedLoopStor stor;
+  while (blocked_loop_msg_q_.dequeue(stor)) {
+    if (stor.blocked) {
+      send_blocked_loop_event(std::move(stor));
+    } else {
+      send_unblocked_loop_event(std::move(stor));
+    }
+  }
 }
 
 void GrpcAgent::got_logs() {

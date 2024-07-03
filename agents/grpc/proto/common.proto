@@ -12,6 +12,4 @@ message CommonResponse {
   string requestId = 2;
   string command = 3;
   Time recorded = 4;
-  uint32 duration = 5;
-  uint32 interval = 6;
 }
