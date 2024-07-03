@@ -344,8 +344,6 @@ class CommonResponse final :
     kRequestIdFieldNumber = 2,
     kCommandFieldNumber = 3,
     kRecordedFieldNumber = 4,
-    kDurationFieldNumber = 5,
-    kIntervalFieldNumber = 6,
   };
   // string agentId = 1;
   void clear_agentid();
@@ -407,24 +405,6 @@ class CommonResponse final :
       ::grpcagent::Time* recorded);
   ::grpcagent::Time* unsafe_arena_release_recorded();
 
-  // uint32 duration = 5;
-  void clear_duration();
-  uint32_t duration() const;
-  void set_duration(uint32_t value);
-  private:
-  uint32_t _internal_duration() const;
-  void _internal_set_duration(uint32_t value);
-  public:
-
-  // uint32 interval = 6;
-  void clear_interval();
-  uint32_t interval() const;
-  void set_interval(uint32_t value);
-  private:
-  uint32_t _internal_interval() const;
-  void _internal_set_interval(uint32_t value);
-  public:
-
   // @@protoc_insertion_point(class_scope:grpcagent.CommonResponse)
  private:
   class _Internal;
@@ -437,8 +417,6 @@ class CommonResponse final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr requestid_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr command_;
     ::grpcagent::Time* recorded_;
-    uint32_t duration_;
-    uint32_t interval_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -737,46 +715,6 @@ inline void CommonResponse::set_allocated_recorded(::grpcagent::Time* recorded) 
   }
   _impl_.recorded_ = recorded;
   // @@protoc_insertion_point(field_set_allocated:grpcagent.CommonResponse.recorded)
-}
-
-// uint32 duration = 5;
-inline void CommonResponse::clear_duration() {
-  _impl_.duration_ = 0u;
-}
-inline uint32_t CommonResponse::_internal_duration() const {
-  return _impl_.duration_;
-}
-inline uint32_t CommonResponse::duration() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommonResponse.duration)
-  return _internal_duration();
-}
-inline void CommonResponse::_internal_set_duration(uint32_t value) {
-  
-  _impl_.duration_ = value;
-}
-inline void CommonResponse::set_duration(uint32_t value) {
-  _internal_set_duration(value);
-  // @@protoc_insertion_point(field_set:grpcagent.CommonResponse.duration)
-}
-
-// uint32 interval = 6;
-inline void CommonResponse::clear_interval() {
-  _impl_.interval_ = 0u;
-}
-inline uint32_t CommonResponse::_internal_interval() const {
-  return _impl_.interval_;
-}
-inline uint32_t CommonResponse::interval() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommonResponse.interval)
-  return _internal_interval();
-}
-inline void CommonResponse::_internal_set_interval(uint32_t value) {
-  
-  _impl_.interval_ = value;
-}
-inline void CommonResponse::set_interval(uint32_t value) {
-  _internal_set_interval(value);
-  // @@protoc_insertion_point(field_set:grpcagent.CommonResponse.interval)
 }
 
 #ifdef __GNUC__
