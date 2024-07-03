@@ -5,13 +5,22 @@
 
 syntax = "proto3";
 
+import "reconfigure.proto";
+
 package grpcagent;
+
+message CommandBody {
+  oneof body {
+    ReconfigureBody reconfigure = 1;
+  }
+}
 
 message CommandRequest {
   string requestId = 1;
   uint32 version = 2;
   string id = 3;
   string command = 4;
+  CommandBody body = 5;
 }
 
 message CommandResponse {

@@ -757,11 +757,28 @@ void GrpcAgent::got_proc_metrics() {
 void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
   Debug("Command: %s\n", request.command().c_str());
   command_stream_->Write(grpcagent::CommandResponse());
+  const std::string cmd = request.command();
+  switch (cmd) {
+    case "info":
+      send_info_event(request.requestid().c_str());
+    break;
+    case "packages":
+      send_packages_event(request.requestid().c_str());
+    break;
+    case "reconfigure":
+      reconfigure(request.config());
+    break;
+    default:
+     break;
+  }
   if (request.command() == "info") {
     send_info_event(request.requestid().c_str());
   } else if (request.command() == "packages") {
     send_packages_event(request.requestid().c_str());
   }
+}
+
+void GrpcAgent::reconfigure(const json& config) {
 }
 
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
