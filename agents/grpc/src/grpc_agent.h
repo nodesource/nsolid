@@ -105,6 +105,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void do_stop();
 
+  void got_blocked_loop_msgs();
+
   void got_logs();
 
   void got_proc_metrics();
