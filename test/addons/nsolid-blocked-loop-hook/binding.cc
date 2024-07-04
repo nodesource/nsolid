@@ -29,6 +29,8 @@ static void loop_blocked(node::nsolid::SharedEnvInst envinst,
   uint64_t then;
   uint64_t thread_id = node::nsolid::GetThreadId(envinst);
 
+  fprintf(stderr, "loop_blocked: %s\n", body.c_str());
+
   uv_mutex_lock(&worker_map_lock);
   then = worker_map[thread_id];
   worker_map[thread_id] = now;

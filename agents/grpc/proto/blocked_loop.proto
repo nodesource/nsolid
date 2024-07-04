@@ -18,10 +18,11 @@ message Stack {
 }
 
 message BlockedLoopBody {
-  int32 blocked_for = 1;
-  int32 loop_id = 2;
-  int32 callback_cntr = 3;
-  repeated Stack stack = 4;
+  int64 thread_id = 1;
+  int32 blocked_for = 2;
+  int32 loop_id = 3;
+  int32 callback_cntr = 4;
+  repeated Stack stack = 5;
 }
 
 message BlockedLoopEvent {
@@ -30,9 +31,10 @@ message BlockedLoopEvent {
 }
 
 message UnblockedLoopBody {
-  int32 blocked_for = 1;
-  int32 loop_id = 2;
-  int32 callback_cntr = 3;
+  int64 thread_id = 1;
+  int32 blocked_for = 2;
+  int32 loop_id = 3;
+  int32 callback_cntr = 4;
 }
 
 message UnblockedLoopEvent {
