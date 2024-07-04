@@ -7,6 +7,8 @@ const binding = require(bindingPath);
 const { Worker, isMainThread, threadId } =
   require('worker_threads');
 
+require('nsolid').start();
+
 if (!isMainThread && +process.argv[2] !== process.pid)
   skip('Test must first run as the main thread');
 

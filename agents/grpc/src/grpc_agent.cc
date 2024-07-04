@@ -49,6 +49,32 @@ JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)) {
 }
 
+void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
+                              const GrpcAgent::BlockedLoopStor& stor) {
+  // Fill in the fields of the BlockedLoopEvent.
+  nlohmann::json body = json::parse(stor.body, nullptr, false);
+  ASSERT(!body.is_discarded());
+
+  grpcagent::CommonResponse* common = blocked_loop_event->mutable_common();
+  common->set_agentid(GetAgentId());
+  common->set_command("loop_blocked");
+
+  grpcagent::BlockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
+  blocked_body->set_thread_id(stor.thread_id);
+  blocked_body->set_blocked_for(body["blockedFor"].get<int32_t>());
+  blocked_body->set_loop_id(body["loopId"].get<int32_t>());
+  blocked_body->set_callback_cntr(body["callbackCntr"].get<int32_t>());
+
+  for (const auto& stack : body["stack"]) {
+    grpcagent::Stack* proto_stack = blocked_body->add_stack();
+    proto_stack->set_is_eval(stack["isEval"].get<bool>());
+    proto_stack->set_script_name(stack["scriptName"].get<std::string>());
+    proto_stack->set_function_name(stack["functionName"].get<std::string>());
+    proto_stack->set_line_number(stack["lineNumber"].get<int32_t>());
+    proto_stack->set_column(stack["column"].get<int32_t>());
+  }
+}
+
 void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
                        const char* req_id) {
   nlohmann::json info = json::parse(GetProcessInfo(), nullptr, false);
@@ -178,6 +204,23 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
       proto_package->set_required(package["required"].get<bool>());
     }
   }
+}
+
+void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* blocked_loop_event,
+                                const GrpcAgent::BlockedLoopStor& stor) {
+  // Fill in the fields of the BlockedLoopEvent.
+  nlohmann::json body = json::parse(stor.body, nullptr, false);
+  ASSERT(!body.is_discarded());
+
+  grpcagent::CommonResponse* common = blocked_loop_event->mutable_common();
+  common->set_agentid(GetAgentId());
+  common->set_command("loop_unblocked");
+
+  grpcagent::UnblockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
+  blocked_body->set_thread_id(stor.thread_id);
+  blocked_body->set_blocked_for(body["blockedFor"].get<int32_t>());
+  blocked_body->set_loop_id(body["loopId"].get<int32_t>());
+  blocked_body->set_callback_cntr(body["callbackCntr"].get<int32_t>());
 }
 
 /*static*/ SharedGrpcAgent GrpcAgent::Inst() {
@@ -780,20 +823,20 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
   arena_options.max_block_size = 65536;
   std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
 
-  grpcagent::InfoEvent* info_event = google::protobuf::Arena::Create<grpcagent::InfoEvent>(arena.get());
-  PopulateInfoEvent(info_event, req_id);
+  grpcagent::BlockedLoopEvent* event = google::protobuf::Arena::Create<grpcagent::BlockedLoopEvent>(arena.get());
+  PopulateBlockedLoopEvent(event, stor);
 
   auto context = GrpcClient::MakeClientContext();
   grpcagent::EventResponse* event_response = google::protobuf::Arena::Create<grpcagent::EventResponse>(arena.get());
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*info_event),
+    std::move(*event),
     [](::grpc::Status,
         std::unique_ptr<google::protobuf::Arena> &&,
-        const grpcagent::InfoEvent& info_event,
+        const grpcagent::BlockedLoopEvent& event,
         grpcagent::EventResponse*) {
-      fprintf(stderr, "ExportInfo() success\n");
+      fprintf(stderr, "ExportBlockedLoop() success\n");
       return true;
     });
 }
@@ -853,7 +896,30 @@ void GrpcAgent::send_packages_event(const char* req_id) {
 }
 
 void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
-  
+  google::protobuf::ArenaOptions arena_options;
+  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  arena_options.initial_block_size = 1024;
+  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
+  // block to reduce memory fragments.
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+
+  grpcagent::UnblockedLoopEvent* event = google::protobuf::Arena::Create<grpcagent::UnblockedLoopEvent>(arena.get());
+  PopulateUnblockedLoopEvent(event, stor);
+
+  auto context = GrpcClient::MakeClientContext();
+  grpcagent::EventResponse* event_response = google::protobuf::Arena::Create<grpcagent::EventResponse>(arena.get());
+
+  client_->DelegateAsyncExport(
+    nsolid_service_stub_.get(), std::move(context), std::move(arena),
+    std::move(*event),
+    [](::grpc::Status,
+        std::unique_ptr<google::protobuf::Arena> &&,
+        const grpcagent::UnblockedLoopEvent& event,
+        grpcagent::EventResponse*) {
+      fprintf(stderr, "ExportUnblockedLoop() success\n");
+      return true;
+    });
 }
 
 void GrpcAgent::setup_blocked_loop_hooks() {

@@ -41,6 +41,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORIT
 PROTOBUF_CONSTEXPR BlockedLoopBody::BlockedLoopBody(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.stack_)*/{}
+  , /*decltype(_impl_.thread_id_)*/int64_t{0}
   , /*decltype(_impl_.blocked_for_)*/0
   , /*decltype(_impl_.loop_id_)*/0
   , /*decltype(_impl_.callback_cntr_)*/0
@@ -70,7 +71,8 @@ struct BlockedLoopEventDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 BlockedLoopEventDefaultTypeInternal _BlockedLoopEvent_default_instance_;
 PROTOBUF_CONSTEXPR UnblockedLoopBody::UnblockedLoopBody(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.blocked_for_)*/0
+    /*decltype(_impl_.thread_id_)*/int64_t{0}
+  , /*decltype(_impl_.blocked_for_)*/0
   , /*decltype(_impl_.loop_id_)*/0
   , /*decltype(_impl_.callback_cntr_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
@@ -120,6 +122,7 @@ const uint32_t TableStruct_blocked_5floop_2eproto::offsets[] PROTOBUF_SECTION_VA
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::BlockedLoopBody, _impl_.thread_id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::BlockedLoopBody, _impl_.blocked_for_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::BlockedLoopBody, _impl_.loop_id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::BlockedLoopBody, _impl_.callback_cntr_),
@@ -138,6 +141,7 @@ const uint32_t TableStruct_blocked_5floop_2eproto::offsets[] PROTOBUF_SECTION_VA
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::UnblockedLoopBody, _impl_.thread_id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::UnblockedLoopBody, _impl_.blocked_for_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::UnblockedLoopBody, _impl_.loop_id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::UnblockedLoopBody, _impl_.callback_cntr_),
@@ -153,9 +157,9 @@ const uint32_t TableStruct_blocked_5floop_2eproto::offsets[] PROTOBUF_SECTION_VA
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::grpcagent::Stack)},
   { 11, -1, -1, sizeof(::grpcagent::BlockedLoopBody)},
-  { 21, -1, -1, sizeof(::grpcagent::BlockedLoopEvent)},
-  { 29, -1, -1, sizeof(::grpcagent::UnblockedLoopBody)},
-  { 38, -1, -1, sizeof(::grpcagent::UnblockedLoopEvent)},
+  { 22, -1, -1, sizeof(::grpcagent::BlockedLoopEvent)},
+  { 30, -1, -1, sizeof(::grpcagent::UnblockedLoopBody)},
+  { 40, -1, -1, sizeof(::grpcagent::UnblockedLoopEvent)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -170,25 +174,26 @@ const char descriptor_table_protodef_blocked_5floop_2eproto[] PROTOBUF_SECTION_V
   "\n\022blocked_loop.proto\022\tgrpcagent\032\014common."
   "proto\"i\n\005Stack\022\017\n\007is_eval\030\001 \001(\010\022\023\n\013scrip"
   "t_name\030\002 \001(\t\022\025\n\rfunction_name\030\003 \001(\t\022\023\n\013l"
-  "ine_number\030\004 \001(\005\022\016\n\006column\030\005 \001(\005\"o\n\017Bloc"
-  "kedLoopBody\022\023\n\013blocked_for\030\001 \001(\005\022\017\n\007loop"
-  "_id\030\002 \001(\005\022\025\n\rcallback_cntr\030\003 \001(\005\022\037\n\005stac"
-  "k\030\004 \003(\0132\020.grpcagent.Stack\"g\n\020BlockedLoop"
-  "Event\022)\n\006common\030\001 \001(\0132\031.grpcagent.Common"
-  "Response\022(\n\004body\030\002 \001(\0132\032.grpcagent.Block"
-  "edLoopBody\"P\n\021UnblockedLoopBody\022\023\n\013block"
-  "ed_for\030\001 \001(\005\022\017\n\007loop_id\030\002 \001(\005\022\025\n\rcallbac"
-  "k_cntr\030\003 \001(\005\"k\n\022UnblockedLoopEvent\022)\n\006co"
-  "mmon\030\001 \001(\0132\031.grpcagent.CommonResponse\022*\n"
-  "\004body\030\002 \001(\0132\034.grpcagent.UnblockedLoopBod"
-  "yb\006proto3"
+  "ine_number\030\004 \001(\005\022\016\n\006column\030\005 \001(\005\"\202\001\n\017Blo"
+  "ckedLoopBody\022\021\n\tthread_id\030\001 \001(\003\022\023\n\013block"
+  "ed_for\030\002 \001(\005\022\017\n\007loop_id\030\003 \001(\005\022\025\n\rcallbac"
+  "k_cntr\030\004 \001(\005\022\037\n\005stack\030\005 \003(\0132\020.grpcagent."
+  "Stack\"g\n\020BlockedLoopEvent\022)\n\006common\030\001 \001("
+  "\0132\031.grpcagent.CommonResponse\022(\n\004body\030\002 \001"
+  "(\0132\032.grpcagent.BlockedLoopBody\"c\n\021Unbloc"
+  "kedLoopBody\022\021\n\tthread_id\030\001 \001(\003\022\023\n\013blocke"
+  "d_for\030\002 \001(\005\022\017\n\007loop_id\030\003 \001(\005\022\025\n\rcallback"
+  "_cntr\030\004 \001(\005\"k\n\022UnblockedLoopEvent\022)\n\006com"
+  "mon\030\001 \001(\0132\031.grpcagent.CommonResponse\022*\n\004"
+  "body\030\002 \001(\0132\034.grpcagent.UnblockedLoopBody"
+  "b\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_blocked_5floop_2eproto_deps[1] = {
   &::descriptor_table_common_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_blocked_5floop_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_blocked_5floop_2eproto = {
-    false, false, 569, descriptor_table_protodef_blocked_5floop_2eproto,
+    false, false, 608, descriptor_table_protodef_blocked_5floop_2eproto,
     "blocked_loop.proto",
     &descriptor_table_blocked_5floop_2eproto_once, descriptor_table_blocked_5floop_2eproto_deps, 1, 5,
     schemas, file_default_instances, TableStruct_blocked_5floop_2eproto::offsets,
@@ -557,15 +562,16 @@ BlockedLoopBody::BlockedLoopBody(const BlockedLoopBody& from)
   BlockedLoopBody* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.stack_){from._impl_.stack_}
+    , decltype(_impl_.thread_id_){}
     , decltype(_impl_.blocked_for_){}
     , decltype(_impl_.loop_id_){}
     , decltype(_impl_.callback_cntr_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  ::memcpy(&_impl_.blocked_for_, &from._impl_.blocked_for_,
+  ::memcpy(&_impl_.thread_id_, &from._impl_.thread_id_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.callback_cntr_) -
-    reinterpret_cast<char*>(&_impl_.blocked_for_)) + sizeof(_impl_.callback_cntr_));
+    reinterpret_cast<char*>(&_impl_.thread_id_)) + sizeof(_impl_.callback_cntr_));
   // @@protoc_insertion_point(copy_constructor:grpcagent.BlockedLoopBody)
 }
 
@@ -575,6 +581,7 @@ inline void BlockedLoopBody::SharedCtor(
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.stack_){arena}
+    , decltype(_impl_.thread_id_){int64_t{0}}
     , decltype(_impl_.blocked_for_){0}
     , decltype(_impl_.loop_id_){0}
     , decltype(_impl_.callback_cntr_){0}
@@ -607,9 +614,9 @@ void BlockedLoopBody::Clear() {
   (void) cached_has_bits;
 
   _impl_.stack_.Clear();
-  ::memset(&_impl_.blocked_for_, 0, static_cast<size_t>(
+  ::memset(&_impl_.thread_id_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.callback_cntr_) -
-      reinterpret_cast<char*>(&_impl_.blocked_for_)) + sizeof(_impl_.callback_cntr_));
+      reinterpret_cast<char*>(&_impl_.thread_id_)) + sizeof(_impl_.callback_cntr_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -619,40 +626,48 @@ const char* BlockedLoopBody::_InternalParse(const char* ptr, ::_pbi::ParseContex
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // int32 blocked_for = 1;
+      // int64 thread_id = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.thread_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 blocked_for = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           _impl_.blocked_for_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // int32 loop_id = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+      // int32 loop_id = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
           _impl_.loop_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // int32 callback_cntr = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+      // int32 callback_cntr = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
           _impl_.callback_cntr_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // repeated .grpcagent.Stack stack = 4;
-      case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+      // repeated .grpcagent.Stack stack = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
           ptr -= 1;
           do {
             ptr += 1;
             ptr = ctx->ParseMessage(_internal_add_stack(), ptr);
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<34>(ptr));
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<42>(ptr));
         } else
           goto handle_unusual;
         continue;
@@ -685,30 +700,36 @@ uint8_t* BlockedLoopBody::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // int32 blocked_for = 1;
+  // int64 thread_id = 1;
+  if (this->_internal_thread_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_thread_id(), target);
+  }
+
+  // int32 blocked_for = 2;
   if (this->_internal_blocked_for() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_blocked_for(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_blocked_for(), target);
   }
 
-  // int32 loop_id = 2;
+  // int32 loop_id = 3;
   if (this->_internal_loop_id() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_loop_id(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(3, this->_internal_loop_id(), target);
   }
 
-  // int32 callback_cntr = 3;
+  // int32 callback_cntr = 4;
   if (this->_internal_callback_cntr() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(3, this->_internal_callback_cntr(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(4, this->_internal_callback_cntr(), target);
   }
 
-  // repeated .grpcagent.Stack stack = 4;
+  // repeated .grpcagent.Stack stack = 5;
   for (unsigned i = 0,
       n = static_cast<unsigned>(this->_internal_stack_size()); i < n; i++) {
     const auto& repfield = this->_internal_stack(i);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-        InternalWriteMessage(4, repfield, repfield.GetCachedSize(), target, stream);
+        InternalWriteMessage(5, repfield, repfield.GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -727,24 +748,29 @@ size_t BlockedLoopBody::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .grpcagent.Stack stack = 4;
+  // repeated .grpcagent.Stack stack = 5;
   total_size += 1UL * this->_internal_stack_size();
   for (const auto& msg : this->_impl_.stack_) {
     total_size +=
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
-  // int32 blocked_for = 1;
+  // int64 thread_id = 1;
+  if (this->_internal_thread_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_thread_id());
+  }
+
+  // int32 blocked_for = 2;
   if (this->_internal_blocked_for() != 0) {
     total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_blocked_for());
   }
 
-  // int32 loop_id = 2;
+  // int32 loop_id = 3;
   if (this->_internal_loop_id() != 0) {
     total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_loop_id());
   }
 
-  // int32 callback_cntr = 3;
+  // int32 callback_cntr = 4;
   if (this->_internal_callback_cntr() != 0) {
     total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_callback_cntr());
   }
@@ -768,6 +794,9 @@ void BlockedLoopBody::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const 
   (void) cached_has_bits;
 
   _this->_impl_.stack_.MergeFrom(from._impl_.stack_);
+  if (from._internal_thread_id() != 0) {
+    _this->_internal_set_thread_id(from._internal_thread_id());
+  }
   if (from._internal_blocked_for() != 0) {
     _this->_internal_set_blocked_for(from._internal_blocked_for());
   }
@@ -798,9 +827,9 @@ void BlockedLoopBody::InternalSwap(BlockedLoopBody* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(BlockedLoopBody, _impl_.callback_cntr_)
       + sizeof(BlockedLoopBody::_impl_.callback_cntr_)
-      - PROTOBUF_FIELD_OFFSET(BlockedLoopBody, _impl_.blocked_for_)>(
-          reinterpret_cast<char*>(&_impl_.blocked_for_),
-          reinterpret_cast<char*>(&other->_impl_.blocked_for_));
+      - PROTOBUF_FIELD_OFFSET(BlockedLoopBody, _impl_.thread_id_)>(
+          reinterpret_cast<char*>(&_impl_.thread_id_),
+          reinterpret_cast<char*>(&other->_impl_.thread_id_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata BlockedLoopBody::GetMetadata() const {
@@ -1070,15 +1099,16 @@ UnblockedLoopBody::UnblockedLoopBody(const UnblockedLoopBody& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   UnblockedLoopBody* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.blocked_for_){}
+      decltype(_impl_.thread_id_){}
+    , decltype(_impl_.blocked_for_){}
     , decltype(_impl_.loop_id_){}
     , decltype(_impl_.callback_cntr_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  ::memcpy(&_impl_.blocked_for_, &from._impl_.blocked_for_,
+  ::memcpy(&_impl_.thread_id_, &from._impl_.thread_id_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.callback_cntr_) -
-    reinterpret_cast<char*>(&_impl_.blocked_for_)) + sizeof(_impl_.callback_cntr_));
+    reinterpret_cast<char*>(&_impl_.thread_id_)) + sizeof(_impl_.callback_cntr_));
   // @@protoc_insertion_point(copy_constructor:grpcagent.UnblockedLoopBody)
 }
 
@@ -1087,7 +1117,8 @@ inline void UnblockedLoopBody::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.blocked_for_){0}
+      decltype(_impl_.thread_id_){int64_t{0}}
+    , decltype(_impl_.blocked_for_){0}
     , decltype(_impl_.loop_id_){0}
     , decltype(_impl_.callback_cntr_){0}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -1117,9 +1148,9 @@ void UnblockedLoopBody::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  ::memset(&_impl_.blocked_for_, 0, static_cast<size_t>(
+  ::memset(&_impl_.thread_id_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.callback_cntr_) -
-      reinterpret_cast<char*>(&_impl_.blocked_for_)) + sizeof(_impl_.callback_cntr_));
+      reinterpret_cast<char*>(&_impl_.thread_id_)) + sizeof(_impl_.callback_cntr_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1129,25 +1160,33 @@ const char* UnblockedLoopBody::_InternalParse(const char* ptr, ::_pbi::ParseCont
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // int32 blocked_for = 1;
+      // int64 thread_id = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.thread_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 blocked_for = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           _impl_.blocked_for_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // int32 loop_id = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+      // int32 loop_id = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
           _impl_.loop_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // int32 callback_cntr = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+      // int32 callback_cntr = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
           _impl_.callback_cntr_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -1182,22 +1221,28 @@ uint8_t* UnblockedLoopBody::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // int32 blocked_for = 1;
+  // int64 thread_id = 1;
+  if (this->_internal_thread_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_thread_id(), target);
+  }
+
+  // int32 blocked_for = 2;
   if (this->_internal_blocked_for() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_blocked_for(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_blocked_for(), target);
   }
 
-  // int32 loop_id = 2;
+  // int32 loop_id = 3;
   if (this->_internal_loop_id() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_loop_id(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(3, this->_internal_loop_id(), target);
   }
 
-  // int32 callback_cntr = 3;
+  // int32 callback_cntr = 4;
   if (this->_internal_callback_cntr() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(3, this->_internal_callback_cntr(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(4, this->_internal_callback_cntr(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1216,17 +1261,22 @@ size_t UnblockedLoopBody::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // int32 blocked_for = 1;
+  // int64 thread_id = 1;
+  if (this->_internal_thread_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_thread_id());
+  }
+
+  // int32 blocked_for = 2;
   if (this->_internal_blocked_for() != 0) {
     total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_blocked_for());
   }
 
-  // int32 loop_id = 2;
+  // int32 loop_id = 3;
   if (this->_internal_loop_id() != 0) {
     total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_loop_id());
   }
 
-  // int32 callback_cntr = 3;
+  // int32 callback_cntr = 4;
   if (this->_internal_callback_cntr() != 0) {
     total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_callback_cntr());
   }
@@ -1249,6 +1299,9 @@ void UnblockedLoopBody::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, cons
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
+  if (from._internal_thread_id() != 0) {
+    _this->_internal_set_thread_id(from._internal_thread_id());
+  }
   if (from._internal_blocked_for() != 0) {
     _this->_internal_set_blocked_for(from._internal_blocked_for());
   }
@@ -1278,9 +1331,9 @@ void UnblockedLoopBody::InternalSwap(UnblockedLoopBody* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(UnblockedLoopBody, _impl_.callback_cntr_)
       + sizeof(UnblockedLoopBody::_impl_.callback_cntr_)
-      - PROTOBUF_FIELD_OFFSET(UnblockedLoopBody, _impl_.blocked_for_)>(
-          reinterpret_cast<char*>(&_impl_.blocked_for_),
-          reinterpret_cast<char*>(&other->_impl_.blocked_for_));
+      - PROTOBUF_FIELD_OFFSET(UnblockedLoopBody, _impl_.thread_id_)>(
+          reinterpret_cast<char*>(&_impl_.thread_id_),
+          reinterpret_cast<char*>(&other->_impl_.thread_id_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata UnblockedLoopBody::GetMetadata() const {
