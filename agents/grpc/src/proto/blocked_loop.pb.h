@@ -396,12 +396,13 @@ class BlockedLoopBody final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kStackFieldNumber = 4,
-    kBlockedForFieldNumber = 1,
-    kLoopIdFieldNumber = 2,
-    kCallbackCntrFieldNumber = 3,
+    kStackFieldNumber = 5,
+    kThreadIdFieldNumber = 1,
+    kBlockedForFieldNumber = 2,
+    kLoopIdFieldNumber = 3,
+    kCallbackCntrFieldNumber = 4,
   };
-  // repeated .grpcagent.Stack stack = 4;
+  // repeated .grpcagent.Stack stack = 5;
   int stack_size() const;
   private:
   int _internal_stack_size() const;
@@ -419,7 +420,16 @@ class BlockedLoopBody final :
   const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::grpcagent::Stack >&
       stack() const;
 
-  // int32 blocked_for = 1;
+  // int64 thread_id = 1;
+  void clear_thread_id();
+  int64_t thread_id() const;
+  void set_thread_id(int64_t value);
+  private:
+  int64_t _internal_thread_id() const;
+  void _internal_set_thread_id(int64_t value);
+  public:
+
+  // int32 blocked_for = 2;
   void clear_blocked_for();
   int32_t blocked_for() const;
   void set_blocked_for(int32_t value);
@@ -428,7 +438,7 @@ class BlockedLoopBody final :
   void _internal_set_blocked_for(int32_t value);
   public:
 
-  // int32 loop_id = 2;
+  // int32 loop_id = 3;
   void clear_loop_id();
   int32_t loop_id() const;
   void set_loop_id(int32_t value);
@@ -437,7 +447,7 @@ class BlockedLoopBody final :
   void _internal_set_loop_id(int32_t value);
   public:
 
-  // int32 callback_cntr = 3;
+  // int32 callback_cntr = 4;
   void clear_callback_cntr();
   int32_t callback_cntr() const;
   void set_callback_cntr(int32_t value);
@@ -455,6 +465,7 @@ class BlockedLoopBody final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::grpcagent::Stack > stack_;
+    int64_t thread_id_;
     int32_t blocked_for_;
     int32_t loop_id_;
     int32_t callback_cntr_;
@@ -763,11 +774,21 @@ class UnblockedLoopBody final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kBlockedForFieldNumber = 1,
-    kLoopIdFieldNumber = 2,
-    kCallbackCntrFieldNumber = 3,
+    kThreadIdFieldNumber = 1,
+    kBlockedForFieldNumber = 2,
+    kLoopIdFieldNumber = 3,
+    kCallbackCntrFieldNumber = 4,
   };
-  // int32 blocked_for = 1;
+  // int64 thread_id = 1;
+  void clear_thread_id();
+  int64_t thread_id() const;
+  void set_thread_id(int64_t value);
+  private:
+  int64_t _internal_thread_id() const;
+  void _internal_set_thread_id(int64_t value);
+  public:
+
+  // int32 blocked_for = 2;
   void clear_blocked_for();
   int32_t blocked_for() const;
   void set_blocked_for(int32_t value);
@@ -776,7 +797,7 @@ class UnblockedLoopBody final :
   void _internal_set_blocked_for(int32_t value);
   public:
 
-  // int32 loop_id = 2;
+  // int32 loop_id = 3;
   void clear_loop_id();
   int32_t loop_id() const;
   void set_loop_id(int32_t value);
@@ -785,7 +806,7 @@ class UnblockedLoopBody final :
   void _internal_set_loop_id(int32_t value);
   public:
 
-  // int32 callback_cntr = 3;
+  // int32 callback_cntr = 4;
   void clear_callback_cntr();
   int32_t callback_cntr() const;
   void set_callback_cntr(int32_t value);
@@ -802,6 +823,7 @@ class UnblockedLoopBody final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    int64_t thread_id_;
     int32_t blocked_for_;
     int32_t loop_id_;
     int32_t callback_cntr_;
@@ -1162,7 +1184,27 @@ inline void Stack::set_column(int32_t value) {
 
 // BlockedLoopBody
 
-// int32 blocked_for = 1;
+// int64 thread_id = 1;
+inline void BlockedLoopBody::clear_thread_id() {
+  _impl_.thread_id_ = int64_t{0};
+}
+inline int64_t BlockedLoopBody::_internal_thread_id() const {
+  return _impl_.thread_id_;
+}
+inline int64_t BlockedLoopBody::thread_id() const {
+  // @@protoc_insertion_point(field_get:grpcagent.BlockedLoopBody.thread_id)
+  return _internal_thread_id();
+}
+inline void BlockedLoopBody::_internal_set_thread_id(int64_t value) {
+  
+  _impl_.thread_id_ = value;
+}
+inline void BlockedLoopBody::set_thread_id(int64_t value) {
+  _internal_set_thread_id(value);
+  // @@protoc_insertion_point(field_set:grpcagent.BlockedLoopBody.thread_id)
+}
+
+// int32 blocked_for = 2;
 inline void BlockedLoopBody::clear_blocked_for() {
   _impl_.blocked_for_ = 0;
 }
@@ -1182,7 +1224,7 @@ inline void BlockedLoopBody::set_blocked_for(int32_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.BlockedLoopBody.blocked_for)
 }
 
-// int32 loop_id = 2;
+// int32 loop_id = 3;
 inline void BlockedLoopBody::clear_loop_id() {
   _impl_.loop_id_ = 0;
 }
@@ -1202,7 +1244,7 @@ inline void BlockedLoopBody::set_loop_id(int32_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.BlockedLoopBody.loop_id)
 }
 
-// int32 callback_cntr = 3;
+// int32 callback_cntr = 4;
 inline void BlockedLoopBody::clear_callback_cntr() {
   _impl_.callback_cntr_ = 0;
 }
@@ -1222,7 +1264,7 @@ inline void BlockedLoopBody::set_callback_cntr(int32_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.BlockedLoopBody.callback_cntr)
 }
 
-// repeated .grpcagent.Stack stack = 4;
+// repeated .grpcagent.Stack stack = 5;
 inline int BlockedLoopBody::_internal_stack_size() const {
   return _impl_.stack_.size();
 }
@@ -1445,7 +1487,27 @@ inline void BlockedLoopEvent::set_allocated_body(::grpcagent::BlockedLoopBody* b
 
 // UnblockedLoopBody
 
-// int32 blocked_for = 1;
+// int64 thread_id = 1;
+inline void UnblockedLoopBody::clear_thread_id() {
+  _impl_.thread_id_ = int64_t{0};
+}
+inline int64_t UnblockedLoopBody::_internal_thread_id() const {
+  return _impl_.thread_id_;
+}
+inline int64_t UnblockedLoopBody::thread_id() const {
+  // @@protoc_insertion_point(field_get:grpcagent.UnblockedLoopBody.thread_id)
+  return _internal_thread_id();
+}
+inline void UnblockedLoopBody::_internal_set_thread_id(int64_t value) {
+  
+  _impl_.thread_id_ = value;
+}
+inline void UnblockedLoopBody::set_thread_id(int64_t value) {
+  _internal_set_thread_id(value);
+  // @@protoc_insertion_point(field_set:grpcagent.UnblockedLoopBody.thread_id)
+}
+
+// int32 blocked_for = 2;
 inline void UnblockedLoopBody::clear_blocked_for() {
   _impl_.blocked_for_ = 0;
 }
@@ -1465,7 +1527,7 @@ inline void UnblockedLoopBody::set_blocked_for(int32_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.UnblockedLoopBody.blocked_for)
 }
 
-// int32 loop_id = 2;
+// int32 loop_id = 3;
 inline void UnblockedLoopBody::clear_loop_id() {
   _impl_.loop_id_ = 0;
 }
@@ -1485,7 +1547,7 @@ inline void UnblockedLoopBody::set_loop_id(int32_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.UnblockedLoopBody.loop_id)
 }
 
-// int32 callback_cntr = 3;
+// int32 callback_cntr = 4;
 inline void UnblockedLoopBody::clear_callback_cntr() {
   _impl_.callback_cntr_ = 0;
 }
