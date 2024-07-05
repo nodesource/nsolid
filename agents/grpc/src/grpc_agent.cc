@@ -655,7 +655,8 @@ int GrpcAgent::config(const json& config) {
       OtlpGrpcLogRecordExporterOptions opt;
       opt.endpoint = "localhost:50051";
       log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(opt);
-      command_stream_ = std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
+      command_stream_ =
+        std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
     }
   }
 
