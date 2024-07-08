@@ -22,7 +22,10 @@
 #include <atomic>
 #include <functional>
 
+#include "absl/log/absl_check.h"
+
 #include <grpc/grpc.h>
+#include <grpc/impl/call.h>
 #include <grpc/support/log.h>
 #include <grpcpp/impl/call.h>
 #include <grpcpp/impl/call_op_set.h>
@@ -69,7 +72,7 @@ class CallbackUnaryCallImpl {
                         const InputMessage* request, OutputMessage* result,
                         std::function<void(grpc::Status)> on_completion) {
     grpc::CompletionQueue* cq = channel->CallbackCQ();
-    GPR_ASSERT(cq != nullptr);
+    ABSL_CHECK_NE(cq, nullptr);
     grpc::internal::Call call(channel->CreateCall(method, context, cq));
 
     using FullCallOpSet = grpc::internal::CallOpSet<
@@ -122,15 +125,6 @@ class ClientReactor {
   ///
   /// \param[in] s The status outcome of this RPC
   virtual void OnDone(const grpc::Status& /*s*/) = 0;
-
-  /// InternalScheduleOnDone is not part of the API and is not meant to be
-  /// overridden. It is virtual to allow successful builds for certain bazel
-  /// build users that only want to depend on gRPC codegen headers and not the
-  /// full library (although this is not a generally-supported option). Although
-  /// the virtual call is slower than a direct call, this function is
-  /// heavyweight and the cost of the virtual call is not much in comparison.
-  /// This function may be removed or devirtualized in the future.
-  virtual void InternalScheduleOnDone(grpc::Status s);
 
   /// InternalTrailersOnly is not part of the API and is not meant to be
   /// overridden. It is virtual to allow successful builds for certain bazel
@@ -312,7 +306,7 @@ class ClientBidiReactor : public internal::ClientReactor {
   /// The argument to AddMultipleHolds must be positive.
   void AddHold() { AddMultipleHolds(1); }
   void AddMultipleHolds(int holds) {
-    GPR_DEBUG_ASSERT(holds > 0);
+    ABSL_DCHECK_GT(holds, 0);
     stream_->AddHold(holds);
   }
   void RemoveHold() { stream_->RemoveHold(); }
@@ -376,7 +370,7 @@ class ClientReadReactor : public internal::ClientReactor {
 
   void AddHold() { AddMultipleHolds(1); }
   void AddMultipleHolds(int holds) {
-    GPR_DEBUG_ASSERT(holds > 0);
+    ABSL_DCHECK_GT(holds, 0);
     reader_->AddHold(holds);
   }
   void RemoveHold() { reader_->RemoveHold(); }
@@ -408,7 +402,7 @@ class ClientWriteReactor : public internal::ClientReactor {
 
   void AddHold() { AddMultipleHolds(1); }
   void AddMultipleHolds(int holds) {
-    GPR_DEBUG_ASSERT(holds > 0);
+    ABSL_DCHECK_GT(holds, 0);
     writer_->AddHold(holds);
   }
   void RemoveHold() { writer_->RemoveHold(); }
@@ -469,7 +463,7 @@ class ClientCallbackReaderWriterImpl
  public:
   // always allocated against a call arena, no memory free required
   static void operator delete(void* /*ptr*/, std::size_t size) {
-    GPR_ASSERT(size == sizeof(ClientCallbackReaderWriterImpl));
+    ABSL_CHECK_EQ(size, sizeof(ClientCallbackReaderWriterImpl));
   }
 
   // This operator should never be called as the memory should be freed as part
@@ -477,7 +471,7 @@ class ClientCallbackReaderWriterImpl
   // delete to the operator new so that some compilers will not complain (see
   // https://github.com/grpc/grpc/issues/11301) Note at the time of adding this
   // there are no tests catching the compiler warning.
-  static void operator delete(void*, void*) { GPR_ASSERT(false); }
+  static void operator delete(void*, void*) { ABSL_CHECK(false); }
 
   void StartCall() ABSL_LOCKS_EXCLUDED(start_mu_) override {
     // This call initiates two batches, plus any backlog, each with a callback
@@ -535,7 +529,7 @@ class ClientCallbackReaderWriterImpl
       write_ops_.ClientSendClose();
     }
     // TODO(vjpai): don't assert
-    GPR_ASSERT(write_ops_.SendMessagePtr(msg, options).ok());
+    ABSL_CHECK(write_ops_.SendMessagePtr(msg, options).ok());
     callbacks_outstanding_.fetch_add(1, std::memory_order_relaxed);
     if (GPR_UNLIKELY(corked_write_needed_)) {
       write_ops_.SendInitialMetadata(&context_->send_initial_metadata_,
@@ -649,11 +643,13 @@ class ClientCallbackReaderWriterImpl
       auto* reactor = reactor_;
       auto* call = call_.call();
       this->~ClientCallbackReaderWriterImpl();
-      grpc_call_unref(call);
       if (GPR_LIKELY(from_reaction)) {
+        grpc_call_unref(call);
         reactor->OnDone(s);
       } else {
-        reactor->InternalScheduleOnDone(std::move(s));
+        grpc_call_run_in_event_engine(
+            call, [reactor, s = std::move(s)]() { reactor->OnDone(s); });
+        grpc_call_unref(call);
       }
     }
   }
@@ -725,7 +721,7 @@ class ClientCallbackReaderImpl : public ClientCallbackReader<Response> {
  public:
   // always allocated against a call arena, no memory free required
   static void operator delete(void* /*ptr*/, std::size_t size) {
-    GPR_ASSERT(size == sizeof(ClientCallbackReaderImpl));
+    ABSL_CHECK_EQ(size, sizeof(ClientCallbackReaderImpl));
   }
 
   // This operator should never be called as the memory should be freed as part
@@ -733,7 +729,7 @@ class ClientCallbackReaderImpl : public ClientCallbackReader<Response> {
   // delete to the operator new so that some compilers will not complain (see
   // https://github.com/grpc/grpc/issues/11301) Note at the time of adding this
   // there are no tests catching the compiler warning.
-  static void operator delete(void*, void*) { GPR_ASSERT(false); }
+  static void operator delete(void*, void*) { ABSL_CHECK(false); }
 
   void StartCall() override {
     // This call initiates two batches, plus any backlog, each with a callback
@@ -810,7 +806,7 @@ class ClientCallbackReaderImpl : public ClientCallbackReader<Response> {
       : context_(context), call_(call), reactor_(reactor) {
     this->BindReactor(reactor);
     // TODO(vjpai): don't assert
-    GPR_ASSERT(start_ops_.SendMessagePtr(request).ok());
+    ABSL_CHECK(start_ops_.SendMessagePtr(request).ok());
     start_ops_.ClientSendClose();
   }
 
@@ -822,11 +818,13 @@ class ClientCallbackReaderImpl : public ClientCallbackReader<Response> {
       auto* reactor = reactor_;
       auto* call = call_.call();
       this->~ClientCallbackReaderImpl();
-      grpc_call_unref(call);
       if (GPR_LIKELY(from_reaction)) {
+        grpc_call_unref(call);
         reactor->OnDone(s);
       } else {
-        reactor->InternalScheduleOnDone(std::move(s));
+        grpc_call_run_in_event_engine(
+            call, [reactor, s = std::move(s)]() { reactor->OnDone(s); });
+        grpc_call_unref(call);
       }
     }
   }
@@ -884,7 +882,7 @@ class ClientCallbackWriterImpl : public ClientCallbackWriter<Request> {
  public:
   // always allocated against a call arena, no memory free required
   static void operator delete(void* /*ptr*/, std::size_t size) {
-    GPR_ASSERT(size == sizeof(ClientCallbackWriterImpl));
+    ABSL_CHECK_EQ(size, sizeof(ClientCallbackWriterImpl));
   }
 
   // This operator should never be called as the memory should be freed as part
@@ -892,7 +890,7 @@ class ClientCallbackWriterImpl : public ClientCallbackWriter<Request> {
   // delete to the operator new so that some compilers will not complain (see
   // https://github.com/grpc/grpc/issues/11301) Note at the time of adding this
   // there are no tests catching the compiler warning.
-  static void operator delete(void*, void*) { GPR_ASSERT(false); }
+  static void operator delete(void*, void*) { ABSL_CHECK(false); }
 
   void StartCall() ABSL_LOCKS_EXCLUDED(start_mu_) override {
     // This call initiates two batches, plus any backlog, each with a callback
@@ -933,7 +931,7 @@ class ClientCallbackWriterImpl : public ClientCallbackWriter<Request> {
       write_ops_.ClientSendClose();
     }
     // TODO(vjpai): don't assert
-    GPR_ASSERT(write_ops_.SendMessagePtr(msg, options).ok());
+    ABSL_CHECK(write_ops_.SendMessagePtr(msg, options).ok());
     callbacks_outstanding_.fetch_add(1, std::memory_order_relaxed);
 
     if (GPR_UNLIKELY(corked_write_needed_)) {
@@ -1040,11 +1038,13 @@ class ClientCallbackWriterImpl : public ClientCallbackWriter<Request> {
       auto* reactor = reactor_;
       auto* call = call_.call();
       this->~ClientCallbackWriterImpl();
-      grpc_call_unref(call);
       if (GPR_LIKELY(from_reaction)) {
+        grpc_call_unref(call);
         reactor->OnDone(s);
       } else {
-        reactor->InternalScheduleOnDone(std::move(s));
+        grpc_call_run_in_event_engine(
+            call, [reactor, s = std::move(s)]() { reactor->OnDone(s); });
+        grpc_call_unref(call);
       }
     }
   }
@@ -1112,7 +1112,7 @@ class ClientCallbackUnaryImpl final : public ClientCallbackUnary {
  public:
   // always allocated against a call arena, no memory free required
   static void operator delete(void* /*ptr*/, std::size_t size) {
-    GPR_ASSERT(size == sizeof(ClientCallbackUnaryImpl));
+    ABSL_CHECK_EQ(size, sizeof(ClientCallbackUnaryImpl));
   }
 
   // This operator should never be called as the memory should be freed as part
@@ -1120,7 +1120,7 @@ class ClientCallbackUnaryImpl final : public ClientCallbackUnary {
   // delete to the operator new so that some compilers will not complain (see
   // https://github.com/grpc/grpc/issues/11301) Note at the time of adding this
   // there are no tests catching the compiler warning.
-  static void operator delete(void*, void*) { GPR_ASSERT(false); }
+  static void operator delete(void*, void*) { ABSL_CHECK(false); }
 
   void StartCall() override {
     // This call initiates two batches, each with a callback
@@ -1159,7 +1159,7 @@ class ClientCallbackUnaryImpl final : public ClientCallbackUnary {
       : context_(context), call_(call), reactor_(reactor) {
     this->BindReactor(reactor);
     // TODO(vjpai): don't assert
-    GPR_ASSERT(start_ops_.SendMessagePtr(request).ok());
+    ABSL_CHECK(start_ops_.SendMessagePtr(request).ok());
     start_ops_.ClientSendClose();
     finish_ops_.RecvMessage(response);
     finish_ops_.AllowNoMessage();

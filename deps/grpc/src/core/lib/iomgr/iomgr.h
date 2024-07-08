@@ -16,12 +16,12 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_IOMGR_H
-#define GRPC_CORE_LIB_IOMGR_IOMGR_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_IOMGR_H
+#define GRPC_SRC_CORE_LIB_IOMGR_IOMGR_H
 
 #include <stdlib.h>
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/iomgr/port.h"
@@ -57,4 +57,4 @@ bool grpc_iomgr_add_closure_to_background_poller(grpc_closure* closure,
 // Exposed only for testing
 size_t grpc_iomgr_count_objects_for_testing();
 
-#endif  // GRPC_CORE_LIB_IOMGR_IOMGR_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_IOMGR_H

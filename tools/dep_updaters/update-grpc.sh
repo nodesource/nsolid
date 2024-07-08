@@ -48,7 +48,7 @@ cleanup () {
 
 trap cleanup INT TERM EXIT
 
-NEW_VERSION="1.59.3"
+# NEW_VERSION="1.59.3"
 
 GRPC_TARBALL="v$NEW_VERSION.tar.gz"
 

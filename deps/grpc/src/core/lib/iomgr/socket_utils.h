@@ -16,12 +16,12 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_SOCKET_UTILS_H
-#define GRPC_CORE_LIB_IOMGR_SOCKET_UTILS_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_SOCKET_UTILS_H
+#define GRPC_SRC_CORE_LIB_IOMGR_SOCKET_UTILS_H
 
 #include <stddef.h>
+
+#include <grpc/support/port_platform.h>
 
 // TODO(juanlishen): The following functions might be simple enough to implement
 // ourselves, so that they don't cause any portability hassle.
@@ -44,4 +44,4 @@ int grpc_inet_pton(int af, const char* src, void* dst);
 // A wrapper for inet_ntop on POSIX systems and InetNtop on Windows systems
 const char* grpc_inet_ntop(int af, const void* src, char* dst, size_t size);
 
-#endif  // GRPC_CORE_LIB_IOMGR_SOCKET_UTILS_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_SOCKET_UTILS_H

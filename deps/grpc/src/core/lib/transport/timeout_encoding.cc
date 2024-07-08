@@ -16,13 +16,15 @@
 //
 //
 
-#include <grpc/support/port_platform.h>
-
 #include "src/core/lib/transport/timeout_encoding.h"
 
+#include <limits>
+
 #include "absl/base/attributes.h"
+#include "absl/log/check.h"
 
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 #include <grpc/support/time.h>
 
 namespace grpc_core {
@@ -30,7 +32,7 @@ namespace grpc_core {
 namespace {
 
 int64_t DivideRoundingUp(int64_t dividend, int64_t divisor) {
-  return (dividend + divisor - 1) / divisor;
+  return (dividend - 1 + divisor) / divisor;
 }
 
 constexpr int64_t kSecondsPerMinute = 60;
@@ -173,12 +175,15 @@ Timeout Timeout::FromMillis(int64_t millis) {
   } else if (millis < 100000) {
     int64_t value = DivideRoundingUp(millis, 100);
     if (value % 10 != 0) return Timeout(value, Unit::kHundredMilliseconds);
+  } else if (millis > std::numeric_limits<int64_t>::max() - 999) {
+    // prevent signed integer overflow.
+    return Timeout(kMaxHours, Unit::kHours);
   }
   return Timeout::FromSeconds(DivideRoundingUp(millis, 1000));
 }
 
 Timeout Timeout::FromSeconds(int64_t seconds) {
-  GPR_DEBUG_ASSERT(seconds != 0);
+  DCHECK_NE(seconds, 0);
   if (seconds < 1000) {
     if (seconds % kSecondsPerMinute != 0) {
       return Timeout(seconds, Unit::kSeconds);
@@ -198,7 +203,7 @@ Timeout Timeout::FromSeconds(int64_t seconds) {
 }
 
 Timeout Timeout::FromMinutes(int64_t minutes) {
-  GPR_DEBUG_ASSERT(minutes != 0);
+  DCHECK_NE(minutes, 0);
   if (minutes < 1000) {
     if (minutes % kMinutesPerHour != 0) {
       return Timeout(minutes, Unit::kMinutes);
@@ -218,7 +223,7 @@ Timeout Timeout::FromMinutes(int64_t minutes) {
 }
 
 Timeout Timeout::FromHours(int64_t hours) {
-  GPR_DEBUG_ASSERT(hours != 0);
+  DCHECK_NE(hours, 0);
   if (hours < kMaxHours) {
     return Timeout(hours, Unit::kHours);
   }

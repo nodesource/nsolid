@@ -16,13 +16,15 @@
 //
 //
 
-#include <grpc/support/port_platform.h>
-
 #include <inttypes.h>
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/port.h"
 
 #ifdef GRPC_WINSOCK_SOCKET
+
+#include "absl/log/check.h"
 
 #include <grpc/event_engine/endpoint_config.h>
 #include <grpc/slice_buffer.h>
@@ -31,7 +33,9 @@
 #include <grpc/support/log_windows.h>
 
 #include "src/core/lib/address_utils/sockaddr_utils.h"
+#include "src/core/lib/event_engine/shim.h"
 #include "src/core/lib/gprpp/crash.h"
+#include "src/core/lib/iomgr/event_engine_shims/tcp_client.h"
 #include "src/core/lib/iomgr/iocp_windows.h"
 #include "src/core/lib/iomgr/sockaddr.h"
 #include "src/core/lib/iomgr/sockaddr_windows.h"
@@ -67,7 +71,7 @@ static void async_connect_unlock_and_cleanup(async_connect* ac,
   if (socket != NULL) grpc_winsocket_destroy(socket);
 }
 
-static void on_alarm(void* acp, grpc_error_handle error) {
+static void on_alarm(void* acp, grpc_error_handle /* error */) {
   async_connect* ac = (async_connect*)acp;
   gpr_mu_lock(&ac->mu);
   grpc_winsocket* socket = ac->socket;
@@ -81,7 +85,7 @@ static void on_alarm(void* acp, grpc_error_handle error) {
 static void on_connect(void* acp, grpc_error_handle error) {
   async_connect* ac = (async_connect*)acp;
   grpc_endpoint** ep = ac->endpoint;
-  GPR_ASSERT(*ep == NULL);
+  CHECK(*ep == NULL);
   grpc_closure* on_done = ac->on_done;
 
   gpr_mu_lock(&ac->mu);
@@ -100,7 +104,7 @@ static void on_connect(void* acp, grpc_error_handle error) {
       BOOL wsa_success =
           WSAGetOverlappedResult(socket->socket, &socket->write_info.overlapped,
                                  &transfered_bytes, FALSE, &flags);
-      GPR_ASSERT(transfered_bytes == 0);
+      CHECK_EQ(transfered_bytes, 0);
       if (!wsa_success) {
         error = GRPC_WSA_ERROR(WSAGetLastError(), "ConnectEx");
         closesocket(socket->socket);
@@ -122,10 +126,14 @@ static void on_connect(void* acp, grpc_error_handle error) {
 // Tries to issue one async connection, then schedules both an IOCP
 // notification request for the connection, and one timeout alert.
 static int64_t tcp_connect(grpc_closure* on_done, grpc_endpoint** endpoint,
-                           grpc_pollset_set* interested_parties,
+                           grpc_pollset_set* /* interested_parties */,
                            const EndpointConfig& config,
                            const grpc_resolved_address* addr,
                            grpc_core::Timestamp deadline) {
+  if (grpc_event_engine::experimental::UseEventEngineClient()) {
+    return grpc_event_engine::experimental::event_engine_tcp_client_connect(
+        on_done, endpoint, config, addr, deadline);
+  }
   SOCKET sock = INVALID_SOCKET;
   BOOL success;
   int status;
@@ -139,6 +147,8 @@ static int64_t tcp_connect(grpc_closure* on_done, grpc_endpoint** endpoint,
   grpc_error_handle error;
   async_connect* ac = NULL;
   absl::StatusOr<std::string> addr_uri;
+  int addr_family;
+  int protocol;
 
   addr_uri = grpc_sockaddr_to_uri(addr);
   if (!addr_uri.ok()) {
@@ -153,14 +163,25 @@ static int64_t tcp_connect(grpc_closure* on_done, grpc_endpoint** endpoint,
     addr = &addr6_v4mapped;
   }
 
-  sock = WSASocket(AF_INET6, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
+  // extract family
+  addr_family =
+      (grpc_sockaddr_get_family(addr) == AF_UNIX) ? AF_UNIX : AF_INET6;
+  protocol = addr_family == AF_UNIX ? 0 : IPPROTO_TCP;
+
+  sock = WSASocket(addr_family, SOCK_STREAM, protocol, NULL, 0,
                    grpc_get_default_wsa_socket_flags());
   if (sock == INVALID_SOCKET) {
     error = GRPC_WSA_ERROR(WSAGetLastError(), "WSASocket");
     goto failure;
   }
 
-  error = grpc_tcp_prepare_socket(sock);
+  if (addr_family == AF_UNIX) {
+    // tcp settings for af_unix are skipped.
+    error = grpc_tcp_set_non_block(sock);
+  } else {
+    error = grpc_tcp_prepare_socket(sock);
+  }
+
   if (!error.ok()) {
     goto failure;
   }
@@ -177,7 +198,15 @@ static int64_t tcp_connect(grpc_closure* on_done, grpc_endpoint** endpoint,
     goto failure;
   }
 
-  grpc_sockaddr_make_wildcard6(0, &local_address);
+  if (addr_family == AF_UNIX) {
+    // For ConnectEx() to work for AF_UNIX, the sock needs to be bound to
+    // the local address of an unnamed socket.
+    local_address = {};
+    ((grpc_sockaddr*)local_address.addr)->sa_family = AF_UNIX;
+    local_address.len = sizeof(grpc_sockaddr);
+  } else {
+    grpc_sockaddr_make_wildcard6(0, &local_address);
+  }
 
   status =
       bind(sock, (grpc_sockaddr*)&local_address.addr, (int)local_address.len);
@@ -190,7 +219,6 @@ static int64_t tcp_connect(grpc_closure* on_done, grpc_endpoint** endpoint,
   info = &socket->write_info;
   success = ConnectEx(sock, (grpc_sockaddr*)&addr->addr, (int)addr->len, NULL,
                       0, NULL, &info->overlapped);
-
   // It wouldn't be unusual to get a success immediately. But we'll still get
   // an IOCP notification, so let's ignore it.
   if (!success) {
@@ -200,7 +228,6 @@ static int64_t tcp_connect(grpc_closure* on_done, grpc_endpoint** endpoint,
       goto failure;
     }
   }
-
   ac = new async_connect();
   ac->on_done = on_done;
   ac->socket = socket;
@@ -218,11 +245,9 @@ static int64_t tcp_connect(grpc_closure* on_done, grpc_endpoint** endpoint,
   return 0;
 
 failure:
-  GPR_ASSERT(!error.ok());
-  grpc_error_handle final_error = grpc_error_set_str(
-      GRPC_ERROR_CREATE_REFERENCING("Failed to connect", &error, 1),
-      grpc_core::StatusStrProperty::kTargetAddress,
-      addr_uri.ok() ? *addr_uri : addr_uri.status().ToString());
+  CHECK(!error.ok());
+  grpc_error_handle final_error =
+      GRPC_ERROR_CREATE_REFERENCING("Failed to connect", &error, 1);
   if (socket != NULL) {
     grpc_winsocket_destroy(socket);
   } else if (sock != INVALID_SOCKET) {
@@ -232,7 +257,13 @@ failure:
   return 0;
 }
 
-static bool tcp_cancel_connect(int64_t /*connection_handle*/) { return false; }
+static bool tcp_cancel_connect(int64_t connection_handle) {
+  if (grpc_event_engine::experimental::UseEventEngineClient()) {
+    return grpc_event_engine::experimental::
+        event_engine_tcp_client_cancel_connect(connection_handle);
+  }
+  return false;
+}
 
 grpc_tcp_client_vtable grpc_windows_tcp_client_vtable = {tcp_connect,
                                                          tcp_cancel_connect};

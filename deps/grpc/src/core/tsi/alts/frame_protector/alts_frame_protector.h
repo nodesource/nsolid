@@ -16,12 +16,12 @@
 //
 //
 
-#ifndef GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_FRAME_PROTECTOR_H
-#define GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_FRAME_PROTECTOR_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_FRAME_PROTECTOR_H
+#define GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_FRAME_PROTECTOR_H
 
 #include <stdbool.h>
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/tsi/transport_security_interface.h"
 
@@ -52,4 +52,4 @@ tsi_result alts_create_frame_protector(const uint8_t* key, size_t key_size,
                                        size_t* max_protected_frame_size,
                                        tsi_frame_protector** self);
 
-#endif  // GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_FRAME_PROTECTOR_H
+#endif  // GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_FRAME_PROTECTOR_H

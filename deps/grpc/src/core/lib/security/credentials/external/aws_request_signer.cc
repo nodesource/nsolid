@@ -13,11 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#include <grpc/support/port_platform.h>
-
 #include "src/core/lib/security/credentials/external/aws_request_signer.h"
 
-#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -37,19 +34,29 @@
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 
+#include <grpc/support/port_platform.h>
+
 namespace grpc_core {
 
 namespace {
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+const char kSha256[] = "SHA256";
+#endif
 const char kAlgorithm[] = "AWS4-HMAC-SHA256";
 const char kDateFormat[] = "%a, %d %b %E4Y %H:%M:%S %Z";
 const char kXAmzDateFormat[] = "%Y%m%dT%H%M%SZ";
 
 void SHA256(const std::string& str, unsigned char out[SHA256_DIGEST_LENGTH]) {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
   SHA256_CTX sha256;
   SHA256_Init(&sha256);
   SHA256_Update(&sha256, str.c_str(), str.size());
   SHA256_Final(out, &sha256);
+#else
+  EVP_Q_digest(nullptr, kSha256, nullptr, str.c_str(), str.size(), out,
+               nullptr);
+#endif
 }
 
 std::string SHA256Hex(const std::string& str) {

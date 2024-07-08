@@ -16,20 +16,20 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_ALTS_CREDENTIALS_H
-#define GRPC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_ALTS_CREDENTIALS_H
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_ALTS_CREDENTIALS_H
+#define GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_ALTS_CREDENTIALS_H
 
-#include <grpc/support/port_platform.h>
-
+#include <grpc/credentials.h>
 #include <grpc/grpc.h>
 #include <grpc/grpc_security.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/channel/channel_args.h"
-#include "src/core/lib/gpr/useful.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
 #include "src/core/lib/gprpp/unique_type_name.h"
 #include "src/core/lib/security/credentials/credentials.h"
 #include "src/core/lib/security/security_connector/security_connector.h"
+#include "src/core/util/useful.h"
 
 // Main struct for grpc ALTS channel credential.
 class grpc_alts_credentials final : public grpc_channel_credentials {
@@ -120,4 +120,4 @@ grpc_server_credentials* grpc_alts_server_credentials_create_customized(
     const grpc_alts_credentials_options* options,
     const char* handshaker_service_url, bool enable_untrusted_alts);
 
-#endif  // GRPC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_ALTS_CREDENTIALS_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_ALTS_CREDENTIALS_H

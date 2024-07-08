@@ -16,12 +16,12 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_ALTS_ALTS_SECURITY_CONNECTOR_H
-#define GRPC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_ALTS_ALTS_SECURITY_CONNECTOR_H
-#include <grpc/support/port_platform.h>
-
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_ALTS_ALTS_SECURITY_CONNECTOR_H
+#define GRPC_SRC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_ALTS_ALTS_SECURITY_CONNECTOR_H
+#include <grpc/credentials.h>
 #include <grpc/grpc.h>
 #include <grpc/grpc_security.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
 #include "src/core/lib/security/security_connector/security_connector.h"
@@ -75,4 +75,4 @@ RefCountedPtr<grpc_auth_context> grpc_alts_auth_context_from_tsi_peer(
 }  // namespace internal
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_ALTS_ALTS_SECURITY_CONNECTOR_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_ALTS_ALTS_SECURITY_CONNECTOR_H

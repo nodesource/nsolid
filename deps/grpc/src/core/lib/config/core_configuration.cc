@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <grpc/support/port_platform.h>
-
 #include "src/core/lib/config/core_configuration.h"
 
-#include <algorithm>
 #include <atomic>
 #include <utility>
 #include <vector>
 
+#include "absl/log/check.h"
+
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
 namespace grpc_core {
 
@@ -49,19 +49,20 @@ CoreConfiguration::CoreConfiguration(Builder* builder)
       certificate_provider_registry_(
           builder->certificate_provider_registry_.Build()) {}
 
-void CoreConfiguration::RegisterBuilder(std::function<void(Builder*)> builder) {
-  GPR_ASSERT(config_.load(std::memory_order_relaxed) == nullptr &&
-             "CoreConfiguration was already instantiated before builder "
-             "registration was completed");
+void CoreConfiguration::RegisterBuilder(
+    absl::AnyInvocable<void(Builder*)> builder) {
+  CHECK(config_.load(std::memory_order_relaxed) == nullptr)
+      << "CoreConfiguration was already instantiated before builder "
+         "registration was completed";
   RegisteredBuilder* n = new RegisteredBuilder();
   n->builder = std::move(builder);
   n->next = builders_.load(std::memory_order_relaxed);
   while (!builders_.compare_exchange_weak(n->next, n, std::memory_order_acq_rel,
                                           std::memory_order_relaxed)) {
   }
-  GPR_ASSERT(config_.load(std::memory_order_relaxed) == nullptr &&
-             "CoreConfiguration was already instantiated before builder "
-             "registration was completed");
+  CHECK(config_.load(std::memory_order_relaxed) == nullptr)
+      << "CoreConfiguration was already instantiated before builder "
+         "registration was completed";
 }
 
 const CoreConfiguration& CoreConfiguration::BuildNewAndMaybeSet() {

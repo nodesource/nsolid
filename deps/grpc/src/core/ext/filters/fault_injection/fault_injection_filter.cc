@@ -27,7 +27,9 @@
 #include <type_traits>
 #include <utility>
 
+#include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -38,7 +40,6 @@
 
 #include "src/core/ext/filters/fault_injection/fault_injection_service_config_parser.h"
 #include "src/core/lib/channel/channel_stack.h"
-#include "src/core/lib/channel/context.h"
 #include "src/core/lib/channel/status_util.h"
 #include "src/core/lib/config/core_configuration.h"
 #include "src/core/lib/debug/trace.h"
@@ -46,13 +47,18 @@
 #include "src/core/lib/promise/context.h"
 #include "src/core/lib/promise/sleep.h"
 #include "src/core/lib/promise/try_seq.h"
-#include "src/core/lib/service_config/service_config_call_data.h"
 #include "src/core/lib/transport/metadata_batch.h"
 #include "src/core/lib/transport/transport.h"
+#include "src/core/service_config/service_config_call_data.h"
 
 namespace grpc_core {
 
-TraceFlag grpc_fault_injection_filter_trace(false, "fault_injection_filter");
+const NoInterceptor FaultInjectionFilter::Call::OnServerInitialMetadata;
+const NoInterceptor FaultInjectionFilter::Call::OnServerTrailingMetadata;
+const NoInterceptor FaultInjectionFilter::Call::OnClientToServerMessage;
+const NoInterceptor FaultInjectionFilter::Call::OnClientToServerHalfClose;
+const NoInterceptor FaultInjectionFilter::Call::OnServerToClientMessage;
+const NoInterceptor FaultInjectionFilter::Call::OnFinalize;
 
 namespace {
 
@@ -129,43 +135,37 @@ class FaultInjectionFilter::InjectionDecision {
   FaultHandle active_fault_{false};
 };
 
-absl::StatusOr<FaultInjectionFilter> FaultInjectionFilter::Create(
-    const ChannelArgs&, ChannelFilter::Args filter_args) {
-  return FaultInjectionFilter(filter_args);
+absl::StatusOr<std::unique_ptr<FaultInjectionFilter>>
+FaultInjectionFilter::Create(const ChannelArgs&,
+                             ChannelFilter::Args filter_args) {
+  return std::make_unique<FaultInjectionFilter>(filter_args);
 }
 
 FaultInjectionFilter::FaultInjectionFilter(ChannelFilter::Args filter_args)
-    : index_(grpc_channel_stack_filter_instance_number(
-          filter_args.channel_stack(),
-          filter_args.uninitialized_channel_element())),
+    : index_(filter_args.instance_id()),
       service_config_parser_index_(
-          FaultInjectionServiceConfigParser::ParserIndex()),
-      mu_(new Mutex) {}
+          FaultInjectionServiceConfigParser::ParserIndex()) {}
 
 // Construct a promise for one call.
-ArenaPromise<ServerMetadataHandle> FaultInjectionFilter::MakeCallPromise(
-    CallArgs call_args, NextPromiseFactory next_promise_factory) {
-  auto decision = MakeInjectionDecision(call_args.client_initial_metadata);
-  if (GRPC_TRACE_FLAG_ENABLED(grpc_fault_injection_filter_trace)) {
+ArenaPromise<absl::Status> FaultInjectionFilter::Call::OnClientInitialMetadata(
+    ClientMetadata& md, FaultInjectionFilter* filter) {
+  auto decision = filter->MakeInjectionDecision(md);
+  if (GRPC_TRACE_FLAG_ENABLED(fault_injection_filter)) {
     gpr_log(GPR_INFO, "chand=%p: Fault injection triggered %s", this,
             decision.ToString().c_str());
   }
   auto delay = decision.DelayUntil();
-  return TrySeq(
-      Sleep(delay),
-      [decision = std::move(decision)]() { return decision.MaybeAbort(); },
-      next_promise_factory(std::move(call_args)));
+  return TrySeq(Sleep(delay), [decision = std::move(decision)]() {
+    return decision.MaybeAbort();
+  });
 }
 
 FaultInjectionFilter::InjectionDecision
 FaultInjectionFilter::MakeInjectionDecision(
-    const ClientMetadataHandle& initial_metadata) {
+    const ClientMetadata& initial_metadata) {
   // Fetch the fault injection policy from the service config, based on the
   // relative index for which policy should this CallData use.
-  auto* service_config_call_data = static_cast<ServiceConfigCallData*>(
-      GetContext<
-          grpc_call_context_element>()[GRPC_CONTEXT_SERVICE_CONFIG_CALL_DATA]
-          .value);
+  auto* service_config_call_data = GetContext<ServiceConfigCallData>();
   auto* method_params = static_cast<FaultInjectionMethodParsedConfig*>(
       service_config_call_data->GetMethodParsedConfig(
           service_config_parser_index_));
@@ -187,15 +187,15 @@ FaultInjectionFilter::MakeInjectionDecision(
       !fi_policy->delay_percentage_header.empty()) {
     std::string buffer;
     if (!fi_policy->abort_code_header.empty() && abort_code == GRPC_STATUS_OK) {
-      auto value = initial_metadata->GetStringValue(
-          fi_policy->abort_code_header, &buffer);
+      auto value = initial_metadata.GetStringValue(fi_policy->abort_code_header,
+                                                   &buffer);
       if (value.has_value()) {
         grpc_status_code_from_int(
             AsInt<int>(*value).value_or(GRPC_STATUS_UNKNOWN), &abort_code);
       }
     }
     if (!fi_policy->abort_percentage_header.empty()) {
-      auto value = initial_metadata->GetStringValue(
+      auto value = initial_metadata.GetStringValue(
           fi_policy->abort_percentage_header, &buffer);
       if (value.has_value()) {
         abort_percentage_numerator = std::min(
@@ -204,14 +204,14 @@ FaultInjectionFilter::MakeInjectionDecision(
     }
     if (!fi_policy->delay_header.empty() && delay == Duration::Zero()) {
       auto value =
-          initial_metadata->GetStringValue(fi_policy->delay_header, &buffer);
+          initial_metadata.GetStringValue(fi_policy->delay_header, &buffer);
       if (value.has_value()) {
         delay = Duration::Milliseconds(
             std::max(AsInt<int64_t>(*value).value_or(0), int64_t{0}));
       }
     }
     if (!fi_policy->delay_percentage_header.empty()) {
-      auto value = initial_metadata->GetStringValue(
+      auto value = initial_metadata.GetStringValue(
           fi_policy->delay_percentage_header, &buffer);
       if (value.has_value()) {
         delay_percentage_numerator = std::min(
@@ -223,7 +223,7 @@ FaultInjectionFilter::MakeInjectionDecision(
   bool delay_request = delay != Duration::Zero();
   bool abort_request = abort_code != GRPC_STATUS_OK;
   if (delay_request || abort_request) {
-    MutexLock lock(mu_.get());
+    MutexLock lock(&mu_);
     if (delay_request) {
       delay_request =
           UnderFraction(&delay_rand_generator_, delay_percentage_numerator,

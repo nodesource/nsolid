@@ -16,8 +16,6 @@
 //
 //
 
-#include <grpc/support/port_platform.h>
-
 #include <string.h>
 
 #include <functional>
@@ -28,22 +26,22 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 
+#include <grpc/credentials.h>
 #include <grpc/grpc_security.h>
 #include <grpc/grpc_security_constants.h>
 #include <grpc/support/alloc.h>
+#include <grpc/support/port_platform.h>
 #include <grpc/support/string_util.h>
 
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/channel/channel_fwd.h"
 #include "src/core/lib/channel/channel_stack.h"
-#include "src/core/lib/channel/context.h"
 #include "src/core/lib/channel/promise_based_filter.h"
 #include "src/core/lib/channel/status_util.h"
 #include "src/core/lib/gprpp/debug_location.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
 #include "src/core/lib/promise/arena_promise.h"
 #include "src/core/lib/promise/context.h"
-#include "src/core/lib/promise/detail/basic_seq.h"
 #include "src/core/lib/promise/promise.h"
 #include "src/core/lib/promise/seq.h"
 #include "src/core/lib/promise/try_seq.h"
@@ -111,8 +109,7 @@ ClientAuthFilter::ClientAuthFilter(
 
 ArenaPromise<absl::StatusOr<CallArgs>> ClientAuthFilter::GetCallCredsMetadata(
     CallArgs call_args) {
-  auto* ctx = static_cast<grpc_client_security_context*>(
-      GetContext<grpc_call_context_element>()[GRPC_CONTEXT_SECURITY].value);
+  auto* ctx = GetContext<grpc_client_security_context>();
   grpc_call_credentials* channel_call_creds =
       args_.security_connector->mutable_request_metadata_creds();
   const bool call_creds_has_md = (ctx != nullptr) && (ctx->creds != nullptr);
@@ -179,30 +176,29 @@ ArenaPromise<absl::StatusOr<CallArgs>> ClientAuthFilter::GetCallCredsMetadata(
 
 ArenaPromise<ServerMetadataHandle> ClientAuthFilter::MakeCallPromise(
     CallArgs call_args, NextPromiseFactory next_promise_factory) {
-  auto* legacy_ctx = GetContext<grpc_call_context_element>();
-  if (legacy_ctx[GRPC_CONTEXT_SECURITY].value == nullptr) {
-    legacy_ctx[GRPC_CONTEXT_SECURITY].value =
-        grpc_client_security_context_create(GetContext<Arena>(),
-                                            /*creds=*/nullptr);
-    legacy_ctx[GRPC_CONTEXT_SECURITY].destroy =
-        grpc_client_security_context_destroy;
+  auto* sec_ctx = MaybeGetContext<grpc_client_security_context>();
+  if (sec_ctx == nullptr) {
+    sec_ctx = grpc_client_security_context_create(GetContext<Arena>(),
+                                                  /*creds=*/nullptr);
+    SetContext<SecurityContext>(sec_ctx);
   }
-  static_cast<grpc_client_security_context*>(
-      legacy_ctx[GRPC_CONTEXT_SECURITY].value)
-      ->auth_context = args_.auth_context;
+  sec_ctx->auth_context = args_.auth_context;
 
   auto* host =
       call_args.client_initial_metadata->get_pointer(HttpAuthorityMetadata());
   if (host == nullptr) {
     return next_promise_factory(std::move(call_args));
   }
-  return TrySeq(args_.security_connector->CheckCallHost(
-                    host->as_string_view(), args_.auth_context.get()),
-                GetCallCredsMetadata(std::move(call_args)),
-                next_promise_factory);
+  return TrySeq(
+      args_.security_connector->CheckCallHost(host->as_string_view(),
+                                              args_.auth_context.get()),
+      [this, call_args = std::move(call_args)]() mutable {
+        return GetCallCredsMetadata(std::move(call_args));
+      },
+      next_promise_factory);
 }
 
-absl::StatusOr<ClientAuthFilter> ClientAuthFilter::Create(
+absl::StatusOr<std::unique_ptr<ClientAuthFilter>> ClientAuthFilter::Create(
     const ChannelArgs& args, ChannelFilter::Args) {
   auto* sc = args.GetObject<grpc_security_connector>();
   if (sc == nullptr) {
@@ -214,9 +210,8 @@ absl::StatusOr<ClientAuthFilter> ClientAuthFilter::Create(
     return absl::InvalidArgumentError(
         "Auth context missing from client auth filter args");
   }
-
-  return ClientAuthFilter(
-      static_cast<grpc_channel_security_connector*>(sc)->Ref(),
+  return std::make_unique<ClientAuthFilter>(
+      sc->RefAsSubclass<grpc_channel_security_connector>(),
       auth_context->Ref());
 }
 

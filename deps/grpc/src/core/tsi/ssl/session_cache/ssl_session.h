@@ -16,16 +16,15 @@
 //
 //
 
-#ifndef GRPC_CORE_TSI_SSL_SESSION_CACHE_SSL_SESSION_H
-#define GRPC_CORE_TSI_SSL_SESSION_CACHE_SSL_SESSION_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_TSI_SSL_SESSION_CACHE_SSL_SESSION_H
+#define GRPC_SRC_CORE_TSI_SSL_SESSION_CACHE_SSL_SESSION_H
 
 #include <memory>
 
 #include <openssl/ssl.h>
 
 #include <grpc/slice.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/ref_counted.h"
 
@@ -68,4 +67,4 @@ class SslCachedSession {
 
 }  // namespace tsi
 
-#endif  // GRPC_CORE_TSI_SSL_SESSION_CACHE_SSL_SESSION_H
+#endif  // GRPC_SRC_CORE_TSI_SSL_SESSION_CACHE_SSL_SESSION_H

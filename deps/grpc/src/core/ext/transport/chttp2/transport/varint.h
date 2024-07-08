@@ -16,15 +16,16 @@
 //
 //
 
-#ifndef GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_VARINT_H
-#define GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_VARINT_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_VARINT_H
+#define GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_VARINT_H
 
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "absl/log/check.h"
+
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
 // Helpers for hpack varint encoding
 
@@ -50,7 +51,7 @@ class VarintWriter {
   explicit VarintWriter(size_t value)
       : value_(value),
         length_(value < kMaxInPrefix ? 1 : VarintLength(value - kMaxInPrefix)) {
-    GPR_ASSERT(value <= UINT32_MAX);
+    CHECK(value <= UINT32_MAX);
   }
 
   size_t value() const { return value_; }
@@ -73,4 +74,4 @@ class VarintWriter {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_VARINT_H
+#endif  // GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_VARINT_H

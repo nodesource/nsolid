@@ -19,11 +19,12 @@
 #ifndef GRPCPP_SERVER_INTERFACE_H
 #define GRPCPP_SERVER_INTERFACE_H
 
-#include <grpc/support/port_platform.h>
+#include "absl/log/absl_check.h"
 
 #include <grpc/grpc.h>
 #include <grpc/impl/grpc_types.h>
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 #include <grpc/support/time.h>
 #include <grpcpp/impl/call.h>
 #include <grpcpp/impl/call_hook.h>
@@ -54,6 +55,7 @@ class CallbackGenericService;
 
 namespace experimental {
 class ServerInterceptorFactoryInterface;
+class ServerMetricRecorder;
 }  // namespace experimental
 
 class ServerInterface : public internal::CallHook {
@@ -185,6 +187,8 @@ class ServerInterface : public internal::CallHook {
     internal::Call call_wrapper_;
     internal::InterceptorBatchMethodsImpl interceptor_methods_;
     bool done_intercepting_;
+    bool call_metric_recording_enabled_;
+    experimental::ServerMetricRecorder* server_metric_recorder_;
   };
 
   /// RegisteredAsyncRequest is not part of the C++ API
@@ -298,9 +302,12 @@ class ServerInterface : public internal::CallHook {
                         internal::ServerAsyncStreamingInterface* stream,
                         grpc::CompletionQueue* call_cq,
                         grpc::ServerCompletionQueue* notification_cq, void* tag,
-                        bool delete_on_finalize);
+                        bool delete_on_finalize, bool issue_request = true);
 
     bool FinalizeResult(void** tag, bool* status) override;
+
+   protected:
+    void IssueRequest();
 
    private:
     grpc_call_details call_details_;
@@ -313,7 +320,7 @@ class ServerInterface : public internal::CallHook {
                         grpc::CompletionQueue* call_cq,
                         grpc::ServerCompletionQueue* notification_cq, void* tag,
                         Message* message) {
-    GPR_ASSERT(method);
+    ABSL_CHECK(method);
     new PayloadAsyncRequest<Message>(method, this, context, stream, call_cq,
                                      notification_cq, tag, message);
   }
@@ -324,7 +331,7 @@ class ServerInterface : public internal::CallHook {
                         grpc::CompletionQueue* call_cq,
                         grpc::ServerCompletionQueue* notification_cq,
                         void* tag) {
-    GPR_ASSERT(method);
+    ABSL_CHECK(method);
     new NoPayloadAsyncRequest(method, this, context, stream, call_cq,
                               notification_cq, tag);
   }
@@ -349,6 +356,13 @@ class ServerInterface : public internal::CallHook {
   interceptor_creators() {
     return nullptr;
   }
+
+  // Whether per-call load reporting is enabled.
+  virtual bool call_metric_recording_enabled() const = 0;
+
+  // Interface to read or update server-wide metrics. Returns null when not set.
+  virtual experimental::ServerMetricRecorder* server_metric_recorder()
+      const = 0;
 
   // A method to get the callbackable completion queue associated with this
   // server. If the return value is nullptr, this server doesn't support

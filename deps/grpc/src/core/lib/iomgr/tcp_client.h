@@ -16,13 +16,12 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_TCP_CLIENT_H
-#define GRPC_CORE_LIB_IOMGR_TCP_CLIENT_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_TCP_CLIENT_H
+#define GRPC_SRC_CORE_LIB_IOMGR_TCP_CLIENT_H
 
 #include <grpc/event_engine/endpoint_config.h>
 #include <grpc/impl/grpc_types.h>
+#include <grpc/support/port_platform.h>
 #include <grpc/support/time.h>
 
 #include "src/core/lib/iomgr/endpoint.h"
@@ -63,4 +62,4 @@ extern void grpc_tcp_client_global_init();
 
 void grpc_set_tcp_client_impl(grpc_tcp_client_vtable* impl);
 
-#endif  // GRPC_CORE_LIB_IOMGR_TCP_CLIENT_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_TCP_CLIENT_H
