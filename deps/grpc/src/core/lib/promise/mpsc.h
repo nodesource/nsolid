@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CORE_LIB_PROMISE_MPSC_H
-#define GRPC_SRC_CORE_LIB_PROMISE_MPSC_H
+#ifndef GRPC_CORE_LIB_PROMISE_MPSC_H
+#define GRPC_CORE_LIB_PROMISE_MPSC_H
 
 #include <grpc/support/port_platform.h>
 
@@ -91,16 +91,6 @@ class Center : public RefCounted<Center<T>> {
     return Pending{};
   }
 
-  bool ImmediateSend(T t) {
-    ReleasableMutexLock lock(&mu_);
-    if (receiver_closed_) return false;
-    queue_.push_back(std::move(t));
-    auto receive_waker = std::move(receive_waker_);
-    lock.Release();
-    receive_waker.Wakeup();
-    return true;
-  }
-
   // Mark that the receiver is closed.
   void ReceiverClosed() {
     MutexLock lock(&mu_);
@@ -135,10 +125,6 @@ class MpscSender {
   // will never be successfully sent).
   auto Send(T t) {
     return [this, t = std::move(t)]() mutable { return center_->PollSend(t); };
-  }
-
-  bool UnbufferedImmediateSend(T t) {
-    return center_->ImmediateSend(std::move(t));
   }
 
  private:
@@ -208,4 +194,4 @@ class MpscReceiver {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_PROMISE_MPSC_H
+#endif  // GRPC_CORE_LIB_PROMISE_MPSC_H

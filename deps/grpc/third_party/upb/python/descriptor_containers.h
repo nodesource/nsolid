@@ -43,7 +43,7 @@
 #include <stdbool.h>
 
 #include "protobuf.h"
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
 // -----------------------------------------------------------------------------
 // PyUpb_GenericSequence

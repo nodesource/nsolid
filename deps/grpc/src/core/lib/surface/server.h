@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_SRC_CORE_LIB_SURFACE_SERVER_H
-#define GRPC_SRC_CORE_LIB_SURFACE_SERVER_H
+#ifndef GRPC_CORE_LIB_SURFACE_SERVER_H
+#define GRPC_CORE_LIB_SURFACE_SERVER_H
 
 #include <grpc/support/port_platform.h>
 
@@ -36,9 +36,9 @@
 
 #include <grpc/grpc.h>
 #include <grpc/slice.h>
+#include <grpc/support/log.h>
 #include <grpc/support/time.h>
 
-#include "src/core/lib/channel/call_tracer.h"
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/channel/channel_fwd.h"
 #include "src/core/lib/channel/channel_stack.h"
@@ -46,6 +46,7 @@
 #include "src/core/lib/debug/trace.h"
 #include "src/core/lib/gprpp/cpp_impl_of.h"
 #include "src/core/lib/gprpp/dual_ref_counted.h"
+#include "src/core/lib/gprpp/notification.h"
 #include "src/core/lib/gprpp/orphanable.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
 #include "src/core/lib/gprpp/sync.h"
@@ -55,13 +56,14 @@
 #include "src/core/lib/iomgr/endpoint.h"
 #include "src/core/lib/iomgr/error.h"
 #include "src/core/lib/iomgr/iomgr_fwd.h"
-#include "src/core/lib/promise/arena_promise.h"
 #include "src/core/lib/slice/slice.h"
 #include "src/core/lib/surface/channel.h"
 #include "src/core/lib/surface/completion_queue.h"
 #include "src/core/lib/transport/metadata_batch.h"
 #include "src/core/lib/transport/transport.h"
 #include "src/core/lib/transport/transport_fwd.h"
+
+struct grpc_server_config_fetcher;
 
 namespace grpc_core {
 
@@ -136,12 +138,10 @@ class Server : public InternallyRefCounted<Server>,
     return config_fetcher_.get();
   }
 
-  ServerCallTracerFactory* server_call_tracer_factory() const {
-    return server_call_tracer_factory_;
-  }
-
   void set_config_fetcher(
-      std::unique_ptr<grpc_server_config_fetcher> config_fetcher);
+      std::unique_ptr<grpc_server_config_fetcher> config_fetcher) {
+    config_fetcher_ = std::move(config_fetcher);
+  }
 
   bool HasOpenConnections() ABSL_LOCKS_EXCLUDED(mu_global_);
 
@@ -231,20 +231,17 @@ class Server : public InternallyRefCounted<Server>,
 
     ChannelRegisteredMethod* GetRegisteredMethod(const grpc_slice& host,
                                                  const grpc_slice& path);
+
     // Filter vtable functions.
     static grpc_error_handle InitChannelElement(
         grpc_channel_element* elem, grpc_channel_element_args* args);
     static void DestroyChannelElement(grpc_channel_element* elem);
-    static ArenaPromise<ServerMetadataHandle> MakeCallPromise(
-        grpc_channel_element* elem, CallArgs call_args, NextPromiseFactory);
 
    private:
     class ConnectivityWatcher;
 
     static void AcceptStream(void* arg, grpc_transport* /*transport*/,
                              const void* transport_server_data);
-    static void SetRegisteredMethodOnMetadata(void* arg,
-                                              ServerMetadata* metadata);
 
     void Destroy() ABSL_EXCLUSIVE_LOCKS_REQUIRED(server_->mu_global_);
 
@@ -411,13 +408,24 @@ class Server : public InternallyRefCounted<Server>,
     if (shutdown_refs_.fetch_sub(2, std::memory_order_acq_rel) == 2) {
       MutexLock lock(&mu_global_);
       MaybeFinishShutdown();
+      // The last request in-flight during shutdown is now complete.
+      if (requests_complete_ != nullptr) {
+        GPR_ASSERT(!requests_complete_->HasBeenNotified());
+        requests_complete_->Notify();
+      }
     }
   }
-  void ShutdownUnrefOnShutdownCall() ABSL_EXCLUSIVE_LOCKS_REQUIRED(mu_global_) {
+  // Returns a notification pointer to wait on if there are requests in-flight,
+  // or null.
+  Notification* ShutdownUnrefOnShutdownCall()
+      ABSL_EXCLUSIVE_LOCKS_REQUIRED(mu_global_) GRPC_MUST_USE_RESULT {
     if (shutdown_refs_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
       // There is no request in-flight.
       MaybeFinishShutdown();
+      return nullptr;
     }
+    requests_complete_ = std::make_unique<Notification>();
+    return requests_complete_.get();
   }
 
   bool ShutdownCalled() const {
@@ -434,7 +442,6 @@ class Server : public InternallyRefCounted<Server>,
   ChannelArgs const channel_args_;
   RefCountedPtr<channelz::ServerNode> channelz_node_;
   std::unique_ptr<grpc_server_config_fetcher> config_fetcher_;
-  ServerCallTracerFactory* const server_call_tracer_factory_;
 
   std::vector<grpc_completion_queue*> cqs_;
   std::vector<grpc_pollset*> pollsets_;
@@ -469,6 +476,7 @@ class Server : public InternallyRefCounted<Server>,
   std::atomic<int> shutdown_refs_{1};
   bool shutdown_published_ ABSL_GUARDED_BY(mu_global_) = false;
   std::vector<ShutdownTag> shutdown_tags_ ABSL_GUARDED_BY(mu_global_);
+  std::unique_ptr<Notification> requests_complete_ ABSL_GUARDED_BY(mu_global_);
 
   std::list<ChannelData*> channels_;
 
@@ -513,13 +521,4 @@ struct grpc_server_config_fetcher {
   virtual grpc_pollset_set* interested_parties() = 0;
 };
 
-namespace grpc_core {
-
-inline void Server::set_config_fetcher(
-    std::unique_ptr<grpc_server_config_fetcher> config_fetcher) {
-  config_fetcher_ = std::move(config_fetcher);
-}
-
-}  // namespace grpc_core
-
-#endif  // GRPC_SRC_CORE_LIB_SURFACE_SERVER_H
+#endif  // GRPC_CORE_LIB_SURFACE_SERVER_H

@@ -12,20 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CORE_LIB_PROMISE_JOIN_H
-#define GRPC_SRC_CORE_LIB_PROMISE_JOIN_H
+#ifndef GRPC_CORE_LIB_PROMISE_JOIN_H
+#define GRPC_CORE_LIB_PROMISE_JOIN_H
 
 #include <grpc/support/port_platform.h>
 
-#include <stdlib.h>
-
-#include <tuple>
-#include <utility>
-
 #include "absl/meta/type_traits.h"
 
-#include "src/core/lib/promise/detail/join_state.h"
-#include "src/core/lib/promise/map.h"
+#include "src/core/lib/promise/detail/basic_join.h"
 
 namespace grpc_core {
 namespace promise_detail {
@@ -33,36 +27,19 @@ namespace promise_detail {
 struct JoinTraits {
   template <typename T>
   using ResultType = absl::remove_reference_t<T>;
-  template <typename T>
-  static bool IsOk(const T&) {
-    return true;
+  template <typename T, typename F>
+  static auto OnResult(T result, F kontinue)
+      -> decltype(kontinue(std::move(result))) {
+    return kontinue(std::move(result));
   }
   template <typename T>
-  static T Unwrapped(T x) {
+  static T Wrap(T x) {
     return x;
-  }
-  template <typename R, typename T>
-  static R EarlyReturn(T) {
-    abort();
   }
 };
 
 template <typename... Promises>
-class Join {
- public:
-  explicit Join(Promises... promises) : state_(std::move(promises)...) {}
-  auto operator()() { return state_.PollOnce(); }
-
- private:
-  JoinState<JoinTraits, Promises...> state_;
-};
-
-struct WrapInTuple {
-  template <typename T>
-  std::tuple<T> operator()(T x) {
-    return std::make_tuple(std::move(x));
-  }
-};
+using Join = BasicJoin<JoinTraits, Promises...>;
 
 }  // namespace promise_detail
 
@@ -73,11 +50,6 @@ promise_detail::Join<Promise...> Join(Promise... promises) {
   return promise_detail::Join<Promise...>(std::move(promises)...);
 }
 
-template <typename F>
-auto Join(F promise) {
-  return Map(std::move(promise), promise_detail::WrapInTuple{});
-}
-
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_PROMISE_JOIN_H
+#endif  // GRPC_CORE_LIB_PROMISE_JOIN_H

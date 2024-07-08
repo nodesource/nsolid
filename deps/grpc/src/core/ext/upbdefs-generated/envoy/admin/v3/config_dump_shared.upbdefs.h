@@ -9,16 +9,15 @@
 #ifndef ENVOY_ADMIN_V3_CONFIG_DUMP_SHARED_PROTO_UPBDEFS_H_
 #define ENVOY_ADMIN_V3_CONFIG_DUMP_SHARED_PROTO_UPBDEFS_H_
 
-#include "upb/reflection/def.h"
-#include "upb/reflection/def_pool_internal.h"
-#include "upb/port/def.inc"
+#include "upb/def.h"
+#include "upb/port_def.inc"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
 extern _upb_DefPool_Init envoy_admin_v3_config_dump_shared_proto_upbdefinit;
 
@@ -107,20 +106,10 @@ UPB_INLINE const upb_MessageDef *envoy_admin_v3_EndpointsConfigDump_DynamicEndpo
   return upb_DefPool_FindMessageByName(s, "envoy.admin.v3.EndpointsConfigDump.DynamicEndpointConfig");
 }
 
-UPB_INLINE const upb_MessageDef *envoy_admin_v3_EcdsConfigDump_getmsgdef(upb_DefPool *s) {
-  _upb_DefPool_LoadDefInit(s, &envoy_admin_v3_config_dump_shared_proto_upbdefinit);
-  return upb_DefPool_FindMessageByName(s, "envoy.admin.v3.EcdsConfigDump");
-}
-
-UPB_INLINE const upb_MessageDef *envoy_admin_v3_EcdsConfigDump_EcdsFilterConfig_getmsgdef(upb_DefPool *s) {
-  _upb_DefPool_LoadDefInit(s, &envoy_admin_v3_config_dump_shared_proto_upbdefinit);
-  return upb_DefPool_FindMessageByName(s, "envoy.admin.v3.EcdsConfigDump.EcdsFilterConfig");
-}
-
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 
 #endif  /* ENVOY_ADMIN_V3_CONFIG_DUMP_SHARED_PROTO_UPBDEFS_H_ */

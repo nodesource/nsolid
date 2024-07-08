@@ -16,19 +16,14 @@
 //
 //
 
-#ifndef GRPC_SRC_CORE_LIB_GPRPP_THD_H
-#define GRPC_SRC_CORE_LIB_GPRPP_THD_H
+#ifndef GRPC_CORE_LIB_GPRPP_THD_H
+#define GRPC_CORE_LIB_GPRPP_THD_H
 
 /// Internal thread interface.
 
 #include <grpc/support/port_platform.h>
 
 #include <stddef.h>
-
-#include <memory>
-#include <utility>
-
-#include "absl/functional/any_invocable.h"
 
 #include <grpc/support/log.h>
 
@@ -90,17 +85,6 @@ class Thread {
   /// The optional \a options can be used to set the thread detachable.
   Thread(const char* thd_name, void (*thd_body)(void* arg), void* arg,
          bool* success = nullptr, const Options& options = Options());
-
-  Thread(const char* thd_name, absl::AnyInvocable<void()> fn,
-         bool* success = nullptr, const Options& options = Options())
-      : Thread(
-            thd_name,
-            [](void* p) {
-              std::unique_ptr<absl::AnyInvocable<void()>> fn_from_p(
-                  static_cast<absl::AnyInvocable<void()>*>(p));
-              (*fn_from_p)();
-            },
-            new absl::AnyInvocable<void()>(std::move(fn)), success, options) {}
 
   /// Move constructor for thread. After this is called, the other thread
   /// no longer represents a living thread object
@@ -184,4 +168,4 @@ class Thread {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_GPRPP_THD_H
+#endif  // GRPC_CORE_LIB_GPRPP_THD_H

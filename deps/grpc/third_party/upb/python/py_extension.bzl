@@ -2,7 +2,7 @@
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
 
-def py_extension(name, srcs, copts, deps = [], **kwargs):
+def py_extension(name, srcs, copts, deps = []):
     """Creates a C++ library to extend python
 
     Args:
@@ -18,10 +18,10 @@ def py_extension(name, srcs, copts, deps = [], **kwargs):
         copts = copts + ["-fvisibility=hidden"],
         linkopts = selects.with_or({
             (
-                "//python/dist:osx_x86_64",
-                "//python/dist:osx_aarch64",
+                "//python/dist:osx-x86_64_cpu",
+                "//python/dist:osx-aarch64_cpu",
             ): ["-undefined", "dynamic_lookup"],
-            "//python/dist:windows_x86_32": ["-static-libgcc"],
+            "//python/dist:win32_cpu": ["-static-libgcc"],
             "//conditions:default": [],
         }),
         linkshared = True,
@@ -38,7 +38,6 @@ def py_extension(name, srcs, copts, deps = [], **kwargs):
             "//python:limited_api_3.10_win64": ["@nuget_python_x86-64_3.10.0//:python_limited_api"],
             "//conditions:default": ["@system_python//:python_headers"],
         }),
-        **kwargs
     )
 
     EXT_SUFFIX = ".abi3.so"

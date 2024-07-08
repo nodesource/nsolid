@@ -61,7 +61,6 @@
 #include "src/core/lib/iomgr/wakeup_fd_posix.h"
 
 static grpc_wakeup_fd global_wakeup_fd;
-static bool g_is_shutdown = true;
 
 //******************************************************************************
 // Singleton epoll set related fields
@@ -1236,7 +1235,10 @@ static void shutdown_engine(void) {
   fd_global_shutdown();
   pollset_global_shutdown();
   epoll_set_shutdown();
-  g_is_shutdown = true;
+  if (grpc_core::Fork::Enabled()) {
+    gpr_mu_destroy(&fork_fd_list_mu);
+    grpc_core::Fork::SetResetChildPollingEngineFunc(nullptr);
+  }
 }
 
 static bool init_epoll1_linux();
@@ -1276,13 +1278,10 @@ const grpc_event_engine_vtable grpc_ev_epoll1_posix = {
 
     is_any_background_poller_thread,
     /* name = */ "epoll1",
-    /* check_engine_available = */
-    [](bool) { return init_epoll1_linux(); },
-    /* init_engine = */
-    []() { GPR_ASSERT(init_epoll1_linux()); },
+    /* check_engine_available = */ [](bool) { return init_epoll1_linux(); },
+    /* init_engine = */ []() {},
     shutdown_background_closure,
-    /* shutdown_engine = */
-    []() { shutdown_engine(); },
+    /* shutdown_engine = */ []() {},
     add_closure_to_background_poller,
 
     fd_set_pre_allocated,
@@ -1292,7 +1291,6 @@ const grpc_event_engine_vtable grpc_ev_epoll1_posix = {
 // the global epoll fd. This allows gRPC to shutdown in the child process
 // without interfering with connections or RPCs ongoing in the parent.
 static void reset_event_manager_on_fork() {
-  if (g_is_shutdown) return;
   gpr_mu_lock(&fork_fd_list_mu);
   while (fork_fd_list_head != nullptr) {
     close(fork_fd_list_head->fd);
@@ -1308,7 +1306,6 @@ static void reset_event_manager_on_fork() {
 // Create epoll_fd (epoll_set_init() takes care of that) to make sure epoll
 // support is available
 static bool init_epoll1_linux() {
-  if (!g_is_shutdown) return true;
   if (!grpc_has_wakeup_fd()) {
     gpr_log(GPR_ERROR, "Skipping epoll1 because of no wakeup fd.");
     return false;
@@ -1327,12 +1324,10 @@ static bool init_epoll1_linux() {
   }
 
   if (grpc_core::Fork::Enabled()) {
-    if (grpc_core::Fork::RegisterResetChildPollingEngineFunc(
-            reset_event_manager_on_fork)) {
-      gpr_mu_init(&fork_fd_list_mu);
-    }
+    gpr_mu_init(&fork_fd_list_mu);
+    grpc_core::Fork::SetResetChildPollingEngineFunc(
+        reset_event_manager_on_fork);
   }
-  g_is_shutdown = false;
   return true;
 }
 

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CORE_LIB_PROMISE_MAP_H
-#define GRPC_SRC_CORE_LIB_PROMISE_MAP_H
+#ifndef GRPC_CORE_LIB_PROMISE_MAP_H
+#define GRPC_CORE_LIB_PROMISE_MAP_H
 
 #include <grpc/support/port_platform.h>
 
@@ -22,6 +22,8 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
+#include "absl/types/variant.h"
 
 #include "src/core/lib/promise/detail/promise_like.h"
 #include "src/core/lib/promise/poll.h"
@@ -39,20 +41,13 @@ class Map {
   Map(Promise promise, Fn fn)
       : promise_(std::move(promise)), fn_(std::move(fn)) {}
 
-  Map(const Map&) = delete;
-  Map& operator=(const Map&) = delete;
-  // NOLINTNEXTLINE(performance-noexcept-move-constructor): clang6 bug
-  Map(Map&& other) = default;
-  // NOLINTNEXTLINE(performance-noexcept-move-constructor): clang6 bug
-  Map& operator=(Map&& other) = default;
-
   using PromiseResult = typename PromiseLike<Promise>::Result;
   using Result =
       RemoveCVRef<decltype(std::declval<Fn>()(std::declval<PromiseResult>()))>;
 
   Poll<Result> operator()() {
     Poll<PromiseResult> r = promise_();
-    if (auto* p = r.value_if_ready()) {
+    if (auto* p = absl::get_if<kPollReadyIdx>(&r)) {
       return fn_(std::move(*p));
     }
     return Pending();
@@ -90,4 +85,4 @@ struct JustElem {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_PROMISE_MAP_H
+#endif  // GRPC_CORE_LIB_PROMISE_MAP_H

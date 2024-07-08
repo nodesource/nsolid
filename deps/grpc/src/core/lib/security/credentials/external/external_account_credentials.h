@@ -14,12 +14,10 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
-#define GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
+#ifndef GRPC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
+#define GRPC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
 
 #include <grpc/support/port_platform.h>
-
-#include <stdint.h>
 
 #include <functional>
 #include <string>
@@ -47,16 +45,12 @@ namespace grpc_core {
 class ExternalAccountCredentials
     : public grpc_oauth2_token_fetcher_credentials {
  public:
-  struct ServiceAccountImpersonation {
-    int32_t token_lifetime_seconds;
-  };
   // External account credentials json interface.
   struct Options {
     std::string type;
     std::string audience;
     std::string subject_token_type;
     std::string service_account_impersonation_url;
-    ServiceAccountImpersonation service_account_impersonation;
     std::string token_url;
     std::string token_info_url;
     Json credential_source;
@@ -132,4 +126,4 @@ class ExternalAccountCredentials
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
+#endif  // GRPC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H

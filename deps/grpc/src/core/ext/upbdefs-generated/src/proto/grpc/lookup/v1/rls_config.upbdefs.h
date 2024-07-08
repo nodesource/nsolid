@@ -9,16 +9,15 @@
 #ifndef SRC_PROTO_GRPC_LOOKUP_V1_RLS_CONFIG_PROTO_UPBDEFS_H_
 #define SRC_PROTO_GRPC_LOOKUP_V1_RLS_CONFIG_PROTO_UPBDEFS_H_
 
-#include "upb/reflection/def.h"
-#include "upb/reflection/def_pool_internal.h"
-#include "upb/port/def.inc"
+#include "upb/def.h"
+#include "upb/port_def.inc"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
 extern _upb_DefPool_Init src_proto_grpc_lookup_v1_rls_config_proto_upbdefinit;
 
@@ -71,6 +70,6 @@ UPB_INLINE const upb_MessageDef *grpc_lookup_v1_RouteLookupClusterSpecifier_getm
 }  /* extern "C" */
 #endif
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 
 #endif  /* SRC_PROTO_GRPC_LOOKUP_V1_RLS_CONFIG_PROTO_UPBDEFS_H_ */

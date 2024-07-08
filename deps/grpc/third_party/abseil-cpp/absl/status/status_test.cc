@@ -132,29 +132,6 @@ TEST(Status, ConstructorWithCodeMessage) {
   }
 }
 
-TEST(Status, StatusMessageCStringTest) {
-  {
-    absl::Status status = absl::OkStatus();
-    EXPECT_EQ(status.message(), "");
-    EXPECT_STREQ(absl::StatusMessageAsCStr(status), "");
-    EXPECT_EQ(status.message(), absl::StatusMessageAsCStr(status));
-    EXPECT_NE(absl::StatusMessageAsCStr(status), nullptr);
-  }
-  {
-    absl::Status status;
-    EXPECT_EQ(status.message(), "");
-    EXPECT_NE(absl::StatusMessageAsCStr(status), nullptr);
-    EXPECT_STREQ(absl::StatusMessageAsCStr(status), "");
-  }
-  {
-    absl::Status status(absl::StatusCode::kInternal, "message");
-    EXPECT_FALSE(status.ok());
-    EXPECT_EQ(absl::StatusCode::kInternal, status.code());
-    EXPECT_EQ("message", status.message());
-    EXPECT_STREQ("message", absl::StatusMessageAsCStr(status));
-  }
-}
-
 TEST(Status, ConstructOutOfRangeCode) {
   const int kRawCode = 9999;
   absl::Status status(static_cast<absl::StatusCode>(kRawCode), "");
@@ -528,5 +505,4 @@ TEST(StatusErrno, ErrnoToStatus) {
   EXPECT_EQ(status.code(), absl::StatusCode::kNotFound);
   EXPECT_EQ(status.message(), "Cannot open 'path': No such file or directory");
 }
-
 }  // namespace

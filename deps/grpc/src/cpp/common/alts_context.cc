@@ -21,8 +21,7 @@
 #include <map>
 #include <string>
 
-#include "upb/base/string_view.h"
-#include "upb/collections/map.h"
+#include "upb/upb.h"
 
 #include <grpc/grpc_security_constants.h>
 #include <grpcpp/security/alts_context.h>
@@ -88,7 +87,7 @@ AltsContext::AltsContext(const grpc_gcp_AltsContext* ctx) {
     security_level_ = static_cast<grpc_security_level>(
         grpc_gcp_AltsContext_security_level(ctx));
   }
-  if (grpc_gcp_AltsContext_peer_attributes_size(ctx) != 0) {
+  if (grpc_gcp_AltsContext_has_peer_attributes(ctx)) {
     size_t iter = kUpb_Map_Begin;
     const grpc_gcp_AltsContext_PeerAttributesEntry* peer_attributes_entry =
         grpc_gcp_AltsContext_peer_attributes_next(ctx, &iter);

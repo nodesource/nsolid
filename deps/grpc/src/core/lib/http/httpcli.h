@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_SRC_CORE_LIB_HTTP_HTTPCLI_H
-#define GRPC_SRC_CORE_LIB_HTTP_HTTPCLI_H
+#ifndef GRPC_CORE_LIB_HTTP_HTTPCLI_H
+#define GRPC_CORE_LIB_HTTP_HTTPCLI_H
 
 #include <grpc/support/port_platform.h>
 
@@ -100,11 +100,12 @@ class HttpRequest : public InternallyRefCounted<HttpRequest> {
   //   nullptr is treated as insecure credentials.
   //   TODO(yihuaz): disallow nullptr as a value after unsecure builds
   //   are removed.
-  GRPC_MUST_USE_RESULT static OrphanablePtr<HttpRequest> Get(
+  static OrphanablePtr<HttpRequest> Get(
       URI uri, const grpc_channel_args* args, grpc_polling_entity* pollent,
       const grpc_http_request* request, Timestamp deadline,
       grpc_closure* on_done, grpc_http_response* response,
-      RefCountedPtr<grpc_channel_credentials> channel_creds);
+      RefCountedPtr<grpc_channel_credentials> channel_creds)
+      GRPC_MUST_USE_RESULT;
 
   // Asynchronously perform a HTTP POST.
   // 'uri' is the target to make the request to. The scheme field is used to
@@ -125,11 +126,12 @@ class HttpRequest : public InternallyRefCounted<HttpRequest> {
   //   TODO(apolcyn): disallow nullptr as a value after unsecure builds
   //   are removed.
   // Does not support ?var1=val1&var2=val2 in the path.
-  GRPC_MUST_USE_RESULT static OrphanablePtr<HttpRequest> Post(
+  static OrphanablePtr<HttpRequest> Post(
       URI uri, const grpc_channel_args* args, grpc_polling_entity* pollent,
       const grpc_http_request* request, Timestamp deadline,
       grpc_closure* on_done, grpc_http_response* response,
-      RefCountedPtr<grpc_channel_credentials> channel_creds);
+      RefCountedPtr<grpc_channel_credentials> channel_creds)
+      GRPC_MUST_USE_RESULT;
 
   // Asynchronously perform a HTTP PUT.
   // 'uri' is the target to make the request to. The scheme field is used to
@@ -150,11 +152,12 @@ class HttpRequest : public InternallyRefCounted<HttpRequest> {
   //   TODO(apolcyn): disallow nullptr as a value after unsecure builds
   //   are removed.
   // Does not support ?var1=val1&var2=val2 in the path.
-  GRPC_MUST_USE_RESULT static OrphanablePtr<HttpRequest> Put(
+  static OrphanablePtr<HttpRequest> Put(
       URI uri, const grpc_channel_args* args, grpc_polling_entity* pollent,
       const grpc_http_request* request, Timestamp deadline,
       grpc_closure* on_done, grpc_http_response* response,
-      RefCountedPtr<grpc_channel_credentials> channel_creds);
+      RefCountedPtr<grpc_channel_credentials> channel_creds)
+      GRPC_MUST_USE_RESULT;
 
   HttpRequest(URI uri, const grpc_slice& request_text,
               grpc_http_response* response, Timestamp deadline,
@@ -265,4 +268,4 @@ class HttpRequest : public InternallyRefCounted<HttpRequest> {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_HTTP_HTTPCLI_H
+#endif  // GRPC_CORE_LIB_HTTP_HTTPCLI_H

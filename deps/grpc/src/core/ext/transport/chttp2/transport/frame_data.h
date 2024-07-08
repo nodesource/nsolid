@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FRAME_DATA_H
-#define GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FRAME_DATA_H
+#ifndef GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FRAME_DATA_H
+#define GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FRAME_DATA_H
 
 // Parser for GRPC streams embedded in DATA frames
 
@@ -29,7 +29,7 @@
 
 #include <grpc/slice.h>
 
-#include "src/core/ext/transport/chttp2/transport/legacy_frame.h"
+#include "src/core/ext/transport/chttp2/transport/frame.h"
 #include "src/core/lib/iomgr/error.h"
 #include "src/core/lib/promise/poll.h"
 #include "src/core/lib/slice/slice_buffer.h"
@@ -57,4 +57,4 @@ grpc_core::Poll<grpc_error_handle> grpc_deframe_unprocessed_incoming_frames(
     grpc_chttp2_stream* s, int64_t* min_progress_size,
     grpc_core::SliceBuffer* stream_out, uint32_t* message_flags);
 
-#endif  // GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FRAME_DATA_H
+#endif  // GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FRAME_DATA_H

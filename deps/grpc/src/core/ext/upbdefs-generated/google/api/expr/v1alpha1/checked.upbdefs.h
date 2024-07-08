@@ -9,16 +9,15 @@
 #ifndef GOOGLE_API_EXPR_V1ALPHA1_CHECKED_PROTO_UPBDEFS_H_
 #define GOOGLE_API_EXPR_V1ALPHA1_CHECKED_PROTO_UPBDEFS_H_
 
-#include "upb/reflection/def.h"
-#include "upb/reflection/def_pool_internal.h"
-#include "upb/port/def.inc"
+#include "upb/def.h"
+#include "upb/port_def.inc"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
 extern _upb_DefPool_Init google_api_expr_v1alpha1_checked_proto_upbdefinit;
 
@@ -91,6 +90,6 @@ UPB_INLINE const upb_MessageDef *google_api_expr_v1alpha1_Reference_getmsgdef(up
 }  /* extern "C" */
 #endif
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 
 #endif  /* GOOGLE_API_EXPR_V1ALPHA1_CHECKED_PROTO_UPBDEFS_H_ */

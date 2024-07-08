@@ -6,7 +6,7 @@
  * Do not edit -- your changes will be discarded when the file is
  * regenerated. */
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 #include "envoy/admin/v3/config_dump.upbdefs.h"
 #include "envoy/admin/v3/config_dump.upb.h"
 

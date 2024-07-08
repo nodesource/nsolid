@@ -24,7 +24,6 @@
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/interceptor.h>
 
-// IWYU pragma: no_include "google/protobuf/descriptor.h"
 // IWYU pragma: no_include <google/protobuf/descriptor.h>
 
 using grpc::reflection::v1alpha::ErrorResponse;

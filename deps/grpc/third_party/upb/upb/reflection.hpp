@@ -23,11 +23,15 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// This header is deprecated, use upb/reflection/message.hpp instead
-
 #ifndef UPB_REFLECTION_HPP_
 #define UPB_REFLECTION_HPP_
 
-#include "upb/reflection/message.hpp"
+#include "upb/reflection.h"
+
+namespace upb {
+
+typedef upb_MessageValue MessageValue;
+
+}  // namespace upb
 
 #endif  // UPB_REFLECTION_HPP_

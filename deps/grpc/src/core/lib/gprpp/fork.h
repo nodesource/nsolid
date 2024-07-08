@@ -16,13 +16,12 @@
 //
 //
 
-#ifndef GRPC_SRC_CORE_LIB_GPRPP_FORK_H
-#define GRPC_SRC_CORE_LIB_GPRPP_FORK_H
+#ifndef GRPC_CORE_LIB_GPRPP_FORK_H
+#define GRPC_CORE_LIB_GPRPP_FORK_H
 
 #include <grpc/support/port_platform.h>
 
 #include <atomic>
-#include <set>
 
 //
 // NOTE: FORKING IS NOT GENERALLY SUPPORTED, THIS IS ONLY INTENDED TO WORK
@@ -31,7 +30,7 @@
 
 namespace grpc_core {
 
-class GPR_DLL Fork {
+class Fork {
  public:
   typedef void (*child_postfork_func)(void);
 
@@ -57,11 +56,9 @@ class GPR_DLL Fork {
 
   // Provide a function that will be invoked in the child's postfork handler to
   // reset the polling engine's internal state.
-  // Returns true if reset_child_polling_engine was not previously registered,
-  // otherwise returns false and does nothing.
-  static bool RegisterResetChildPollingEngineFunc(
+  static void SetResetChildPollingEngineFunc(
       child_postfork_func reset_child_polling_engine);
-  static const std::set<child_postfork_func>& GetResetChildPollingEngineFunc();
+  static child_postfork_func GetResetChildPollingEngineFunc();
 
   // Check if there is a single active ExecCtx
   // (the one used to invoke this function).  If there are more,
@@ -90,9 +87,9 @@ class GPR_DLL Fork {
 
   static std::atomic<bool> support_enabled_;
   static bool override_enabled_;
-  static std::set<child_postfork_func>* reset_child_polling_engine_;
+  static child_postfork_func reset_child_polling_engine_;
 };
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_GPRPP_FORK_H
+#endif  // GRPC_CORE_LIB_GPRPP_FORK_H

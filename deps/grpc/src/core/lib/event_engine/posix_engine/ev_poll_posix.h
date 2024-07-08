@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_EV_POLL_POSIX_H
-#define GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_EV_POLL_POSIX_H
+#ifndef GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_EV_POLL_POSIX_H
+#define GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_EV_POLL_POSIX_H
 
 #include <grpc/support/port_platform.h>
 
@@ -27,7 +27,6 @@
 
 #include <grpc/event_engine/event_engine.h>
 
-#include "src/core/lib/event_engine/forkable.h"
 #include "src/core/lib/event_engine/poller.h"
 #include "src/core/lib/event_engine/posix_engine/event_poller.h"
 #include "src/core/lib/event_engine/posix_engine/wakeup_fd_posix.h"
@@ -39,7 +38,7 @@ namespace experimental {
 class PollEventHandle;
 
 // Definition of poll based poller.
-class PollPoller : public PosixEventPoller, public Forkable {
+class PollPoller : public PosixEventPoller {
  public:
   explicit PollPoller(Scheduler* scheduler);
   PollPoller(Scheduler* scheduler, bool use_phony_poll);
@@ -54,13 +53,6 @@ class PollPoller : public PosixEventPoller, public Forkable {
   void Shutdown() override;
   bool CanTrackErrors() const override { return false; }
   ~PollPoller() override;
-
-  // Forkable
-  void PrepareFork() override;
-  void PostforkParent() override;
-  void PostforkChild() override;
-
-  void Close();
 
  private:
   void Ref() { ref_count_.fetch_add(1, std::memory_order_relaxed); }
@@ -91,7 +83,6 @@ class PollPoller : public PosixEventPoller, public Forkable {
   int num_poll_handles_ ABSL_GUARDED_BY(mu_);
   PollEventHandle* poll_handles_list_head_ ABSL_GUARDED_BY(mu_) = nullptr;
   std::unique_ptr<WakeupFd> wakeup_fd_;
-  bool closed_ ABSL_GUARDED_BY(mu_);
 };
 
 // Return an instance of a poll based poller tied to the specified scheduler.
@@ -103,4 +94,4 @@ PollPoller* MakePollPoller(Scheduler* scheduler, bool use_phony_poll);
 }  // namespace experimental
 }  // namespace grpc_event_engine
 
-#endif  // GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_EV_POLL_POSIX_H
+#endif  // GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_EV_POLL_POSIX_H

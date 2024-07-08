@@ -20,9 +20,14 @@
 
 #include <string.h>
 
+#include "absl/types/optional.h"
+
+#include <grpc/grpc.h>
+
 #include "src/core/ext/filters/http/client/http_client_filter.h"
 #include "src/core/ext/filters/http/message_compress/compression_filter.h"
 #include "src/core/ext/filters/http/server/http_server_filter.h"
+#include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/channel/channel_fwd.h"
 #include "src/core/lib/channel/channel_stack_builder.h"
 #include "src/core/lib/config/core_configuration.h"
@@ -45,7 +50,13 @@ void RegisterHttpFilters(CoreConfiguration::Builder* builder) {
         channel_type, GRPC_CHANNEL_INIT_BUILTIN_PRIORITY,
         [filter](ChannelStackBuilder* builder) {
           if (!is_building_http_like_transport(builder)) return true;
-          builder->PrependFilter(filter);
+          auto args = builder->channel_args();
+          const bool enable =
+              args.GetBool(GRPC_ARG_ENABLE_PER_MESSAGE_DECOMPRESSION)
+                  .value_or(true) ||
+              args.GetBool(GRPC_ARG_ENABLE_PER_MESSAGE_COMPRESSION)
+                  .value_or(true);
+          if (enable) builder->PrependFilter(filter);
           return true;
         });
   };

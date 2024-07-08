@@ -7,26 +7,25 @@
  * regenerated. */
 
 #include <stddef.h>
-#include "upb/generated_code_support.h"
+#include "upb/msg_internal.h"
 #include "xds/annotations/v3/sensitive.upb.h"
 #include "google/protobuf/descriptor.upb.h"
 
-// Must be last.
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
-extern const upb_MiniTable google_protobuf_FieldOptions_msg_init;
-const upb_MiniTableExtension xds_annotations_v3_sensitive_ext = {
-  {61008053, 0, 0, kUpb_NoSub, 8, (int)kUpb_FieldMode_Scalar | (int)kUpb_LabelFlags_IsExtension | ((int)kUpb_FieldRep_1Byte << kUpb_FieldRep_Shift)},
-  &google_protobuf_FieldOptions_msg_init,
+extern const upb_MiniTable google_protobuf_FieldOptions_msginit;
+const upb_MiniTable_Extension xds_annotations_v3_sensitive_ext = {
+  {61008053, UPB_SIZE(0, 0), UPB_SIZE(0, 0), kUpb_NoSub, 8, kUpb_FieldMode_Scalar | kUpb_LabelFlags_IsExtension | (kUpb_FieldRep_1Byte << kUpb_FieldRep_Shift)},
+  &google_protobuf_FieldOptions_msginit,
   {.submsg = NULL},
 
 };
 
-static const upb_MiniTableExtension *extensions_layout[1] = {
+static const upb_MiniTable_Extension *extensions_layout[1] = {
   &xds_annotations_v3_sensitive_ext,
 };
 
-const upb_MiniTableFile xds_annotations_v3_sensitive_proto_upb_file_layout = {
+const upb_MiniTable_File xds_annotations_v3_sensitive_proto_upb_file_layout = {
   NULL,
   NULL,
   extensions_layout,
@@ -35,5 +34,5 @@ const upb_MiniTableFile xds_annotations_v3_sensitive_proto_upb_file_layout = {
   1,
 };
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 

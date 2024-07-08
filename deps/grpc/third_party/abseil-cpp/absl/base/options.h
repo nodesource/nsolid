@@ -67,6 +67,12 @@
 #ifndef ABSL_BASE_OPTIONS_H_
 #define ABSL_BASE_OPTIONS_H_
 
+// Include a standard library header to allow configuration based on the
+// standard library in use.
+#ifdef __cplusplus
+#include <ciso646>
+#endif
+
 // -----------------------------------------------------------------------------
 // Type Compatibility Options
 // -----------------------------------------------------------------------------
@@ -200,7 +206,7 @@
 // allowed.
 
 #define ABSL_OPTION_USE_INLINE_NAMESPACE 1
-#define ABSL_OPTION_INLINE_NAMESPACE_NAME lts_20230802
+#define ABSL_OPTION_INLINE_NAMESPACE_NAME lts_20220623
 
 // ABSL_OPTION_HARDENED
 //

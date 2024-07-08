@@ -65,7 +65,6 @@ extern const absl::string_view kRpcClientStartedRpcsMeasureName;
 extern const absl::string_view kRpcClientRetriesPerCallMeasureName;
 extern const absl::string_view kRpcClientTransparentRetriesPerCallMeasureName;
 extern const absl::string_view kRpcClientRetryDelayPerCallMeasureName;
-extern const absl::string_view kRpcClientTransportLatencyMeasureName;
 
 extern const absl::string_view kRpcServerSentMessagesPerRpcMeasureName;
 extern const absl::string_view kRpcServerSentBytesPerRpcMeasureName;
@@ -82,7 +81,6 @@ const ::opencensus::stats::ViewDescriptor&
 ClientSentCompressedMessageBytesPerRpc();
 const ::opencensus::stats::ViewDescriptor&
 ClientReceivedCompressedMessageBytesPerRpc();
-const ::opencensus::stats::ViewDescriptor& ClientTransportLatency();
 
 const ::opencensus::stats::ViewDescriptor& ServerStartedRpcs();
 const ::opencensus::stats::ViewDescriptor& ServerCompletedRpcs();
@@ -174,9 +172,6 @@ class CensusContext {
                          const ::opencensus::tags::TagMap& tags)
       : span_(::opencensus::trace::Span::StartSpan(name)), tags_(tags) {}
 
-  explicit CensusContext(const ::opencensus::tags::TagMap& tags)
-      : span_(::opencensus::trace::Span::BlankSpan()), tags_(tags) {}
-
   CensusContext(absl::string_view name, const ::opencensus::trace::Span* parent,
                 const ::opencensus::tags::TagMap& tags)
       : span_(::opencensus::trace::Span::StartSpan(name, parent)),
@@ -187,13 +182,6 @@ class CensusContext {
       : span_(::opencensus::trace::Span::StartSpanWithRemoteParent(
             name, parent_ctxt)),
         tags_({}) {}
-
-  CensusContext(absl::string_view name,
-                const ::opencensus::trace::SpanContext& parent_ctxt,
-                const ::opencensus::tags::TagMap& tags)
-      : span_(::opencensus::trace::Span::StartSpanWithRemoteParent(
-            name, parent_ctxt)),
-        tags_(tags) {}
 
   void AddSpanAttribute(absl::string_view key,
                         opencensus::trace::AttributeValueRef attribute) {

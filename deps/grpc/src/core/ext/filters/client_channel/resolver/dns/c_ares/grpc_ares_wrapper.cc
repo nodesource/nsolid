@@ -19,12 +19,11 @@
 #include <grpc/support/port_platform.h>
 
 #include <algorithm>
-#include <initializer_list>
 #include <vector>
 
 #include "absl/strings/string_view.h"
 
-#include <grpc/impl/channel_arg_names.h>
+#include <grpc/grpc.h>
 
 #include "src/core/lib/gprpp/status_helper.h"
 #include "src/core/lib/iomgr/sockaddr.h"
@@ -366,7 +365,9 @@ static void on_readable(void* arg, grpc_error_handle error) {
   GRPC_CARES_TRACE_LOG("request:%p readable on %s", fdn->ev_driver->request,
                        fdn->grpc_polled_fd->GetName());
   if (error.ok() && !ev_driver->shutting_down) {
-    ares_process_fd(ev_driver->channel, as, ARES_SOCKET_BAD);
+    do {
+      ares_process_fd(ev_driver->channel, as, ARES_SOCKET_BAD);
+    } while (fdn->grpc_polled_fd->IsFdStillReadableLocked());
   } else {
     // If error is not absl::OkStatus() or the resolution was cancelled, it
     // means the fd has been shutdown or timed out. The pending lookups made on
@@ -436,21 +437,12 @@ static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver)
         if (ARES_GETSOCK_READABLE(socks_bitmask, i) &&
             !fdn->readable_registered) {
           grpc_ares_ev_driver_ref(ev_driver);
+          GRPC_CARES_TRACE_LOG("request:%p notify read on: %s",
+                               ev_driver->request,
+                               fdn->grpc_polled_fd->GetName());
           GRPC_CLOSURE_INIT(&fdn->read_closure, on_readable, fdn,
                             grpc_schedule_on_exec_ctx);
-          if (fdn->grpc_polled_fd->IsFdStillReadableLocked()) {
-            GRPC_CARES_TRACE_LOG("request:%p schedule direct read on: %s",
-                                 ev_driver->request,
-                                 fdn->grpc_polled_fd->GetName());
-            grpc_core::ExecCtx::Run(DEBUG_LOCATION, &fdn->read_closure,
-                                    absl::OkStatus());
-          } else {
-            GRPC_CARES_TRACE_LOG("request:%p notify read on: %s",
-                                 ev_driver->request,
-                                 fdn->grpc_polled_fd->GetName());
-            fdn->grpc_polled_fd->RegisterForOnReadableLocked(
-                &fdn->read_closure);
-          }
+          fdn->grpc_polled_fd->RegisterForOnReadableLocked(&fdn->read_closure);
           fdn->readable_registered = true;
         }
         // Register write_closure if the socket is writable and write_closure
@@ -461,6 +453,8 @@ static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver)
                                ev_driver->request,
                                fdn->grpc_polled_fd->GetName());
           grpc_ares_ev_driver_ref(ev_driver);
+          GRPC_CLOSURE_INIT(&fdn->write_closure, on_writable, fdn,
+                            grpc_schedule_on_exec_ctx);
           GRPC_CLOSURE_INIT(&fdn->write_closure, on_writable, fdn,
                             grpc_schedule_on_exec_ctx);
           fdn->grpc_polled_fd->RegisterForOnWriteableLocked(
@@ -517,12 +511,10 @@ void grpc_ares_ev_driver_start_locked(grpc_ares_ev_driver* ev_driver)
                   &ev_driver->on_ares_backup_poll_alarm_locked);
 }
 
-static void noop_inject_channel_config(ares_channel* /*channel*/) {}
+static void noop_inject_channel_config(ares_channel /*channel*/) {}
 
-void (*grpc_ares_test_only_inject_config)(ares_channel* channel) =
+void (*grpc_ares_test_only_inject_config)(ares_channel channel) =
     noop_inject_channel_config;
-
-bool g_grpc_ares_test_only_force_tcp = false;
 
 grpc_error_handle grpc_ares_ev_driver_create_locked(
     grpc_ares_ev_driver** ev_driver, grpc_pollset_set* pollset_set,
@@ -532,11 +524,8 @@ grpc_error_handle grpc_ares_ev_driver_create_locked(
   ares_options opts;
   memset(&opts, 0, sizeof(opts));
   opts.flags |= ARES_FLAG_STAYOPEN;
-  if (g_grpc_ares_test_only_force_tcp) {
-    opts.flags |= ARES_FLAG_USEVC;
-  }
   int status = ares_init_options(&(*ev_driver)->channel, &opts, ARES_OPT_FLAGS);
-  grpc_ares_test_only_inject_config(&(*ev_driver)->channel);
+  grpc_ares_test_only_inject_config((*ev_driver)->channel);
   GRPC_CARES_TRACE_LOG("request:%p grpc_ares_ev_driver_create_locked", request);
   if (status != ARES_SUCCESS) {
     grpc_error_handle err = GRPC_ERROR_CREATE(absl::StrCat(
@@ -678,33 +667,35 @@ static void on_hostbyname_done_locked(void* arg, int status, int /*timeouts*/,
       if (hr->is_balancer) {
         args = args.Set(GRPC_ARG_DEFAULT_AUTHORITY, hr->host);
       }
-      grpc_resolved_address address;
-      memset(&address, 0, sizeof(address));
       switch (hostent->h_addrtype) {
         case AF_INET6: {
-          address.len = sizeof(struct sockaddr_in6);
-          auto* addr = reinterpret_cast<struct sockaddr_in6*>(&address.addr);
-          memcpy(&addr->sin6_addr, hostent->h_addr_list[i],
+          size_t addr_len = sizeof(struct sockaddr_in6);
+          struct sockaddr_in6 addr;
+          memset(&addr, 0, addr_len);
+          memcpy(&addr.sin6_addr, hostent->h_addr_list[i],
                  sizeof(struct in6_addr));
-          addr->sin6_family = static_cast<unsigned char>(hostent->h_addrtype);
-          addr->sin6_port = hr->port;
+          addr.sin6_family = static_cast<unsigned char>(hostent->h_addrtype);
+          addr.sin6_port = hr->port;
+          addresses.emplace_back(&addr, addr_len, args);
           char output[INET6_ADDRSTRLEN];
-          ares_inet_ntop(AF_INET6, &addr->sin6_addr, output, INET6_ADDRSTRLEN);
+          ares_inet_ntop(AF_INET6, &addr.sin6_addr, output, INET6_ADDRSTRLEN);
           GRPC_CARES_TRACE_LOG(
               "request:%p c-ares resolver gets a AF_INET6 result: \n"
               "  addr: %s\n  port: %d\n  sin6_scope_id: %d\n",
-              r, output, ntohs(hr->port), addr->sin6_scope_id);
+              r, output, ntohs(hr->port), addr.sin6_scope_id);
           break;
         }
         case AF_INET: {
-          address.len = sizeof(struct sockaddr_in);
-          auto* addr = reinterpret_cast<struct sockaddr_in*>(&address.addr);
-          memcpy(&addr->sin_addr, hostent->h_addr_list[i],
+          size_t addr_len = sizeof(struct sockaddr_in);
+          struct sockaddr_in addr;
+          memset(&addr, 0, addr_len);
+          memcpy(&addr.sin_addr, hostent->h_addr_list[i],
                  sizeof(struct in_addr));
-          addr->sin_family = static_cast<unsigned char>(hostent->h_addrtype);
-          addr->sin_port = hr->port;
+          addr.sin_family = static_cast<unsigned char>(hostent->h_addrtype);
+          addr.sin_port = hr->port;
+          addresses.emplace_back(&addr, addr_len, args);
           char output[INET_ADDRSTRLEN];
-          ares_inet_ntop(AF_INET, &addr->sin_addr, output, INET_ADDRSTRLEN);
+          ares_inet_ntop(AF_INET, &addr.sin_addr, output, INET_ADDRSTRLEN);
           GRPC_CARES_TRACE_LOG(
               "request:%p c-ares resolver gets a AF_INET result: \n"
               "  addr: %s\n  port: %d\n",
@@ -712,7 +703,6 @@ static void on_hostbyname_done_locked(void* arg, int status, int /*timeouts*/,
           break;
         }
       }
-      addresses.emplace_back(address, args);
     }
   } else {
     std::string error_msg = absl::StrFormat(
@@ -931,7 +921,7 @@ static bool inner_resolve_as_ip_literal_locked(
                                false /* log errors */)) {
     GPR_ASSERT(*addrs == nullptr);
     *addrs = std::make_unique<ServerAddressList>();
-    (*addrs)->emplace_back(addr, grpc_core::ChannelArgs());
+    (*addrs)->emplace_back(addr.addr, addr.len, grpc_core::ChannelArgs());
     return true;
   }
   return false;
@@ -990,26 +980,23 @@ static bool inner_maybe_resolve_localhost_manually_locked(
     GPR_ASSERT(*addrs == nullptr);
     *addrs = std::make_unique<grpc_core::ServerAddressList>();
     uint16_t numeric_port = grpc_strhtons(port->c_str());
-    grpc_resolved_address address;
     // Append the ipv6 loopback address.
-    memset(&address, 0, sizeof(address));
-    auto* ipv6_loopback_addr =
-        reinterpret_cast<struct sockaddr_in6*>(&address.addr);
-    ((char*)&ipv6_loopback_addr->sin6_addr)[15] = 1;
-    ipv6_loopback_addr->sin6_family = AF_INET6;
-    ipv6_loopback_addr->sin6_port = numeric_port;
-    address.len = sizeof(struct sockaddr_in6);
-    (*addrs)->emplace_back(address, grpc_core::ChannelArgs());
+    struct sockaddr_in6 ipv6_loopback_addr;
+    memset(&ipv6_loopback_addr, 0, sizeof(ipv6_loopback_addr));
+    ((char*)&ipv6_loopback_addr.sin6_addr)[15] = 1;
+    ipv6_loopback_addr.sin6_family = AF_INET6;
+    ipv6_loopback_addr.sin6_port = numeric_port;
+    (*addrs)->emplace_back(&ipv6_loopback_addr, sizeof(ipv6_loopback_addr),
+                           grpc_core::ChannelArgs() /* args */);
     // Append the ipv4 loopback address.
-    memset(&address, 0, sizeof(address));
-    auto* ipv4_loopback_addr =
-        reinterpret_cast<struct sockaddr_in*>(&address.addr);
-    ((char*)&ipv4_loopback_addr->sin_addr)[0] = 0x7f;
-    ((char*)&ipv4_loopback_addr->sin_addr)[3] = 0x01;
-    ipv4_loopback_addr->sin_family = AF_INET;
-    ipv4_loopback_addr->sin_port = numeric_port;
-    address.len = sizeof(struct sockaddr_in);
-    (*addrs)->emplace_back(address, grpc_core::ChannelArgs());
+    struct sockaddr_in ipv4_loopback_addr;
+    memset(&ipv4_loopback_addr, 0, sizeof(ipv4_loopback_addr));
+    ((char*)&ipv4_loopback_addr.sin_addr)[0] = 0x7f;
+    ((char*)&ipv4_loopback_addr.sin_addr)[3] = 0x01;
+    ipv4_loopback_addr.sin_family = AF_INET;
+    ipv4_loopback_addr.sin_port = numeric_port;
+    (*addrs)->emplace_back(&ipv4_loopback_addr, sizeof(ipv4_loopback_addr),
+                           grpc_core::ChannelArgs() /* args */);
     // Let the address sorter figure out which one should be tried first.
     grpc_cares_wrapper_address_sorting_sort(r, addrs->get());
     return true;

@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_SRC_CORE_LIB_IOMGR_POLLING_ENTITY_H
-#define GRPC_SRC_CORE_LIB_IOMGR_POLLING_ENTITY_H
+#ifndef GRPC_CORE_LIB_IOMGR_POLLING_ENTITY_H
+#define GRPC_CORE_LIB_IOMGR_POLLING_ENTITY_H
 
 #include <grpc/support/port_platform.h>
 
@@ -66,11 +66,9 @@ void grpc_polling_entity_add_to_pollset_set(grpc_polling_entity* pollent,
 void grpc_polling_entity_del_from_pollset_set(grpc_polling_entity* pollent,
                                               grpc_pollset_set* pss_dst);
 
-std::string grpc_polling_entity_string(grpc_polling_entity* pollent);
-
 namespace grpc_core {
 template <>
 struct ContextType<grpc_polling_entity> {};
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_IOMGR_POLLING_ENTITY_H
+#endif  // GRPC_CORE_LIB_IOMGR_POLLING_ENTITY_H

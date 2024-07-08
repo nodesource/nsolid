@@ -47,12 +47,13 @@ namespace grpc_core {
 using ::grpc_event_engine::experimental::EventEngine;
 
 PollingResolver::PollingResolver(ResolverArgs args,
+                                 const ChannelArgs& channel_args,
                                  Duration min_time_between_resolutions,
                                  BackOff::Options backoff_options,
                                  TraceFlag* tracer)
     : authority_(args.uri.authority()),
       name_to_resolve_(absl::StripPrefix(args.uri.path(), "/")),
-      channel_args_(std::move(args.args)),
+      channel_args_(channel_args),
       work_serializer_(std::move(args.work_serializer)),
       result_handler_(std::move(args.result_handler)),
       tracer_(tracer),
@@ -159,7 +160,7 @@ void PollingResolver::OnRequestCompleteLocked(Result result) {
     if (GPR_UNLIKELY(tracer_ != nullptr && tracer_->enabled())) {
       gpr_log(GPR_INFO,
               "[polling resolver %p] returning result: "
-              "addresses=%s, service_config=%s, resolution_note=%s",
+              "addresses=%s, service_config=%s",
               this,
               result.addresses.ok()
                   ? absl::StrCat("<", result.addresses->size(), " addresses>")
@@ -170,8 +171,7 @@ void PollingResolver::OnRequestCompleteLocked(Result result) {
                          ? "<null>"
                          : std::string((*result.service_config)->json_string())
                                .c_str())
-                  : result.service_config.status().ToString().c_str(),
-              result.resolution_note.c_str());
+                  : result.service_config.status().ToString().c_str());
     }
     GPR_ASSERT(result.result_health_callback == nullptr);
     RefCountedPtr<PollingResolver> self =
@@ -261,13 +261,8 @@ void PollingResolver::StartResolvingLocked() {
   request_ = StartRequest();
   last_resolution_timestamp_ = Timestamp::Now();
   if (GPR_UNLIKELY(tracer_ != nullptr && tracer_->enabled())) {
-    if (request_ != nullptr) {
-      gpr_log(GPR_INFO,
-              "[polling resolver %p] starting resolution, request_=%p", this,
-              request_.get());
-    } else {
-      gpr_log(GPR_INFO, "[polling resolver %p] StartRequest failed", this);
-    }
+    gpr_log(GPR_INFO, "[polling resolver %p] starting resolution, request_=%p",
+            this, request_.get());
   }
 }
 

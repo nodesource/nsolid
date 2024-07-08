@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CORE_LIB_PROMISE_ARENA_PROMISE_H
-#define GRPC_SRC_CORE_LIB_PROMISE_ARENA_PROMISE_H
+#ifndef GRPC_CORE_LIB_PROMISE_ARENA_PROMISE_H
+#define GRPC_CORE_LIB_PROMISE_ARENA_PROMISE_H
 
 #include <grpc/support/port_platform.h>
 
 #include <stdlib.h>
 
-#include <cstddef>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -35,10 +34,7 @@ namespace grpc_core {
 
 namespace arena_promise_detail {
 
-struct ArgType {
-  alignas(std::max_align_t) char buffer[sizeof(void*)];
-};
-
+using ArgType = std::aligned_storage_t<sizeof(void*)>;
 template <typename T>
 T*& ArgAsPtr(ArgType* arg) {
   static_assert(sizeof(ArgType) >= sizeof(T**),
@@ -232,4 +228,4 @@ class ArenaPromise {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_PROMISE_ARENA_PROMISE_H
+#endif  // GRPC_CORE_LIB_PROMISE_ARENA_PROMISE_H

@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CORE_LIB_PROMISE_DETAIL_PROMISE_FACTORY_H
-#define GRPC_SRC_CORE_LIB_PROMISE_DETAIL_PROMISE_FACTORY_H
+#ifndef GRPC_CORE_LIB_PROMISE_DETAIL_PROMISE_FACTORY_H
+#define GRPC_CORE_LIB_PROMISE_DETAIL_PROMISE_FACTORY_H
 
 #include <grpc/support/port_platform.h>
 
-#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -107,9 +106,6 @@ class Curried {
  private:
   GPR_NO_UNIQUE_ADDRESS F f_;
   GPR_NO_UNIQUE_ADDRESS Arg arg_;
-#ifndef NDEBUG
-  std::unique_ptr<int> asan_canary_ = std::make_unique<int>(0);
-#endif
 };
 
 // Promote a callable(A) -> T | Poll<T> to a PromiseFactory(A) -> Promise<T> by
@@ -169,7 +165,7 @@ absl::enable_if_t<IsVoidCallable<ResultOf<F()>>::value,
                   PromiseLike<decltype(std::declval<F>()())>>
 PromiseFactoryImpl(F&& f) {
   return f();
-}
+};
 
 template <typename A, typename F>
 class OncePromiseFactory {
@@ -237,4 +233,4 @@ class RepeatedPromiseFactory<void, F> {
 }  // namespace promise_detail
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_PROMISE_DETAIL_PROMISE_FACTORY_H
+#endif  // GRPC_CORE_LIB_PROMISE_DETAIL_PROMISE_FACTORY_H

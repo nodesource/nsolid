@@ -7,23 +7,22 @@
  * regenerated. */
 
 #include <stddef.h>
-#include "upb/generated_code_support.h"
+#include "upb/msg_internal.h"
 #include "google/protobuf/empty.upb.h"
 
-// Must be last.
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
-const upb_MiniTable google_protobuf_Empty_msg_init = {
+const upb_MiniTable google_protobuf_Empty_msginit = {
   NULL,
   NULL,
-  0, 0, kUpb_ExtMode_NonExtendable, 0, UPB_FASTTABLE_MASK(255), 0,
+  UPB_SIZE(0, 0), 0, kUpb_ExtMode_NonExtendable, 0, 255, 0,
 };
 
 static const upb_MiniTable *messages_layout[1] = {
-  &google_protobuf_Empty_msg_init,
+  &google_protobuf_Empty_msginit,
 };
 
-const upb_MiniTableFile google_protobuf_empty_proto_upb_file_layout = {
+const upb_MiniTable_File google_protobuf_empty_proto_upb_file_layout = {
   messages_layout,
   NULL,
   NULL,
@@ -32,5 +31,5 @@ const upb_MiniTableFile google_protobuf_empty_proto_upb_file_layout = {
   0,
 };
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 

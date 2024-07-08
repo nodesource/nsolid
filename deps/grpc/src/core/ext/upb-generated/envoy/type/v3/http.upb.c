@@ -7,14 +7,13 @@
  * regenerated. */
 
 #include <stddef.h>
-#include "upb/generated_code_support.h"
+#include "upb/msg_internal.h"
 #include "envoy/type/v3/http.upb.h"
 #include "udpa/annotations/status.upb.h"
 
-// Must be last.
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
-const upb_MiniTableFile envoy_type_v3_http_proto_upb_file_layout = {
+const upb_MiniTable_File envoy_type_v3_http_proto_upb_file_layout = {
   NULL,
   NULL,
   NULL,
@@ -23,5 +22,5 @@ const upb_MiniTableFile envoy_type_v3_http_proto_upb_file_layout = {
   0,
 };
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 

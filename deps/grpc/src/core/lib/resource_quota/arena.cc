@@ -54,9 +54,6 @@ Arena::~Arena() {
     gpr_free_aligned(z);
     z = prev_z;
   }
-#ifdef GRPC_ARENA_TRACE_POOLED_ALLOCATIONS
-  gpr_log(GPR_ERROR, "DESTRUCT_ARENA %p", this);
-#endif
 }
 
 Arena* Arena::Create(size_t initial_size, MemoryAllocator* memory_allocator) {
@@ -74,7 +71,7 @@ std::pair<Arena*, void*> Arena::CreateWithAlloc(
   return std::make_pair(new_arena, first_alloc);
 }
 
-void Arena::DestroyManagedNewObjects() {
+size_t Arena::Destroy() {
   ManagedNewObject* p;
   // Outer loop: clear the managed new object list.
   // We do this repeatedly in case a destructor ends up allocating something.
@@ -85,13 +82,11 @@ void Arena::DestroyManagedNewObjects() {
       Destruct(std::exchange(p, p->next));
     }
   }
-}
-
-void Arena::Destroy() {
-  DestroyManagedNewObjects();
+  size_t size = total_used_.load(std::memory_order_relaxed);
   memory_allocator_->Release(total_allocated_.load(std::memory_order_relaxed));
   this->~Arena();
   gpr_free_aligned(this);
+  return size;
 }
 
 void* Arena::AllocZone(size_t size) {
@@ -121,63 +116,23 @@ void Arena::ManagedNewObject::Link(std::atomic<ManagedNewObject*>* head) {
   }
 }
 
-#ifndef GRPC_ARENA_POOLED_ALLOCATIONS_USE_MALLOC
-void* Arena::AllocPooled(size_t obj_size, size_t alloc_size,
-                         std::atomic<FreePoolNode*>* head) {
-  // ABA mitigation:
-  // AllocPooled may be called by multiple threads, and to remove a node from
-  // the free list we need to manipulate the next pointer, which may be done
-  // differently by each thread in a naive implementation.
-  // The literature contains various ways of dealing with this. Here we expect
-  // to be mostly single threaded - Arena's are owned by calls and calls don't
-  // do a lot of concurrent work with the pooled allocator. The place that they
-  // do is allocating metadata batches for decoding HPACK headers in chttp2.
-  // So we adopt an approach that is simple and fast for the single threaded
-  // case, and that is also correct in the multi threaded case.
-
-  // First, take ownership of the entire free list. At this point we know that
-  // no other thread can see free nodes and will be forced to allocate.
-  // We think we're mostly single threaded and so that's ok.
-  FreePoolNode* p = head->exchange(nullptr, std::memory_order_acquire);
-  // If there are no nodes in the free list, then go ahead and allocate from the
-  // arena.
-  if (p == nullptr) {
-    void* r = Alloc(alloc_size);
-    TracePoolAlloc(obj_size, r);
-    return r;
-  }
-  // We had a non-empty free list... but we own the *entire* free list.
-  // We only want one node, so if there are extras we'd better give them back.
-  if (p->next != nullptr) {
-    // We perform an exchange to do so, but if there were concurrent frees with
-    // this allocation then there'll be a free list that needs to be merged with
-    // ours.
-    FreePoolNode* extra = head->exchange(p->next, std::memory_order_acq_rel);
-    // If there was a free list concurrently created, we merge it into the
-    // overall free list here by simply freeing each node in turn. This is O(n),
-    // but only O(n) in the number of nodes that were freed concurrently, and
-    // again: we think real world use cases are going to see this as mostly
-    // single threaded.
-    while (extra != nullptr) {
-      FreePoolNode* next = extra->next;
-      FreePooled(extra, head);
-      extra = next;
+void* Arena::AllocPooled(size_t alloc_size, std::atomic<FreePoolNode*>* head) {
+  FreePoolNode* p = head->load(std::memory_order_acquire);
+  while (p != nullptr) {
+    if (head->compare_exchange_weak(p, p->next, std::memory_order_acq_rel,
+                                    std::memory_order_relaxed)) {
+      return p;
     }
   }
-  TracePoolAlloc(obj_size, p);
-  return p;
+  return Alloc(alloc_size);
 }
 
 void Arena::FreePooled(void* p, std::atomic<FreePoolNode*>* head) {
-  // May spuriously trace a free of an already freed object - see AllocPooled
-  // ABA mitigation.
-  TracePoolFree(p);
   FreePoolNode* node = static_cast<FreePoolNode*>(p);
   node->next = head->load(std::memory_order_acquire);
   while (!head->compare_exchange_weak(
       node->next, node, std::memory_order_acq_rel, std::memory_order_relaxed)) {
   }
 }
-#endif
 
 }  // namespace grpc_core

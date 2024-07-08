@@ -9,16 +9,15 @@
 #ifndef ENVOY_EXTENSIONS_FILTERS_NETWORK_HTTP_CONNECTION_MANAGER_V3_HTTP_CONNECTION_MANAGER_PROTO_UPBDEFS_H_
 #define ENVOY_EXTENSIONS_FILTERS_NETWORK_HTTP_CONNECTION_MANAGER_V3_HTTP_CONNECTION_MANAGER_PROTO_UPBDEFS_H_
 
-#include "upb/reflection/def.h"
-#include "upb/reflection/def_pool_internal.h"
-#include "upb/port/def.inc"
+#include "upb/def.h"
+#include "upb/port_def.inc"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
 extern _upb_DefPool_Init envoy_extensions_filters_network_http_connection_manager_v3_http_connection_manager_proto_upbdefinit;
 
@@ -55,11 +54,6 @@ UPB_INLINE const upb_MessageDef *envoy_extensions_filters_network_http_connectio
 UPB_INLINE const upb_MessageDef *envoy_extensions_filters_network_http_connection_manager_v3_HttpConnectionManager_ProxyStatusConfig_getmsgdef(upb_DefPool *s) {
   _upb_DefPool_LoadDefInit(s, &envoy_extensions_filters_network_http_connection_manager_v3_http_connection_manager_proto_upbdefinit);
   return upb_DefPool_FindMessageByName(s, "envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager.ProxyStatusConfig");
-}
-
-UPB_INLINE const upb_MessageDef *envoy_extensions_filters_network_http_connection_manager_v3_HttpConnectionManager_HcmAccessLogOptions_getmsgdef(upb_DefPool *s) {
-  _upb_DefPool_LoadDefInit(s, &envoy_extensions_filters_network_http_connection_manager_v3_http_connection_manager_proto_upbdefinit);
-  return upb_DefPool_FindMessageByName(s, "envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager.HcmAccessLogOptions");
 }
 
 UPB_INLINE const upb_MessageDef *envoy_extensions_filters_network_http_connection_manager_v3_LocalReplyConfig_getmsgdef(upb_DefPool *s) {
@@ -131,6 +125,6 @@ UPB_INLINE const upb_MessageDef *envoy_extensions_filters_network_http_connectio
 }  /* extern "C" */
 #endif
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 
 #endif  /* ENVOY_EXTENSIONS_FILTERS_NETWORK_HTTP_CONNECTION_MANAGER_V3_HTTP_CONNECTION_MANAGER_PROTO_UPBDEFS_H_ */

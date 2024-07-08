@@ -21,7 +21,6 @@
 #include "src/cpp/ext/filters/census/rpc_encoding.h"
 
 namespace grpc {
-namespace internal {
 
 constexpr size_t RpcServerStatsEncoding::kRpcServerStatsSize;
 constexpr size_t RpcServerStatsEncoding::kEncodeDecodeFailure;
@@ -30,5 +29,4 @@ constexpr size_t RpcServerStatsEncoding::kFieldIdSize;
 constexpr size_t RpcServerStatsEncoding::kVersionIdOffset;
 constexpr size_t RpcServerStatsEncoding::kVersionId;
 
-}  // namespace internal
 }  // namespace grpc

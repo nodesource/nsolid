@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FLOW_CONTROL_H
-#define GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FLOW_CONTROL_H
+#ifndef GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FLOW_CONTROL_H
+#define GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FLOW_CONTROL_H
 
 #include <grpc/support/port_platform.h>
 
@@ -30,7 +30,6 @@
 
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
-#include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 
 #include <grpc/support/log.h>
@@ -169,7 +168,7 @@ std::ostream& operator<<(std::ostream& out, const FlowControlAction& action);
 // to be as performant as possible.
 class TransportFlowControl final {
  public:
-  explicit TransportFlowControl(absl::string_view name, bool enable_bdp_probe,
+  explicit TransportFlowControl(const char* name, bool enable_bdp_probe,
                                 MemoryOwner* memory_owner);
   ~TransportFlowControl() {}
 
@@ -179,17 +178,7 @@ class TransportFlowControl final {
   // else returns zero; writing_anyway indicates if a write would happen
   // regardless of the send - if it is false and this function returns non-zero,
   // this announce will cause a write to occur
-  uint32_t DesiredAnnounceSize(bool writing_anyway) const;
-  // notify that we've actually sent a stream window update
-  // (should be DesiredAnnounceSize())
-  void SentUpdate(uint32_t announce);
-
-  // Older API: combines getting the DesiredAnnounceSize() with SentUpdate()
-  uint32_t MaybeSendUpdate(bool writing_anyway) {
-    uint32_t n = DesiredAnnounceSize(writing_anyway);
-    SentUpdate(n);
-    return n;
-  }
+  uint32_t MaybeSendUpdate(bool writing_anyway);
 
   // Track an update to the incoming flow control counters - that is how many
   // tokens we report to our peer that we're willing to accept.
@@ -270,10 +259,7 @@ class TransportFlowControl final {
   BdpEstimator* bdp_estimator() { return &bdp_estimator_; }
 
   uint32_t acked_init_window() const { return acked_init_window_; }
-  uint32_t queued_init_window() const { return target_initial_window_size_; }
-  uint32_t sent_init_window() const { return sent_init_window_; }
-
-  void FlushedSettings() { sent_init_window_ = queued_init_window(); }
+  uint32_t sent_init_window() const { return target_initial_window_size_; }
 
   FlowControlAction SetAckedInitialWindow(uint32_t value);
 
@@ -332,7 +318,6 @@ class TransportFlowControl final {
       kDefaultPreferredRxCryptoFrameSize;
   int64_t announced_window_ = kDefaultWindow;
   uint32_t acked_init_window_ = kDefaultWindow;
-  uint32_t sent_init_window_ = kDefaultWindow;
 };
 
 // Implementation of flow control that abides to HTTP/2 spec and attempts
@@ -393,17 +378,7 @@ class StreamFlowControl final {
 
   // returns an announce if we should send a stream update to our peer, else
   // returns zero
-  uint32_t DesiredAnnounceSize() const;
-  // notify that we've actually sent a stream window update
-  // (should be DesiredAnnounceSize())
-  void SentUpdate(uint32_t announce);
-
-  // Older API: combines getting the DesiredAnnounceSize() with SentUpdate()
-  uint32_t MaybeSendUpdate() {
-    uint32_t n = DesiredAnnounceSize();
-    SentUpdate(n);
-    return n;
-  }
+  uint32_t MaybeSendUpdate();
 
   int64_t remote_window_delta() const { return remote_window_delta_; }
   int64_t announced_window_delta() const { return announced_window_delta_; }
@@ -417,6 +392,7 @@ class StreamFlowControl final {
   absl::optional<int64_t> pending_size_;
 
   FlowControlAction UpdateAction(FlowControlAction action);
+  int64_t DesiredAnnounceSize() const;
 };
 
 class TestOnlyTransportTargetWindowEstimatesMocker {
@@ -432,4 +408,4 @@ extern TestOnlyTransportTargetWindowEstimatesMocker*
 }  // namespace chttp2
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FLOW_CONTROL_H
+#endif  // GRPC_CORE_EXT_TRANSPORT_CHTTP2_TRANSPORT_FLOW_CONTROL_H

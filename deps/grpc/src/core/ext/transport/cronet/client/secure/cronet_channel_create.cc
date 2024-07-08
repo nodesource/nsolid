@@ -22,7 +22,6 @@
 
 #include "absl/status/statusor.h"
 
-#include <grpc/impl/channel_arg_names.h>
 #include <grpc/support/log.h>
 
 #include "src/core/ext/transport/cronet/transport/cronet_transport.h"

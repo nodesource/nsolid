@@ -9,16 +9,15 @@
 #ifndef GOOGLE_API_HTTP_PROTO_UPBDEFS_H_
 #define GOOGLE_API_HTTP_PROTO_UPBDEFS_H_
 
-#include "upb/reflection/def.h"
-#include "upb/reflection/def_pool_internal.h"
-#include "upb/port/def.inc"
+#include "upb/def.h"
+#include "upb/port_def.inc"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
 extern _upb_DefPool_Init google_api_http_proto_upbdefinit;
 
@@ -41,6 +40,6 @@ UPB_INLINE const upb_MessageDef *google_api_CustomHttpPattern_getmsgdef(upb_DefP
 }  /* extern "C" */
 #endif
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 
 #endif  /* GOOGLE_API_HTTP_PROTO_UPBDEFS_H_ */

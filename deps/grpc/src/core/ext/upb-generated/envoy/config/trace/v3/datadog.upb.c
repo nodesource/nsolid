@@ -7,39 +7,31 @@
  * regenerated. */
 
 #include <stddef.h>
-#include "upb/generated_code_support.h"
+#include "upb/msg_internal.h"
 #include "envoy/config/trace/v3/datadog.upb.h"
 #include "udpa/annotations/migrate.upb.h"
 #include "udpa/annotations/status.upb.h"
 #include "udpa/annotations/versioning.upb.h"
 #include "validate/validate.upb.h"
 
-// Must be last.
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
-static const upb_MiniTableField envoy_config_trace_v3_DatadogConfig__fields[3] = {
-  {1, 0, 0, kUpb_NoSub, 9, (int)kUpb_FieldMode_Scalar | ((int)kUpb_FieldRep_StringView << kUpb_FieldRep_Shift)},
-  {2, UPB_SIZE(8, 16), 0, kUpb_NoSub, 9, (int)kUpb_FieldMode_Scalar | ((int)kUpb_FieldRep_StringView << kUpb_FieldRep_Shift)},
-  {3, UPB_SIZE(16, 32), 0, kUpb_NoSub, 9, (int)kUpb_FieldMode_Scalar | ((int)kUpb_FieldRep_StringView << kUpb_FieldRep_Shift)},
+static const upb_MiniTable_Field envoy_config_trace_v3_DatadogConfig__fields[2] = {
+  {1, UPB_SIZE(0, 0), UPB_SIZE(0, 0), kUpb_NoSub, 9, kUpb_FieldMode_Scalar | (kUpb_FieldRep_StringView << kUpb_FieldRep_Shift)},
+  {2, UPB_SIZE(8, 16), UPB_SIZE(0, 0), kUpb_NoSub, 9, kUpb_FieldMode_Scalar | (kUpb_FieldRep_StringView << kUpb_FieldRep_Shift)},
 };
 
-const upb_MiniTable envoy_config_trace_v3_DatadogConfig_msg_init = {
+const upb_MiniTable envoy_config_trace_v3_DatadogConfig_msginit = {
   NULL,
   &envoy_config_trace_v3_DatadogConfig__fields[0],
-  UPB_SIZE(24, 48), 3, kUpb_ExtMode_NonExtendable, 3, UPB_FASTTABLE_MASK(24), 0,
-  UPB_FASTTABLE_INIT({
-    {0x0000000000000000, &_upb_FastDecoder_DecodeGeneric},
-    {0x000000003f00000a, &upb_pss_1bt},
-    {0x001000003f000012, &upb_pss_1bt},
-    {0x002000003f00001a, &upb_pss_1bt},
-  })
+  UPB_SIZE(16, 32), 2, kUpb_ExtMode_NonExtendable, 2, 255, 0,
 };
 
 static const upb_MiniTable *messages_layout[1] = {
-  &envoy_config_trace_v3_DatadogConfig_msg_init,
+  &envoy_config_trace_v3_DatadogConfig_msginit,
 };
 
-const upb_MiniTableFile envoy_config_trace_v3_datadog_proto_upb_file_layout = {
+const upb_MiniTable_File envoy_config_trace_v3_datadog_proto_upb_file_layout = {
   messages_layout,
   NULL,
   NULL,
@@ -48,5 +40,5 @@ const upb_MiniTableFile envoy_config_trace_v3_datadog_proto_upb_file_layout = {
   0,
 };
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 

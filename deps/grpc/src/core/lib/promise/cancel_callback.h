@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CORE_LIB_PROMISE_CANCEL_CALLBACK_H
-#define GRPC_SRC_CORE_LIB_PROMISE_CANCEL_CALLBACK_H
+#ifndef GRPC_CORE_LIB_PROMISE_CANCEL_CALLBACK_H
+#define GRPC_CORE_LIB_PROMISE_CANCEL_CALLBACK_H
 
 #include <grpc/support/port_platform.h>
 
 #include <utility>
 
+#include "absl/types/variant.h"
+
 #include "src/core/lib/promise/detail/promise_like.h"
+#include "src/core/lib/promise/poll.h"
 
 namespace grpc_core {
 
@@ -65,7 +68,7 @@ auto OnCancel(MainFn main_fn, CancelFn cancel_fn) {
           main_fn = promise_detail::PromiseLike<MainFn>(
               std::move(main_fn))]() mutable {
     auto r = main_fn();
-    if (r.ready()) {
+    if (!absl::holds_alternative<Pending>(r)) {
       on_cancel.Done();
     }
     return r;
@@ -74,4 +77,4 @@ auto OnCancel(MainFn main_fn, CancelFn cancel_fn) {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_PROMISE_CANCEL_CALLBACK_H
+#endif  // GRPC_CORE_LIB_PROMISE_CANCEL_CALLBACK_H

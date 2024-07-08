@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_SRC_CORE_EXT_XDS_XDS_HTTP_FILTERS_H
-#define GRPC_SRC_CORE_EXT_XDS_XDS_HTTP_FILTERS_H
+#ifndef GRPC_CORE_EXT_XDS_XDS_HTTP_FILTERS_H
+#define GRPC_CORE_EXT_XDS_XDS_HTTP_FILTERS_H
 
 #include <grpc/support/port_platform.h>
 
@@ -30,7 +30,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
 #include "src/core/ext/xds/xds_common_types.h"
 #include "src/core/ext/xds/xds_resource_type.h"
@@ -38,7 +38,6 @@
 #include "src/core/lib/channel/channel_fwd.h"
 #include "src/core/lib/gprpp/validation_errors.h"
 #include "src/core/lib/json/json.h"
-#include "src/core/lib/json/json_writer.h"
 
 namespace grpc_core {
 
@@ -54,7 +53,7 @@ class XdsHttpFilterImpl {
     }
     std::string ToString() const {
       return absl::StrCat("{config_proto_type_name=", config_proto_type_name,
-                          " config=", JsonDump(config), "}");
+                          " config=", config.Dump(), "}");
     }
   };
 
@@ -179,4 +178,4 @@ class XdsHttpFilterRegistry {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_EXT_XDS_XDS_HTTP_FILTERS_H
+#endif  // GRPC_CORE_EXT_XDS_XDS_HTTP_FILTERS_H

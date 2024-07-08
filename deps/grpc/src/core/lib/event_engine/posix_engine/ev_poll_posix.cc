@@ -19,7 +19,6 @@
 #include <stdint.h>
 
 #include <atomic>
-#include <initializer_list>
 #include <list>
 #include <memory>
 #include <utility>
@@ -40,6 +39,7 @@
 #include "src/core/lib/event_engine/posix_engine/event_poller.h"
 #include "src/core/lib/event_engine/posix_engine/posix_engine_closure.h"
 #include "src/core/lib/gprpp/crash.h"
+#include "src/core/lib/gprpp/memory.h"
 #include "src/core/lib/iomgr/port.h"
 
 #ifdef GRPC_POSIX_SOCKET_EV_POLL
@@ -57,10 +57,13 @@
 #include "src/core/lib/event_engine/posix_engine/wakeup_fd_posix_default.h"
 #include "src/core/lib/event_engine/time_util.h"
 #include "src/core/lib/gprpp/fork.h"
+#include "src/core/lib/gprpp/global_config.h"
 #include "src/core/lib/gprpp/status_helper.h"
 #include "src/core/lib/gprpp/strerror.h"
 #include "src/core/lib/gprpp/sync.h"
 #include "src/core/lib/gprpp/time.h"
+
+GPR_GLOBAL_CONFIG_DECLARE_STRING(grpc_poll_strategy);
 
 static const intptr_t kClosureNotReady = 0;
 static const intptr_t kClosureReady = 1;
@@ -316,9 +319,13 @@ void ResetEventManagerOnFork() {
   while (!fork_poller_list.empty()) {
     PollPoller* poller = fork_poller_list.front();
     fork_poller_list.pop_front();
-    poller->Close();
+    delete poller;
   }
   gpr_mu_unlock(&fork_fd_list_mu);
+  if (grpc_core::Fork::Enabled()) {
+    gpr_mu_destroy(&fork_fd_list_mu);
+    grpc_core::Fork::SetResetChildPollingEngineFunc(nullptr);
+  }
   InitPollPollerPosix();
 }
 
@@ -329,10 +336,8 @@ bool InitPollPollerPosix() {
     return false;
   }
   if (grpc_core::Fork::Enabled()) {
-    if (grpc_core::Fork::RegisterResetChildPollingEngineFunc(
-            ResetEventManagerOnFork)) {
-      gpr_mu_init(&fork_fd_list_mu);
-    }
+    gpr_mu_init(&fork_fd_list_mu);
+    grpc_core::Fork::SetResetChildPollingEngineFunc(ResetEventManagerOnFork);
   }
   return true;
 }
@@ -373,12 +378,12 @@ void PollEventHandle::OrphanHandle(PosixEngineClosure* on_done, int* release_fd,
       grpc_core::StatusSetInt(&shutdown_error_,
                               grpc_core::StatusIntProperty::kRpcStatus,
                               GRPC_STATUS_UNAVAILABLE);
+      // signal read/write closed to OS so that future operations fail.
+      if (!released_) {
+        shutdown(fd_, SHUT_RDWR);
+      }
       SetReadyLocked(&read_closure_);
       SetReadyLocked(&write_closure_);
-    }
-    // signal read/write closed to OS so that future operations fail.
-    if (!released_) {
-      shutdown(fd_, SHUT_RDWR);
     }
     if (!IsWatched()) {
       CloseFd();
@@ -450,6 +455,8 @@ void PollEventHandle::ShutdownHandle(absl::Status why) {
       grpc_core::StatusSetInt(&shutdown_error_,
                               grpc_core::StatusIntProperty::kRpcStatus,
                               GRPC_STATUS_UNAVAILABLE);
+      // signal read/write closed to OS so that future operations fail.
+      shutdown(fd_, SHUT_RDWR);
       SetReadyLocked(&read_closure_);
       SetReadyLocked(&write_closure_);
     }
@@ -566,9 +573,6 @@ bool PollEventHandle::EndPollLocked(bool got_read, bool got_write) {
 
 void PollPoller::KickExternal(bool ext) {
   grpc_core::MutexLock lock(&mu_);
-  if (closed_) {
-    return;
-  }
   if (was_kicked_) {
     if (ext) {
       was_kicked_ext_ = true;
@@ -613,8 +617,7 @@ PollPoller::PollPoller(Scheduler* scheduler)
       was_kicked_(false),
       was_kicked_ext_(false),
       num_poll_handles_(0),
-      poll_handles_list_head_(nullptr),
-      closed_(false) {
+      poll_handles_list_head_(nullptr) {
   wakeup_fd_ = *CreateWakeupFd();
   GPR_ASSERT(wakeup_fd_ != nullptr);
   ForkPollerListAddPoller(this);
@@ -626,8 +629,7 @@ PollPoller::PollPoller(Scheduler* scheduler, bool use_phony_poll)
       was_kicked_(false),
       was_kicked_ext_(false),
       num_poll_handles_(0),
-      poll_handles_list_head_(nullptr),
-      closed_(false) {
+      poll_handles_list_head_(nullptr) {
   wakeup_fd_ = *CreateWakeupFd();
   GPR_ASSERT(wakeup_fd_ != nullptr);
   ForkPollerListAddPoller(this);
@@ -713,7 +715,7 @@ Poller::WorkResult PollPoller::Work(
       // well instead of crashing. This is because the poller::Work is called
       // right after an event enging is constructed. Even if phony poll is
       // expected to be used, we dont want to check for it until some actual
-      // event handles are registered. Otherwise the EventEngine construction
+      // event handles are registered. Otherwise the event engine construction
       // may crash.
       r = poll(pfds, pfd_count, timeout_ms);
     } else {
@@ -834,17 +836,6 @@ void PollPoller::Shutdown() {
   Unref();
 }
 
-void PollPoller::PrepareFork() { Kick(); }
-// TODO(vigneshbabu): implement
-void PollPoller::PostforkParent() {}
-// TODO(vigneshbabu): implement
-void PollPoller::PostforkChild() {}
-
-void PollPoller::Close() {
-  grpc_core::MutexLock lock(&mu_);
-  closed_ = true;
-}
-
 PollPoller* MakePollPoller(Scheduler* scheduler, bool use_phony_poll) {
   static bool kPollPollerSupported = InitPollPollerPosix();
   if (kPollPollerSupported) {
@@ -890,12 +881,6 @@ PollPoller* MakePollPoller(Scheduler* /*scheduler*/,
                            bool /* use_phony_poll */) {
   return nullptr;
 }
-
-void PollPoller::PrepareFork() { grpc_core::Crash("unimplemented"); }
-void PollPoller::PostforkParent() { grpc_core::Crash("unimplemented"); }
-void PollPoller::PostforkChild() { grpc_core::Crash("unimplemented"); }
-
-void PollPoller::Close() { grpc_core::Crash("unimplemented"); }
 
 void PollPoller::KickExternal(bool /*ext*/) {
   grpc_core::Crash("unimplemented");

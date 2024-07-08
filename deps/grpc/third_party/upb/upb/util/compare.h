@@ -28,7 +28,7 @@
 #ifndef UPB_UTIL_COMPARE_H_
 #define UPB_UTIL_COMPARE_H_
 
-#include <stddef.h>
+#include "upb/def.h"
 
 #ifdef __cplusplus
 extern "C" {

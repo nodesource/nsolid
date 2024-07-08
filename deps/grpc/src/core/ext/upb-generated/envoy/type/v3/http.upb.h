@@ -9,9 +9,12 @@
 #ifndef ENVOY_TYPE_V3_HTTP_PROTO_UPB_H_
 #define ENVOY_TYPE_V3_HTTP_PROTO_UPB_H_
 
-#include "upb/generated_code_support.h"
-// Must be last. 
-#include "upb/port/def.inc"
+#include "upb/msg_internal.h"
+#include "upb/decode.h"
+#include "upb/decode_fast.h"
+#include "upb/encode.h"
+
+#include "upb/port_def.inc"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,12 +28,12 @@ typedef enum {
 
 
 
-extern const upb_MiniTableFile envoy_type_v3_http_proto_upb_file_layout;
+extern const upb_MiniTable_File envoy_type_v3_http_proto_upb_file_layout;
 
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 
 #endif  /* ENVOY_TYPE_V3_HTTP_PROTO_UPB_H_ */

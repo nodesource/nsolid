@@ -18,7 +18,6 @@
 #include <stdint.h>
 
 #include <atomic>
-#include <initializer_list>
 #include <memory>
 
 #include "absl/status/status.h"
@@ -252,9 +251,13 @@ void ResetEventManagerOnFork() {
   while (!fork_poller_list.empty()) {
     Epoll1Poller* poller = fork_poller_list.front();
     fork_poller_list.pop_front();
-    poller->Close();
+    delete poller;
   }
   gpr_mu_unlock(&fork_fd_list_mu);
+  if (grpc_core::Fork::Enabled()) {
+    gpr_mu_destroy(&fork_fd_list_mu);
+    grpc_core::Fork::SetResetChildPollingEngineFunc(nullptr);
+  }
   InitEpoll1PollerLinux();
 }
 
@@ -269,10 +272,8 @@ bool InitEpoll1PollerLinux() {
     return false;
   }
   if (grpc_core::Fork::Enabled()) {
-    if (grpc_core::Fork::RegisterResetChildPollingEngineFunc(
-            ResetEventManagerOnFork)) {
-      gpr_mu_init(&fork_fd_list_mu);
-    }
+    gpr_mu_init(&fork_fd_list_mu);
+    grpc_core::Fork::SetResetChildPollingEngineFunc(ResetEventManagerOnFork);
   }
   close(fd);
   return true;
@@ -284,9 +285,7 @@ void Epoll1EventHandle::OrphanHandle(PosixEngineClosure* on_done,
                                      int* release_fd,
                                      absl::string_view reason) {
   bool is_release_fd = (release_fd != nullptr);
-  bool was_shutdown = false;
   if (!read_closure_->IsShutdown()) {
-    was_shutdown = true;
     HandleShutdownInternal(absl::Status(absl::StatusCode::kUnknown, reason),
                            is_release_fd);
   }
@@ -294,17 +293,8 @@ void Epoll1EventHandle::OrphanHandle(PosixEngineClosure* on_done,
   // If release_fd is not NULL, we should be relinquishing control of the file
   // descriptor fd->fd (but we still own the grpc_fd structure).
   if (is_release_fd) {
-    if (!was_shutdown) {
-      epoll_event phony_event;
-      if (epoll_ctl(poller_->g_epoll_set_.epfd, EPOLL_CTL_DEL, fd_,
-                    &phony_event) != 0) {
-        gpr_log(GPR_ERROR, "OrphanHandle: epoll_ctl failed: %s",
-                grpc_core::StrError(errno).c_str());
-      }
-    }
     *release_fd = fd_;
   } else {
-    shutdown(fd_, SHUT_RDWR);
     close(fd_);
   }
 
@@ -338,21 +328,23 @@ void Epoll1EventHandle::HandleShutdownInternal(absl::Status why,
   grpc_core::StatusSetInt(&why, grpc_core::StatusIntProperty::kRpcStatus,
                           GRPC_STATUS_UNAVAILABLE);
   if (read_closure_->SetShutdown(why)) {
-    if (releasing_fd) {
+    if (!releasing_fd) {
+      shutdown(fd_, SHUT_RDWR);
+    } else {
       epoll_event phony_event;
       if (epoll_ctl(poller_->g_epoll_set_.epfd, EPOLL_CTL_DEL, fd_,
                     &phony_event) != 0) {
-        gpr_log(GPR_ERROR, "HandleShutdownInternal: epoll_ctl failed: %s",
+        gpr_log(GPR_ERROR, "epoll_ctl failed: %s",
                 grpc_core::StrError(errno).c_str());
       }
     }
     write_closure_->SetShutdown(why);
-    error_closure_->SetShutdown(why);
+    write_closure_->SetShutdown(why);
   }
 }
 
 Epoll1Poller::Epoll1Poller(Scheduler* scheduler)
-    : scheduler_(scheduler), was_kicked_(false), closed_(false) {
+    : scheduler_(scheduler), was_kicked_(false) {
   g_epoll_set_.epfd = EpollCreateAndCloexec();
   wakeup_fd_ = *CreateWakeupFd();
   GPR_ASSERT(wakeup_fd_ != nullptr);
@@ -373,25 +365,21 @@ void Epoll1Poller::Shutdown() {
   delete this;
 }
 
-void Epoll1Poller::Close() {
-  grpc_core::MutexLock lock(&mu_);
-  if (closed_) return;
-
+Epoll1Poller::~Epoll1Poller() {
   if (g_epoll_set_.epfd >= 0) {
     close(g_epoll_set_.epfd);
     g_epoll_set_.epfd = -1;
   }
-
-  while (!free_epoll1_handles_list_.empty()) {
-    Epoll1EventHandle* handle =
-        reinterpret_cast<Epoll1EventHandle*>(free_epoll1_handles_list_.front());
-    free_epoll1_handles_list_.pop_front();
-    delete handle;
+  {
+    grpc_core::MutexLock lock(&mu_);
+    while (!free_epoll1_handles_list_.empty()) {
+      Epoll1EventHandle* handle = reinterpret_cast<Epoll1EventHandle*>(
+          free_epoll1_handles_list_.front());
+      free_epoll1_handles_list_.pop_front();
+      delete handle;
+    }
   }
-  closed_ = true;
 }
-
-Epoll1Poller::~Epoll1Poller() { Close(); }
 
 EventHandle* Epoll1Poller::CreateHandle(int fd, absl::string_view /*name*/,
                                         bool track_err) {
@@ -558,7 +546,7 @@ Poller::WorkResult Epoll1Poller::Work(
 
 void Epoll1Poller::Kick() {
   grpc_core::MutexLock lock(&mu_);
-  if (was_kicked_ || closed_) {
+  if (was_kicked_) {
     return;
   }
   was_kicked_ = true;
@@ -572,14 +560,6 @@ Epoll1Poller* MakeEpoll1Poller(Scheduler* scheduler) {
   }
   return nullptr;
 }
-
-void Epoll1Poller::PrepareFork() { Kick(); }
-
-// TODO(vigneshbabu): implement
-void Epoll1Poller::PostforkParent() {}
-
-// TODO(vigneshbabu): implement
-void Epoll1Poller::PostforkChild() {}
 
 }  // namespace experimental
 }  // namespace grpc_event_engine
@@ -626,12 +606,6 @@ void Epoll1Poller::Kick() { grpc_core::Crash("unimplemented"); }
 // If GRPC_LINUX_EPOLL is not defined, it means epoll is not available. Return
 // nullptr.
 Epoll1Poller* MakeEpoll1Poller(Scheduler* /*scheduler*/) { return nullptr; }
-
-void Epoll1Poller::PrepareFork() {}
-
-void Epoll1Poller::PostforkParent() {}
-
-void Epoll1Poller::PostforkChild() {}
 
 }  // namespace experimental
 }  // namespace grpc_event_engine

@@ -1,6 +1,7 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//bazel:python_downloads.bzl", "python_nuget_package", "python_source_archive")
+load("//bazel:system_python.bzl", "system_python")
 
 def _github_archive(repo, commit, **kwargs):
     repo_name = repo.split("/")[-1]
@@ -12,56 +13,40 @@ def _github_archive(repo, commit, **kwargs):
 
 def upb_deps():
     maybe(
-        _github_archive,
+        http_archive,
         name = "com_google_absl",
-        repo = "https://github.com/abseil/abseil-cpp",
-        commit = "29bf8085f3bf17b84d30e34b3d7ff8248fda404e",  # Abseil LTS 20230802
-        sha256 = "f4871f2982e29496f4ddd598ccd5a87fea42f23c49b5e5eb459d57eab91df9d9",
+        url = "https://github.com/abseil/abseil-cpp/archive/b9b925341f9e90f5e7aa0cf23f036c29c7e454eb.zip",
+        strip_prefix = "abseil-cpp-b9b925341f9e90f5e7aa0cf23f036c29c7e454eb",
+        sha256 = "bb2a0b57c92b6666e8acb00f4cbbfce6ddb87e83625fb851b0e78db581340617",
     )
 
     maybe(
         _github_archive,
         name = "com_google_protobuf",
         repo = "https://github.com/protocolbuffers/protobuf",
-        commit = "3465661aece8b9c754dcb3d4f0432bb89374e738",
-        patches = ["@upb//bazel:protobuf.patch"],
-        sha256 = "1a59e28a55cc46fa444c976460799f6d76b69a6831fdb7da870ff9031fc40617",
+        commit = "14803e6f63d4785ecd95adeeae3ac42a728b3857",
+        patches = ["//bazel:protobuf.patch"],
     )
 
-    maybe(
-        _github_archive,
-        name = "utf8_range",
-        repo = "https://github.com/protocolbuffers/utf8_range",
-        commit = "de0b4a8ff9b5d4c98108bdfe723291a33c52c54f",
-        sha256 = "5da960e5e5d92394c809629a03af3c7709d2d3d0ca731dacb3a9fb4bf28f7702",
-    )
+    rules_python_version = "740825b7f74930c62f44af95c9a4c1bd428d2c53"  # Latest @ 2021-06-23
 
     maybe(
         http_archive,
-        name = "rules_pkg",
-        urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.7.0/rules_pkg-0.7.0.tar.gz",
-            "https://github.com/bazelbuild/rules_pkg/releases/download/0.7.0/rules_pkg-0.7.0.tar.gz",
-        ],
-        sha256 = "8a298e832762eda1830597d64fe7db58178aa84cd5926d76d5b744d6558941c2",
-    )
-
-    maybe(
-        _github_archive,
         name = "rules_python",
-        repo = "https://github.com/bazelbuild/rules_python",
-        commit = "912a5051f51581784fd64094f6bdabf93f6d698f",  # 0.14.0
-        sha256 = "a3e4b4ade7c4a52e757b16a16e94d0b2640333062180cba577d81fac087a501d",
+        strip_prefix = "rules_python-{}".format(rules_python_version),
+        url = "https://github.com/bazelbuild/rules_python/archive/{}.zip".format(rules_python_version),
+        sha256 = "09a3c4791c61b62c2cbc5b2cbea4ccc32487b38c7a2cc8f87a794d7a659cc742",
     )
 
     maybe(
         http_archive,
         name = "bazel_skylib",
-        urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
-            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
-        ],
-        sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
+        strip_prefix = "bazel-skylib-main",
+        urls = ["https://github.com/bazelbuild/bazel-skylib/archive/main.tar.gz"],
+    )
+
+    system_python(
+        name = "system_python",
     )
 
     #Python Downloads

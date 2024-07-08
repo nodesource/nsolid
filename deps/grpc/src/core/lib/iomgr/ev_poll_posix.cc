@@ -235,7 +235,7 @@ static int poll_deadline_to_millis_timeout(grpc_core::Timestamp deadline);
 // -- mostly for fd_posix's use.
 static grpc_error_handle pollset_kick_ext(grpc_pollset* p,
                                           grpc_pollset_worker* specific_worker,
-                                          uint32_t flags);
+                                          uint32_t flags) GRPC_MUST_USE_RESULT;
 
 // Return 1 if the pollset has active threads in pollset_work (pollset must
 // be locked)
@@ -1404,11 +1404,10 @@ const grpc_event_engine_vtable grpc_ev_poll_posix = {
         return false;
       }
       if (grpc_core::Fork::Enabled()) {
-        if (grpc_core::Fork::RegisterResetChildPollingEngineFunc(
-                reset_event_manager_on_fork)) {
-          track_fds_for_fork = true;
-          gpr_mu_init(&fork_fd_list_mu);
-        }
+        track_fds_for_fork = true;
+        gpr_mu_init(&fork_fd_list_mu);
+        grpc_core::Fork::SetResetChildPollingEngineFunc(
+            reset_event_manager_on_fork);
       }
       return true;
     },

@@ -9,16 +9,15 @@
 #ifndef ENVOY_ANNOTATIONS_RESOURCE_PROTO_UPBDEFS_H_
 #define ENVOY_ANNOTATIONS_RESOURCE_PROTO_UPBDEFS_H_
 
-#include "upb/reflection/def.h"
-#include "upb/reflection/def_pool_internal.h"
-#include "upb/port/def.inc"
+#include "upb/def.h"
+#include "upb/port_def.inc"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
 extern _upb_DefPool_Init envoy_annotations_resource_proto_upbdefinit;
 
@@ -31,6 +30,6 @@ UPB_INLINE const upb_MessageDef *envoy_annotations_ResourceAnnotation_getmsgdef(
 }  /* extern "C" */
 #endif
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 
 #endif  /* ENVOY_ANNOTATIONS_RESOURCE_PROTO_UPBDEFS_H_ */

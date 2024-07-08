@@ -16,7 +16,6 @@
 
 #include "src/core/lib/matchers/matchers.h"
 
-#include <initializer_list>
 #include <utility>
 
 #include "absl/status/status.h"
@@ -159,11 +158,12 @@ std::string StringMatcher::ToString() const {
 absl::StatusOr<HeaderMatcher> HeaderMatcher::Create(
     absl::string_view name, Type type, absl::string_view matcher,
     int64_t range_start, int64_t range_end, bool present_match,
-    bool invert_match, bool case_sensitive) {
+    bool invert_match) {
   if (static_cast<int>(type) < 5) {
     // Only for EXACT, PREFIX, SUFFIX, SAFE_REGEX and CONTAINS.
-    absl::StatusOr<StringMatcher> string_matcher = StringMatcher::Create(
-        static_cast<StringMatcher::Type>(type), matcher, case_sensitive);
+    absl::StatusOr<StringMatcher> string_matcher =
+        StringMatcher::Create(static_cast<StringMatcher::Type>(type), matcher,
+                              /*case_sensitive=*/true);
     if (!string_matcher.ok()) {
       return string_matcher.status();
     }

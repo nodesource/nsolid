@@ -54,7 +54,6 @@ std::string FilenameIdentifier(const std::string& filename) {
   }
   return result;
 }
-
 }  // namespace
 
 template <class T, size_t N>

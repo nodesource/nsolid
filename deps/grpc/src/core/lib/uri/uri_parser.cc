@@ -23,7 +23,6 @@
 
 #include <algorithm>
 #include <functional>
-#include <initializer_list>
 #include <map>
 #include <string>
 #include <utility>
@@ -208,6 +207,7 @@ std::string URI::PercentDecode(absl::string_view str) {
 }
 
 absl::StatusOr<URI> URI::Parse(absl::string_view uri_text) {
+  absl::StatusOr<std::string> decoded;
   absl::string_view remaining = uri_text;
   // parse scheme
   size_t offset = remaining.find(':');

@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_DYNAMIC_FILTERS_H
-#define GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_DYNAMIC_FILTERS_H
+#ifndef GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_DYNAMIC_FILTERS_H
+#define GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_DYNAMIC_FILTERS_H
 
 #include <grpc/support/port_platform.h>
 
@@ -68,9 +68,9 @@ class DynamicFilters : public RefCounted<DynamicFilters> {
     void SetAfterCallStackDestroy(grpc_closure* closure);
 
     // Interface of RefCounted<>.
-    GRPC_MUST_USE_RESULT RefCountedPtr<Call> Ref();
-    GRPC_MUST_USE_RESULT RefCountedPtr<Call> Ref(const DebugLocation& location,
-                                                 const char* reason);
+    RefCountedPtr<Call> Ref() GRPC_MUST_USE_RESULT;
+    RefCountedPtr<Call> Ref(const DebugLocation& location,
+                            const char* reason) GRPC_MUST_USE_RESULT;
     // When refcount drops to 0, destroys itself and the associated call stack,
     // but does NOT free the memory because it's in the call arena.
     void Unref();
@@ -99,12 +99,10 @@ class DynamicFilters : public RefCounted<DynamicFilters> {
 
   RefCountedPtr<Call> CreateCall(Call::Args args, grpc_error_handle* error);
 
-  grpc_channel_stack* channel_stack() const { return channel_stack_.get(); }
-
  private:
   RefCountedPtr<grpc_channel_stack> channel_stack_;
 };
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_DYNAMIC_FILTERS_H
+#endif  // GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_DYNAMIC_FILTERS_H

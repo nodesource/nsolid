@@ -25,8 +25,7 @@ namespace grpc {
 namespace internal {
 experimental::ClientInterceptorFactoryInterface*
     g_global_client_interceptor_factory = nullptr;
-
-}  // namespace internal
+}
 
 namespace experimental {
 void RegisterGlobalClientInterceptorFactory(

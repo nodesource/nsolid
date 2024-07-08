@@ -6,7 +6,7 @@
  * Do not edit -- your changes will be discarded when the file is
  * regenerated. */
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 #include "xds/core/v3/context_params.upbdefs.h"
 #include "xds/core/v3/context_params.upb.h"
 

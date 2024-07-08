@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_BACKEND_METRIC_DATA_H
-#define GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_BACKEND_METRIC_DATA_H
+#ifndef GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_BACKEND_METRIC_DATA_H
+#define GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_BACKEND_METRIC_DATA_H
 
 #include <grpc/support/port_platform.h>
 
@@ -32,13 +32,8 @@ struct BackendMetricData {
   /// Memory utilization expressed as a fraction of available memory
   /// resources.
   double mem_utilization = -1;
-  /// Application specific utilization expressed as a fraction of available
-  /// resources.
-  double application_utilization = -1;
-  /// Total queries per second being served by the backend across all services.
+  /// Total QPS being served by the backend across all services.
   double qps = -1;
-  /// Total errors per second reported by the backend across all services.
-  double eps = -1;
   /// Application-specific requests cost metrics.  Metric names are
   /// determined by the application.  Each value is an absolute cost
   /// (e.g. 3487 bytes of storage) associated with the request.
@@ -47,11 +42,8 @@ struct BackendMetricData {
   /// are determined by the application.  Each value is expressed as a
   /// fraction of total resources available.
   std::map<absl::string_view, double> utilization;
-  /// Application-specific opaque metrics.  Metric names are determined by the
-  /// the application.  Each value is an opaque measurement.
-  std::map<absl::string_view, double> named_metrics;
 };
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_BACKEND_METRIC_DATA_H
+#endif  // GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_LB_POLICY_BACKEND_METRIC_DATA_H

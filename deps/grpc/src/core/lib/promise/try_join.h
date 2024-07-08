@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CORE_LIB_PROMISE_TRY_JOIN_H
-#define GRPC_SRC_CORE_LIB_PROMISE_TRY_JOIN_H
+#ifndef GRPC_CORE_LIB_PROMISE_TRY_JOIN_H
+#define GRPC_CORE_LIB_PROMISE_TRY_JOIN_H
 
 #include <grpc/support/port_platform.h>
 
-#include <tuple>
-#include <utility>
+#include <type_traits>
 
 #include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 
-#include "src/core/lib/promise/detail/join_state.h"
-#include "src/core/lib/promise/map.h"
+#include "src/core/lib/promise/detail/basic_join.h"
+#include "src/core/lib/promise/detail/status.h"
 #include "src/core/lib/promise/poll.h"
 
 namespace grpc_core {
@@ -46,45 +45,27 @@ inline Empty IntoResult(absl::Status*) { return Empty{}; }
 // Traits object to pass to BasicJoin
 struct TryJoinTraits {
   template <typename T>
-  using ResultType = absl::StatusOr<absl::remove_reference_t<T>>;
+  using ResultType =
+      decltype(IntoResult(std::declval<absl::remove_reference_t<T>*>()));
+  template <typename T, typename F>
+  static auto OnResult(T result, F kontinue)
+      -> decltype(kontinue(IntoResult(&result))) {
+    using Result =
+        typename PollTraits<decltype(kontinue(IntoResult(&result)))>::Type;
+    if (!result.ok()) {
+      return Result(IntoStatus(&result));
+    }
+    return kontinue(IntoResult(&result));
+  }
   template <typename T>
-  static bool IsOk(const absl::StatusOr<T>& x) {
-    return x.ok();
-  }
-  static bool IsOk(const absl::Status& x) { return x.ok(); }
-  template <typename T>
-  static T Unwrapped(absl::StatusOr<T> x) {
-    return std::move(*x);
-  }
-  static Empty Unwrapped(absl::Status) { return Empty{}; }
-  template <typename R, typename T>
-  static R EarlyReturn(absl::StatusOr<T> x) {
-    return x.status();
-  }
-  template <typename R>
-  static R EarlyReturn(absl::Status x) {
-    return x;
+  static absl::StatusOr<T> Wrap(T x) {
+    return absl::StatusOr<T>(std::move(x));
   }
 };
 
 // Implementation of TryJoin combinator.
 template <typename... Promises>
-class TryJoin {
- public:
-  explicit TryJoin(Promises... promises) : state_(std::move(promises)...) {}
-  auto operator()() { return state_.PollOnce(); }
-
- private:
-  JoinState<TryJoinTraits, Promises...> state_;
-};
-
-struct WrapInStatusOrTuple {
-  template <typename T>
-  absl::StatusOr<std::tuple<T>> operator()(absl::StatusOr<T> x) {
-    if (!x.ok()) return x.status();
-    return std::make_tuple(std::move(*x));
-  }
-};
+using TryJoin = BasicJoin<TryJoinTraits, Promises...>;
 
 }  // namespace promise_detail
 
@@ -96,11 +77,6 @@ promise_detail::TryJoin<Promises...> TryJoin(Promises... promises) {
   return promise_detail::TryJoin<Promises...>(std::move(promises)...);
 }
 
-template <typename F>
-auto TryJoin(F promise) {
-  return Map(promise, promise_detail::WrapInStatusOrTuple{});
-}
-
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_LIB_PROMISE_TRY_JOIN_H
+#endif  // GRPC_CORE_LIB_PROMISE_TRY_JOIN_H

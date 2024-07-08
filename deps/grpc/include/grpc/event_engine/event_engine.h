@@ -33,11 +33,6 @@ namespace grpc_event_engine {
 namespace experimental {
 
 ////////////////////////////////////////////////////////////////////////////////
-/// The EventEngine Interface
-///
-/// Overview
-/// --------
-///
 /// The EventEngine encapsulates all platform-specific behaviors related to low
 /// level network I/O, timers, asynchronous execution, and DNS resolution.
 ///
@@ -49,8 +44,7 @@ namespace experimental {
 ///
 /// A default cross-platform EventEngine instance is provided by gRPC.
 ///
-/// Lifespan and Ownership
-/// ----------------------
+/// LIFESPAN AND OWNERSHIP
 ///
 /// gRPC takes shared ownership of EventEngines via std::shared_ptrs to ensure
 /// that the engines remain available until they are no longer needed. Depending
@@ -77,19 +71,6 @@ namespace experimental {
 ///    std::unique_ptr<Server> server(builder.BuildAndStart());
 ///    server->Wait();
 ///
-///
-/// Blocking EventEngine Callbacks
-/// -----------------------------
-///
-/// Doing blocking work in EventEngine callbacks is generally not advisable.
-/// While gRPC's default EventEngine implementations have some capacity to scale
-/// their thread pools to avoid starvation, this is not an instantaneous
-/// process. Further, user-provided EventEngines may not be optimized to handle
-/// excessive blocking work at all.
-///
-/// *Best Practice* : Occasional blocking work may be fine, but we do not
-/// recommend running a mostly blocking workload in EventEngine threads.
-///
 ////////////////////////////////////////////////////////////////////////////////
 class EventEngine : public std::enable_shared_from_this<EventEngine> {
  public:
@@ -104,7 +85,6 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
   /// caller - the EventEngine will never delete a Closure, and upon
   /// cancellation, the EventEngine will simply forget the Closure exists. The
   /// caller is responsible for all necessary cleanup.
-
   class Closure {
    public:
     Closure() = default;
@@ -122,20 +102,12 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
   /// \a Cancel method.
   struct TaskHandle {
     intptr_t keys[2];
-    static const GRPC_DLL TaskHandle kInvalid;
-    friend bool operator==(const TaskHandle& lhs, const TaskHandle& rhs);
-    friend bool operator!=(const TaskHandle& lhs, const TaskHandle& rhs);
   };
   /// A handle to a cancellable connection attempt.
   ///
   /// Returned by \a Connect, and can be passed to \a CancelConnect.
   struct ConnectionHandle {
     intptr_t keys[2];
-    static const GRPC_DLL ConnectionHandle kInvalid;
-    friend bool operator==(const ConnectionHandle& lhs,
-                           const ConnectionHandle& rhs);
-    friend bool operator!=(const ConnectionHandle& lhs,
-                           const ConnectionHandle& rhs);
   };
   /// Thin wrapper around a platform-specific sockaddr type. A sockaddr struct
   /// exists on all platforms that gRPC supports.
@@ -155,7 +127,7 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
     socklen_t size() const;
 
    private:
-    char address_[MAX_SIZE_BYTES] = {};
+    char address_[MAX_SIZE_BYTES];
     socklen_t size_ = 0;
   };
 
@@ -187,13 +159,10 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
     /// Reads data from the Endpoint.
     ///
     /// When data is available on the connection, that data is moved into the
-    /// \a buffer. If the read succeeds immediately, it returns true and the \a
-    /// on_read callback is not executed. Otherwise it returns false and the \a
-    /// on_read callback executes asynchronously when the read completes. The
-    /// caller must ensure that the callback has access to the buffer when it
-    /// executes. Ownership of the buffer is not transferred. Valid slices *may*
-    /// be placed into the buffer even if the callback is invoked with a non-OK
-    /// Status.
+    /// \a buffer, and the \a on_read callback is called. The caller must ensure
+    /// that the callback has access to the buffer when executed later.
+    /// Ownership of the buffer is not transferred. Valid slices *may* be placed
+    /// into the buffer even if the callback is invoked with a non-OK Status.
     ///
     /// There can be at most one outstanding read per Endpoint at any given
     /// time. An outstanding read is one in which the \a on_read callback has
@@ -204,7 +173,7 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
     /// For failed read operations, implementations should pass the appropriate
     /// statuses to \a on_read. For example, callbacks might expect to receive
     /// CANCELLED on endpoint shutdown.
-    virtual bool Read(absl::AnyInvocable<void(absl::Status)> on_read,
+    virtual void Read(absl::AnyInvocable<void(absl::Status)> on_read,
                       SliceBuffer* buffer, const ReadArgs* args) = 0;
     /// A struct representing optional arguments that may be provided to an
     /// EventEngine Endpoint Write API call.
@@ -222,14 +191,12 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
     };
     /// Writes data out on the connection.
     ///
-    /// If the write succeeds immediately, it returns true and the
-    /// \a on_writable callback is not executed. Otherwise it returns false and
-    /// the \a on_writable callback is called asynchronously when the connection
-    /// is ready for more data. The Slices within the \a data buffer may be
-    /// mutated at will by the Endpoint until \a on_writable is called. The \a
-    /// data SliceBuffer will remain valid after calling \a Write, but its state
-    /// is otherwise undefined.  All bytes in \a data must have been written
-    /// before calling \a on_writable unless an error has occurred.
+    /// \a on_writable is called when the connection is ready for more data. The
+    /// Slices within the \a data buffer may be mutated at will by the Endpoint
+    /// until \a on_writable is called. The \a data SliceBuffer will remain
+    /// valid after calling \a Write, but its state is otherwise undefined.  All
+    /// bytes in \a data must have been written before calling \a on_writable
+    /// unless an error has occurred.
     ///
     /// There can be at most one outstanding write per Endpoint at any given
     /// time. An outstanding write is one in which the \a on_writable callback
@@ -240,7 +207,7 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
     /// For failed write operations, implementations should pass the appropriate
     /// statuses to \a on_writable. For example, callbacks might expect to
     /// receive CANCELLED on endpoint shutdown.
-    virtual bool Write(absl::AnyInvocable<void(absl::Status)> on_writable,
+    virtual void Write(absl::AnyInvocable<void(absl::Status)> on_writable,
                        SliceBuffer* data, const WriteArgs* args) = 0;
     /// Returns an address in the format described in DNSResolver. The returned
     /// values are expected to remain valid for the life of the Endpoint.
@@ -283,9 +250,8 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
   /// \a on_shutdown will never be called.
   ///
   /// If this method returns a Listener, then \a on_shutdown will be invoked
-  /// exactly once when the Listener is shut down, and only after all
-  /// \a on_accept callbacks have finished executing. The status passed to it
-  /// will indicate if there was a problem during shutdown.
+  /// exactly once, when the Listener is shut down. The status passed to it will
+  /// indicate if there was a problem during shutdown.
   ///
   /// The provided \a MemoryAllocatorFactory is used to create \a
   /// MemoryAllocators for Endpoint construction.
@@ -318,17 +284,15 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
   ///
   /// If the associated connection has not been completed, it will be cancelled,
   /// and this method will return true. The \a OnConnectCallback will not be
-  /// called, and \a on_connect will be destroyed before this method returns.
+  /// called.
   virtual bool CancelConnect(ConnectionHandle handle) = 0;
   /// Provides asynchronous resolution.
-  ///
-  /// This object has a destruction-is-cancellation semantic.
-  /// Implementations should make sure that all pending requests are cancelled
-  /// when the object is destroyed and all pending callbacks will be called
-  /// shortly. If cancellation races with request completion, implementations
-  /// may choose to either cancel or satisfy the request.
   class DNSResolver {
    public:
+    /// Task handle for DNS Resolution requests.
+    struct LookupTaskHandle {
+      intptr_t keys[2];
+    };
     /// Optional configuration for DNSResolvers.
     struct ResolverOptions {
       /// If empty, default DNS servers will be used.
@@ -351,7 +315,7 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
         absl::AnyInvocable<void(absl::StatusOr<std::vector<SRVRecord>>)>;
     /// Called with the result of a TXT record lookup
     using LookupTXTCallback =
-        absl::AnyInvocable<void(absl::StatusOr<std::vector<std::string>>)>;
+        absl::AnyInvocable<void(absl::StatusOr<std::string>)>;
 
     virtual ~DNSResolver() = default;
 
@@ -360,26 +324,37 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
     /// \a default_port may be a non-numeric named service port, and will only
     /// be used if \a address does not already contain a port component.
     ///
-    /// When the lookup is complete or cancelled, the \a on_resolve callback
-    /// will be invoked with a status indicating the success or failure of the
-    /// lookup. Implementations should pass the appropriate statuses to the
-    /// callback. For example, callbacks might expect to receive CANCELLED or
+    /// When the lookup is complete, the \a on_resolve callback will be invoked
+    /// with a status indicating the success or failure of the lookup.
+    /// Implementations should pass the appropriate statuses to the callback.
+    /// For example, callbacks might expect to receive DEADLINE_EXCEEDED or
     /// NOT_FOUND.
-    virtual void LookupHostname(LookupHostnameCallback on_resolve,
-                                absl::string_view name,
-                                absl::string_view default_port) = 0;
+    ///
+    /// If cancelled, \a on_resolve will not be executed.
+    virtual LookupTaskHandle LookupHostname(LookupHostnameCallback on_resolve,
+                                            absl::string_view name,
+                                            absl::string_view default_port,
+                                            Duration timeout) = 0;
     /// Asynchronously perform an SRV record lookup.
     ///
     /// \a on_resolve has the same meaning and expectations as \a
     /// LookupHostname's \a on_resolve callback.
-    virtual void LookupSRV(LookupSRVCallback on_resolve,
-                           absl::string_view name) = 0;
+    virtual LookupTaskHandle LookupSRV(LookupSRVCallback on_resolve,
+                                       absl::string_view name,
+                                       Duration timeout) = 0;
     /// Asynchronously perform a TXT record lookup.
     ///
     /// \a on_resolve has the same meaning and expectations as \a
     /// LookupHostname's \a on_resolve callback.
-    virtual void LookupTXT(LookupTXTCallback on_resolve,
-                           absl::string_view name) = 0;
+    virtual LookupTaskHandle LookupTXT(LookupTXTCallback on_resolve,
+                                       absl::string_view name,
+                                       Duration timeout) = 0;
+    /// Cancel an asynchronous lookup operation.
+    ///
+    /// This shares the same semantics with \a EventEngine::Cancel: successfully
+    /// cancelled lookups will not have their callbacks executed, and this
+    /// method returns true.
+    virtual bool CancelLookup(LookupTaskHandle handle) = 0;
   };
 
   /// At time of destruction, the EventEngine must have no active
@@ -396,11 +371,8 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
   virtual bool IsWorkerThread() = 0;
 
   /// Creates and returns an instance of a DNSResolver, optionally configured by
-  /// the \a options struct. This method may return a non-OK status if an error
-  /// occurred when creating the DNSResolver. If the caller requests a custom
-  /// DNS server, and the EventEngine implementation does not support it, this
-  /// must return an error.
-  virtual absl::StatusOr<std::unique_ptr<DNSResolver>> GetDNSResolver(
+  /// the \a options struct.
+  virtual std::unique_ptr<DNSResolver> GetDNSResolver(
       const DNSResolver::ResolverOptions& options) = 0;
 
   /// Asynchronously executes a task as soon as possible.
@@ -457,9 +429,13 @@ class EventEngine : public std::enable_shared_from_this<EventEngine> {
   /// be cancelled, and this function will return false.
   ///
   /// If the associated closure has not been scheduled to run, it will be
-  /// cancelled, and this method will return true. The associated
-  /// absl::AnyInvocable or \a Closure* will not be called. If the closure type
-  /// was an absl::AnyInvocable, it will be destroyed before the method returns.
+  /// cancelled, and the associated absl::AnyInvocable or \a Closure* will not
+  /// be executed. In this case, Cancel will return true.
+  ///
+  /// Implementation note: closures should be destroyed in a timely manner after
+  /// execution or cancellation (milliseconds), since any state bound to the
+  /// closure may need to be destroyed for things to progress (e.g., if a
+  /// closure holds a ref to some ref-counted object).
   virtual bool Cancel(TaskHandle handle) = 0;
 };
 

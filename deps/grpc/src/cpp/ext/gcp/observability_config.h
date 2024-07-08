@@ -14,10 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_SRC_CPP_EXT_GCP_OBSERVABILITY_CONFIG_H
-#define GRPC_SRC_CPP_EXT_GCP_OBSERVABILITY_CONFIG_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_INTERNAL_CPP_EXT_GCP_OBSERVABILITY_GCP_OBSERVABILITY_CONFIG_H
+#define GRPC_INTERNAL_CPP_EXT_GCP_OBSERVABILITY_GCP_OBSERVABILITY_CONFIG_H
 
 #include <stdint.h>
 
@@ -127,4 +125,4 @@ struct GcpObservabilityConfig {
 }  // namespace internal
 }  // namespace grpc
 
-#endif  // GRPC_SRC_CPP_EXT_GCP_OBSERVABILITY_CONFIG_H
+#endif  // GRPC_INTERNAL_CPP_EXT_GCP_OBSERVABILITY_GCP_OBSERVABILITY_CONFIG_H

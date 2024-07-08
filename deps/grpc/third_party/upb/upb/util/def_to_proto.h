@@ -28,7 +28,7 @@
 #ifndef UPB_UTIL_DEF_TO_PROTO_H_
 #define UPB_UTIL_DEF_TO_PROTO_H_
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <initializer_list>
 #include <new>
 #include <string>
 #include <utility>
@@ -56,10 +55,6 @@
 #include "src/core/lib/iomgr/pollset.h"
 #include "src/core/lib/surface/api_trace.h"
 #include "src/core/lib/surface/event_string.h"
-
-#ifdef GPR_WINDOWS
-#include "src/core/lib/experiments/experiments.h"
-#endif
 
 grpc_core::TraceFlag grpc_trace_operation_failures(false, "op_failure");
 grpc_core::DebugOnlyTraceFlag grpc_trace_pending_tags(false, "pending_tags");
@@ -353,14 +348,10 @@ struct cq_callback_data {
 struct grpc_completion_queue {
   /// Once owning_refs drops to zero, we will destroy the cq
   grpc_core::RefCount owning_refs;
-  /// Add the paddings to fix the false sharing
-  char padding_1[GPR_CACHELINE_SIZE];
+
   gpr_mu* mu;
 
-  char padding_2[GPR_CACHELINE_SIZE];
   const cq_vtable* vtable;
-
-  char padding_3[GPR_CACHELINE_SIZE];
   const cq_poller_vtable* poller_vtable;
 
 #ifndef NDEBUG
@@ -547,8 +538,7 @@ grpc_completion_queue* grpc_completion_queue_create_internal(
   cq->poller_vtable = poller_vtable;
 
   // One for destroy(), one for pollset_shutdown
-  new (&cq->owning_refs) grpc_core::RefCount(
-      2, grpc_trace_cq_refcount.enabled() ? "completion_queue" : nullptr);
+  new (&cq->owning_refs) grpc_core::RefCount(2);
 
   poller_vtable->init(POLLSET_FROM_CQ(cq), &cq->mu);
   vtable->init(DATA_FROM_CQ(cq), shutdown_callback);
@@ -886,12 +876,6 @@ void grpc_cq_end_op(grpc_completion_queue* cq, void* tag,
                     void (*done)(void* done_arg, grpc_cq_completion* storage),
                     void* done_arg, grpc_cq_completion* storage,
                     bool internal) {
-// TODO(hork): remove when the listener flake is identified
-#ifdef GPR_WINDOWS
-  if (grpc_core::IsEventEngineListenerEnabled()) {
-    gpr_log(GPR_ERROR, "cq_end_op called for tag %d (0x%p)", tag, tag);
-  }
-#endif
   cq->vtable->end_op(cq, tag, error, done, done_arg, storage, internal);
 }
 
@@ -1245,7 +1229,7 @@ static grpc_event cq_pluck(grpc_completion_queue* cq, void* tag,
     prev = &cqd->completed_head;
     while ((c = reinterpret_cast<grpc_cq_completion*>(
                 prev->next & ~uintptr_t{1})) != &cqd->completed_head) {
-      if (GPR_LIKELY(c->tag == tag)) {
+      if (c->tag == tag) {
         prev->next = (prev->next & uintptr_t{1}) | (c->next & ~uintptr_t{1});
         if (c == cqd->completed_tail) {
           cqd->completed_tail = prev;

@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_TLS_TLS_CREDENTIALS_H
-#define GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_TLS_TLS_CREDENTIALS_H
+#ifndef GRPC_CORE_LIB_SECURITY_CREDENTIALS_TLS_TLS_CREDENTIALS_H
+#define GRPC_CORE_LIB_SECURITY_CREDENTIALS_TLS_TLS_CREDENTIALS_H
 
 #include <grpc/support/port_platform.h>
 
@@ -41,9 +41,7 @@ class TlsCredentials final : public grpc_channel_credentials {
       grpc_core::RefCountedPtr<grpc_call_credentials> call_creds,
       const char* target_name, grpc_core::ChannelArgs* args) override;
 
-  static grpc_core::UniqueTypeName Type();
-
-  grpc_core::UniqueTypeName type() const override { return Type(); }
+  grpc_core::UniqueTypeName type() const override;
 
   grpc_tls_credentials_options* options() const { return options_.get(); }
 
@@ -70,4 +68,4 @@ class TlsServerCredentials final : public grpc_server_credentials {
   grpc_core::RefCountedPtr<grpc_tls_credentials_options> options_;
 };
 
-#endif  // GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_TLS_TLS_CREDENTIALS_H
+#endif  // GRPC_CORE_LIB_SECURITY_CREDENTIALS_TLS_TLS_CREDENTIALS_H

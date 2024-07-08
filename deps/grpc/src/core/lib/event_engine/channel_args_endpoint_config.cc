@@ -17,8 +17,6 @@
 
 #include "absl/types/optional.h"
 
-#include <grpc/event_engine/event_engine.h>
-
 #include "src/core/lib/channel/channel_args.h"
 
 namespace grpc_event_engine {
@@ -35,9 +33,6 @@ absl::optional<absl::string_view> ChannelArgsEndpointConfig::GetString(
 }
 
 void* ChannelArgsEndpointConfig::GetVoidPointer(absl::string_view key) const {
-  if (key == GRPC_INTERNAL_ARG_EVENT_ENGINE) {
-    return args_.GetObject<EventEngine>();
-  }
   return args_.GetVoidPointer(key);
 }
 

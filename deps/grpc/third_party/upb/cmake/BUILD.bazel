@@ -25,7 +25,7 @@
 
 load(
     ":build_defs.bzl",
-    "staleness_test",
+    "generated_file_staleness_test",
 )
 load(
     "//bazel:build_defs.bzl",
@@ -40,9 +40,6 @@ py_library(
     name = "staleness_test_lib",
     testonly = 1,
     srcs = ["staleness_test_lib.py"],
-    # This is public only for use by the staleness_test() macro. Please do not
-    # depend on this target directly.
-    visibility = ["//visibility:public"],
 )
 
 py_binary(
@@ -55,7 +52,6 @@ genrule(
     srcs = [
         "//:BUILD",
         "//:WORKSPACE",
-        "//bazel:workspace_deps.bzl",
     ],
     outs = ["generated-in/CMakeLists.txt"],
     cmd = "$(location :make_cmakelists) $@",
@@ -72,7 +68,7 @@ genrule(
     cmd = "cp $(SRCS) $(@D)/generated-in/google/protobuf",
 )
 
-staleness_test(
+generated_file_staleness_test(
     name = "test_generated_files",
     outs = [
         "CMakeLists.txt",
@@ -100,13 +96,7 @@ sh_test(
         ":copy_protos",
         ":gen_cmakelists",
         "//:cmake_files",
-        "//upb/mini_descriptor:cmake_files",
-        "//upb/mini_table:cmake_files",
-        "@utf8_range//:utf8_range_srcs",
+        "//third_party/utf8_range:cmake_files",
     ],
-    target_compatible_with = select({
-        "@platforms//os:windows": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
     deps = ["@bazel_tools//tools/bash/runfiles"],
 )

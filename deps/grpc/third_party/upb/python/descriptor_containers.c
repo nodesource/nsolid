@@ -25,54 +25,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "python/descriptor_containers.h"
+#include "descriptor_containers.h"
 
-#include "python/descriptor.h"
-#include "python/protobuf.h"
-#include "upb/reflection/def.h"
-
-// Implements __repr__ as str(dict(self)).
-static PyObject* PyUpb_DescriptorMap_Repr(PyObject* _self) {
-  PyObject* dict = PyDict_New();
-  PyObject* ret = NULL;
-  if (!dict) goto err;
-  if (PyDict_Merge(dict, _self, 1) != 0) goto err;
-  ret = PyObject_Str(dict);
-
-err:
-  Py_XDECREF(dict);
-  return ret;
-}
+#include "descriptor.h"
+#include "protobuf.h"
+#include "upb/def.h"
 
 // -----------------------------------------------------------------------------
-// ByNameIterator
+// DescriptorIterator
 // -----------------------------------------------------------------------------
 
 typedef struct {
   PyObject_HEAD;
-  const PyUpb_ByNameMap_Funcs* funcs;
+  const PyUpb_GenericSequence_Funcs* funcs;
   const void* parent;    // upb_MessageDef*, upb_DefPool*, etc.
   PyObject* parent_obj;  // Python object that keeps parent alive, we own a ref.
   int index;             // Current iterator index.
-} PyUpb_ByNameIterator;
+} PyUpb_DescriptorIterator;
 
-static PyUpb_ByNameIterator* PyUpb_ByNameIterator_Self(PyObject* obj) {
-  assert(Py_TYPE(obj) == PyUpb_ModuleState_Get()->by_name_iterator_type);
-  return (PyUpb_ByNameIterator*)obj;
+PyUpb_DescriptorIterator* PyUpb_DescriptorIterator_Self(PyObject* obj) {
+  assert(Py_TYPE(obj) == PyUpb_ModuleState_Get()->descriptor_iterator_type);
+  return (PyUpb_DescriptorIterator*)obj;
 }
 
-static void PyUpb_ByNameIterator_Dealloc(PyObject* _self) {
-  PyUpb_ByNameIterator* self = PyUpb_ByNameIterator_Self(_self);
+static void PyUpb_DescriptorIterator_Dealloc(PyObject* _self) {
+  PyUpb_DescriptorIterator* self = PyUpb_DescriptorIterator_Self(_self);
   Py_DECREF(self->parent_obj);
   PyUpb_Dealloc(self);
 }
 
-static PyObject* PyUpb_ByNameIterator_New(const PyUpb_ByNameMap_Funcs* funcs,
-                                          const void* parent,
-                                          PyObject* parent_obj) {
+PyObject* PyUpb_DescriptorIterator_New(const PyUpb_GenericSequence_Funcs* funcs,
+                                       const void* parent,
+                                       PyObject* parent_obj) {
   PyUpb_ModuleState* s = PyUpb_ModuleState_Get();
-  PyUpb_ByNameIterator* iter =
-      (void*)PyType_GenericAlloc(s->by_name_iterator_type, 0);
+  PyUpb_DescriptorIterator* iter =
+      (void*)PyType_GenericAlloc(s->descriptor_iterator_type, 0);
   iter->funcs = funcs;
   iter->parent = parent;
   iter->parent_obj = parent_obj;
@@ -81,87 +68,27 @@ static PyObject* PyUpb_ByNameIterator_New(const PyUpb_ByNameMap_Funcs* funcs,
   return &iter->ob_base;
 }
 
-static PyObject* PyUpb_ByNameIterator_IterNext(PyObject* _self) {
-  PyUpb_ByNameIterator* self = PyUpb_ByNameIterator_Self(_self);
-  int size = self->funcs->base.get_elem_count(self->parent);
+PyObject* PyUpb_DescriptorIterator_IterNext(PyObject* _self) {
+  PyUpb_DescriptorIterator* self = PyUpb_DescriptorIterator_Self(_self);
+  int size = self->funcs->get_elem_count(self->parent);
   if (self->index >= size) return NULL;
-  const void* elem = self->funcs->base.index(self->parent, self->index);
+  const void* elem = self->funcs->index(self->parent, self->index);
   self->index++;
-  return PyUnicode_FromString(self->funcs->get_elem_name(elem));
+  return self->funcs->get_elem_wrapper(elem);
 }
 
-static PyType_Slot PyUpb_ByNameIterator_Slots[] = {
-    {Py_tp_dealloc, PyUpb_ByNameIterator_Dealloc},
+static PyType_Slot PyUpb_DescriptorIterator_Slots[] = {
+    {Py_tp_dealloc, PyUpb_DescriptorIterator_Dealloc},
     {Py_tp_iter, PyObject_SelfIter},
-    {Py_tp_iternext, PyUpb_ByNameIterator_IterNext},
+    {Py_tp_iternext, PyUpb_DescriptorIterator_IterNext},
     {0, NULL}};
 
-static PyType_Spec PyUpb_ByNameIterator_Spec = {
-    PYUPB_MODULE_NAME "._ByNameIterator",  // tp_name
-    sizeof(PyUpb_ByNameIterator),          // tp_basicsize
-    0,                                     // tp_itemsize
-    Py_TPFLAGS_DEFAULT,                    // tp_flags
-    PyUpb_ByNameIterator_Slots,
-};
-
-// -----------------------------------------------------------------------------
-// ByNumberIterator
-// -----------------------------------------------------------------------------
-
-typedef struct {
-  PyObject_HEAD;
-  const PyUpb_ByNumberMap_Funcs* funcs;
-  const void* parent;    // upb_MessageDef*, upb_DefPool*, etc.
-  PyObject* parent_obj;  // Python object that keeps parent alive, we own a ref.
-  int index;             // Current iterator index.
-} PyUpb_ByNumberIterator;
-
-static PyUpb_ByNumberIterator* PyUpb_ByNumberIterator_Self(PyObject* obj) {
-  assert(Py_TYPE(obj) == PyUpb_ModuleState_Get()->by_number_iterator_type);
-  return (PyUpb_ByNumberIterator*)obj;
-}
-
-static void PyUpb_ByNumberIterator_Dealloc(PyObject* _self) {
-  PyUpb_ByNumberIterator* self = PyUpb_ByNumberIterator_Self(_self);
-  Py_DECREF(self->parent_obj);
-  PyUpb_Dealloc(self);
-}
-
-static PyObject* PyUpb_ByNumberIterator_New(
-    const PyUpb_ByNumberMap_Funcs* funcs, const void* parent,
-    PyObject* parent_obj) {
-  PyUpb_ModuleState* s = PyUpb_ModuleState_Get();
-  PyUpb_ByNumberIterator* iter =
-      (void*)PyType_GenericAlloc(s->by_number_iterator_type, 0);
-  iter->funcs = funcs;
-  iter->parent = parent;
-  iter->parent_obj = parent_obj;
-  iter->index = 0;
-  Py_INCREF(iter->parent_obj);
-  return &iter->ob_base;
-}
-
-static PyObject* PyUpb_ByNumberIterator_IterNext(PyObject* _self) {
-  PyUpb_ByNumberIterator* self = PyUpb_ByNumberIterator_Self(_self);
-  int size = self->funcs->base.get_elem_count(self->parent);
-  if (self->index >= size) return NULL;
-  const void* elem = self->funcs->base.index(self->parent, self->index);
-  self->index++;
-  return PyLong_FromLong(self->funcs->get_elem_num(elem));
-}
-
-static PyType_Slot PyUpb_ByNumberIterator_Slots[] = {
-    {Py_tp_dealloc, PyUpb_ByNumberIterator_Dealloc},
-    {Py_tp_iter, PyObject_SelfIter},
-    {Py_tp_iternext, PyUpb_ByNumberIterator_IterNext},
-    {0, NULL}};
-
-static PyType_Spec PyUpb_ByNumberIterator_Spec = {
-    PYUPB_MODULE_NAME "._ByNumberIterator",  // tp_name
-    sizeof(PyUpb_ByNumberIterator),          // tp_basicsize
-    0,                                       // tp_itemsize
-    Py_TPFLAGS_DEFAULT,                      // tp_flags
-    PyUpb_ByNumberIterator_Slots,
+static PyType_Spec PyUpb_DescriptorIterator_Spec = {
+    PYUPB_MODULE_NAME ".DescriptorIterator",  // tp_name
+    sizeof(PyUpb_DescriptorIterator),         // tp_basicsize
+    0,                                        // tp_itemsize
+    Py_TPFLAGS_DEFAULT,                       // tp_flags
+    PyUpb_DescriptorIterator_Slots,
 };
 
 // -----------------------------------------------------------------------------
@@ -379,8 +306,6 @@ static PyObject* PyUpb_ByNameMap_Subscript(PyObject* _self, PyObject* key) {
   const char* name = PyUpb_GetStrData(key);
   const void* elem = name ? self->funcs->lookup(self->parent, name) : NULL;
 
-  if (!name && PyObject_Hash(key) == -1) return NULL;
-
   if (elem) {
     return self->funcs->base.get_elem_wrapper(elem);
   } else {
@@ -400,7 +325,6 @@ static int PyUpb_ByNameMap_Contains(PyObject* _self, PyObject* key) {
   PyUpb_ByNameMap* self = PyUpb_ByNameMap_Self(_self);
   const char* name = PyUpb_GetStrData(key);
   const void* elem = name ? self->funcs->lookup(self->parent, name) : NULL;
-  if (!name && PyObject_Hash(key) == -1) return -1;
   return elem ? 1 : 0;
 }
 
@@ -415,8 +339,6 @@ static PyObject* PyUpb_ByNameMap_Get(PyObject* _self, PyObject* args) {
   const char* name = PyUpb_GetStrData(key);
   const void* elem = name ? self->funcs->lookup(self->parent, name) : NULL;
 
-  if (!name && PyObject_Hash(key) == -1) return NULL;
-
   if (elem) {
     return self->funcs->base.get_elem_wrapper(elem);
   } else {
@@ -427,7 +349,8 @@ static PyObject* PyUpb_ByNameMap_Get(PyObject* _self, PyObject* args) {
 
 static PyObject* PyUpb_ByNameMap_GetIter(PyObject* _self) {
   PyUpb_ByNameMap* self = PyUpb_ByNameMap_Self(_self);
-  return PyUpb_ByNameIterator_New(self->funcs, self->parent, self->parent_obj);
+  return PyUpb_DescriptorIterator_New(&self->funcs->base, self->parent,
+                                      self->parent_obj);
 }
 
 static PyObject* PyUpb_ByNameMap_Keys(PyObject* _self, PyObject* args) {
@@ -537,7 +460,6 @@ static PyType_Slot PyUpb_ByNameMap_Slots[] = {
     {Py_tp_dealloc, &PyUpb_ByNameMap_Dealloc},
     {Py_tp_iter, PyUpb_ByNameMap_GetIter},
     {Py_tp_methods, &PyUpb_ByNameMap_Methods},
-    {Py_tp_repr, &PyUpb_DescriptorMap_Repr},
     {Py_tp_richcompare, &PyUpb_ByNameMap_RichCompare},
     {0, NULL},
 };
@@ -593,8 +515,6 @@ static const void* PyUpb_ByNumberMap_LookupHelper(PyUpb_ByNumberMap* self,
   long num = PyLong_AsLong(key);
   if (num == -1 && PyErr_Occurred()) {
     PyErr_Clear();
-    // Ensure that the key is hashable (this will raise an error if not).
-    PyObject_Hash(key);
     return NULL;
   } else {
     return self->funcs->lookup(self->parent, num);
@@ -607,9 +527,7 @@ static PyObject* PyUpb_ByNumberMap_Subscript(PyObject* _self, PyObject* key) {
   if (elem) {
     return self->funcs->base.get_elem_wrapper(elem);
   } else {
-    if (!PyErr_Occurred()) {
-      PyErr_SetObject(PyExc_KeyError, key);
-    }
+    PyErr_SetObject(PyExc_KeyError, key);
     return NULL;
   }
 }
@@ -632,8 +550,6 @@ static PyObject* PyUpb_ByNumberMap_Get(PyObject* _self, PyObject* args) {
   const void* elem = PyUpb_ByNumberMap_LookupHelper(self, key);
   if (elem) {
     return self->funcs->base.get_elem_wrapper(elem);
-  } else if (PyErr_Occurred()) {
-    return NULL;
   } else {
     return PyUpb_NewRef(default_value);
   }
@@ -641,8 +557,8 @@ static PyObject* PyUpb_ByNumberMap_Get(PyObject* _self, PyObject* args) {
 
 static PyObject* PyUpb_ByNumberMap_GetIter(PyObject* _self) {
   PyUpb_ByNumberMap* self = PyUpb_ByNumberMap_Self(_self);
-  return PyUpb_ByNumberIterator_New(self->funcs, self->parent,
-                                    self->parent_obj);
+  return PyUpb_DescriptorIterator_New(&self->funcs->base, self->parent,
+                                      self->parent_obj);
 }
 
 static PyObject* PyUpb_ByNumberMap_Keys(PyObject* _self, PyObject* args) {
@@ -710,9 +626,7 @@ error:
 static int PyUpb_ByNumberMap_Contains(PyObject* _self, PyObject* key) {
   PyUpb_ByNumberMap* self = PyUpb_ByNumberMap_Self(_self);
   const void* elem = PyUpb_ByNumberMap_LookupHelper(self, key);
-  if (elem) return 1;
-  if (PyErr_Occurred()) return -1;
-  return 0;
+  return elem ? 1 : 0;
 }
 
 // A mapping container can only be equal to another mapping container, or (for
@@ -760,7 +674,6 @@ static PyType_Slot PyUpb_ByNumberMap_Slots[] = {
     {Py_tp_dealloc, &PyUpb_ByNumberMap_Dealloc},
     {Py_tp_iter, PyUpb_ByNumberMap_GetIter},
     {Py_tp_methods, &PyUpb_ByNumberMap_Methods},
-    {Py_tp_repr, &PyUpb_DescriptorMap_Repr},
     {Py_tp_richcompare, &PyUpb_ByNumberMap_RichCompare},
     {0, NULL},
 };
@@ -782,11 +695,10 @@ bool PyUpb_InitDescriptorContainers(PyObject* m) {
 
   s->by_name_map_type = PyUpb_AddClass(m, &PyUpb_ByNameMap_Spec);
   s->by_number_map_type = PyUpb_AddClass(m, &PyUpb_ByNumberMap_Spec);
-  s->by_name_iterator_type = PyUpb_AddClass(m, &PyUpb_ByNameIterator_Spec);
-  s->by_number_iterator_type = PyUpb_AddClass(m, &PyUpb_ByNumberIterator_Spec);
+  s->descriptor_iterator_type =
+      PyUpb_AddClass(m, &PyUpb_DescriptorIterator_Spec);
   s->generic_sequence_type = PyUpb_AddClass(m, &PyUpb_GenericSequence_Spec);
 
   return s->by_name_map_type && s->by_number_map_type &&
-         s->by_name_iterator_type && s->by_number_iterator_type &&
-         s->generic_sequence_type;
+         s->descriptor_iterator_type && s->generic_sequence_type;
 }

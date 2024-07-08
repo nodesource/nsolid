@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_CONNECTOR_H
-#define GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_CONNECTOR_H
+#ifndef GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_CONNECTOR_H
+#define GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_CONNECTOR_H
 
 #include <grpc/support/port_platform.h>
 
@@ -28,7 +28,6 @@
 #include "src/core/lib/iomgr/error.h"
 #include "src/core/lib/iomgr/iomgr_fwd.h"
 #include "src/core/lib/iomgr/resolved_address.h"
-#include "src/core/lib/transport/transport.h"
 #include "src/core/lib/transport/transport_fwd.h"
 
 namespace grpc_core {
@@ -58,10 +57,7 @@ class SubchannelConnector : public InternallyRefCounted<SubchannelConnector> {
     RefCountedPtr<channelz::SocketNode> socket_node;
 
     void Reset() {
-      if (transport != nullptr) {
-        grpc_transport_destroy(transport);
-        transport = nullptr;
-      }
+      transport = nullptr;
       channel_args = ChannelArgs();
       socket_node.reset();
     }
@@ -85,4 +81,4 @@ class SubchannelConnector : public InternallyRefCounted<SubchannelConnector> {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_SRC_CORE_EXT_FILTERS_CLIENT_CHANNEL_CONNECTOR_H
+#endif  // GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_CONNECTOR_H

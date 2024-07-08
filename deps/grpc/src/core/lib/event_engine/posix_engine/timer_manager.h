@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
-#define GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
+#ifndef GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
+#define GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
 
 #include <grpc/support/port_platform.h>
 
@@ -33,7 +33,7 @@
 
 #include "src/core/lib/event_engine/forkable.h"
 #include "src/core/lib/event_engine/posix_engine/timer.h"
-#include "src/core/lib/event_engine/thread_pool/thread_pool.h"
+#include "src/core/lib/event_engine/thread_pool.h"
 #include "src/core/lib/gprpp/notification.h"
 #include "src/core/lib/gprpp/sync.h"
 #include "src/core/lib/gprpp/thd.h"
@@ -111,4 +111,4 @@ class TimerManager final : public grpc_event_engine::experimental::Forkable {
 }  // namespace experimental
 }  // namespace grpc_event_engine
 
-#endif  // GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
+#endif  // GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H

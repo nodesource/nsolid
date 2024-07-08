@@ -32,7 +32,6 @@
 
 #include "python/descriptor.h"
 #include "python/python_api.h"
-#include "upb/hash/int_table.h"
 
 // begin:github_only
 #define PYUPB_PROTOBUF_PUBLIC_PACKAGE "google.protobuf"
@@ -68,9 +67,8 @@ typedef struct {
 
   // From descriptor_containers.c
   PyTypeObject* by_name_map_type;
-  PyTypeObject* by_name_iterator_type;
   PyTypeObject* by_number_map_type;
-  PyTypeObject* by_number_iterator_type;
+  PyTypeObject* descriptor_iterator_type;
   PyTypeObject* generic_sequence_type;
 
   // From descriptor_pool.c

@@ -32,29 +32,23 @@
 #include <grpcpp/opencensus.h>
 #include <grpcpp/server_context.h>
 
-#include "src/core/lib/channel/call_tracer.h"
-#include "src/core/lib/channel/channel_stack_builder.h"
-#include "src/core/lib/config/core_configuration.h"
 #include "src/core/lib/surface/channel_stack_type.h"
+#include "src/cpp/common/channel_filter.h"
+#include "src/cpp/ext/filters/census/channel_filter.h"
 #include "src/cpp/ext/filters/census/client_filter.h"
 #include "src/cpp/ext/filters/census/measures.h"
-#include "src/cpp/ext/filters/census/server_call_tracer.h"
+#include "src/cpp/ext/filters/census/server_filter.h"
 
 namespace grpc {
 
 void RegisterOpenCensusPlugin() {
-  grpc_core::ServerCallTracerFactory::RegisterGlobal(
-      new grpc::internal::OpenCensusServerCallTracerFactory);
-  grpc_core::CoreConfiguration::RegisterBuilder(
-      [](grpc_core::CoreConfiguration::Builder* builder) {
-        builder->channel_init()->RegisterStage(
-            GRPC_CLIENT_CHANNEL, /*priority=*/INT_MAX,
-            [](grpc_core::ChannelStackBuilder* builder) {
-              builder->PrependFilter(
-                  &grpc::internal::OpenCensusClientFilter::kFilter);
-              return true;
-            });
-      });
+  RegisterChannelFilter<CensusClientChannelData,
+                        CensusClientChannelData::CensusClientCallData>(
+      "opencensus_client", GRPC_CLIENT_CHANNEL, INT_MAX /* priority */,
+      nullptr /* condition function */);
+  RegisterChannelFilter<CensusChannelData, CensusServerCallData>(
+      "opencensus_server", GRPC_SERVER_CHANNEL, INT_MAX /* priority */,
+      nullptr /* condition function */);
 
   // Access measures to ensure they are initialized. Otherwise, creating a view
   // before the first RPC would cause an error.
@@ -68,8 +62,6 @@ void RegisterOpenCensusPlugin() {
   RpcClientRetriesPerCall();
   RpcClientTransparentRetriesPerCall();
   RpcClientRetryDelayPerCall();
-  RpcClientTransportLatency();
-  internal::RpcClientApiLatency();
 
   RpcServerSentBytesPerRpc();
   RpcServerReceivedBytesPerRpc();
@@ -152,9 +144,6 @@ ABSL_CONST_INIT const absl::string_view
 ABSL_CONST_INIT const absl::string_view kRpcClientRetryDelayPerCallMeasureName =
     "grpc.io/client/retry_delay_per_call";
 
-ABSL_CONST_INIT const absl::string_view kRpcClientTransportLatencyMeasureName =
-    "grpc.io/client/transport_latency";
-
 // Server
 ABSL_CONST_INIT const absl::string_view
     kRpcServerSentMessagesPerRpcMeasureName =
@@ -179,40 +168,8 @@ ABSL_CONST_INIT const absl::string_view kRpcServerStartedRpcsMeasureName =
 
 }  // namespace experimental
 
-namespace internal {
-
-ABSL_CONST_INIT const absl::string_view kRpcClientApiLatencyMeasureName =
-    "grpc.io/client/api_latency";
-namespace {
 std::atomic<bool> g_open_census_stats_enabled(true);
 std::atomic<bool> g_open_census_tracing_enabled(true);
-}  // namespace
-
-//
-// OpenCensusRegistry
-//
-
-OpenCensusRegistry& OpenCensusRegistry::Get() {
-  static OpenCensusRegistry* registry = new OpenCensusRegistry;
-  return *registry;
-}
-
-::opencensus::tags::TagMap OpenCensusRegistry::PopulateTagMapWithConstantLabels(
-    const ::opencensus::tags::TagMap& tag_map) {
-  std::vector<std::pair<::opencensus::tags::TagKey, std::string>> tags =
-      tag_map.tags();
-  for (const auto& label : ConstantLabels()) {
-    tags.emplace_back(label.tag_key, label.value);
-  }
-  return ::opencensus::tags::TagMap(std::move(tags));
-}
-
-void OpenCensusRegistry::PopulateCensusContextWithConstantAttributes(
-    grpc::experimental::CensusContext* context) {
-  for (const auto& attribute : ConstantAttributes()) {
-    context->AddSpanAttribute(attribute.key, attribute.value);
-  }
-}
 
 void EnableOpenCensusStats(bool enable) {
   g_open_census_stats_enabled = enable;
@@ -229,7 +186,5 @@ bool OpenCensusStatsEnabled() {
 bool OpenCensusTracingEnabled() {
   return g_open_census_tracing_enabled.load(std::memory_order_relaxed);
 }
-
-}  // namespace internal
 
 }  // namespace grpc

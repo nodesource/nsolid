@@ -20,20 +20,27 @@
 
 #include "src/core/lib/gprpp/fork.h"
 
-#include <utility>
-
 #include <grpc/support/atm.h>
 #include <grpc/support/sync.h>
 #include <grpc/support/time.h>
 
-#include "src/core/lib/config/config_vars.h"
-#include "src/core/lib/event_engine/thread_local.h"
+#include "src/core/lib/gprpp/global_config_env.h"
 #include "src/core/lib/gprpp/no_destruct.h"
 
 //
 // NOTE: FORKING IS NOT GENERALLY SUPPORTED, THIS IS ONLY INTENDED TO WORK
 //       AROUND VERY SPECIFIC USE CASES.
 //
+
+#ifdef GRPC_ENABLE_FORK_SUPPORT
+#define GRPC_ENABLE_FORK_SUPPORT_DEFAULT true
+#else
+#define GRPC_ENABLE_FORK_SUPPORT_DEFAULT false
+#endif  // GRPC_ENABLE_FORK_SUPPORT
+
+GPR_GLOBAL_CONFIG_DEFINE_BOOL(grpc_enable_fork_support,
+                              GRPC_ENABLE_FORK_SUPPORT_DEFAULT,
+                              "Enable fork support");
 
 namespace grpc_core {
 namespace {
@@ -56,11 +63,6 @@ class ExecCtxState {
   }
 
   void IncExecCtxCount() {
-    // EventEngine is expected to terminate all threads before fork, and so this
-    // extra work is unnecessary
-    if (grpc_event_engine::experimental::ThreadLocal::IsEventEngineThread()) {
-      return;
-    }
     gpr_atm count = gpr_atm_no_barrier_load(&count_);
     while (true) {
       if (count <= BLOCKED(1)) {
@@ -80,12 +82,7 @@ class ExecCtxState {
     }
   }
 
-  void DecExecCtxCount() {
-    if (grpc_event_engine::experimental::ThreadLocal::IsEventEngineThread()) {
-      return;
-    }
-    gpr_atm_no_barrier_fetch_add(&count_, -1);
-  }
+  void DecExecCtxCount() { gpr_atm_no_barrier_fetch_add(&count_, -1); }
 
   bool BlockExecCtx() {
     // Assumes there is an active ExecCtx when this function is called
@@ -168,7 +165,7 @@ class ThreadState {
 
 void Fork::GlobalInit() {
   if (!override_enabled_) {
-    support_enabled_.store(ConfigVars::Get().EnableForkSupport(),
+    support_enabled_.store(GPR_GLOBAL_CONFIG_GET(grpc_enable_fork_support),
                            std::memory_order_relaxed);
   }
 }
@@ -191,18 +188,12 @@ void Fork::DoDecExecCtxCount() {
   NoDestructSingleton<ExecCtxState>::Get()->DecExecCtxCount();
 }
 
-bool Fork::RegisterResetChildPollingEngineFunc(
+void Fork::SetResetChildPollingEngineFunc(
     Fork::child_postfork_func reset_child_polling_engine) {
-  if (reset_child_polling_engine_ == nullptr) {
-    reset_child_polling_engine_ = new std::set<Fork::child_postfork_func>();
-  }
-  auto ret = reset_child_polling_engine_->insert(reset_child_polling_engine);
-  return ret.second;
+  reset_child_polling_engine_ = reset_child_polling_engine;
 }
-
-const std::set<Fork::child_postfork_func>&
-Fork::GetResetChildPollingEngineFunc() {
-  return *reset_child_polling_engine_;
+Fork::child_postfork_func Fork::GetResetChildPollingEngineFunc() {
+  return reset_child_polling_engine_;
 }
 
 bool Fork::BlockExecCtx() {
@@ -237,6 +228,5 @@ void Fork::AwaitThreads() {
 
 std::atomic<bool> Fork::support_enabled_(false);
 bool Fork::override_enabled_ = false;
-std::set<Fork::child_postfork_func>* Fork::reset_child_polling_engine_ =
-    nullptr;
+Fork::child_postfork_func Fork::reset_child_polling_engine_ = nullptr;
 }  // namespace grpc_core

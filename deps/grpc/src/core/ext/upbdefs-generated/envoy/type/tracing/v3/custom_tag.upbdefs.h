@@ -9,16 +9,15 @@
 #ifndef ENVOY_TYPE_TRACING_V3_CUSTOM_TAG_PROTO_UPBDEFS_H_
 #define ENVOY_TYPE_TRACING_V3_CUSTOM_TAG_PROTO_UPBDEFS_H_
 
-#include "upb/reflection/def.h"
-#include "upb/reflection/def_pool_internal.h"
-#include "upb/port/def.inc"
+#include "upb/def.h"
+#include "upb/port_def.inc"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
 extern _upb_DefPool_Init envoy_type_tracing_v3_custom_tag_proto_upbdefinit;
 
@@ -51,6 +50,6 @@ UPB_INLINE const upb_MessageDef *envoy_type_tracing_v3_CustomTag_Metadata_getmsg
 }  /* extern "C" */
 #endif
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 
 #endif  /* ENVOY_TYPE_TRACING_V3_CUSTOM_TAG_PROTO_UPBDEFS_H_ */

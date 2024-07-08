@@ -6,7 +6,7 @@
  * Do not edit -- your changes will be discarded when the file is
  * regenerated. */
 
-#include "upb/reflection/def.h"
+#include "upb/def.h"
 #include "xds/annotations/v3/migrate.upbdefs.h"
 #include "xds/annotations/v3/migrate.upb.h"
 

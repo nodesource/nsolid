@@ -7,34 +7,29 @@
  * regenerated. */
 
 #include <stddef.h>
-#include "upb/generated_code_support.h"
+#include "upb/msg_internal.h"
 #include "envoy/extensions/clusters/aggregate/v3/cluster.upb.h"
 #include "udpa/annotations/status.upb.h"
 #include "udpa/annotations/versioning.upb.h"
 #include "validate/validate.upb.h"
 
-// Must be last.
-#include "upb/port/def.inc"
+#include "upb/port_def.inc"
 
-static const upb_MiniTableField envoy_extensions_clusters_aggregate_v3_ClusterConfig__fields[1] = {
-  {1, 0, 0, kUpb_NoSub, 9, (int)kUpb_FieldMode_Array | ((int)UPB_SIZE(kUpb_FieldRep_4Byte, kUpb_FieldRep_8Byte) << kUpb_FieldRep_Shift)},
+static const upb_MiniTable_Field envoy_extensions_clusters_aggregate_v3_ClusterConfig__fields[1] = {
+  {1, UPB_SIZE(0, 0), UPB_SIZE(0, 0), kUpb_NoSub, 9, kUpb_FieldMode_Array | (kUpb_FieldRep_Pointer << kUpb_FieldRep_Shift)},
 };
 
-const upb_MiniTable envoy_extensions_clusters_aggregate_v3_ClusterConfig_msg_init = {
+const upb_MiniTable envoy_extensions_clusters_aggregate_v3_ClusterConfig_msginit = {
   NULL,
   &envoy_extensions_clusters_aggregate_v3_ClusterConfig__fields[0],
-  8, 1, kUpb_ExtMode_NonExtendable, 1, UPB_FASTTABLE_MASK(8), 0,
-  UPB_FASTTABLE_INIT({
-    {0x0000000000000000, &_upb_FastDecoder_DecodeGeneric},
-    {0x000000003f00000a, &upb_prs_1bt},
-  })
+  UPB_SIZE(8, 8), 1, kUpb_ExtMode_NonExtendable, 1, 255, 0,
 };
 
 static const upb_MiniTable *messages_layout[1] = {
-  &envoy_extensions_clusters_aggregate_v3_ClusterConfig_msg_init,
+  &envoy_extensions_clusters_aggregate_v3_ClusterConfig_msginit,
 };
 
-const upb_MiniTableFile envoy_extensions_clusters_aggregate_v3_cluster_proto_upb_file_layout = {
+const upb_MiniTable_File envoy_extensions_clusters_aggregate_v3_cluster_proto_upb_file_layout = {
   messages_layout,
   NULL,
   NULL,
@@ -43,5 +38,5 @@ const upb_MiniTableFile envoy_extensions_clusters_aggregate_v3_cluster_proto_upb
   0,
 };
 
-#include "upb/port/undef.inc"
+#include "upb/port_undef.inc"
 

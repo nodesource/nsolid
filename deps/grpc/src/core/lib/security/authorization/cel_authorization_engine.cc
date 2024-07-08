@@ -24,8 +24,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "upb/base/string_view.h"
-#include "upb/collections/map.h"
+#include "upb/upb.h"
 
 #include <grpc/support/log.h>
 
