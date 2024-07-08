@@ -61,16 +61,16 @@ void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
 
   grpcagent::BlockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
   blocked_body->set_thread_id(stor.thread_id);
-  blocked_body->set_blocked_for(body["blockedFor"].get<int32_t>());
-  blocked_body->set_loop_id(body["loopId"].get<int32_t>());
-  blocked_body->set_callback_cntr(body["callbackCntr"].get<int32_t>());
+  blocked_body->set_blocked_for(body["blocked_for"].get<int32_t>());
+  blocked_body->set_loop_id(body["loop_id"].get<int32_t>());
+  blocked_body->set_callback_cntr(body["callback_cntr"].get<int32_t>());
 
   for (const auto& stack : body["stack"]) {
     grpcagent::Stack* proto_stack = blocked_body->add_stack();
-    proto_stack->set_is_eval(stack["isEval"].get<bool>());
-    proto_stack->set_script_name(stack["scriptName"].get<std::string>());
-    proto_stack->set_function_name(stack["functionName"].get<std::string>());
-    proto_stack->set_line_number(stack["lineNumber"].get<int32_t>());
+    proto_stack->set_is_eval(stack["is_eval"].get<bool>());
+    proto_stack->set_script_name(stack["script_name"].get<std::string>());
+    proto_stack->set_function_name(stack["function_name"].get<std::string>());
+    proto_stack->set_line_number(stack["line_number"].get<int32_t>());
     proto_stack->set_column(stack["column"].get<int32_t>());
   }
 }
@@ -218,9 +218,9 @@ void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* blocked_loop_even
 
   grpcagent::UnblockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
   blocked_body->set_thread_id(stor.thread_id);
-  blocked_body->set_blocked_for(body["blockedFor"].get<int32_t>());
-  blocked_body->set_loop_id(body["loopId"].get<int32_t>());
-  blocked_body->set_callback_cntr(body["callbackCntr"].get<int32_t>());
+  blocked_body->set_blocked_for(body["blocked_for"].get<int32_t>());
+  blocked_body->set_loop_id(body["loop_id"].get<int32_t>());
+  blocked_body->set_callback_cntr(body["callback_cntr"].get<int32_t>());
 }
 
 /*static*/ SharedGrpcAgent GrpcAgent::Inst() {
