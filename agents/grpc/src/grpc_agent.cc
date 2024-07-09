@@ -819,8 +819,54 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
   }
 }
 
+/*message CommandBody {
+  oneof body {
+    ReconfigureBody reconfigure = 1;
+  }
+}
+
+message CommandRequest {
+  string requestId = 1;
+  uint32 version = 2;
+  string id = 3;
+  string command = 4;
+  CommandBody body = 5;
+}*/
 void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
-  //  UpdateConfig(out.dump());
+  const grpcagent::ReconfigureBody& body = request.body().reconfigure();
+  /*
+  message ReconfigureBody {
+  uint32 blockedLoopThreshold = 1;
+  uint32 interval = 2;
+  bool pauseMetrics = 3;
+  bool promiseTracking = 4;
+  bool redactSnapshots = 5;
+  string statsd = 6;
+  string statsdBucket = 7;
+  string statsdTags = 8;
+  repeated string tags = 9;
+  bool tracingEnabled = 10;
+  uint32 tracingModulesBlacklist = 11;
+}
+  */
+  json out = json::object();
+  out["blockedLoopThreshold"] = body.blockedloopthreshold();
+  out["interval"] = body.interval();
+  out["pauseMetrics"] = body.pausemetrics();
+  out["promiseTracking"] = body.promisetracking();
+  out["redactSnapshots"] = body.redactsnapshots();
+  out["statsd"] = body.statsd();
+  out["statsdBucket"] = body.statsdbucket();
+  out["statsdTags"] = body.statsdtags();
+  if (body.tags_size() > 0) {
+    out["tags"] = json::array();
+    for (int i = 0; i < body.tags_size(); i++) {
+      out["tags"].push_back(body.tags(i));
+    }
+  }
+  out["tracingEnabled"] = body.tracingenabled();
+  out["tracingModulesBlacklist"] = body.tracingmodulesblacklist();
+  UpdateConfig(out.dump());
 }
 
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {

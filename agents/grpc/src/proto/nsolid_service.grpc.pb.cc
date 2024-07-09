@@ -27,6 +27,7 @@ static const char* NSolidService_method_names[] = {
   "/grpcagent.NSolidService/ExportPackages",
   "/grpcagent.NSolidService/ExportBlockedLoop",
   "/grpcagent.NSolidService/ExportUnblockedLoop",
+  "/grpcagent.NSolidService/ExportReconfigure",
 };
 
 std::unique_ptr< NSolidService::Stub> NSolidService::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -41,6 +42,7 @@ NSolidService::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& chan
   , rpcmethod_ExportPackages_(NSolidService_method_names[2], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportBlockedLoop_(NSolidService_method_names[3], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportUnblockedLoop_(NSolidService_method_names[4], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportReconfigure_(NSolidService_method_names[5], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::ClientReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* NSolidService::Stub::CommandRaw(::grpc::ClientContext* context) {
@@ -151,6 +153,29 @@ void NSolidService::Stub::async::ExportUnblockedLoop(::grpc::ClientContext* cont
   return result;
 }
 
+::grpc::Status NSolidService::Stub::ExportReconfigure(::grpc::ClientContext* context, const ::grpcagent::ReconfigureEvent& request, ::grpcagent::EventResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::grpcagent::ReconfigureEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_ExportReconfigure_, context, request, response);
+}
+
+void NSolidService::Stub::async::ExportReconfigure(::grpc::ClientContext* context, const ::grpcagent::ReconfigureEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::grpcagent::ReconfigureEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportReconfigure_, context, request, response, std::move(f));
+}
+
+void NSolidService::Stub::async::ExportReconfigure(::grpc::ClientContext* context, const ::grpcagent::ReconfigureEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportReconfigure_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::PrepareAsyncExportReconfigureRaw(::grpc::ClientContext* context, const ::grpcagent::ReconfigureEvent& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::grpcagent::EventResponse, ::grpcagent::ReconfigureEvent, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_ExportReconfigure_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::AsyncExportReconfigureRaw(::grpc::ClientContext* context, const ::grpcagent::ReconfigureEvent& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncExportReconfigureRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
 NSolidService::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NSolidService_method_names[0],
@@ -202,6 +227,16 @@ NSolidService::Service::Service() {
              ::grpcagent::EventResponse* resp) {
                return service->ExportUnblockedLoop(ctx, req, resp);
              }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      NSolidService_method_names[5],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::ReconfigureEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](NSolidService::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::grpcagent::ReconfigureEvent* req,
+             ::grpcagent::EventResponse* resp) {
+               return service->ExportReconfigure(ctx, req, resp);
+             }, this)));
 }
 
 NSolidService::Service::~Service() {
@@ -235,6 +270,13 @@ NSolidService::Service::~Service() {
 }
 
 ::grpc::Status NSolidService::Service::ExportUnblockedLoop(::grpc::ServerContext* context, const ::grpcagent::UnblockedLoopEvent* request, ::grpcagent::EventResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status NSolidService::Service::ExportReconfigure(::grpc::ServerContext* context, const ::grpcagent::ReconfigureEvent* request, ::grpcagent::EventResponse* response) {
   (void) context;
   (void) request;
   (void) response;
