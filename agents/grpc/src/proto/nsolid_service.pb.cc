@@ -59,30 +59,33 @@ static const ::_pb::Message* const file_default_instances[] = {
 const char descriptor_table_protodef_nsolid_5fservice_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\024nsolid_service.proto\022\tgrpcagent\032\022block"
   "ed_loop.proto\032\rcommand.proto\032\ninfo.proto"
-  "\032\016packages.proto\"&\n\rEventResponse\022\025\n\rerr"
-  "or_message\030\001 \001(\t2\377\002\n\rNSolidService\022F\n\007Co"
-  "mmand\022\032.grpcagent.CommandResponse\032\031.grpc"
-  "agent.CommandRequest\"\000(\0010\001\022>\n\nExportInfo"
-  "\022\024.grpcagent.InfoEvent\032\030.grpcagent.Event"
-  "Response\"\000\022F\n\016ExportPackages\022\030.grpcagent"
-  ".PackagesEvent\032\030.grpcagent.EventResponse"
-  "\"\000\022L\n\021ExportBlockedLoop\022\033.grpcagent.Bloc"
-  "kedLoopEvent\032\030.grpcagent.EventResponse\"\000"
-  "\022P\n\023ExportUnblockedLoop\022\035.grpcagent.Unbl"
-  "ockedLoopEvent\032\030.grpcagent.EventResponse"
-  "\"\000b\006proto3"
+  "\032\016packages.proto\032\021reconfigure.proto\"&\n\rE"
+  "ventResponse\022\025\n\rerror_message\030\001 \001(\t2\315\003\n\r"
+  "NSolidService\022F\n\007Command\022\032.grpcagent.Com"
+  "mandResponse\032\031.grpcagent.CommandRequest\""
+  "\000(\0010\001\022>\n\nExportInfo\022\024.grpcagent.InfoEven"
+  "t\032\030.grpcagent.EventResponse\"\000\022F\n\016ExportP"
+  "ackages\022\030.grpcagent.PackagesEvent\032\030.grpc"
+  "agent.EventResponse\"\000\022L\n\021ExportBlockedLo"
+  "op\022\033.grpcagent.BlockedLoopEvent\032\030.grpcag"
+  "ent.EventResponse\"\000\022P\n\023ExportUnblockedLo"
+  "op\022\035.grpcagent.UnblockedLoopEvent\032\030.grpc"
+  "agent.EventResponse\"\000\022L\n\021ExportReconfigu"
+  "re\022\033.grpcagent.ReconfigureEvent\032\030.grpcag"
+  "ent.EventResponse\"\000b\006proto3"
   ;
-static const ::_pbi::DescriptorTable* const descriptor_table_nsolid_5fservice_2eproto_deps[4] = {
+static const ::_pbi::DescriptorTable* const descriptor_table_nsolid_5fservice_2eproto_deps[5] = {
   &::descriptor_table_blocked_5floop_2eproto,
   &::descriptor_table_command_2eproto,
   &::descriptor_table_info_2eproto,
   &::descriptor_table_packages_2eproto,
+  &::descriptor_table_reconfigure_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_nsolid_5fservice_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_nsolid_5fservice_2eproto = {
-    false, false, 530, descriptor_table_protodef_nsolid_5fservice_2eproto,
+    false, false, 627, descriptor_table_protodef_nsolid_5fservice_2eproto,
     "nsolid_service.proto",
-    &descriptor_table_nsolid_5fservice_2eproto_once, descriptor_table_nsolid_5fservice_2eproto_deps, 4, 1,
+    &descriptor_table_nsolid_5fservice_2eproto_once, descriptor_table_nsolid_5fservice_2eproto_deps, 5, 1,
     schemas, file_default_instances, TableStruct_nsolid_5fservice_2eproto::offsets,
     file_level_metadata_nsolid_5fservice_2eproto, file_level_enum_descriptors_nsolid_5fservice_2eproto,
     file_level_service_descriptors_nsolid_5fservice_2eproto,
