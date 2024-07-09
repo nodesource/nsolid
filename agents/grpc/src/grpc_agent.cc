@@ -68,8 +68,16 @@ void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
   for (const auto& stack : body["stack"]) {
     grpcagent::Stack* proto_stack = blocked_body->add_stack();
     proto_stack->set_is_eval(stack["is_eval"].get<bool>());
-    proto_stack->set_script_name(stack["script_name"].get<std::string>());
-    proto_stack->set_function_name(stack["function_name"].get<std::string>());
+    auto it = stack.find("script_name");
+    if (it != stack.end() && it->is_string()) {
+      proto_stack->set_script_name(*it);
+    }
+
+    it = stack.find("function_name");
+    if (it != stack.end() && it->is_string()) {
+      proto_stack->set_function_name(*it);
+    }
+
     proto_stack->set_line_number(stack["line_number"].get<int32_t>());
     proto_stack->set_column(stack["column"].get<int32_t>());
   }
