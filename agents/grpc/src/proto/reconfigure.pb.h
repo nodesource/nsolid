@@ -218,7 +218,11 @@ class ReconfigureBody final :
   std::string* _internal_add_tags();
   public:
 
-  // string statsd = 6;
+  // optional string statsd = 6;
+  bool has_statsd() const;
+  private:
+  bool _internal_has_statsd() const;
+  public:
   void clear_statsd();
   const std::string& statsd() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -232,7 +236,11 @@ class ReconfigureBody final :
   std::string* _internal_mutable_statsd();
   public:
 
-  // string statsdBucket = 7;
+  // optional string statsdBucket = 7;
+  bool has_statsdbucket() const;
+  private:
+  bool _internal_has_statsdbucket() const;
+  public:
   void clear_statsdbucket();
   const std::string& statsdbucket() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -246,7 +254,11 @@ class ReconfigureBody final :
   std::string* _internal_mutable_statsdbucket();
   public:
 
-  // string statsdTags = 8;
+  // optional string statsdTags = 8;
+  bool has_statsdtags() const;
+  private:
+  bool _internal_has_statsdtags() const;
+  public:
   void clear_statsdtags();
   const std::string& statsdtags() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -260,7 +272,11 @@ class ReconfigureBody final :
   std::string* _internal_mutable_statsdtags();
   public:
 
-  // uint32 blockedLoopThreshold = 1;
+  // optional uint32 blockedLoopThreshold = 1;
+  bool has_blockedloopthreshold() const;
+  private:
+  bool _internal_has_blockedloopthreshold() const;
+  public:
   void clear_blockedloopthreshold();
   uint32_t blockedloopthreshold() const;
   void set_blockedloopthreshold(uint32_t value);
@@ -269,7 +285,11 @@ class ReconfigureBody final :
   void _internal_set_blockedloopthreshold(uint32_t value);
   public:
 
-  // uint32 interval = 2;
+  // optional uint32 interval = 2;
+  bool has_interval() const;
+  private:
+  bool _internal_has_interval() const;
+  public:
   void clear_interval();
   uint32_t interval() const;
   void set_interval(uint32_t value);
@@ -278,7 +298,11 @@ class ReconfigureBody final :
   void _internal_set_interval(uint32_t value);
   public:
 
-  // bool pauseMetrics = 3;
+  // optional bool pauseMetrics = 3;
+  bool has_pausemetrics() const;
+  private:
+  bool _internal_has_pausemetrics() const;
+  public:
   void clear_pausemetrics();
   bool pausemetrics() const;
   void set_pausemetrics(bool value);
@@ -287,7 +311,11 @@ class ReconfigureBody final :
   void _internal_set_pausemetrics(bool value);
   public:
 
-  // bool promiseTracking = 4;
+  // optional bool promiseTracking = 4;
+  bool has_promisetracking() const;
+  private:
+  bool _internal_has_promisetracking() const;
+  public:
   void clear_promisetracking();
   bool promisetracking() const;
   void set_promisetracking(bool value);
@@ -296,7 +324,11 @@ class ReconfigureBody final :
   void _internal_set_promisetracking(bool value);
   public:
 
-  // bool redactSnapshots = 5;
+  // optional bool redactSnapshots = 5;
+  bool has_redactsnapshots() const;
+  private:
+  bool _internal_has_redactsnapshots() const;
+  public:
   void clear_redactsnapshots();
   bool redactsnapshots() const;
   void set_redactsnapshots(bool value);
@@ -305,7 +337,11 @@ class ReconfigureBody final :
   void _internal_set_redactsnapshots(bool value);
   public:
 
-  // bool tracingEnabled = 10;
+  // optional bool tracingEnabled = 10;
+  bool has_tracingenabled() const;
+  private:
+  bool _internal_has_tracingenabled() const;
+  public:
   void clear_tracingenabled();
   bool tracingenabled() const;
   void set_tracingenabled(bool value);
@@ -314,7 +350,11 @@ class ReconfigureBody final :
   void _internal_set_tracingenabled(bool value);
   public:
 
-  // uint32 tracingModulesBlacklist = 11;
+  // optional uint32 tracingModulesBlacklist = 11;
+  bool has_tracingmodulesblacklist() const;
+  private:
+  bool _internal_has_tracingmodulesblacklist() const;
+  public:
   void clear_tracingmodulesblacklist();
   uint32_t tracingmodulesblacklist() const;
   void set_tracingmodulesblacklist(uint32_t value);
@@ -331,6 +371,8 @@ class ReconfigureBody final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::HasBits<1> _has_bits_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> tags_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr statsd_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr statsdbucket_;
@@ -342,7 +384,6 @@ class ReconfigureBody final :
     bool redactsnapshots_;
     bool tracingenabled_;
     uint32_t tracingmodulesblacklist_;
-    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
   friend struct ::TableStruct_reconfigure_2eproto;
@@ -535,9 +576,17 @@ class ReconfigureEvent final :
 #endif  // __GNUC__
 // ReconfigureBody
 
-// uint32 blockedLoopThreshold = 1;
+// optional uint32 blockedLoopThreshold = 1;
+inline bool ReconfigureBody::_internal_has_blockedloopthreshold() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000008u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_blockedloopthreshold() const {
+  return _internal_has_blockedloopthreshold();
+}
 inline void ReconfigureBody::clear_blockedloopthreshold() {
   _impl_.blockedloopthreshold_ = 0u;
+  _impl_._has_bits_[0] &= ~0x00000008u;
 }
 inline uint32_t ReconfigureBody::_internal_blockedloopthreshold() const {
   return _impl_.blockedloopthreshold_;
@@ -547,7 +596,7 @@ inline uint32_t ReconfigureBody::blockedloopthreshold() const {
   return _internal_blockedloopthreshold();
 }
 inline void ReconfigureBody::_internal_set_blockedloopthreshold(uint32_t value) {
-  
+  _impl_._has_bits_[0] |= 0x00000008u;
   _impl_.blockedloopthreshold_ = value;
 }
 inline void ReconfigureBody::set_blockedloopthreshold(uint32_t value) {
@@ -555,9 +604,17 @@ inline void ReconfigureBody::set_blockedloopthreshold(uint32_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.blockedLoopThreshold)
 }
 
-// uint32 interval = 2;
+// optional uint32 interval = 2;
+inline bool ReconfigureBody::_internal_has_interval() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000010u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_interval() const {
+  return _internal_has_interval();
+}
 inline void ReconfigureBody::clear_interval() {
   _impl_.interval_ = 0u;
+  _impl_._has_bits_[0] &= ~0x00000010u;
 }
 inline uint32_t ReconfigureBody::_internal_interval() const {
   return _impl_.interval_;
@@ -567,7 +624,7 @@ inline uint32_t ReconfigureBody::interval() const {
   return _internal_interval();
 }
 inline void ReconfigureBody::_internal_set_interval(uint32_t value) {
-  
+  _impl_._has_bits_[0] |= 0x00000010u;
   _impl_.interval_ = value;
 }
 inline void ReconfigureBody::set_interval(uint32_t value) {
@@ -575,9 +632,17 @@ inline void ReconfigureBody::set_interval(uint32_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.interval)
 }
 
-// bool pauseMetrics = 3;
+// optional bool pauseMetrics = 3;
+inline bool ReconfigureBody::_internal_has_pausemetrics() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000020u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_pausemetrics() const {
+  return _internal_has_pausemetrics();
+}
 inline void ReconfigureBody::clear_pausemetrics() {
   _impl_.pausemetrics_ = false;
+  _impl_._has_bits_[0] &= ~0x00000020u;
 }
 inline bool ReconfigureBody::_internal_pausemetrics() const {
   return _impl_.pausemetrics_;
@@ -587,7 +652,7 @@ inline bool ReconfigureBody::pausemetrics() const {
   return _internal_pausemetrics();
 }
 inline void ReconfigureBody::_internal_set_pausemetrics(bool value) {
-  
+  _impl_._has_bits_[0] |= 0x00000020u;
   _impl_.pausemetrics_ = value;
 }
 inline void ReconfigureBody::set_pausemetrics(bool value) {
@@ -595,9 +660,17 @@ inline void ReconfigureBody::set_pausemetrics(bool value) {
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.pauseMetrics)
 }
 
-// bool promiseTracking = 4;
+// optional bool promiseTracking = 4;
+inline bool ReconfigureBody::_internal_has_promisetracking() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000040u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_promisetracking() const {
+  return _internal_has_promisetracking();
+}
 inline void ReconfigureBody::clear_promisetracking() {
   _impl_.promisetracking_ = false;
+  _impl_._has_bits_[0] &= ~0x00000040u;
 }
 inline bool ReconfigureBody::_internal_promisetracking() const {
   return _impl_.promisetracking_;
@@ -607,7 +680,7 @@ inline bool ReconfigureBody::promisetracking() const {
   return _internal_promisetracking();
 }
 inline void ReconfigureBody::_internal_set_promisetracking(bool value) {
-  
+  _impl_._has_bits_[0] |= 0x00000040u;
   _impl_.promisetracking_ = value;
 }
 inline void ReconfigureBody::set_promisetracking(bool value) {
@@ -615,9 +688,17 @@ inline void ReconfigureBody::set_promisetracking(bool value) {
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.promiseTracking)
 }
 
-// bool redactSnapshots = 5;
+// optional bool redactSnapshots = 5;
+inline bool ReconfigureBody::_internal_has_redactsnapshots() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000080u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_redactsnapshots() const {
+  return _internal_has_redactsnapshots();
+}
 inline void ReconfigureBody::clear_redactsnapshots() {
   _impl_.redactsnapshots_ = false;
+  _impl_._has_bits_[0] &= ~0x00000080u;
 }
 inline bool ReconfigureBody::_internal_redactsnapshots() const {
   return _impl_.redactsnapshots_;
@@ -627,7 +708,7 @@ inline bool ReconfigureBody::redactsnapshots() const {
   return _internal_redactsnapshots();
 }
 inline void ReconfigureBody::_internal_set_redactsnapshots(bool value) {
-  
+  _impl_._has_bits_[0] |= 0x00000080u;
   _impl_.redactsnapshots_ = value;
 }
 inline void ReconfigureBody::set_redactsnapshots(bool value) {
@@ -635,9 +716,17 @@ inline void ReconfigureBody::set_redactsnapshots(bool value) {
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.redactSnapshots)
 }
 
-// string statsd = 6;
+// optional string statsd = 6;
+inline bool ReconfigureBody::_internal_has_statsd() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_statsd() const {
+  return _internal_has_statsd();
+}
 inline void ReconfigureBody::clear_statsd() {
   _impl_.statsd_.ClearToEmpty();
+  _impl_._has_bits_[0] &= ~0x00000001u;
 }
 inline const std::string& ReconfigureBody::statsd() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.statsd)
@@ -646,7 +735,7 @@ inline const std::string& ReconfigureBody::statsd() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ReconfigureBody::set_statsd(ArgT0&& arg0, ArgT... args) {
- 
+ _impl_._has_bits_[0] |= 0x00000001u;
  _impl_.statsd_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.statsd)
 }
@@ -659,22 +748,32 @@ inline const std::string& ReconfigureBody::_internal_statsd() const {
   return _impl_.statsd_.Get();
 }
 inline void ReconfigureBody::_internal_set_statsd(const std::string& value) {
-  
+  _impl_._has_bits_[0] |= 0x00000001u;
   _impl_.statsd_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ReconfigureBody::_internal_mutable_statsd() {
-  
+  _impl_._has_bits_[0] |= 0x00000001u;
   return _impl_.statsd_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ReconfigureBody::release_statsd() {
   // @@protoc_insertion_point(field_release:grpcagent.ReconfigureBody.statsd)
-  return _impl_.statsd_.Release();
+  if (!_internal_has_statsd()) {
+    return nullptr;
+  }
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  auto* p = _impl_.statsd_.Release();
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.statsd_.IsDefault()) {
+    _impl_.statsd_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  return p;
 }
 inline void ReconfigureBody::set_allocated_statsd(std::string* statsd) {
   if (statsd != nullptr) {
-    
+    _impl_._has_bits_[0] |= 0x00000001u;
   } else {
-    
+    _impl_._has_bits_[0] &= ~0x00000001u;
   }
   _impl_.statsd_.SetAllocated(statsd, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -685,9 +784,17 @@ inline void ReconfigureBody::set_allocated_statsd(std::string* statsd) {
   // @@protoc_insertion_point(field_set_allocated:grpcagent.ReconfigureBody.statsd)
 }
 
-// string statsdBucket = 7;
+// optional string statsdBucket = 7;
+inline bool ReconfigureBody::_internal_has_statsdbucket() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_statsdbucket() const {
+  return _internal_has_statsdbucket();
+}
 inline void ReconfigureBody::clear_statsdbucket() {
   _impl_.statsdbucket_.ClearToEmpty();
+  _impl_._has_bits_[0] &= ~0x00000002u;
 }
 inline const std::string& ReconfigureBody::statsdbucket() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.statsdBucket)
@@ -696,7 +803,7 @@ inline const std::string& ReconfigureBody::statsdbucket() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ReconfigureBody::set_statsdbucket(ArgT0&& arg0, ArgT... args) {
- 
+ _impl_._has_bits_[0] |= 0x00000002u;
  _impl_.statsdbucket_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.statsdBucket)
 }
@@ -709,22 +816,32 @@ inline const std::string& ReconfigureBody::_internal_statsdbucket() const {
   return _impl_.statsdbucket_.Get();
 }
 inline void ReconfigureBody::_internal_set_statsdbucket(const std::string& value) {
-  
+  _impl_._has_bits_[0] |= 0x00000002u;
   _impl_.statsdbucket_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ReconfigureBody::_internal_mutable_statsdbucket() {
-  
+  _impl_._has_bits_[0] |= 0x00000002u;
   return _impl_.statsdbucket_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ReconfigureBody::release_statsdbucket() {
   // @@protoc_insertion_point(field_release:grpcagent.ReconfigureBody.statsdBucket)
-  return _impl_.statsdbucket_.Release();
+  if (!_internal_has_statsdbucket()) {
+    return nullptr;
+  }
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  auto* p = _impl_.statsdbucket_.Release();
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.statsdbucket_.IsDefault()) {
+    _impl_.statsdbucket_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  return p;
 }
 inline void ReconfigureBody::set_allocated_statsdbucket(std::string* statsdbucket) {
   if (statsdbucket != nullptr) {
-    
+    _impl_._has_bits_[0] |= 0x00000002u;
   } else {
-    
+    _impl_._has_bits_[0] &= ~0x00000002u;
   }
   _impl_.statsdbucket_.SetAllocated(statsdbucket, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -735,9 +852,17 @@ inline void ReconfigureBody::set_allocated_statsdbucket(std::string* statsdbucke
   // @@protoc_insertion_point(field_set_allocated:grpcagent.ReconfigureBody.statsdBucket)
 }
 
-// string statsdTags = 8;
+// optional string statsdTags = 8;
+inline bool ReconfigureBody::_internal_has_statsdtags() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000004u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_statsdtags() const {
+  return _internal_has_statsdtags();
+}
 inline void ReconfigureBody::clear_statsdtags() {
   _impl_.statsdtags_.ClearToEmpty();
+  _impl_._has_bits_[0] &= ~0x00000004u;
 }
 inline const std::string& ReconfigureBody::statsdtags() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.statsdTags)
@@ -746,7 +871,7 @@ inline const std::string& ReconfigureBody::statsdtags() const {
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void ReconfigureBody::set_statsdtags(ArgT0&& arg0, ArgT... args) {
- 
+ _impl_._has_bits_[0] |= 0x00000004u;
  _impl_.statsdtags_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.statsdTags)
 }
@@ -759,22 +884,32 @@ inline const std::string& ReconfigureBody::_internal_statsdtags() const {
   return _impl_.statsdtags_.Get();
 }
 inline void ReconfigureBody::_internal_set_statsdtags(const std::string& value) {
-  
+  _impl_._has_bits_[0] |= 0x00000004u;
   _impl_.statsdtags_.Set(value, GetArenaForAllocation());
 }
 inline std::string* ReconfigureBody::_internal_mutable_statsdtags() {
-  
+  _impl_._has_bits_[0] |= 0x00000004u;
   return _impl_.statsdtags_.Mutable(GetArenaForAllocation());
 }
 inline std::string* ReconfigureBody::release_statsdtags() {
   // @@protoc_insertion_point(field_release:grpcagent.ReconfigureBody.statsdTags)
-  return _impl_.statsdtags_.Release();
+  if (!_internal_has_statsdtags()) {
+    return nullptr;
+  }
+  _impl_._has_bits_[0] &= ~0x00000004u;
+  auto* p = _impl_.statsdtags_.Release();
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.statsdtags_.IsDefault()) {
+    _impl_.statsdtags_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  return p;
 }
 inline void ReconfigureBody::set_allocated_statsdtags(std::string* statsdtags) {
   if (statsdtags != nullptr) {
-    
+    _impl_._has_bits_[0] |= 0x00000004u;
   } else {
-    
+    _impl_._has_bits_[0] &= ~0x00000004u;
   }
   _impl_.statsdtags_.SetAllocated(statsdtags, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -860,9 +995,17 @@ ReconfigureBody::mutable_tags() {
   return &_impl_.tags_;
 }
 
-// bool tracingEnabled = 10;
+// optional bool tracingEnabled = 10;
+inline bool ReconfigureBody::_internal_has_tracingenabled() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000100u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_tracingenabled() const {
+  return _internal_has_tracingenabled();
+}
 inline void ReconfigureBody::clear_tracingenabled() {
   _impl_.tracingenabled_ = false;
+  _impl_._has_bits_[0] &= ~0x00000100u;
 }
 inline bool ReconfigureBody::_internal_tracingenabled() const {
   return _impl_.tracingenabled_;
@@ -872,7 +1015,7 @@ inline bool ReconfigureBody::tracingenabled() const {
   return _internal_tracingenabled();
 }
 inline void ReconfigureBody::_internal_set_tracingenabled(bool value) {
-  
+  _impl_._has_bits_[0] |= 0x00000100u;
   _impl_.tracingenabled_ = value;
 }
 inline void ReconfigureBody::set_tracingenabled(bool value) {
@@ -880,9 +1023,17 @@ inline void ReconfigureBody::set_tracingenabled(bool value) {
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.tracingEnabled)
 }
 
-// uint32 tracingModulesBlacklist = 11;
+// optional uint32 tracingModulesBlacklist = 11;
+inline bool ReconfigureBody::_internal_has_tracingmodulesblacklist() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000200u) != 0;
+  return value;
+}
+inline bool ReconfigureBody::has_tracingmodulesblacklist() const {
+  return _internal_has_tracingmodulesblacklist();
+}
 inline void ReconfigureBody::clear_tracingmodulesblacklist() {
   _impl_.tracingmodulesblacklist_ = 0u;
+  _impl_._has_bits_[0] &= ~0x00000200u;
 }
 inline uint32_t ReconfigureBody::_internal_tracingmodulesblacklist() const {
   return _impl_.tracingmodulesblacklist_;
@@ -892,7 +1043,7 @@ inline uint32_t ReconfigureBody::tracingmodulesblacklist() const {
   return _internal_tracingmodulesblacklist();
 }
 inline void ReconfigureBody::_internal_set_tracingmodulesblacklist(uint32_t value) {
-  
+  _impl_._has_bits_[0] |= 0x00000200u;
   _impl_.tracingmodulesblacklist_ = value;
 }
 inline void ReconfigureBody::set_tracingmodulesblacklist(uint32_t value) {

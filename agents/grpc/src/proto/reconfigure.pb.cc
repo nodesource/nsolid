@@ -23,7 +23,9 @@ namespace _pbi = _pb::internal;
 namespace grpcagent {
 PROTOBUF_CONSTEXPR ReconfigureBody::ReconfigureBody(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.tags_)*/{}
+    /*decltype(_impl_._has_bits_)*/{}
+  , /*decltype(_impl_._cached_size_)*/{}
+  , /*decltype(_impl_.tags_)*/{}
   , /*decltype(_impl_.statsd_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.statsdbucket_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.statsdtags_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
@@ -33,8 +35,7 @@ PROTOBUF_CONSTEXPR ReconfigureBody::ReconfigureBody(
   , /*decltype(_impl_.promisetracking_)*/false
   , /*decltype(_impl_.redactsnapshots_)*/false
   , /*decltype(_impl_.tracingenabled_)*/false
-  , /*decltype(_impl_.tracingmodulesblacklist_)*/0u
-  , /*decltype(_impl_._cached_size_)*/{}} {}
+  , /*decltype(_impl_.tracingmodulesblacklist_)*/0u} {}
 struct ReconfigureBodyDefaultTypeInternal {
   PROTOBUF_CONSTEXPR ReconfigureBodyDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
@@ -64,7 +65,7 @@ static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_recon
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_reconfigure_2eproto = nullptr;
 
 const uint32_t TableStruct_reconfigure_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_._has_bits_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
@@ -81,6 +82,17 @@ const uint32_t TableStruct_reconfigure_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.tags_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.tracingenabled_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.tracingmodulesblacklist_),
+  3,
+  4,
+  5,
+  6,
+  7,
+  0,
+  1,
+  2,
+  ~0u,
+  8,
+  9,
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureEvent, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -91,8 +103,8 @@ const uint32_t TableStruct_reconfigure_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureEvent, _impl_.body_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, -1, sizeof(::grpcagent::ReconfigureBody)},
-  { 17, -1, -1, sizeof(::grpcagent::ReconfigureEvent)},
+  { 0, 17, -1, sizeof(::grpcagent::ReconfigureBody)},
+  { 28, -1, -1, sizeof(::grpcagent::ReconfigureEvent)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -102,23 +114,29 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_reconfigure_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\021reconfigure.proto\022\tgrpcagent\032\014common.p"
-  "roto\"\212\002\n\017ReconfigureBody\022\034\n\024blockedLoopT"
-  "hreshold\030\001 \001(\r\022\020\n\010interval\030\002 \001(\r\022\024\n\014paus"
-  "eMetrics\030\003 \001(\010\022\027\n\017promiseTracking\030\004 \001(\010\022"
-  "\027\n\017redactSnapshots\030\005 \001(\010\022\016\n\006statsd\030\006 \001(\t"
-  "\022\024\n\014statsdBucket\030\007 \001(\t\022\022\n\nstatsdTags\030\010 \001"
-  "(\t\022\014\n\004tags\030\t \003(\t\022\026\n\016tracingEnabled\030\n \001(\010"
-  "\022\037\n\027tracingModulesBlacklist\030\013 \001(\r\"g\n\020Rec"
-  "onfigureEvent\022)\n\006common\030\001 \001(\0132\031.grpcagen"
-  "t.CommonResponse\022(\n\004body\030\002 \001(\0132\032.grpcage"
-  "nt.ReconfigureBodyb\006proto3"
+  "roto\"\365\003\n\017ReconfigureBody\022!\n\024blockedLoopT"
+  "hreshold\030\001 \001(\rH\000\210\001\001\022\025\n\010interval\030\002 \001(\rH\001\210"
+  "\001\001\022\031\n\014pauseMetrics\030\003 \001(\010H\002\210\001\001\022\034\n\017promise"
+  "Tracking\030\004 \001(\010H\003\210\001\001\022\034\n\017redactSnapshots\030\005"
+  " \001(\010H\004\210\001\001\022\023\n\006statsd\030\006 \001(\tH\005\210\001\001\022\031\n\014statsd"
+  "Bucket\030\007 \001(\tH\006\210\001\001\022\027\n\nstatsdTags\030\010 \001(\tH\007\210"
+  "\001\001\022\014\n\004tags\030\t \003(\t\022\033\n\016tracingEnabled\030\n \001(\010"
+  "H\010\210\001\001\022$\n\027tracingModulesBlacklist\030\013 \001(\rH\t"
+  "\210\001\001B\027\n\025_blockedLoopThresholdB\013\n\t_interva"
+  "lB\017\n\r_pauseMetricsB\022\n\020_promiseTrackingB\022"
+  "\n\020_redactSnapshotsB\t\n\007_statsdB\017\n\r_statsd"
+  "BucketB\r\n\013_statsdTagsB\021\n\017_tracingEnabled"
+  "B\032\n\030_tracingModulesBlacklist\"g\n\020Reconfig"
+  "ureEvent\022)\n\006common\030\001 \001(\0132\031.grpcagent.Com"
+  "monResponse\022(\n\004body\030\002 \001(\0132\032.grpcagent.Re"
+  "configureBodyb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_reconfigure_2eproto_deps[1] = {
   &::descriptor_table_common_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_reconfigure_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_reconfigure_2eproto = {
-    false, false, 426, descriptor_table_protodef_reconfigure_2eproto,
+    false, false, 661, descriptor_table_protodef_reconfigure_2eproto,
     "reconfigure.proto",
     &descriptor_table_reconfigure_2eproto_once, descriptor_table_reconfigure_2eproto_deps, 1, 2,
     schemas, file_default_instances, TableStruct_reconfigure_2eproto::offsets,
@@ -137,6 +155,37 @@ namespace grpcagent {
 
 class ReconfigureBody::_Internal {
  public:
+  using HasBits = decltype(std::declval<ReconfigureBody>()._impl_._has_bits_);
+  static void set_has_blockedloopthreshold(HasBits* has_bits) {
+    (*has_bits)[0] |= 8u;
+  }
+  static void set_has_interval(HasBits* has_bits) {
+    (*has_bits)[0] |= 16u;
+  }
+  static void set_has_pausemetrics(HasBits* has_bits) {
+    (*has_bits)[0] |= 32u;
+  }
+  static void set_has_promisetracking(HasBits* has_bits) {
+    (*has_bits)[0] |= 64u;
+  }
+  static void set_has_redactsnapshots(HasBits* has_bits) {
+    (*has_bits)[0] |= 128u;
+  }
+  static void set_has_statsd(HasBits* has_bits) {
+    (*has_bits)[0] |= 1u;
+  }
+  static void set_has_statsdbucket(HasBits* has_bits) {
+    (*has_bits)[0] |= 2u;
+  }
+  static void set_has_statsdtags(HasBits* has_bits) {
+    (*has_bits)[0] |= 4u;
+  }
+  static void set_has_tracingenabled(HasBits* has_bits) {
+    (*has_bits)[0] |= 256u;
+  }
+  static void set_has_tracingmodulesblacklist(HasBits* has_bits) {
+    (*has_bits)[0] |= 512u;
+  }
 };
 
 ReconfigureBody::ReconfigureBody(::PROTOBUF_NAMESPACE_ID::Arena* arena,
@@ -149,7 +198,9 @@ ReconfigureBody::ReconfigureBody(const ReconfigureBody& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   ReconfigureBody* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.tags_){from._impl_.tags_}
+      decltype(_impl_._has_bits_){from._impl_._has_bits_}
+    , /*decltype(_impl_._cached_size_)*/{}
+    , decltype(_impl_.tags_){from._impl_.tags_}
     , decltype(_impl_.statsd_){}
     , decltype(_impl_.statsdbucket_){}
     , decltype(_impl_.statsdtags_){}
@@ -159,15 +210,14 @@ ReconfigureBody::ReconfigureBody(const ReconfigureBody& from)
     , decltype(_impl_.promisetracking_){}
     , decltype(_impl_.redactsnapshots_){}
     , decltype(_impl_.tracingenabled_){}
-    , decltype(_impl_.tracingmodulesblacklist_){}
-    , /*decltype(_impl_._cached_size_)*/{}};
+    , decltype(_impl_.tracingmodulesblacklist_){}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   _impl_.statsd_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.statsd_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (!from._internal_statsd().empty()) {
+  if (from._internal_has_statsd()) {
     _this->_impl_.statsd_.Set(from._internal_statsd(), 
       _this->GetArenaForAllocation());
   }
@@ -175,7 +225,7 @@ ReconfigureBody::ReconfigureBody(const ReconfigureBody& from)
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.statsdbucket_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (!from._internal_statsdbucket().empty()) {
+  if (from._internal_has_statsdbucket()) {
     _this->_impl_.statsdbucket_.Set(from._internal_statsdbucket(), 
       _this->GetArenaForAllocation());
   }
@@ -183,7 +233,7 @@ ReconfigureBody::ReconfigureBody(const ReconfigureBody& from)
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.statsdtags_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (!from._internal_statsdtags().empty()) {
+  if (from._internal_has_statsdtags()) {
     _this->_impl_.statsdtags_.Set(from._internal_statsdtags(), 
       _this->GetArenaForAllocation());
   }
@@ -198,7 +248,9 @@ inline void ReconfigureBody::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.tags_){arena}
+      decltype(_impl_._has_bits_){}
+    , /*decltype(_impl_._cached_size_)*/{}
+    , decltype(_impl_.tags_){arena}
     , decltype(_impl_.statsd_){}
     , decltype(_impl_.statsdbucket_){}
     , decltype(_impl_.statsdtags_){}
@@ -209,7 +261,6 @@ inline void ReconfigureBody::SharedCtor(
     , decltype(_impl_.redactsnapshots_){false}
     , decltype(_impl_.tracingenabled_){false}
     , decltype(_impl_.tracingmodulesblacklist_){0u}
-    , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.statsd_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -253,62 +304,85 @@ void ReconfigureBody::Clear() {
   (void) cached_has_bits;
 
   _impl_.tags_.Clear();
-  _impl_.statsd_.ClearToEmpty();
-  _impl_.statsdbucket_.ClearToEmpty();
-  _impl_.statsdtags_.ClearToEmpty();
-  ::memset(&_impl_.blockedloopthreshold_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.tracingmodulesblacklist_) -
-      reinterpret_cast<char*>(&_impl_.blockedloopthreshold_)) + sizeof(_impl_.tracingmodulesblacklist_));
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000007u) {
+    if (cached_has_bits & 0x00000001u) {
+      _impl_.statsd_.ClearNonDefaultToEmpty();
+    }
+    if (cached_has_bits & 0x00000002u) {
+      _impl_.statsdbucket_.ClearNonDefaultToEmpty();
+    }
+    if (cached_has_bits & 0x00000004u) {
+      _impl_.statsdtags_.ClearNonDefaultToEmpty();
+    }
+  }
+  if (cached_has_bits & 0x000000f8u) {
+    ::memset(&_impl_.blockedloopthreshold_, 0, static_cast<size_t>(
+        reinterpret_cast<char*>(&_impl_.redactsnapshots_) -
+        reinterpret_cast<char*>(&_impl_.blockedloopthreshold_)) + sizeof(_impl_.redactsnapshots_));
+  }
+  if (cached_has_bits & 0x00000300u) {
+    ::memset(&_impl_.tracingenabled_, 0, static_cast<size_t>(
+        reinterpret_cast<char*>(&_impl_.tracingmodulesblacklist_) -
+        reinterpret_cast<char*>(&_impl_.tracingenabled_)) + sizeof(_impl_.tracingmodulesblacklist_));
+  }
+  _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
 const char* ReconfigureBody::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // uint32 blockedLoopThreshold = 1;
+      // optional uint32 blockedLoopThreshold = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _Internal::set_has_blockedloopthreshold(&has_bits);
           _impl_.blockedloopthreshold_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // uint32 interval = 2;
+      // optional uint32 interval = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _Internal::set_has_interval(&has_bits);
           _impl_.interval_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // bool pauseMetrics = 3;
+      // optional bool pauseMetrics = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _Internal::set_has_pausemetrics(&has_bits);
           _impl_.pausemetrics_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // bool promiseTracking = 4;
+      // optional bool promiseTracking = 4;
       case 4:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+          _Internal::set_has_promisetracking(&has_bits);
           _impl_.promisetracking_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // bool redactSnapshots = 5;
+      // optional bool redactSnapshots = 5;
       case 5:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+          _Internal::set_has_redactsnapshots(&has_bits);
           _impl_.redactsnapshots_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // string statsd = 6;
+      // optional string statsd = 6;
       case 6:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
           auto str = _internal_mutable_statsd();
@@ -318,7 +392,7 @@ const char* ReconfigureBody::_InternalParse(const char* ptr, ::_pbi::ParseContex
         } else
           goto handle_unusual;
         continue;
-      // string statsdBucket = 7;
+      // optional string statsdBucket = 7;
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
           auto str = _internal_mutable_statsdbucket();
@@ -328,7 +402,7 @@ const char* ReconfigureBody::_InternalParse(const char* ptr, ::_pbi::ParseContex
         } else
           goto handle_unusual;
         continue;
-      // string statsdTags = 8;
+      // optional string statsdTags = 8;
       case 8:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
           auto str = _internal_mutable_statsdtags();
@@ -353,17 +427,19 @@ const char* ReconfigureBody::_InternalParse(const char* ptr, ::_pbi::ParseContex
         } else
           goto handle_unusual;
         continue;
-      // bool tracingEnabled = 10;
+      // optional bool tracingEnabled = 10;
       case 10:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 80)) {
+          _Internal::set_has_tracingenabled(&has_bits);
           _impl_.tracingenabled_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // uint32 tracingModulesBlacklist = 11;
+      // optional uint32 tracingModulesBlacklist = 11;
       case 11:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 88)) {
+          _Internal::set_has_tracingmodulesblacklist(&has_bits);
           _impl_.tracingmodulesblacklist_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -385,6 +461,7 @@ const char* ReconfigureBody::_InternalParse(const char* ptr, ::_pbi::ParseContex
     CHK_(ptr != nullptr);
   }  // while
 message_done:
+  _impl_._has_bits_.Or(has_bits);
   return ptr;
 failure:
   ptr = nullptr;
@@ -398,38 +475,38 @@ uint8_t* ReconfigureBody::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // uint32 blockedLoopThreshold = 1;
-  if (this->_internal_blockedloopthreshold() != 0) {
+  // optional uint32 blockedLoopThreshold = 1;
+  if (_internal_has_blockedloopthreshold()) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(1, this->_internal_blockedloopthreshold(), target);
   }
 
-  // uint32 interval = 2;
-  if (this->_internal_interval() != 0) {
+  // optional uint32 interval = 2;
+  if (_internal_has_interval()) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(2, this->_internal_interval(), target);
   }
 
-  // bool pauseMetrics = 3;
-  if (this->_internal_pausemetrics() != 0) {
+  // optional bool pauseMetrics = 3;
+  if (_internal_has_pausemetrics()) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteBoolToArray(3, this->_internal_pausemetrics(), target);
   }
 
-  // bool promiseTracking = 4;
-  if (this->_internal_promisetracking() != 0) {
+  // optional bool promiseTracking = 4;
+  if (_internal_has_promisetracking()) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteBoolToArray(4, this->_internal_promisetracking(), target);
   }
 
-  // bool redactSnapshots = 5;
-  if (this->_internal_redactsnapshots() != 0) {
+  // optional bool redactSnapshots = 5;
+  if (_internal_has_redactsnapshots()) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteBoolToArray(5, this->_internal_redactsnapshots(), target);
   }
 
-  // string statsd = 6;
-  if (!this->_internal_statsd().empty()) {
+  // optional string statsd = 6;
+  if (_internal_has_statsd()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_statsd().data(), static_cast<int>(this->_internal_statsd().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
@@ -438,8 +515,8 @@ uint8_t* ReconfigureBody::_InternalSerialize(
         6, this->_internal_statsd(), target);
   }
 
-  // string statsdBucket = 7;
-  if (!this->_internal_statsdbucket().empty()) {
+  // optional string statsdBucket = 7;
+  if (_internal_has_statsdbucket()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_statsdbucket().data(), static_cast<int>(this->_internal_statsdbucket().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
@@ -448,8 +525,8 @@ uint8_t* ReconfigureBody::_InternalSerialize(
         7, this->_internal_statsdbucket(), target);
   }
 
-  // string statsdTags = 8;
-  if (!this->_internal_statsdtags().empty()) {
+  // optional string statsdTags = 8;
+  if (_internal_has_statsdtags()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_statsdtags().data(), static_cast<int>(this->_internal_statsdtags().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
@@ -468,14 +545,14 @@ uint8_t* ReconfigureBody::_InternalSerialize(
     target = stream->WriteString(9, s, target);
   }
 
-  // bool tracingEnabled = 10;
-  if (this->_internal_tracingenabled() != 0) {
+  // optional bool tracingEnabled = 10;
+  if (_internal_has_tracingenabled()) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteBoolToArray(10, this->_internal_tracingenabled(), target);
   }
 
-  // uint32 tracingModulesBlacklist = 11;
-  if (this->_internal_tracingmodulesblacklist() != 0) {
+  // optional uint32 tracingModulesBlacklist = 11;
+  if (_internal_has_tracingmodulesblacklist()) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(11, this->_internal_tracingmodulesblacklist(), target);
   }
@@ -504,62 +581,67 @@ size_t ReconfigureBody::ByteSizeLong() const {
       _impl_.tags_.Get(i));
   }
 
-  // string statsd = 6;
-  if (!this->_internal_statsd().empty()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_statsd());
-  }
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x000000ffu) {
+    // optional string statsd = 6;
+    if (cached_has_bits & 0x00000001u) {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+          this->_internal_statsd());
+    }
 
-  // string statsdBucket = 7;
-  if (!this->_internal_statsdbucket().empty()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_statsdbucket());
-  }
+    // optional string statsdBucket = 7;
+    if (cached_has_bits & 0x00000002u) {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+          this->_internal_statsdbucket());
+    }
 
-  // string statsdTags = 8;
-  if (!this->_internal_statsdtags().empty()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_statsdtags());
-  }
+    // optional string statsdTags = 8;
+    if (cached_has_bits & 0x00000004u) {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+          this->_internal_statsdtags());
+    }
 
-  // uint32 blockedLoopThreshold = 1;
-  if (this->_internal_blockedloopthreshold() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_blockedloopthreshold());
-  }
+    // optional uint32 blockedLoopThreshold = 1;
+    if (cached_has_bits & 0x00000008u) {
+      total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_blockedloopthreshold());
+    }
 
-  // uint32 interval = 2;
-  if (this->_internal_interval() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_interval());
-  }
+    // optional uint32 interval = 2;
+    if (cached_has_bits & 0x00000010u) {
+      total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_interval());
+    }
 
-  // bool pauseMetrics = 3;
-  if (this->_internal_pausemetrics() != 0) {
-    total_size += 1 + 1;
-  }
+    // optional bool pauseMetrics = 3;
+    if (cached_has_bits & 0x00000020u) {
+      total_size += 1 + 1;
+    }
 
-  // bool promiseTracking = 4;
-  if (this->_internal_promisetracking() != 0) {
-    total_size += 1 + 1;
-  }
+    // optional bool promiseTracking = 4;
+    if (cached_has_bits & 0x00000040u) {
+      total_size += 1 + 1;
+    }
 
-  // bool redactSnapshots = 5;
-  if (this->_internal_redactsnapshots() != 0) {
-    total_size += 1 + 1;
-  }
+    // optional bool redactSnapshots = 5;
+    if (cached_has_bits & 0x00000080u) {
+      total_size += 1 + 1;
+    }
 
-  // bool tracingEnabled = 10;
-  if (this->_internal_tracingenabled() != 0) {
-    total_size += 1 + 1;
   }
+  if (cached_has_bits & 0x00000300u) {
+    // optional bool tracingEnabled = 10;
+    if (cached_has_bits & 0x00000100u) {
+      total_size += 1 + 1;
+    }
 
-  // uint32 tracingModulesBlacklist = 11;
-  if (this->_internal_tracingmodulesblacklist() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_tracingmodulesblacklist());
+    // optional uint32 tracingModulesBlacklist = 11;
+    if (cached_has_bits & 0x00000200u) {
+      total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_tracingmodulesblacklist());
+    }
+
   }
-
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -579,35 +661,42 @@ void ReconfigureBody::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const 
   (void) cached_has_bits;
 
   _this->_impl_.tags_.MergeFrom(from._impl_.tags_);
-  if (!from._internal_statsd().empty()) {
-    _this->_internal_set_statsd(from._internal_statsd());
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (cached_has_bits & 0x000000ffu) {
+    if (cached_has_bits & 0x00000001u) {
+      _this->_internal_set_statsd(from._internal_statsd());
+    }
+    if (cached_has_bits & 0x00000002u) {
+      _this->_internal_set_statsdbucket(from._internal_statsdbucket());
+    }
+    if (cached_has_bits & 0x00000004u) {
+      _this->_internal_set_statsdtags(from._internal_statsdtags());
+    }
+    if (cached_has_bits & 0x00000008u) {
+      _this->_impl_.blockedloopthreshold_ = from._impl_.blockedloopthreshold_;
+    }
+    if (cached_has_bits & 0x00000010u) {
+      _this->_impl_.interval_ = from._impl_.interval_;
+    }
+    if (cached_has_bits & 0x00000020u) {
+      _this->_impl_.pausemetrics_ = from._impl_.pausemetrics_;
+    }
+    if (cached_has_bits & 0x00000040u) {
+      _this->_impl_.promisetracking_ = from._impl_.promisetracking_;
+    }
+    if (cached_has_bits & 0x00000080u) {
+      _this->_impl_.redactsnapshots_ = from._impl_.redactsnapshots_;
+    }
+    _this->_impl_._has_bits_[0] |= cached_has_bits;
   }
-  if (!from._internal_statsdbucket().empty()) {
-    _this->_internal_set_statsdbucket(from._internal_statsdbucket());
-  }
-  if (!from._internal_statsdtags().empty()) {
-    _this->_internal_set_statsdtags(from._internal_statsdtags());
-  }
-  if (from._internal_blockedloopthreshold() != 0) {
-    _this->_internal_set_blockedloopthreshold(from._internal_blockedloopthreshold());
-  }
-  if (from._internal_interval() != 0) {
-    _this->_internal_set_interval(from._internal_interval());
-  }
-  if (from._internal_pausemetrics() != 0) {
-    _this->_internal_set_pausemetrics(from._internal_pausemetrics());
-  }
-  if (from._internal_promisetracking() != 0) {
-    _this->_internal_set_promisetracking(from._internal_promisetracking());
-  }
-  if (from._internal_redactsnapshots() != 0) {
-    _this->_internal_set_redactsnapshots(from._internal_redactsnapshots());
-  }
-  if (from._internal_tracingenabled() != 0) {
-    _this->_internal_set_tracingenabled(from._internal_tracingenabled());
-  }
-  if (from._internal_tracingmodulesblacklist() != 0) {
-    _this->_internal_set_tracingmodulesblacklist(from._internal_tracingmodulesblacklist());
+  if (cached_has_bits & 0x00000300u) {
+    if (cached_has_bits & 0x00000100u) {
+      _this->_impl_.tracingenabled_ = from._impl_.tracingenabled_;
+    }
+    if (cached_has_bits & 0x00000200u) {
+      _this->_impl_.tracingmodulesblacklist_ = from._impl_.tracingmodulesblacklist_;
+    }
+    _this->_impl_._has_bits_[0] |= cached_has_bits;
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -628,6 +717,7 @@ void ReconfigureBody::InternalSwap(ReconfigureBody* other) {
   auto* lhs_arena = GetArenaForAllocation();
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   _impl_.tags_.InternalSwap(&other->_impl_.tags_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.statsd_, lhs_arena,

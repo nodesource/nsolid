@@ -5,17 +5,17 @@ import "common.proto";
 package grpcagent;
 
 message ReconfigureBody {
-  uint32 blockedLoopThreshold = 1;
-  uint32 interval = 2;
-  bool pauseMetrics = 3;
-  bool promiseTracking = 4;
-  bool redactSnapshots = 5;
-  string statsd = 6;
-  string statsdBucket = 7;
-  string statsdTags = 8;
+  optional uint32 blockedLoopThreshold = 1;
+  optional uint32 interval = 2;
+  optional bool pauseMetrics = 3;
+  optional bool promiseTracking = 4;
+  optional bool redactSnapshots = 5;
+  optional string statsd = 6;
+  optional string statsdBucket = 7;
+  optional string statsdTags = 8;
   repeated string tags = 9;
-  bool tracingEnabled = 10;
-  uint32 tracingModulesBlacklist = 11;
+  optional bool tracingEnabled = 10;
+  optional uint32 tracingModulesBlacklist = 11;
 }
 
 message ReconfigureEvent {
