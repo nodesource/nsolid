@@ -641,8 +641,6 @@ static string_vector tracing_fields({ "/tracingEnabled",
 
 
 int GrpcAgent::config(const json& config) {
-  int ret;
-
   json old_config = config_;
   config_ = config;
   json diff = json::diff(old_config, config_);
@@ -882,7 +880,6 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
   PopulateBlockedLoopEvent(event, stor);
 
   auto context = GrpcClient::MakeClientContext();
-  grpcagent::EventResponse* event_response = google::protobuf::Arena::Create<grpcagent::EventResponse>(arena.get());
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
@@ -909,7 +906,6 @@ void GrpcAgent::send_info_event(const char* req_id) {
   PopulateInfoEvent(info_event, req_id);
 
   auto context = GrpcClient::MakeClientContext();
-  grpcagent::EventResponse* event_response = google::protobuf::Arena::Create<grpcagent::EventResponse>(arena.get());
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
@@ -936,7 +932,6 @@ void GrpcAgent::send_packages_event(const char* req_id) {
   PopulatePackagesEvent(packages_event, req_id);
 
   auto context = GrpcClient::MakeClientContext();
-  grpcagent::EventResponse* event_response = google::protobuf::Arena::Create<grpcagent::EventResponse>(arena.get());
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
@@ -963,7 +958,6 @@ void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
   PopulateUnblockedLoopEvent(event, stor);
 
   auto context = GrpcClient::MakeClientContext();
-  grpcagent::EventResponse* event_response = google::protobuf::Arena::Create<grpcagent::EventResponse>(arena.get());
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
