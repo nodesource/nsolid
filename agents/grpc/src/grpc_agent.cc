@@ -848,22 +848,45 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
 }
   */
   json out = json::object();
-  out["blockedLoopThreshold"] = body.blockedloopthreshold();
-  out["interval"] = body.interval();
-  out["pauseMetrics"] = body.pausemetrics();
-  out["promiseTracking"] = body.promisetracking();
-  out["redactSnapshots"] = body.redactsnapshots();
-  out["statsd"] = body.statsd();
-  out["statsdBucket"] = body.statsdbucket();
-  out["statsdTags"] = body.statsdtags();
-  if (body.tags_size() > 0) {
-    out["tags"] = json::array();
-    for (int i = 0; i < body.tags_size(); i++) {
-      out["tags"].push_back(body.tags(i));
-    }
+  if (body.has_blockedloopthreshold()) {
+      out["blockedLoopThreshold"] = body.blockedloopthreshold();
   }
-  out["tracingEnabled"] = body.tracingenabled();
-  out["tracingModulesBlacklist"] = body.tracingmodulesblacklist();
+  if (body.has_interval()) {
+      out["interval"] = body.interval();
+  }
+  if (body.has_pausemetrics()) {
+      out["pauseMetrics"] = body.pausemetrics();
+  }
+  if (body.has_promisetracking()) {
+      out["promiseTracking"] = body.promisetracking();
+  }
+  if (body.has_redactsnapshots()) {
+      out["redactSnapshots"] = body.redactsnapshots();
+  }
+  if (body.has_statsd()) {
+      out["statsd"] = body.statsd();
+  }
+  if (body.has_statsdbucket()) {
+      out["statsdBucket"] = body.statsdbucket();
+  }
+  if (body.has_statsdtags()) {
+      out["statsdTags"] = body.statsdtags();
+  }
+  if (body.tags_size() > 0) {
+      out["tags"] = json::array();
+      for (int i = 0; i < body.tags_size(); i++) {
+          out["tags"].push_back(body.tags(i));
+      }
+  }
+  if (body.has_tracingenabled()) {
+      out["tracingEnabled"] = body.tracingenabled();
+  }
+  if (body.has_tracingmodulesblacklist()) {
+      out["tracingModulesBlacklist"] = body.tracingmodulesblacklist();
+  }
+
+  DebugJSON("Reconfigure out: \n%s\n", out);
+
   UpdateConfig(out.dump());
 }
 
