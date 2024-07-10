@@ -1050,7 +1050,7 @@
         'src/cpp/client/call_credentials.cc',
         'src/cpp/client/channel_cc.cc',
         'src/cpp/client/channel_credentials.cc',
-        'src/cpp/client/channel_test_peer.cc',
+        # 'src/cpp/client/channel_test_peer.cc',
         'src/cpp/client/client_callback.cc',
         'src/cpp/client/client_context.cc',
         'src/cpp/client/client_interceptor.cc',
