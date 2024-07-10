@@ -128,17 +128,15 @@ static int InternalDelegateAsyncExport(
 
   (stub->async()
       ->*exportFunc)(call_data->grpc_context.get(), call_data->event, call_data->event_response,
-               [call_data](::grpc::Status grpc_status) {
-
-                 call_data->grpc_status = grpc_status;
-                 if (call_data->grpc_status.ok())
-                 {
-                   fprintf(stderr, "InternalDelegateAsyncExport() success\n");
-                 }
-                  
-                  call_data->result_callback(call_data->grpc_status, std::move(call_data->arena), *call_data->event, call_data->event_response);
-               });
-
+    [call_data](::grpc::Status grpc_status) {
+      call_data->grpc_status = grpc_status;
+      if (call_data->grpc_status.ok())
+      {
+        fprintf(stderr, "InternalDelegateAsyncExport() success\n");
+      }
+      
+      call_data->result_callback(call_data->grpc_status, std::move(call_data->arena), *call_data->event, call_data->event_response);
+    });
   return 0;
 }
 
