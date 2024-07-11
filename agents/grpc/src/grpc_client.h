@@ -60,7 +60,8 @@ class GrpcClient {
   /**
    * Create gRPC client context to call RPC.
    */
-  static std::unique_ptr<::grpc::ClientContext> MakeClientContext();
+  static std::unique_ptr<::grpc::ClientContext> MakeClientContext(const std::string& agent_id,
+                                                                  const std::string& saas);
 
   /**
    * Create N|Solid service stub to communicate with the N|Solid Console.

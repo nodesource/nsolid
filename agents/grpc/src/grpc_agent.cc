@@ -243,7 +243,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         trace_flags_(0),
                         proc_metrics_(),
                         proc_prev_stor_(),
-                        config_(json::object()) {
+                        config_(json::object()),
+                        agent_id_(GetAgentId()) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
@@ -666,6 +667,15 @@ int GrpcAgent::config(const json& config) {
     }
   }
 
+  if (utils::find_any_fields_in_diff(diff, { "/saas" })) {
+    auto it = config_.find("saas");
+    if (it != config_.end()) {
+      saas_ = *it;
+    } else {
+      saas_.clear();
+    }
+  }
+
   if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
     setup_blocked_loop_hooks();
   }
@@ -902,7 +912,7 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
   grpcagent::BlockedLoopEvent* event = google::protobuf::Arena::Create<grpcagent::BlockedLoopEvent>(arena.get());
   PopulateBlockedLoopEvent(event, stor);
 
-  auto context = GrpcClient::MakeClientContext();
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
@@ -928,7 +938,7 @@ void GrpcAgent::send_info_event(const char* req_id) {
   grpcagent::InfoEvent* info_event = google::protobuf::Arena::Create<grpcagent::InfoEvent>(arena.get());
   PopulateInfoEvent(info_event, req_id);
 
-  auto context = GrpcClient::MakeClientContext();
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
@@ -954,7 +964,7 @@ void GrpcAgent::send_packages_event(const char* req_id) {
   auto packages_event = google::protobuf::Arena::Create<grpcagent::PackagesEvent>(arena.get());
   PopulatePackagesEvent(packages_event, req_id);
 
-  auto context = GrpcClient::MakeClientContext();
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
@@ -980,7 +990,7 @@ void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
   grpcagent::UnblockedLoopEvent* event = google::protobuf::Arena::Create<grpcagent::UnblockedLoopEvent>(arena.get());
   PopulateUnblockedLoopEvent(event, stor);
 
-  auto context = GrpcClient::MakeClientContext();
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
