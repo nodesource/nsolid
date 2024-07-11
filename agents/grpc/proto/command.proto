@@ -9,9 +9,10 @@ import "reconfigure.proto";
 
 package grpcagent;
 
-message CommandBody {
-  oneof body {
+message CommandArgs {
+  oneof args {
     ReconfigureBody reconfigure = 1;
+    CPUProfileArgs cpu_profile = 2
   }
 }
 
@@ -20,7 +21,7 @@ message CommandRequest {
   uint32 version = 2;
   string id = 3;
   string command = 4;
-  CommandBody body = 5;
+  CommandArgs args = 5;
 }
 
 message CommandResponse {
