@@ -172,6 +172,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   nsuv::ns_async config_msg_;
   TSQueue<nlohmann::json> config_msg_q_;
   nlohmann::json config_;
+  std::string agent_id_;
+  std::string saas_;
 
   // For the Logging API
   nsuv::ns_async log_msg_;
