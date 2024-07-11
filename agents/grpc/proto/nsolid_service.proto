@@ -10,6 +10,7 @@ package grpcagent;
 
 service NSolidService {
   rpc Command (stream CommandResponse) returns (stream CommandRequest) {}
+  rpc BinaryAssetsCommand (stream BinaryData) returns (CommandRequest) {}
   rpc ExportInfo (InfoEvent) returns (EventResponse) {}
   rpc ExportPackages (PackagesEvent) returns (EventResponse) {}
   rpc ExportBlockedLoop (BlockedLoopEvent) returns (EventResponse) {}

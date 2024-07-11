@@ -8,8 +8,7 @@ message Time {
 }
 
 message CommonResponse {
-  string agentId = 1;
-  string requestId = 2;
-  string command = 3;
-  Time recorded = 4;
+  string requestId = 1;
+  string command = 2;
+  Time recorded = 3;
 }
