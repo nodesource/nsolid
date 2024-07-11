@@ -68,11 +68,9 @@ void CommandStream::Write(grpcagent::CommandResponse&& resp) {
 }
 
 GrpcClient::GrpcClient() {
-
 }
 
 GrpcClient::~GrpcClient() {
-
 }
 
 /**
@@ -88,8 +86,11 @@ std::shared_ptr<::grpc::Channel> GrpcClient::MakeChannel() {
 /**
   * Create gRPC client context to call RPC.
   */
-std::unique_ptr<::grpc::ClientContext> GrpcClient::MakeClientContext() {
+std::unique_ptr<::grpc::ClientContext> GrpcClient::MakeClientContext(const std::string& agent_id,
+                                                                     const std::string& saas) {
   std::unique_ptr<::grpc::ClientContext> context = std::make_unique<::grpc::ClientContext>();
+  context->AddMetadata("NSOLID-AGENT-ID", agent_id);
+  context->AddMetadata("NSOLID-SAAS-TOKEN", saas);
   return context;
 }
 
