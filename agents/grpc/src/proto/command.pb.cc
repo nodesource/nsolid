@@ -21,26 +21,26 @@ namespace _pb = ::PROTOBUF_NAMESPACE_ID;
 namespace _pbi = _pb::internal;
 
 namespace grpcagent {
-PROTOBUF_CONSTEXPR CommandBody::CommandBody(
+PROTOBUF_CONSTEXPR CommandArgs::CommandArgs(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.body_)*/{}
+    /*decltype(_impl_.args_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_._oneof_case_)*/{}} {}
-struct CommandBodyDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR CommandBodyDefaultTypeInternal()
+struct CommandArgsDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR CommandArgsDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~CommandBodyDefaultTypeInternal() {}
+  ~CommandArgsDefaultTypeInternal() {}
   union {
-    CommandBody _instance;
+    CommandArgs _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CommandBodyDefaultTypeInternal _CommandBody_default_instance_;
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CommandArgsDefaultTypeInternal _CommandArgs_default_instance_;
 PROTOBUF_CONSTEXPR CommandRequest::CommandRequest(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.requestid_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.id_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.command_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.body_)*/nullptr
+  , /*decltype(_impl_.args_)*/nullptr
   , /*decltype(_impl_.version_)*/0u
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct CommandRequestDefaultTypeInternal {
@@ -72,13 +72,13 @@ static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors
 
 const uint32_t TableStruct_command_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grpcagent::CommandBody, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::CommandArgs, _internal_metadata_),
   ~0u,  // no _extensions_
-  PROTOBUF_FIELD_OFFSET(::grpcagent::CommandBody, _impl_._oneof_case_[0]),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::CommandArgs, _impl_._oneof_case_[0]),
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   ::_pbi::kInvalidFieldOffsetTag,
-  PROTOBUF_FIELD_OFFSET(::grpcagent::CommandBody, _impl_.body_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::CommandArgs, _impl_.args_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandRequest, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -89,7 +89,7 @@ const uint32_t TableStruct_command_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandRequest, _impl_.version_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandRequest, _impl_.id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandRequest, _impl_.command_),
-  PROTOBUF_FIELD_OFFSET(::grpcagent::CommandRequest, _impl_.body_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::CommandRequest, _impl_.args_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandResponse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -99,24 +99,24 @@ const uint32_t TableStruct_command_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandResponse, _impl_.error_message_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, -1, sizeof(::grpcagent::CommandBody)},
+  { 0, -1, -1, sizeof(::grpcagent::CommandArgs)},
   { 8, -1, -1, sizeof(::grpcagent::CommandRequest)},
   { 19, -1, -1, sizeof(::grpcagent::CommandResponse)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
-  &::grpcagent::_CommandBody_default_instance_._instance,
+  &::grpcagent::_CommandArgs_default_instance_._instance,
   &::grpcagent::_CommandRequest_default_instance_._instance,
   &::grpcagent::_CommandResponse_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_command_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\rcommand.proto\022\tgrpcagent\032\021reconfigure."
-  "proto\"H\n\013CommandBody\0221\n\013reconfigure\030\001 \001("
-  "\0132\032.grpcagent.ReconfigureBodyH\000B\006\n\004body\""
+  "proto\"H\n\013CommandArgs\0221\n\013reconfigure\030\001 \001("
+  "\0132\032.grpcagent.ReconfigureBodyH\000B\006\n\004args\""
   "w\n\016CommandRequest\022\021\n\trequestId\030\001 \001(\t\022\017\n\007"
   "version\030\002 \001(\r\022\n\n\002id\030\003 \001(\t\022\017\n\007command\030\004 \001"
-  "(\t\022$\n\004body\030\005 \001(\0132\026.grpcagent.CommandBody"
+  "(\t\022$\n\004args\030\005 \001(\0132\026.grpcagent.CommandArgs"
   "\"(\n\017CommandResponse\022\025\n\rerror_message\030\001 \001"
   "(\tb\006proto3"
   ;
@@ -142,18 +142,18 @@ namespace grpcagent {
 
 // ===================================================================
 
-class CommandBody::_Internal {
+class CommandArgs::_Internal {
  public:
-  static const ::grpcagent::ReconfigureBody& reconfigure(const CommandBody* msg);
+  static const ::grpcagent::ReconfigureBody& reconfigure(const CommandArgs* msg);
 };
 
 const ::grpcagent::ReconfigureBody&
-CommandBody::_Internal::reconfigure(const CommandBody* msg) {
-  return *msg->_impl_.body_.reconfigure_;
+CommandArgs::_Internal::reconfigure(const CommandArgs* msg) {
+  return *msg->_impl_.args_.reconfigure_;
 }
-void CommandBody::set_allocated_reconfigure(::grpcagent::ReconfigureBody* reconfigure) {
+void CommandArgs::set_allocated_reconfigure(::grpcagent::ReconfigureBody* reconfigure) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  clear_body();
+  clear_args();
   if (reconfigure) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
         ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
@@ -163,61 +163,61 @@ void CommandBody::set_allocated_reconfigure(::grpcagent::ReconfigureBody* reconf
           message_arena, reconfigure, submessage_arena);
     }
     set_has_reconfigure();
-    _impl_.body_.reconfigure_ = reconfigure;
+    _impl_.args_.reconfigure_ = reconfigure;
   }
-  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandBody.reconfigure)
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandArgs.reconfigure)
 }
-void CommandBody::clear_reconfigure() {
+void CommandArgs::clear_reconfigure() {
   if (_internal_has_reconfigure()) {
     if (GetArenaForAllocation() == nullptr) {
-      delete _impl_.body_.reconfigure_;
+      delete _impl_.args_.reconfigure_;
     }
-    clear_has_body();
+    clear_has_args();
   }
 }
-CommandBody::CommandBody(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+CommandArgs::CommandArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grpcagent.CommandBody)
+  // @@protoc_insertion_point(arena_constructor:grpcagent.CommandArgs)
 }
-CommandBody::CommandBody(const CommandBody& from)
+CommandArgs::CommandArgs(const CommandArgs& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  CommandBody* const _this = this; (void)_this;
+  CommandArgs* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.body_){}
+      decltype(_impl_.args_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , /*decltype(_impl_._oneof_case_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  clear_has_body();
-  switch (from.body_case()) {
+  clear_has_args();
+  switch (from.args_case()) {
     case kReconfigure: {
       _this->_internal_mutable_reconfigure()->::grpcagent::ReconfigureBody::MergeFrom(
           from._internal_reconfigure());
       break;
     }
-    case BODY_NOT_SET: {
+    case ARGS_NOT_SET: {
       break;
     }
   }
-  // @@protoc_insertion_point(copy_constructor:grpcagent.CommandBody)
+  // @@protoc_insertion_point(copy_constructor:grpcagent.CommandArgs)
 }
 
-inline void CommandBody::SharedCtor(
+inline void CommandArgs::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.body_){}
+      decltype(_impl_.args_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , /*decltype(_impl_._oneof_case_)*/{}
   };
-  clear_has_body();
+  clear_has_args();
 }
 
-CommandBody::~CommandBody() {
-  // @@protoc_insertion_point(destructor:grpcagent.CommandBody)
+CommandArgs::~CommandArgs() {
+  // @@protoc_insertion_point(destructor:grpcagent.CommandArgs)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -225,45 +225,45 @@ CommandBody::~CommandBody() {
   SharedDtor();
 }
 
-inline void CommandBody::SharedDtor() {
+inline void CommandArgs::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  if (has_body()) {
-    clear_body();
+  if (has_args()) {
+    clear_args();
   }
 }
 
-void CommandBody::SetCachedSize(int size) const {
+void CommandArgs::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void CommandBody::clear_body() {
-// @@protoc_insertion_point(one_of_clear_start:grpcagent.CommandBody)
-  switch (body_case()) {
+void CommandArgs::clear_args() {
+// @@protoc_insertion_point(one_of_clear_start:grpcagent.CommandArgs)
+  switch (args_case()) {
     case kReconfigure: {
       if (GetArenaForAllocation() == nullptr) {
-        delete _impl_.body_.reconfigure_;
+        delete _impl_.args_.reconfigure_;
       }
       break;
     }
-    case BODY_NOT_SET: {
+    case ARGS_NOT_SET: {
       break;
     }
   }
-  _impl_._oneof_case_[0] = BODY_NOT_SET;
+  _impl_._oneof_case_[0] = ARGS_NOT_SET;
 }
 
 
-void CommandBody::Clear() {
-// @@protoc_insertion_point(message_clear_start:grpcagent.CommandBody)
+void CommandArgs::Clear() {
+// @@protoc_insertion_point(message_clear_start:grpcagent.CommandArgs)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  clear_body();
+  clear_args();
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* CommandBody::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* CommandArgs::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -300,9 +300,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* CommandBody::_InternalSerialize(
+uint8_t* CommandArgs::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grpcagent.CommandBody)
+  // @@protoc_insertion_point(serialize_to_array_start:grpcagent.CommandArgs)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -317,80 +317,80 @@ uint8_t* CommandBody::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grpcagent.CommandBody)
+  // @@protoc_insertion_point(serialize_to_array_end:grpcagent.CommandArgs)
   return target;
 }
 
-size_t CommandBody::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grpcagent.CommandBody)
+size_t CommandArgs::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grpcagent.CommandArgs)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  switch (body_case()) {
+  switch (args_case()) {
     // .grpcagent.ReconfigureBody reconfigure = 1;
     case kReconfigure: {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-          *_impl_.body_.reconfigure_);
+          *_impl_.args_.reconfigure_);
       break;
     }
-    case BODY_NOT_SET: {
+    case ARGS_NOT_SET: {
       break;
     }
   }
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData CommandBody::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData CommandArgs::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    CommandBody::MergeImpl
+    CommandArgs::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*CommandBody::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*CommandArgs::GetClassData() const { return &_class_data_; }
 
 
-void CommandBody::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<CommandBody*>(&to_msg);
-  auto& from = static_cast<const CommandBody&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grpcagent.CommandBody)
+void CommandArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<CommandArgs*>(&to_msg);
+  auto& from = static_cast<const CommandArgs&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grpcagent.CommandArgs)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  switch (from.body_case()) {
+  switch (from.args_case()) {
     case kReconfigure: {
       _this->_internal_mutable_reconfigure()->::grpcagent::ReconfigureBody::MergeFrom(
           from._internal_reconfigure());
       break;
     }
-    case BODY_NOT_SET: {
+    case ARGS_NOT_SET: {
       break;
     }
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void CommandBody::CopyFrom(const CommandBody& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grpcagent.CommandBody)
+void CommandArgs::CopyFrom(const CommandArgs& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grpcagent.CommandArgs)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool CommandBody::IsInitialized() const {
+bool CommandArgs::IsInitialized() const {
   return true;
 }
 
-void CommandBody::InternalSwap(CommandBody* other) {
+void CommandArgs::InternalSwap(CommandArgs* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_.body_, other->_impl_.body_);
+  swap(_impl_.args_, other->_impl_.args_);
   swap(_impl_._oneof_case_[0], other->_impl_._oneof_case_[0]);
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata CommandBody::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata CommandArgs::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_command_2eproto_getter, &descriptor_table_command_2eproto_once,
       file_level_metadata_command_2eproto[0]);
@@ -400,12 +400,12 @@ void CommandBody::InternalSwap(CommandBody* other) {
 
 class CommandRequest::_Internal {
  public:
-  static const ::grpcagent::CommandBody& body(const CommandRequest* msg);
+  static const ::grpcagent::CommandArgs& args(const CommandRequest* msg);
 };
 
-const ::grpcagent::CommandBody&
-CommandRequest::_Internal::body(const CommandRequest* msg) {
-  return *msg->_impl_.body_;
+const ::grpcagent::CommandArgs&
+CommandRequest::_Internal::args(const CommandRequest* msg) {
+  return *msg->_impl_.args_;
 }
 CommandRequest::CommandRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -420,7 +420,7 @@ CommandRequest::CommandRequest(const CommandRequest& from)
       decltype(_impl_.requestid_){}
     , decltype(_impl_.id_){}
     , decltype(_impl_.command_){}
-    , decltype(_impl_.body_){nullptr}
+    , decltype(_impl_.args_){nullptr}
     , decltype(_impl_.version_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
@@ -449,8 +449,8 @@ CommandRequest::CommandRequest(const CommandRequest& from)
     _this->_impl_.command_.Set(from._internal_command(), 
       _this->GetArenaForAllocation());
   }
-  if (from._internal_has_body()) {
-    _this->_impl_.body_ = new ::grpcagent::CommandBody(*from._impl_.body_);
+  if (from._internal_has_args()) {
+    _this->_impl_.args_ = new ::grpcagent::CommandArgs(*from._impl_.args_);
   }
   _this->_impl_.version_ = from._impl_.version_;
   // @@protoc_insertion_point(copy_constructor:grpcagent.CommandRequest)
@@ -464,7 +464,7 @@ inline void CommandRequest::SharedCtor(
       decltype(_impl_.requestid_){}
     , decltype(_impl_.id_){}
     , decltype(_impl_.command_){}
-    , decltype(_impl_.body_){nullptr}
+    , decltype(_impl_.args_){nullptr}
     , decltype(_impl_.version_){0u}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -496,7 +496,7 @@ inline void CommandRequest::SharedDtor() {
   _impl_.requestid_.Destroy();
   _impl_.id_.Destroy();
   _impl_.command_.Destroy();
-  if (this != internal_default_instance()) delete _impl_.body_;
+  if (this != internal_default_instance()) delete _impl_.args_;
 }
 
 void CommandRequest::SetCachedSize(int size) const {
@@ -512,10 +512,10 @@ void CommandRequest::Clear() {
   _impl_.requestid_.ClearToEmpty();
   _impl_.id_.ClearToEmpty();
   _impl_.command_.ClearToEmpty();
-  if (GetArenaForAllocation() == nullptr && _impl_.body_ != nullptr) {
-    delete _impl_.body_;
+  if (GetArenaForAllocation() == nullptr && _impl_.args_ != nullptr) {
+    delete _impl_.args_;
   }
-  _impl_.body_ = nullptr;
+  _impl_.args_ = nullptr;
   _impl_.version_ = 0u;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
@@ -564,10 +564,10 @@ const char* CommandRequest::_InternalParse(const char* ptr, ::_pbi::ParseContext
         } else
           goto handle_unusual;
         continue;
-      // .grpcagent.CommandBody body = 5;
+      // .grpcagent.CommandArgs args = 5;
       case 5:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
-          ptr = ctx->ParseMessage(_internal_mutable_body(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_args(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -637,11 +637,11 @@ uint8_t* CommandRequest::_InternalSerialize(
         4, this->_internal_command(), target);
   }
 
-  // .grpcagent.CommandBody body = 5;
-  if (this->_internal_has_body()) {
+  // .grpcagent.CommandArgs args = 5;
+  if (this->_internal_has_args()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(5, _Internal::body(this),
-        _Internal::body(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(5, _Internal::args(this),
+        _Internal::args(this).GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -681,11 +681,11 @@ size_t CommandRequest::ByteSizeLong() const {
         this->_internal_command());
   }
 
-  // .grpcagent.CommandBody body = 5;
-  if (this->_internal_has_body()) {
+  // .grpcagent.CommandArgs args = 5;
+  if (this->_internal_has_args()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.body_);
+        *_impl_.args_);
   }
 
   // uint32 version = 2;
@@ -720,9 +720,9 @@ void CommandRequest::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const :
   if (!from._internal_command().empty()) {
     _this->_internal_set_command(from._internal_command());
   }
-  if (from._internal_has_body()) {
-    _this->_internal_mutable_body()->::grpcagent::CommandBody::MergeFrom(
-        from._internal_body());
+  if (from._internal_has_args()) {
+    _this->_internal_mutable_args()->::grpcagent::CommandArgs::MergeFrom(
+        from._internal_args());
   }
   if (from._internal_version() != 0) {
     _this->_internal_set_version(from._internal_version());
@@ -761,9 +761,9 @@ void CommandRequest::InternalSwap(CommandRequest* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(CommandRequest, _impl_.version_)
       + sizeof(CommandRequest::_impl_.version_)
-      - PROTOBUF_FIELD_OFFSET(CommandRequest, _impl_.body_)>(
-          reinterpret_cast<char*>(&_impl_.body_),
-          reinterpret_cast<char*>(&other->_impl_.body_));
+      - PROTOBUF_FIELD_OFFSET(CommandRequest, _impl_.args_)>(
+          reinterpret_cast<char*>(&_impl_.args_),
+          reinterpret_cast<char*>(&other->_impl_.args_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata CommandRequest::GetMetadata() const {
@@ -978,9 +978,9 @@ void CommandResponse::InternalSwap(CommandResponse* other) {
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace grpcagent
 PROTOBUF_NAMESPACE_OPEN
-template<> PROTOBUF_NOINLINE ::grpcagent::CommandBody*
-Arena::CreateMaybeMessage< ::grpcagent::CommandBody >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grpcagent::CommandBody >(arena);
+template<> PROTOBUF_NOINLINE ::grpcagent::CommandArgs*
+Arena::CreateMaybeMessage< ::grpcagent::CommandArgs >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grpcagent::CommandArgs >(arena);
 }
 template<> PROTOBUF_NOINLINE ::grpcagent::CommandRequest*
 Arena::CreateMaybeMessage< ::grpcagent::CommandRequest >(Arena* arena) {

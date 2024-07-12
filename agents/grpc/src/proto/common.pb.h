@@ -340,26 +340,11 @@ class CommonResponse final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kAgentIdFieldNumber = 1,
-    kRequestIdFieldNumber = 2,
-    kCommandFieldNumber = 3,
-    kRecordedFieldNumber = 4,
+    kRequestIdFieldNumber = 1,
+    kCommandFieldNumber = 2,
+    kRecordedFieldNumber = 3,
   };
-  // string agentId = 1;
-  void clear_agentid();
-  const std::string& agentid() const;
-  template <typename ArgT0 = const std::string&, typename... ArgT>
-  void set_agentid(ArgT0&& arg0, ArgT... args);
-  std::string* mutable_agentid();
-  PROTOBUF_NODISCARD std::string* release_agentid();
-  void set_allocated_agentid(std::string* agentid);
-  private:
-  const std::string& _internal_agentid() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_agentid(const std::string& value);
-  std::string* _internal_mutable_agentid();
-  public:
-
-  // string requestId = 2;
+  // string requestId = 1;
   void clear_requestid();
   const std::string& requestid() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -373,7 +358,7 @@ class CommonResponse final :
   std::string* _internal_mutable_requestid();
   public:
 
-  // string command = 3;
+  // string command = 2;
   void clear_command();
   const std::string& command() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -387,7 +372,7 @@ class CommonResponse final :
   std::string* _internal_mutable_command();
   public:
 
-  // .grpcagent.Time recorded = 4;
+  // .grpcagent.Time recorded = 3;
   bool has_recorded() const;
   private:
   bool _internal_has_recorded() const;
@@ -413,7 +398,6 @@ class CommonResponse final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr agentid_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr requestid_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr command_;
     ::grpcagent::Time* recorded_;
@@ -477,57 +461,7 @@ inline void Time::set_nanoseconds(uint32_t value) {
 
 // CommonResponse
 
-// string agentId = 1;
-inline void CommonResponse::clear_agentid() {
-  _impl_.agentid_.ClearToEmpty();
-}
-inline const std::string& CommonResponse::agentid() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommonResponse.agentId)
-  return _internal_agentid();
-}
-template <typename ArgT0, typename... ArgT>
-inline PROTOBUF_ALWAYS_INLINE
-void CommonResponse::set_agentid(ArgT0&& arg0, ArgT... args) {
- 
- _impl_.agentid_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:grpcagent.CommonResponse.agentId)
-}
-inline std::string* CommonResponse::mutable_agentid() {
-  std::string* _s = _internal_mutable_agentid();
-  // @@protoc_insertion_point(field_mutable:grpcagent.CommonResponse.agentId)
-  return _s;
-}
-inline const std::string& CommonResponse::_internal_agentid() const {
-  return _impl_.agentid_.Get();
-}
-inline void CommonResponse::_internal_set_agentid(const std::string& value) {
-  
-  _impl_.agentid_.Set(value, GetArenaForAllocation());
-}
-inline std::string* CommonResponse::_internal_mutable_agentid() {
-  
-  return _impl_.agentid_.Mutable(GetArenaForAllocation());
-}
-inline std::string* CommonResponse::release_agentid() {
-  // @@protoc_insertion_point(field_release:grpcagent.CommonResponse.agentId)
-  return _impl_.agentid_.Release();
-}
-inline void CommonResponse::set_allocated_agentid(std::string* agentid) {
-  if (agentid != nullptr) {
-    
-  } else {
-    
-  }
-  _impl_.agentid_.SetAllocated(agentid, GetArenaForAllocation());
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (_impl_.agentid_.IsDefault()) {
-    _impl_.agentid_.Set("", GetArenaForAllocation());
-  }
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommonResponse.agentId)
-}
-
-// string requestId = 2;
+// string requestId = 1;
 inline void CommonResponse::clear_requestid() {
   _impl_.requestid_.ClearToEmpty();
 }
@@ -577,7 +511,7 @@ inline void CommonResponse::set_allocated_requestid(std::string* requestid) {
   // @@protoc_insertion_point(field_set_allocated:grpcagent.CommonResponse.requestId)
 }
 
-// string command = 3;
+// string command = 2;
 inline void CommonResponse::clear_command() {
   _impl_.command_.ClearToEmpty();
 }
@@ -627,7 +561,7 @@ inline void CommonResponse::set_allocated_command(std::string* command) {
   // @@protoc_insertion_point(field_set_allocated:grpcagent.CommonResponse.command)
 }
 
-// .grpcagent.Time recorded = 4;
+// .grpcagent.Time recorded = 3;
 inline bool CommonResponse::_internal_has_recorded() const {
   return this != internal_default_instance() && _impl_.recorded_ != nullptr;
 }

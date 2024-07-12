@@ -37,8 +37,7 @@ struct TimeDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TimeDefaultTypeInternal _Time_default_instance_;
 PROTOBUF_CONSTEXPR CommonResponse::CommonResponse(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.agentid_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.requestid_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+    /*decltype(_impl_.requestid_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.command_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.recorded_)*/nullptr
   , /*decltype(_impl_._cached_size_)*/{}} {}
@@ -71,7 +70,6 @@ const uint32_t TableStruct_common_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(p
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grpcagent::CommonResponse, _impl_.agentid_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommonResponse, _impl_.requestid_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommonResponse, _impl_.command_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommonResponse, _impl_.recorded_),
@@ -88,14 +86,14 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_common_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\014common.proto\022\tgrpcagent\",\n\004Time\022\017\n\007sec"
-  "onds\030\001 \001(\004\022\023\n\013nanoseconds\030\002 \001(\r\"h\n\016Commo"
-  "nResponse\022\017\n\007agentId\030\001 \001(\t\022\021\n\trequestId\030"
-  "\002 \001(\t\022\017\n\007command\030\003 \001(\t\022!\n\010recorded\030\004 \001(\013"
-  "2\017.grpcagent.Timeb\006proto3"
+  "onds\030\001 \001(\004\022\023\n\013nanoseconds\030\002 \001(\r\"W\n\016Commo"
+  "nResponse\022\021\n\trequestId\030\001 \001(\t\022\017\n\007command\030"
+  "\002 \001(\t\022!\n\010recorded\030\003 \001(\0132\017.grpcagent.Time"
+  "b\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_common_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_common_2eproto = {
-    false, false, 185, descriptor_table_protodef_common_2eproto,
+    false, false, 168, descriptor_table_protodef_common_2eproto,
     "common.proto",
     &descriptor_table_common_2eproto_once, nullptr, 0, 2,
     schemas, file_default_instances, TableStruct_common_2eproto::offsets,
@@ -342,21 +340,12 @@ CommonResponse::CommonResponse(const CommonResponse& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   CommonResponse* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.agentid_){}
-    , decltype(_impl_.requestid_){}
+      decltype(_impl_.requestid_){}
     , decltype(_impl_.command_){}
     , decltype(_impl_.recorded_){nullptr}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  _impl_.agentid_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.agentid_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (!from._internal_agentid().empty()) {
-    _this->_impl_.agentid_.Set(from._internal_agentid(), 
-      _this->GetArenaForAllocation());
-  }
   _impl_.requestid_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.requestid_.Set("", GetArenaForAllocation());
@@ -384,16 +373,11 @@ inline void CommonResponse::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.agentid_){}
-    , decltype(_impl_.requestid_){}
+      decltype(_impl_.requestid_){}
     , decltype(_impl_.command_){}
     , decltype(_impl_.recorded_){nullptr}
     , /*decltype(_impl_._cached_size_)*/{}
   };
-  _impl_.agentid_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.agentid_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.requestid_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.requestid_.Set("", GetArenaForAllocation());
@@ -415,7 +399,6 @@ CommonResponse::~CommonResponse() {
 
 inline void CommonResponse::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  _impl_.agentid_.Destroy();
   _impl_.requestid_.Destroy();
   _impl_.command_.Destroy();
   if (this != internal_default_instance()) delete _impl_.recorded_;
@@ -431,7 +414,6 @@ void CommonResponse::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.agentid_.ClearToEmpty();
   _impl_.requestid_.ClearToEmpty();
   _impl_.command_.ClearToEmpty();
   if (GetArenaForAllocation() == nullptr && _impl_.recorded_ != nullptr) {
@@ -447,19 +429,9 @@ const char* CommonResponse::_InternalParse(const char* ptr, ::_pbi::ParseContext
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // string agentId = 1;
+      // string requestId = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          auto str = _internal_mutable_agentid();
-          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
-          CHK_(ptr);
-          CHK_(::_pbi::VerifyUTF8(str, "grpcagent.CommonResponse.agentId"));
-        } else
-          goto handle_unusual;
-        continue;
-      // string requestId = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           auto str = _internal_mutable_requestid();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -467,9 +439,9 @@ const char* CommonResponse::_InternalParse(const char* ptr, ::_pbi::ParseContext
         } else
           goto handle_unusual;
         continue;
-      // string command = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+      // string command = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           auto str = _internal_mutable_command();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -477,9 +449,9 @@ const char* CommonResponse::_InternalParse(const char* ptr, ::_pbi::ParseContext
         } else
           goto handle_unusual;
         continue;
-      // .grpcagent.Time recorded = 4;
-      case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+      // .grpcagent.Time recorded = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           ptr = ctx->ParseMessage(_internal_mutable_recorded(), ptr);
           CHK_(ptr);
         } else
@@ -514,40 +486,30 @@ uint8_t* CommonResponse::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // string agentId = 1;
-  if (!this->_internal_agentid().empty()) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->_internal_agentid().data(), static_cast<int>(this->_internal_agentid().length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "grpcagent.CommonResponse.agentId");
-    target = stream->WriteStringMaybeAliased(
-        1, this->_internal_agentid(), target);
-  }
-
-  // string requestId = 2;
+  // string requestId = 1;
   if (!this->_internal_requestid().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_requestid().data(), static_cast<int>(this->_internal_requestid().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "grpcagent.CommonResponse.requestId");
     target = stream->WriteStringMaybeAliased(
-        2, this->_internal_requestid(), target);
+        1, this->_internal_requestid(), target);
   }
 
-  // string command = 3;
+  // string command = 2;
   if (!this->_internal_command().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_command().data(), static_cast<int>(this->_internal_command().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "grpcagent.CommonResponse.command");
     target = stream->WriteStringMaybeAliased(
-        3, this->_internal_command(), target);
+        2, this->_internal_command(), target);
   }
 
-  // .grpcagent.Time recorded = 4;
+  // .grpcagent.Time recorded = 3;
   if (this->_internal_has_recorded()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(4, _Internal::recorded(this),
+      InternalWriteMessage(3, _Internal::recorded(this),
         _Internal::recorded(this).GetCachedSize(), target, stream);
   }
 
@@ -567,28 +529,21 @@ size_t CommonResponse::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // string agentId = 1;
-  if (!this->_internal_agentid().empty()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_agentid());
-  }
-
-  // string requestId = 2;
+  // string requestId = 1;
   if (!this->_internal_requestid().empty()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
         this->_internal_requestid());
   }
 
-  // string command = 3;
+  // string command = 2;
   if (!this->_internal_command().empty()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
         this->_internal_command());
   }
 
-  // .grpcagent.Time recorded = 4;
+  // .grpcagent.Time recorded = 3;
   if (this->_internal_has_recorded()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
@@ -613,9 +568,6 @@ void CommonResponse::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const :
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (!from._internal_agentid().empty()) {
-    _this->_internal_set_agentid(from._internal_agentid());
-  }
   if (!from._internal_requestid().empty()) {
     _this->_internal_set_requestid(from._internal_requestid());
   }
@@ -645,10 +597,6 @@ void CommonResponse::InternalSwap(CommonResponse* other) {
   auto* lhs_arena = GetArenaForAllocation();
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.agentid_, lhs_arena,
-      &other->_impl_.agentid_, rhs_arena
-  );
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.requestid_, lhs_arena,
       &other->_impl_.requestid_, rhs_arena
