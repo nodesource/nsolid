@@ -56,7 +56,6 @@ void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
   ASSERT(!body.is_discarded());
 
   grpcagent::CommonResponse* common = blocked_loop_event->mutable_common();
-  common->set_agentid(GetAgentId());
   common->set_command("loop_blocked");
 
   grpcagent::BlockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
@@ -96,7 +95,6 @@ void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
 
   // Fill in the fields of the InfoResponse.
   grpcagent::CommonResponse* common = info_event->mutable_common();
-  common->set_agentid(GetAgentId());
   common->set_command("info");
   if (req_id) {
     common->set_requestid(req_id);
@@ -180,7 +178,6 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
 
   // Fill in the fields of the InfoResponse.
   grpcagent::CommonResponse* common = packages_event->mutable_common();
-  common->set_agentid(GetAgentId());
   common->set_command("packages");
   if (req_id) {
     common->set_requestid(req_id);
@@ -221,7 +218,6 @@ void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* blocked_loop_even
   ASSERT(!body.is_discarded());
 
   grpcagent::CommonResponse* common = blocked_loop_event->mutable_common();
-  common->set_agentid(GetAgentId());
   common->set_command("loop_unblocked");
 
   grpcagent::UnblockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
@@ -841,7 +837,7 @@ message CommandRequest {
   CommandBody body = 5;
 }*/
 void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
-  const grpcagent::ReconfigureBody& body = request.body().reconfigure();
+  const grpcagent::ReconfigureBody& body = request.args().reconfigure();
   /*
   message ReconfigureBody {
   uint32 blockedLoopThreshold = 1;
