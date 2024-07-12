@@ -823,36 +823,8 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
   }
 }
 
-/*message CommandBody {
-  oneof body {
-    ReconfigureBody reconfigure = 1;
-  }
-}
-
-message CommandRequest {
-  string requestId = 1;
-  uint32 version = 2;
-  string id = 3;
-  string command = 4;
-  CommandBody body = 5;
-}*/
 void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   const grpcagent::ReconfigureBody& body = request.args().reconfigure();
-  /*
-  message ReconfigureBody {
-  uint32 blockedLoopThreshold = 1;
-  uint32 interval = 2;
-  bool pauseMetrics = 3;
-  bool promiseTracking = 4;
-  bool redactSnapshots = 5;
-  string statsd = 6;
-  string statsdBucket = 7;
-  string statsdTags = 8;
-  repeated string tags = 9;
-  bool tracingEnabled = 10;
-  uint32 tracingModulesBlacklist = 11;
-}
-  */
   json out = json::object();
   if (body.has_blockedloopthreshold()) {
       out["blockedLoopThreshold"] = body.blockedloopthreshold();
