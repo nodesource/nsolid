@@ -44,6 +44,7 @@ class NSolidService final {
     std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>> PrepareAsyncCommand(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>>(PrepareAsyncCommandRaw(context, cq));
     }
+    // rpc BinaryAssetsCommand (stream BinaryAsset) returns (CommandRequest) {}
     virtual ::grpc::Status ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpcagent::EventResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> AsyncExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(AsyncExportInfoRaw(context, request, cq));
@@ -83,6 +84,7 @@ class NSolidService final {
      public:
       virtual ~async_interface() {}
       virtual void Command(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::grpcagent::CommandResponse,::grpcagent::CommandRequest>* reactor) = 0;
+      // rpc BinaryAssetsCommand (stream BinaryAsset) returns (CommandRequest) {}
       virtual void ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void ExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
@@ -211,6 +213,7 @@ class NSolidService final {
     Service();
     virtual ~Service();
     virtual ::grpc::Status Command(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::CommandResponse>* stream);
+    // rpc BinaryAssetsCommand (stream BinaryAsset) returns (CommandRequest) {}
     virtual ::grpc::Status ExportInfo(::grpc::ServerContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportPackages(::grpc::ServerContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportBlockedLoop(::grpc::ServerContext* context, const ::grpcagent::BlockedLoopEvent* request, ::grpcagent::EventResponse* response);
