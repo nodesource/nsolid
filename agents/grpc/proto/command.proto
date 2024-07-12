@@ -12,7 +12,7 @@ package grpcagent;
 message CommandArgs {
   oneof args {
     ReconfigureBody reconfigure = 1;
-    CPUProfileArgs cpu_profile = 2
+    // CPUProfileArgs cpu_profile = 2
   }
 }
 
