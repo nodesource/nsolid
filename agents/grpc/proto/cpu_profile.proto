@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// import "common.proto";
+
+package grpcagent;
+
+message CPUProfileArgs {
+  uint64 thread_id = 1;
+  uint64 duration = 2;
+  map<string, string> metadata = 3;
+}
