@@ -78,6 +78,7 @@ const uint32_t TableStruct_command_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   ::_pbi::kInvalidFieldOffsetTag,
+  ::_pbi::kInvalidFieldOffsetTag,
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandArgs, _impl_.args_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandRequest, _internal_metadata_),
@@ -100,8 +101,8 @@ const uint32_t TableStruct_command_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::grpcagent::CommandArgs)},
-  { 8, -1, -1, sizeof(::grpcagent::CommandRequest)},
-  { 19, -1, -1, sizeof(::grpcagent::CommandResponse)},
+  { 9, -1, -1, sizeof(::grpcagent::CommandRequest)},
+  { 20, -1, -1, sizeof(::grpcagent::CommandResponse)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -111,23 +112,25 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 
 const char descriptor_table_protodef_command_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\rcommand.proto\022\tgrpcagent\032\021reconfigure."
-  "proto\"H\n\013CommandArgs\0221\n\013reconfigure\030\001 \001("
-  "\0132\032.grpcagent.ReconfigureBodyH\000B\006\n\004args\""
-  "w\n\016CommandRequest\022\021\n\trequestId\030\001 \001(\t\022\017\n\007"
-  "version\030\002 \001(\r\022\n\n\002id\030\003 \001(\t\022\017\n\007command\030\004 \001"
-  "(\t\022$\n\004args\030\005 \001(\0132\026.grpcagent.CommandArgs"
-  "\"(\n\017CommandResponse\022\025\n\rerror_message\030\001 \001"
-  "(\tb\006proto3"
+  "\n\rcommand.proto\022\tgrpcagent\032\021cpu_profile."
+  "proto\032\021reconfigure.proto\"z\n\013CommandArgs\022"
+  "1\n\013reconfigure\030\001 \001(\0132\032.grpcagent.Reconfi"
+  "gureBodyH\000\0220\n\013cpu_profile\030\002 \001(\0132\031.grpcag"
+  "ent.CPUProfileArgsH\000B\006\n\004args\"w\n\016CommandR"
+  "equest\022\021\n\trequestId\030\001 \001(\t\022\017\n\007version\030\002 \001"
+  "(\r\022\n\n\002id\030\003 \001(\t\022\017\n\007command\030\004 \001(\t\022$\n\004args\030"
+  "\005 \001(\0132\026.grpcagent.CommandArgs\"(\n\017Command"
+  "Response\022\025\n\rerror_message\030\001 \001(\tb\006proto3"
   ;
-static const ::_pbi::DescriptorTable* const descriptor_table_command_2eproto_deps[1] = {
+static const ::_pbi::DescriptorTable* const descriptor_table_command_2eproto_deps[2] = {
+  &::descriptor_table_cpu_5fprofile_2eproto,
   &::descriptor_table_reconfigure_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_command_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_command_2eproto = {
-    false, false, 290, descriptor_table_protodef_command_2eproto,
+    false, false, 359, descriptor_table_protodef_command_2eproto,
     "command.proto",
-    &descriptor_table_command_2eproto_once, descriptor_table_command_2eproto_deps, 1, 3,
+    &descriptor_table_command_2eproto_once, descriptor_table_command_2eproto_deps, 2, 3,
     schemas, file_default_instances, TableStruct_command_2eproto::offsets,
     file_level_metadata_command_2eproto, file_level_enum_descriptors_command_2eproto,
     file_level_service_descriptors_command_2eproto,
@@ -145,11 +148,16 @@ namespace grpcagent {
 class CommandArgs::_Internal {
  public:
   static const ::grpcagent::ReconfigureBody& reconfigure(const CommandArgs* msg);
+  static const ::grpcagent::CPUProfileArgs& cpu_profile(const CommandArgs* msg);
 };
 
 const ::grpcagent::ReconfigureBody&
 CommandArgs::_Internal::reconfigure(const CommandArgs* msg) {
   return *msg->_impl_.args_.reconfigure_;
+}
+const ::grpcagent::CPUProfileArgs&
+CommandArgs::_Internal::cpu_profile(const CommandArgs* msg) {
+  return *msg->_impl_.args_.cpu_profile_;
 }
 void CommandArgs::set_allocated_reconfigure(::grpcagent::ReconfigureBody* reconfigure) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
@@ -175,6 +183,30 @@ void CommandArgs::clear_reconfigure() {
     clear_has_args();
   }
 }
+void CommandArgs::set_allocated_cpu_profile(::grpcagent::CPUProfileArgs* cpu_profile) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_args();
+  if (cpu_profile) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(cpu_profile));
+    if (message_arena != submessage_arena) {
+      cpu_profile = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, cpu_profile, submessage_arena);
+    }
+    set_has_cpu_profile();
+    _impl_.args_.cpu_profile_ = cpu_profile;
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandArgs.cpu_profile)
+}
+void CommandArgs::clear_cpu_profile() {
+  if (_internal_has_cpu_profile()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.args_.cpu_profile_;
+    }
+    clear_has_args();
+  }
+}
 CommandArgs::CommandArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
@@ -195,6 +227,11 @@ CommandArgs::CommandArgs(const CommandArgs& from)
     case kReconfigure: {
       _this->_internal_mutable_reconfigure()->::grpcagent::ReconfigureBody::MergeFrom(
           from._internal_reconfigure());
+      break;
+    }
+    case kCpuProfile: {
+      _this->_internal_mutable_cpu_profile()->::grpcagent::CPUProfileArgs::MergeFrom(
+          from._internal_cpu_profile());
       break;
     }
     case ARGS_NOT_SET: {
@@ -245,6 +282,12 @@ void CommandArgs::clear_args() {
       }
       break;
     }
+    case kCpuProfile: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.args_.cpu_profile_;
+      }
+      break;
+    }
     case ARGS_NOT_SET: {
       break;
     }
@@ -273,6 +316,14 @@ const char* CommandArgs::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           ptr = ctx->ParseMessage(_internal_mutable_reconfigure(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .grpcagent.CPUProfileArgs cpu_profile = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+          ptr = ctx->ParseMessage(_internal_mutable_cpu_profile(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -313,6 +364,13 @@ uint8_t* CommandArgs::_InternalSerialize(
         _Internal::reconfigure(this).GetCachedSize(), target, stream);
   }
 
+  // .grpcagent.CPUProfileArgs cpu_profile = 2;
+  if (_internal_has_cpu_profile()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(2, _Internal::cpu_profile(this),
+        _Internal::cpu_profile(this).GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -335,6 +393,13 @@ size_t CommandArgs::ByteSizeLong() const {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
           *_impl_.args_.reconfigure_);
+      break;
+    }
+    // .grpcagent.CPUProfileArgs cpu_profile = 2;
+    case kCpuProfile: {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.args_.cpu_profile_);
       break;
     }
     case ARGS_NOT_SET: {
@@ -363,6 +428,11 @@ void CommandArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PR
     case kReconfigure: {
       _this->_internal_mutable_reconfigure()->::grpcagent::ReconfigureBody::MergeFrom(
           from._internal_reconfigure());
+      break;
+    }
+    case kCpuProfile: {
+      _this->_internal_mutable_cpu_profile()->::grpcagent::CPUProfileArgs::MergeFrom(
+          from._internal_cpu_profile());
       break;
     }
     case ARGS_NOT_SET: {

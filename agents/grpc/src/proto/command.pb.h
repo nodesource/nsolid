@@ -30,6 +30,7 @@
 #include <google/protobuf/repeated_field.h>  // IWYU pragma: export
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/unknown_field_set.h>
+#include "cpu_profile.pb.h"
 #include "reconfigure.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
@@ -110,6 +111,7 @@ class CommandArgs final :
   }
   enum ArgsCase {
     kReconfigure = 1,
+    kCpuProfile = 2,
     ARGS_NOT_SET = 0,
   };
 
@@ -192,6 +194,7 @@ class CommandArgs final :
 
   enum : int {
     kReconfigureFieldNumber = 1,
+    kCpuProfileFieldNumber = 2,
   };
   // .grpcagent.ReconfigureBody reconfigure = 1;
   bool has_reconfigure() const;
@@ -211,12 +214,31 @@ class CommandArgs final :
       ::grpcagent::ReconfigureBody* reconfigure);
   ::grpcagent::ReconfigureBody* unsafe_arena_release_reconfigure();
 
+  // .grpcagent.CPUProfileArgs cpu_profile = 2;
+  bool has_cpu_profile() const;
+  private:
+  bool _internal_has_cpu_profile() const;
+  public:
+  void clear_cpu_profile();
+  const ::grpcagent::CPUProfileArgs& cpu_profile() const;
+  PROTOBUF_NODISCARD ::grpcagent::CPUProfileArgs* release_cpu_profile();
+  ::grpcagent::CPUProfileArgs* mutable_cpu_profile();
+  void set_allocated_cpu_profile(::grpcagent::CPUProfileArgs* cpu_profile);
+  private:
+  const ::grpcagent::CPUProfileArgs& _internal_cpu_profile() const;
+  ::grpcagent::CPUProfileArgs* _internal_mutable_cpu_profile();
+  public:
+  void unsafe_arena_set_allocated_cpu_profile(
+      ::grpcagent::CPUProfileArgs* cpu_profile);
+  ::grpcagent::CPUProfileArgs* unsafe_arena_release_cpu_profile();
+
   void clear_args();
   ArgsCase args_case() const;
   // @@protoc_insertion_point(class_scope:grpcagent.CommandArgs)
  private:
   class _Internal;
   void set_has_reconfigure();
+  void set_has_cpu_profile();
 
   inline bool has_args() const;
   inline void clear_has_args();
@@ -229,6 +251,7 @@ class CommandArgs final :
       constexpr ArgsUnion() : _constinit_{} {}
         ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized _constinit_;
       ::grpcagent::ReconfigureBody* reconfigure_;
+      ::grpcagent::CPUProfileArgs* cpu_profile_;
     } args_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     uint32_t _oneof_case_[1];
@@ -680,6 +703,72 @@ inline ::grpcagent::ReconfigureBody* CommandArgs::_internal_mutable_reconfigure(
 inline ::grpcagent::ReconfigureBody* CommandArgs::mutable_reconfigure() {
   ::grpcagent::ReconfigureBody* _msg = _internal_mutable_reconfigure();
   // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.reconfigure)
+  return _msg;
+}
+
+// .grpcagent.CPUProfileArgs cpu_profile = 2;
+inline bool CommandArgs::_internal_has_cpu_profile() const {
+  return args_case() == kCpuProfile;
+}
+inline bool CommandArgs::has_cpu_profile() const {
+  return _internal_has_cpu_profile();
+}
+inline void CommandArgs::set_has_cpu_profile() {
+  _impl_._oneof_case_[0] = kCpuProfile;
+}
+inline ::grpcagent::CPUProfileArgs* CommandArgs::release_cpu_profile() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.cpu_profile)
+  if (_internal_has_cpu_profile()) {
+    clear_has_args();
+    ::grpcagent::CPUProfileArgs* temp = _impl_.args_.cpu_profile_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.args_.cpu_profile_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::grpcagent::CPUProfileArgs& CommandArgs::_internal_cpu_profile() const {
+  return _internal_has_cpu_profile()
+      ? *_impl_.args_.cpu_profile_
+      : reinterpret_cast< ::grpcagent::CPUProfileArgs&>(::grpcagent::_CPUProfileArgs_default_instance_);
+}
+inline const ::grpcagent::CPUProfileArgs& CommandArgs::cpu_profile() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.cpu_profile)
+  return _internal_cpu_profile();
+}
+inline ::grpcagent::CPUProfileArgs* CommandArgs::unsafe_arena_release_cpu_profile() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.cpu_profile)
+  if (_internal_has_cpu_profile()) {
+    clear_has_args();
+    ::grpcagent::CPUProfileArgs* temp = _impl_.args_.cpu_profile_;
+    _impl_.args_.cpu_profile_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void CommandArgs::unsafe_arena_set_allocated_cpu_profile(::grpcagent::CPUProfileArgs* cpu_profile) {
+  clear_args();
+  if (cpu_profile) {
+    set_has_cpu_profile();
+    _impl_.args_.cpu_profile_ = cpu_profile;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.cpu_profile)
+}
+inline ::grpcagent::CPUProfileArgs* CommandArgs::_internal_mutable_cpu_profile() {
+  if (!_internal_has_cpu_profile()) {
+    clear_args();
+    set_has_cpu_profile();
+    _impl_.args_.cpu_profile_ = CreateMaybeMessage< ::grpcagent::CPUProfileArgs >(GetArenaForAllocation());
+  }
+  return _impl_.args_.cpu_profile_;
+}
+inline ::grpcagent::CPUProfileArgs* CommandArgs::mutable_cpu_profile() {
+  ::grpcagent::CPUProfileArgs* _msg = _internal_mutable_cpu_profile();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.cpu_profile)
   return _msg;
 }
 
