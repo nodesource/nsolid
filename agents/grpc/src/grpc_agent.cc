@@ -644,24 +644,6 @@ int GrpcAgent::config(const json& config) {
   DebugJSON("Old Config: \n%s\n", old_config);
   DebugJSON("NewConfig: \n%s\n", config_);
   DebugJSON("Diff: \n%s\n", diff);
-  if (utils::find_any_fields_in_diff(diff, { "/grpc" })) {
-    if (config_.contains("grpc")) {
-      // Setup the client/s
-      client_ = std::make_shared<GrpcClient>();
-      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub();
-      OtlpGrpcExporterOptions options;
-      options.endpoint = "localhost:50051";
-      trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options);
-      OtlpGrpcMetricExporterOptions opts;
-      opts.endpoint = "localhost:50051";
-      metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
-      OtlpGrpcLogRecordExporterOptions opt;
-      opt.endpoint = "localhost:50051";
-      log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(opt);
-      command_stream_ =
-        std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
-    }
-  }
 
   if (utils::find_any_fields_in_diff(diff, { "/saas" })) {
     auto it = config_.find("saas");
@@ -669,6 +651,31 @@ int GrpcAgent::config(const json& config) {
       saas_ = *it;
     } else {
       saas_.clear();
+    }
+  }
+
+  if (utils::find_any_fields_in_diff(diff, { "/grpc" })) {
+    if (config_.contains("grpc")) {
+      // Setup the client/s
+      client_ = std::make_shared<GrpcClient>();
+      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub();
+      OtlpGrpcExporterOptions options;
+      options.endpoint = "localhost:50051";
+      options.metadata = {{"nsolid-agent-id", agent_id_},
+                          {"nsolid-saas", saas_}};
+      trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options);
+      OtlpGrpcMetricExporterOptions opts;
+      opts.endpoint = "localhost:50051";
+      opts.metadata = {{"nsolid-agent-id", agent_id_},
+                       {"nsolid-saas", saas_}};
+      metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
+      OtlpGrpcLogRecordExporterOptions opt;
+      opt.endpoint = "localhost:50051";
+      opt.metadata =  {{"nsolid-agent-id", agent_id_},
+                       {"nsolid-saas", saas_}};
+      log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(opt);
+      command_stream_ =
+        std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
     }
   }
 
