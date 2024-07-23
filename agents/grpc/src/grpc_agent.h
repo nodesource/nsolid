@@ -25,6 +25,7 @@ namespace nsolid {
 namespace grpc {
 
 // predeclarations
+class BinaryAssetsCommandStream;
 class CommandStream;
 class GrpcAgent;
 class GrpcClient;
@@ -59,6 +60,20 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   int stop();
 
  private:
+  enum ProfileType {
+    kCpu = 0,
+    kHeapProf,
+    kHeapSampl,
+    kNumberOfProfileTypes
+  };
+
+  struct ProfileQStor {
+    ProfileType type;
+    int status;
+    std::string profile;
+    uint64_t thread_id;
+  };
+
   GrpcAgent();
 
   ~GrpcAgent();
@@ -72,6 +87,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   static void config_agent_cb_(std::string, WeakGrpcAgent);
 
   static void config_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
+
+  static void cpu_profile_cb_(int, std::string, uint64_t, WeakGrpcAgent);
 
   static void env_creation_cb_(SharedEnvInst, WeakGrpcAgent);
 
@@ -91,6 +108,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static void metrics_timer_cb_(nsuv::ns_timer*, WeakGrpcAgent);
 
+  static void profile_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
+
   static void shutdown_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
   static void span_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
@@ -106,6 +125,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void do_stop();
 
   void got_blocked_loop_msgs();
+
+  void got_cpu_profile(const ProfileQStor& stor);
 
   void got_logs();
 
@@ -128,6 +149,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void setup_blocked_loop_hooks();
 
   int setup_metrics_timer(uint64_t period);
+
+  int start_cpu_profile(const grpcagent::CommandRequest& req);
 
   void update_tracer(uint32_t flags);
 
@@ -181,10 +204,18 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporter>
     log_exporter_;
 
+  // Profiling
+  nsuv::ns_async profile_msg_;
+  TSQueue<ProfileQStor> profile_msg_q_;
+  // ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
+  // std::atomic<bool> profile_on_exit_;
+
+
   // For the grpc client
   std::shared_ptr<GrpcClient> client_;
   std::unique_ptr<grpcagent::NSolidService::StubInterface> nsolid_service_stub_;
-  std::unique_ptr<CommandStream> command_stream_; 
+  std::unique_ptr<CommandStream> command_stream_;
+  std::unique_ptr<BinaryAssetsCommandStream> binary_assets_command_stream_;
 
   // For the gRPC server
   nsuv::ns_async command_msg_;

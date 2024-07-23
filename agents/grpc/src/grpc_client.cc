@@ -55,7 +55,6 @@ void CommandStream::OnWriteDone(bool ok/*ok*/) {
 }
 
 void CommandStream::NextWrite() {
-  grpcagent::CommandResponse response;
   if (write_state_.write_done && response_q_.dequeue(write_state_.resp)) {
     StartWrite(&write_state_.resp);
     write_state_.write_done = false;
@@ -64,6 +63,42 @@ void CommandStream::NextWrite() {
 
 void CommandStream::Write(grpcagent::CommandResponse&& resp) {
   response_q_.enqueue(std::move(resp));
+  NextWrite(); 
+}
+
+AssetStream::AssetStream(
+    grpcagent::NSolidService::StubInterface* stub,
+    std::shared_ptr<GrpcAgent> agent): agent_(agent) {
+  stub->async()->ExportAsset(&context_, this);
+  StartCall();
+ }
+
+AssetStream::~AssetStream() {
+}
+
+void AssetStream::OnDone(const ::grpc::Status& s) {
+  fprintf(stderr, "AssetStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+}
+
+void AssetStream::OnReadDone(bool ok) {
+  fprintf(stderr, "AssetStream::OnReadDone: %d\n", ok);
+}
+
+void AssetStream::OnWriteDone(bool ok/*ok*/) {
+  fprintf(stderr, "AssetStream::OnWriteDone: %d\n", ok);
+  write_state_.write_done = true;
+  NextWrite();
+}
+
+void AssetStream::NextWrite() {
+  if (write_state_.write_done && assets_q_.dequeue(write_state_.asset)) {
+    StartWrite(&write_state_.asset);
+    write_state_.write_done = false;
+  }
+}
+
+void AssetStream::Write(grpcagent::BinaryAsset&& asset) {
+  assets_q_.enqueue(std::move(asset));
   NextWrite(); 
 }
 

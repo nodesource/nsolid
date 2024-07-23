@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package grpcagent;
-
-message BinaryAsset {
-  string data = 1;
-}

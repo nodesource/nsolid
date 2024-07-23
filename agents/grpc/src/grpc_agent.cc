@@ -377,6 +377,21 @@ int GrpcAgent::stop() {
   }
 }
 
+/*static*/ void GrpcAgent::cpu_profile_cb_(int status,
+                                           std::string profile,
+                                           uint64_t thread_id,
+                                           WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  if (agent->profile_msg_q_.enqueue(
+        ProfileQStor { kCpu, status, std::move(profile), thread_id }) == 1) {
+    ASSERT_EQ(0, agent->profile_msg_.send());
+  }
+}
+
 void GrpcAgent::env_creation_cb_(SharedEnvInst envinst,
                                  WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
@@ -568,6 +583,30 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   }
 }
 
+/*static*/void GrpcAgent::profile_msg_cb_(nsuv::ns_async*, WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  ProfileQStor stor;
+  while (agent->profile_msg_q_.dequeue(stor)) {
+    switch (stor.type) {
+      // case kHeapProf:
+      //   agent->got_prof<HeapProfilePolicy>(stor);
+      // break;
+      // case kHeapSampl:
+      //   agent->got_prof<HeapSamplingPolicy>(stor);
+      // break;
+      case kCpu:
+        agent->got_cpu_profile(stor);
+      break;
+      default:
+        ASSERT(false);
+    }
+  }
+}
+
 /*static*/void GrpcAgent::span_msg_cb_(nsuv::ns_async*, WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
   if (agent == nullptr) {
@@ -676,6 +715,8 @@ int GrpcAgent::config(const json& config) {
       log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(opt);
       command_stream_ =
         std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
+      binary_assets_command_stream_ =
+        std::make_unique<BinaryAssetsCommandStream>(nsolid_service_stub_.get(), shared_from_this());
     }
   }
 
@@ -749,6 +790,8 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
+  ASSERT_EQ(0, profile_msg_.init(&loop_, profile_msg_cb_, weak_from_this()));
+
   ASSERT_EQ(0, span_msg_.init(&loop_, span_msg_cb_, weak_from_this()));
 
   ready_ = true;
@@ -788,6 +831,17 @@ void GrpcAgent::got_blocked_loop_msgs() {
   }
 }
 
+void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
+  Debug("CPU Profile: %ld\n", stor.profile.size());
+  if (stor.profile.size() > 0) {
+    grpcagent::BinaryAsset asset;
+    asset.set_data(stor.profile);
+    binary_assets_command_stream_->Write(std::move(asset));
+  } else {
+    binary_assets_command_stream_->StartWritesDone();
+  }
+}
+
 void GrpcAgent::got_logs() {
   std::vector<std::unique_ptr<LogsRecordable>> recordables;
   LogInfoStor stor;
@@ -797,7 +851,6 @@ void GrpcAgent::got_logs() {
     recordables.push_back(std::move(recordable));
   }
 
-  // span<std::unique_ptr<Recordable>> batch(recordables);
   auto result = log_exporter_->Export(recordables);
   Debug("# Logs Exported: %ld. Result: %d\n",
         recordables.size(),
@@ -827,6 +880,8 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
     send_packages_event(request.requestid().c_str());
   } else if (cmd == "reconfigure") {
     reconfigure(request);
+  } else if (cmd == "cpu_profile") {
+    start_cpu_profile(request);
   }
 }
 
@@ -996,6 +1051,18 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
   // There's no need to stop the timer previously as uv_timer_start() stops the
   // timer if active.
   return metrics_timer_.start(metrics_timer_cb_, period, period, weak_from_this());
+}
+
+int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
+  const grpcagent::CPUProfileArgs& args = req.args().cpu_profile();
+  uint64_t thread_id = args.thread_id();
+  uint64_t duration = args.duration();
+  // Get metadata
+  return CpuProfiler::TakeProfile(GetEnvInst(thread_id),
+                                  duration,
+                                  cpu_profile_cb_,
+                                  thread_id,
+                                  weak_from_this());
 }
 
 void GrpcAgent::update_tracer(uint32_t flags) {

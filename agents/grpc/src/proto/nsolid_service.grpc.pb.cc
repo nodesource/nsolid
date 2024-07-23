@@ -23,7 +23,7 @@ namespace grpcagent {
 
 static const char* NSolidService_method_names[] = {
   "/grpcagent.NSolidService/Command",
-  "/grpcagent.NSolidService/BinaryAssetsCommand",
+  "/grpcagent.NSolidService/ExportAsset",
   "/grpcagent.NSolidService/ExportInfo",
   "/grpcagent.NSolidService/ExportPackages",
   "/grpcagent.NSolidService/ExportBlockedLoop",
@@ -39,7 +39,7 @@ std::unique_ptr< NSolidService::Stub> NSolidService::NewStub(const std::shared_p
 
 NSolidService::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options)
   : channel_(channel), rpcmethod_Command_(NSolidService_method_names[0], options.suffix_for_stats(),::grpc::internal::RpcMethod::BIDI_STREAMING, channel)
-  , rpcmethod_BinaryAssetsCommand_(NSolidService_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::BIDI_STREAMING, channel)
+  , rpcmethod_ExportAsset_(NSolidService_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::CLIENT_STREAMING, channel)
   , rpcmethod_ExportInfo_(NSolidService_method_names[2], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportPackages_(NSolidService_method_names[3], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportBlockedLoop_(NSolidService_method_names[4], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
@@ -63,20 +63,20 @@ void NSolidService::Stub::async::Command(::grpc::ClientContext* context, ::grpc:
   return ::grpc::internal::ClientAsyncReaderWriterFactory< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>::Create(channel_.get(), cq, rpcmethod_Command_, context, false, nullptr);
 }
 
-::grpc::ClientReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* NSolidService::Stub::BinaryAssetsCommandRaw(::grpc::ClientContext* context) {
-  return ::grpc::internal::ClientReaderWriterFactory< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>::Create(channel_.get(), rpcmethod_BinaryAssetsCommand_, context);
+::grpc::ClientWriter< ::grpcagent::Asset>* NSolidService::Stub::ExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response) {
+  return ::grpc::internal::ClientWriterFactory< ::grpcagent::Asset>::Create(channel_.get(), rpcmethod_ExportAsset_, context, response);
 }
 
-void NSolidService::Stub::async::BinaryAssetsCommand(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::grpcagent::BinaryAsset,::grpcagent::CommandRequest>* reactor) {
-  ::grpc::internal::ClientCallbackReaderWriterFactory< ::grpcagent::BinaryAsset,::grpcagent::CommandRequest>::Create(stub_->channel_.get(), stub_->rpcmethod_BinaryAssetsCommand_, context, reactor);
+void NSolidService::Stub::async::ExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::ClientWriteReactor< ::grpcagent::Asset>* reactor) {
+  ::grpc::internal::ClientCallbackWriterFactory< ::grpcagent::Asset>::Create(stub_->channel_.get(), stub_->rpcmethod_ExportAsset_, context, response, reactor);
 }
 
-::grpc::ClientAsyncReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* NSolidService::Stub::AsyncBinaryAssetsCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) {
-  return ::grpc::internal::ClientAsyncReaderWriterFactory< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>::Create(channel_.get(), cq, rpcmethod_BinaryAssetsCommand_, context, true, tag);
+::grpc::ClientAsyncWriter< ::grpcagent::Asset>* NSolidService::Stub::AsyncExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq, void* tag) {
+  return ::grpc::internal::ClientAsyncWriterFactory< ::grpcagent::Asset>::Create(channel_.get(), cq, rpcmethod_ExportAsset_, context, response, true, tag);
 }
 
-::grpc::ClientAsyncReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* NSolidService::Stub::PrepareAsyncBinaryAssetsCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncReaderWriterFactory< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>::Create(channel_.get(), cq, rpcmethod_BinaryAssetsCommand_, context, false, nullptr);
+::grpc::ClientAsyncWriter< ::grpcagent::Asset>* NSolidService::Stub::PrepareAsyncExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncWriterFactory< ::grpcagent::Asset>::Create(channel_.get(), cq, rpcmethod_ExportAsset_, context, response, false, nullptr);
 }
 
 ::grpc::Status NSolidService::Stub::ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpcagent::EventResponse* response) {
@@ -207,13 +207,13 @@ NSolidService::Service::Service() {
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NSolidService_method_names[1],
-      ::grpc::internal::RpcMethod::BIDI_STREAMING,
-      new ::grpc::internal::BidiStreamingHandler< NSolidService::Service, ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>(
+      ::grpc::internal::RpcMethod::CLIENT_STREAMING,
+      new ::grpc::internal::ClientStreamingHandler< NSolidService::Service, ::grpcagent::Asset, ::grpcagent::EventResponse>(
           [](NSolidService::Service* service,
              ::grpc::ServerContext* ctx,
-             ::grpc::ServerReaderWriter<::grpcagent::CommandRequest,
-             ::grpcagent::BinaryAsset>* stream) {
-               return service->BinaryAssetsCommand(ctx, stream);
+             ::grpc::ServerReader<::grpcagent::Asset>* reader,
+             ::grpcagent::EventResponse* resp) {
+               return service->ExportAsset(ctx, reader, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NSolidService_method_names[2],
@@ -276,9 +276,10 @@ NSolidService::Service::~Service() {
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status NSolidService::Service::BinaryAssetsCommand(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::BinaryAsset>* stream) {
+::grpc::Status NSolidService::Service::ExportAsset(::grpc::ServerContext* context, ::grpc::ServerReader< ::grpcagent::Asset>* reader, ::grpcagent::EventResponse* response) {
   (void) context;
-  (void) stream;
+  (void) reader;
+  (void) response;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
