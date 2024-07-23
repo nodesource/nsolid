@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message Asset {
+  CommonResponse common = 1;
+  string data = 2;
+}
