@@ -23,7 +23,6 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/arena.h>
 #include <google/protobuf/arenastring.h>
-#include <google/protobuf/generated_message_bases.h>
 #include <google/protobuf/generated_message_util.h>
 #include <google/protobuf/metadata_lite.h>
 #include <google/protobuf/generated_message_reflection.h>
@@ -58,9 +57,10 @@ namespace grpcagent {
 // ===================================================================
 
 class BinaryAsset final :
-    public ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase /* @@protoc_insertion_point(class_definition:grpcagent.BinaryAsset) */ {
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:grpcagent.BinaryAsset) */ {
  public:
   inline BinaryAsset() : BinaryAsset(nullptr) {}
+  ~BinaryAsset() override;
   explicit PROTOBUF_CONSTEXPR BinaryAsset(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
   BinaryAsset(const BinaryAsset& from);
@@ -133,15 +133,29 @@ class BinaryAsset final :
   BinaryAsset* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
     return CreateMaybeMessage<BinaryAsset>(arena);
   }
-  using ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyFrom;
-  inline void CopyFrom(const BinaryAsset& from) {
-    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyImpl(*this, from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const BinaryAsset& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const BinaryAsset& from) {
+    BinaryAsset::MergeImpl(*this, from);
   }
-  using ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeFrom;
-  void MergeFrom(const BinaryAsset& from) {
-    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeImpl(*this, from);
-  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
   public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(BinaryAsset* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
@@ -162,6 +176,23 @@ class BinaryAsset final :
 
   // accessors -------------------------------------------------------
 
+  enum : int {
+    kDataFieldNumber = 1,
+  };
+  // string data = 1;
+  void clear_data();
+  const std::string& data() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_data(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_data();
+  PROTOBUF_NODISCARD std::string* release_data();
+  void set_allocated_data(std::string* data);
+  private:
+  const std::string& _internal_data() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_data(const std::string& value);
+  std::string* _internal_mutable_data();
+  public:
+
   // @@protoc_insertion_point(class_scope:grpcagent.BinaryAsset)
  private:
   class _Internal;
@@ -170,7 +201,10 @@ class BinaryAsset final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr data_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
+  union { Impl_ _impl_; };
   friend struct ::TableStruct_binary_5fasset_2eproto;
 };
 // ===================================================================
@@ -183,6 +217,56 @@ class BinaryAsset final :
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
 // BinaryAsset
+
+// string data = 1;
+inline void BinaryAsset::clear_data() {
+  _impl_.data_.ClearToEmpty();
+}
+inline const std::string& BinaryAsset::data() const {
+  // @@protoc_insertion_point(field_get:grpcagent.BinaryAsset.data)
+  return _internal_data();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void BinaryAsset::set_data(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.data_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:grpcagent.BinaryAsset.data)
+}
+inline std::string* BinaryAsset::mutable_data() {
+  std::string* _s = _internal_mutable_data();
+  // @@protoc_insertion_point(field_mutable:grpcagent.BinaryAsset.data)
+  return _s;
+}
+inline const std::string& BinaryAsset::_internal_data() const {
+  return _impl_.data_.Get();
+}
+inline void BinaryAsset::_internal_set_data(const std::string& value) {
+  
+  _impl_.data_.Set(value, GetArenaForAllocation());
+}
+inline std::string* BinaryAsset::_internal_mutable_data() {
+  
+  return _impl_.data_.Mutable(GetArenaForAllocation());
+}
+inline std::string* BinaryAsset::release_data() {
+  // @@protoc_insertion_point(field_release:grpcagent.BinaryAsset.data)
+  return _impl_.data_.Release();
+}
+inline void BinaryAsset::set_allocated_data(std::string* data) {
+  if (data != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.data_.SetAllocated(data, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.data_.IsDefault()) {
+    _impl_.data_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.BinaryAsset.data)
+}
 
 #ifdef __GNUC__
   #pragma GCC diagnostic pop

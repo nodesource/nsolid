@@ -30,6 +30,7 @@
 #include <google/protobuf/repeated_field.h>  // IWYU pragma: export
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/unknown_field_set.h>
+#include "binary_asset.pb.h"
 #include "blocked_loop.pb.h"
 #include "command.pb.h"
 #include "info.pb.h"
