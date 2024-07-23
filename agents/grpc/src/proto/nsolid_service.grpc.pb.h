@@ -44,14 +44,14 @@ class NSolidService final {
     std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>> PrepareAsyncCommand(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>>(PrepareAsyncCommandRaw(context, cq));
     }
-    std::unique_ptr< ::grpc::ClientReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>> BinaryAssetsCommand(::grpc::ClientContext* context) {
-      return std::unique_ptr< ::grpc::ClientReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>>(BinaryAssetsCommandRaw(context));
+    std::unique_ptr< ::grpc::ClientWriterInterface< ::grpcagent::Asset>> ExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response) {
+      return std::unique_ptr< ::grpc::ClientWriterInterface< ::grpcagent::Asset>>(ExportAssetRaw(context, response));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>> AsyncBinaryAssetsCommand(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) {
-      return std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>>(AsyncBinaryAssetsCommandRaw(context, cq, tag));
+    std::unique_ptr< ::grpc::ClientAsyncWriterInterface< ::grpcagent::Asset>> AsyncExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq, void* tag) {
+      return std::unique_ptr< ::grpc::ClientAsyncWriterInterface< ::grpcagent::Asset>>(AsyncExportAssetRaw(context, response, cq, tag));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>> PrepareAsyncBinaryAssetsCommand(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>>(PrepareAsyncBinaryAssetsCommandRaw(context, cq));
+    std::unique_ptr< ::grpc::ClientAsyncWriterInterface< ::grpcagent::Asset>> PrepareAsyncExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncWriterInterface< ::grpcagent::Asset>>(PrepareAsyncExportAssetRaw(context, response, cq));
     }
     virtual ::grpc::Status ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpcagent::EventResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> AsyncExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpc::CompletionQueue* cq) {
@@ -92,7 +92,7 @@ class NSolidService final {
      public:
       virtual ~async_interface() {}
       virtual void Command(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::grpcagent::CommandResponse,::grpcagent::CommandRequest>* reactor) = 0;
-      virtual void BinaryAssetsCommand(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::grpcagent::BinaryAsset,::grpcagent::CommandRequest>* reactor) = 0;
+      virtual void ExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::ClientWriteReactor< ::grpcagent::Asset>* reactor) = 0;
       virtual void ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void ExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
@@ -111,9 +111,9 @@ class NSolidService final {
     virtual ::grpc::ClientReaderWriterInterface< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* CommandRaw(::grpc::ClientContext* context) = 0;
     virtual ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* AsyncCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) = 0;
     virtual ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* PrepareAsyncCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* BinaryAssetsCommandRaw(::grpc::ClientContext* context) = 0;
-    virtual ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* AsyncBinaryAssetsCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) = 0;
-    virtual ::grpc::ClientAsyncReaderWriterInterface< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* PrepareAsyncBinaryAssetsCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientWriterInterface< ::grpcagent::Asset>* ExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response) = 0;
+    virtual ::grpc::ClientAsyncWriterInterface< ::grpcagent::Asset>* AsyncExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq, void* tag) = 0;
+    virtual ::grpc::ClientAsyncWriterInterface< ::grpcagent::Asset>* PrepareAsyncExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportInfoRaw(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportInfoRaw(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportPackagesRaw(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent& request, ::grpc::CompletionQueue* cq) = 0;
@@ -137,14 +137,14 @@ class NSolidService final {
     std::unique_ptr<  ::grpc::ClientAsyncReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>> PrepareAsyncCommand(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>>(PrepareAsyncCommandRaw(context, cq));
     }
-    std::unique_ptr< ::grpc::ClientReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>> BinaryAssetsCommand(::grpc::ClientContext* context) {
-      return std::unique_ptr< ::grpc::ClientReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>>(BinaryAssetsCommandRaw(context));
+    std::unique_ptr< ::grpc::ClientWriter< ::grpcagent::Asset>> ExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response) {
+      return std::unique_ptr< ::grpc::ClientWriter< ::grpcagent::Asset>>(ExportAssetRaw(context, response));
     }
-    std::unique_ptr<  ::grpc::ClientAsyncReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>> AsyncBinaryAssetsCommand(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) {
-      return std::unique_ptr< ::grpc::ClientAsyncReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>>(AsyncBinaryAssetsCommandRaw(context, cq, tag));
+    std::unique_ptr< ::grpc::ClientAsyncWriter< ::grpcagent::Asset>> AsyncExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq, void* tag) {
+      return std::unique_ptr< ::grpc::ClientAsyncWriter< ::grpcagent::Asset>>(AsyncExportAssetRaw(context, response, cq, tag));
     }
-    std::unique_ptr<  ::grpc::ClientAsyncReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>> PrepareAsyncBinaryAssetsCommand(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>>(PrepareAsyncBinaryAssetsCommandRaw(context, cq));
+    std::unique_ptr< ::grpc::ClientAsyncWriter< ::grpcagent::Asset>> PrepareAsyncExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncWriter< ::grpcagent::Asset>>(PrepareAsyncExportAssetRaw(context, response, cq));
     }
     ::grpc::Status ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpcagent::EventResponse* response) override;
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> AsyncExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpc::CompletionQueue* cq) {
@@ -185,7 +185,7 @@ class NSolidService final {
       public StubInterface::async_interface {
      public:
       void Command(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::grpcagent::CommandResponse,::grpcagent::CommandRequest>* reactor) override;
-      void BinaryAssetsCommand(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::grpcagent::BinaryAsset,::grpcagent::CommandRequest>* reactor) override;
+      void ExportAsset(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::ClientWriteReactor< ::grpcagent::Asset>* reactor) override;
       void ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
       void ExportInfo(::grpc::ClientContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void ExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
@@ -210,9 +210,9 @@ class NSolidService final {
     ::grpc::ClientReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* CommandRaw(::grpc::ClientContext* context) override;
     ::grpc::ClientAsyncReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* AsyncCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) override;
     ::grpc::ClientAsyncReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* PrepareAsyncCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* BinaryAssetsCommandRaw(::grpc::ClientContext* context) override;
-    ::grpc::ClientAsyncReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* AsyncBinaryAssetsCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) override;
-    ::grpc::ClientAsyncReaderWriter< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* PrepareAsyncBinaryAssetsCommandRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientWriter< ::grpcagent::Asset>* ExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response) override;
+    ::grpc::ClientAsyncWriter< ::grpcagent::Asset>* AsyncExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq, void* tag) override;
+    ::grpc::ClientAsyncWriter< ::grpcagent::Asset>* PrepareAsyncExportAssetRaw(::grpc::ClientContext* context, ::grpcagent::EventResponse* response, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportInfoRaw(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportInfoRaw(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportPackagesRaw(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent& request, ::grpc::CompletionQueue* cq) override;
@@ -224,7 +224,7 @@ class NSolidService final {
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportReconfigureRaw(::grpc::ClientContext* context, const ::grpcagent::ReconfigureEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportReconfigureRaw(::grpc::ClientContext* context, const ::grpcagent::ReconfigureEvent& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_Command_;
-    const ::grpc::internal::RpcMethod rpcmethod_BinaryAssetsCommand_;
+    const ::grpc::internal::RpcMethod rpcmethod_ExportAsset_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportInfo_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportPackages_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportBlockedLoop_;
@@ -238,7 +238,7 @@ class NSolidService final {
     Service();
     virtual ~Service();
     virtual ::grpc::Status Command(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::CommandResponse>* stream);
-    virtual ::grpc::Status BinaryAssetsCommand(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::BinaryAsset>* stream);
+    virtual ::grpc::Status ExportAsset(::grpc::ServerContext* context, ::grpc::ServerReader< ::grpcagent::Asset>* reader, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportInfo(::grpc::ServerContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportPackages(::grpc::ServerContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportBlockedLoop(::grpc::ServerContext* context, const ::grpcagent::BlockedLoopEvent* request, ::grpcagent::EventResponse* response);
@@ -266,23 +266,23 @@ class NSolidService final {
     }
   };
   template <class BaseClass>
-  class WithAsyncMethod_BinaryAssetsCommand : public BaseClass {
+  class WithAsyncMethod_ExportAsset : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithAsyncMethod_BinaryAssetsCommand() {
+    WithAsyncMethod_ExportAsset() {
       ::grpc::Service::MarkMethodAsync(1);
     }
-    ~WithAsyncMethod_BinaryAssetsCommand() override {
+    ~WithAsyncMethod_ExportAsset() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status BinaryAssetsCommand(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::BinaryAsset>* /*stream*/)  override {
+    ::grpc::Status ExportAsset(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Asset>* /*reader*/, ::grpcagent::EventResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestBinaryAssetsCommand(::grpc::ServerContext* context, ::grpc::ServerAsyncReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::BinaryAsset>* stream, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncBidiStreaming(1, context, stream, new_call_cq, notification_cq, tag);
+    void RequestExportAsset(::grpc::ServerContext* context, ::grpc::ServerAsyncReader< ::grpcagent::EventResponse, ::grpcagent::Asset>* reader, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncClientStreaming(1, context, reader, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -385,7 +385,7 @@ class NSolidService final {
       ::grpc::Service::RequestAsyncUnary(6, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_Command<WithAsyncMethod_BinaryAssetsCommand<WithAsyncMethod_ExportInfo<WithAsyncMethod_ExportPackages<WithAsyncMethod_ExportBlockedLoop<WithAsyncMethod_ExportUnblockedLoop<WithAsyncMethod_ExportReconfigure<Service > > > > > > > AsyncService;
+  typedef WithAsyncMethod_Command<WithAsyncMethod_ExportAsset<WithAsyncMethod_ExportInfo<WithAsyncMethod_ExportPackages<WithAsyncMethod_ExportBlockedLoop<WithAsyncMethod_ExportUnblockedLoop<WithAsyncMethod_ExportReconfigure<Service > > > > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_Command : public BaseClass {
    private:
@@ -410,27 +410,26 @@ class NSolidService final {
       { return nullptr; }
   };
   template <class BaseClass>
-  class WithCallbackMethod_BinaryAssetsCommand : public BaseClass {
+  class WithCallbackMethod_ExportAsset : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithCallbackMethod_BinaryAssetsCommand() {
+    WithCallbackMethod_ExportAsset() {
       ::grpc::Service::MarkMethodCallback(1,
-          new ::grpc::internal::CallbackBidiHandler< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>(
+          new ::grpc::internal::CallbackClientStreamingHandler< ::grpcagent::Asset, ::grpcagent::EventResponse>(
             [this](
-                   ::grpc::CallbackServerContext* context) { return this->BinaryAssetsCommand(context); }));
+                   ::grpc::CallbackServerContext* context, ::grpcagent::EventResponse* response) { return this->ExportAsset(context, response); }));
     }
-    ~WithCallbackMethod_BinaryAssetsCommand() override {
+    ~WithCallbackMethod_ExportAsset() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status BinaryAssetsCommand(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::BinaryAsset>* /*stream*/)  override {
+    ::grpc::Status ExportAsset(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Asset>* /*reader*/, ::grpcagent::EventResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerBidiReactor< ::grpcagent::BinaryAsset, ::grpcagent::CommandRequest>* BinaryAssetsCommand(
-      ::grpc::CallbackServerContext* /*context*/)
-      { return nullptr; }
+    virtual ::grpc::ServerReadReactor< ::grpcagent::Asset>* ExportAsset(
+      ::grpc::CallbackServerContext* /*context*/, ::grpcagent::EventResponse* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
   class WithCallbackMethod_ExportInfo : public BaseClass {
@@ -567,7 +566,7 @@ class NSolidService final {
     virtual ::grpc::ServerUnaryReactor* ExportReconfigure(
       ::grpc::CallbackServerContext* /*context*/, const ::grpcagent::ReconfigureEvent* /*request*/, ::grpcagent::EventResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_Command<WithCallbackMethod_BinaryAssetsCommand<WithCallbackMethod_ExportInfo<WithCallbackMethod_ExportPackages<WithCallbackMethod_ExportBlockedLoop<WithCallbackMethod_ExportUnblockedLoop<WithCallbackMethod_ExportReconfigure<Service > > > > > > > CallbackService;
+  typedef WithCallbackMethod_Command<WithCallbackMethod_ExportAsset<WithCallbackMethod_ExportInfo<WithCallbackMethod_ExportPackages<WithCallbackMethod_ExportBlockedLoop<WithCallbackMethod_ExportUnblockedLoop<WithCallbackMethod_ExportReconfigure<Service > > > > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_Command : public BaseClass {
@@ -587,18 +586,18 @@ class NSolidService final {
     }
   };
   template <class BaseClass>
-  class WithGenericMethod_BinaryAssetsCommand : public BaseClass {
+  class WithGenericMethod_ExportAsset : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithGenericMethod_BinaryAssetsCommand() {
+    WithGenericMethod_ExportAsset() {
       ::grpc::Service::MarkMethodGeneric(1);
     }
-    ~WithGenericMethod_BinaryAssetsCommand() override {
+    ~WithGenericMethod_ExportAsset() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status BinaryAssetsCommand(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::BinaryAsset>* /*stream*/)  override {
+    ::grpc::Status ExportAsset(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Asset>* /*reader*/, ::grpcagent::EventResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -709,23 +708,23 @@ class NSolidService final {
     }
   };
   template <class BaseClass>
-  class WithRawMethod_BinaryAssetsCommand : public BaseClass {
+  class WithRawMethod_ExportAsset : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawMethod_BinaryAssetsCommand() {
+    WithRawMethod_ExportAsset() {
       ::grpc::Service::MarkMethodRaw(1);
     }
-    ~WithRawMethod_BinaryAssetsCommand() override {
+    ~WithRawMethod_ExportAsset() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status BinaryAssetsCommand(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::BinaryAsset>* /*stream*/)  override {
+    ::grpc::Status ExportAsset(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Asset>* /*reader*/, ::grpcagent::EventResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestBinaryAssetsCommand(::grpc::ServerContext* context, ::grpc::ServerAsyncReaderWriter< ::grpc::ByteBuffer, ::grpc::ByteBuffer>* stream, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncBidiStreaming(1, context, stream, new_call_cq, notification_cq, tag);
+    void RequestExportAsset(::grpc::ServerContext* context, ::grpc::ServerAsyncReader< ::grpc::ByteBuffer, ::grpc::ByteBuffer>* reader, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncClientStreaming(1, context, reader, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -852,27 +851,26 @@ class NSolidService final {
       { return nullptr; }
   };
   template <class BaseClass>
-  class WithRawCallbackMethod_BinaryAssetsCommand : public BaseClass {
+  class WithRawCallbackMethod_ExportAsset : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawCallbackMethod_BinaryAssetsCommand() {
+    WithRawCallbackMethod_ExportAsset() {
       ::grpc::Service::MarkMethodRawCallback(1,
-          new ::grpc::internal::CallbackBidiHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+          new ::grpc::internal::CallbackClientStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
-                   ::grpc::CallbackServerContext* context) { return this->BinaryAssetsCommand(context); }));
+                   ::grpc::CallbackServerContext* context, ::grpc::ByteBuffer* response) { return this->ExportAsset(context, response); }));
     }
-    ~WithRawCallbackMethod_BinaryAssetsCommand() override {
+    ~WithRawCallbackMethod_ExportAsset() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status BinaryAssetsCommand(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::grpcagent::CommandRequest, ::grpcagent::BinaryAsset>* /*stream*/)  override {
+    ::grpc::Status ExportAsset(::grpc::ServerContext* /*context*/, ::grpc::ServerReader< ::grpcagent::Asset>* /*reader*/, ::grpcagent::EventResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerBidiReactor< ::grpc::ByteBuffer, ::grpc::ByteBuffer>* BinaryAssetsCommand(
-      ::grpc::CallbackServerContext* /*context*/)
-      { return nullptr; }
+    virtual ::grpc::ServerReadReactor< ::grpc::ByteBuffer>* ExportAsset(
+      ::grpc::CallbackServerContext* /*context*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
   class WithRawCallbackMethod_ExportInfo : public BaseClass {

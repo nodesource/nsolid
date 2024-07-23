@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "binary_asset.proto";
+import "asset.proto";
 import "blocked_loop.proto";
 import "command.proto";
 import "info.proto";
@@ -11,7 +11,7 @@ package grpcagent;
 
 service NSolidService {
   rpc Command (stream CommandResponse) returns (stream CommandRequest) {}
-  rpc BinaryAssetsCommand (stream BinaryAsset) returns (stream CommandRequest) {}
+  rpc ExportAsset (stream Asset) returns (EventResponse) {}
   rpc ExportInfo (InfoEvent) returns (EventResponse) {}
   rpc ExportPackages (PackagesEvent) returns (EventResponse) {}
   rpc ExportBlockedLoop (BlockedLoopEvent) returns (EventResponse) {}
