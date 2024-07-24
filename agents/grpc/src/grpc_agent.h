@@ -25,6 +25,7 @@ namespace nsolid {
 namespace grpc {
 
 // predeclarations
+class AssetStream;
 class CommandStream;
 class GrpcAgent;
 class GrpcClient;
@@ -71,6 +72,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     int status;
     std::string profile;
     uint64_t thread_id;
+    std::string req_id;
   };
 
   GrpcAgent();
@@ -87,7 +89,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static void config_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
-  static void cpu_profile_cb_(int, std::string, uint64_t, WeakGrpcAgent);
+  static void cpu_profile_cb_(int, std::string, uint64_t, std::string, WeakGrpcAgent);
 
   static void env_creation_cb_(SharedEnvInst, WeakGrpcAgent);
 
@@ -206,6 +208,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   // Profiling
   nsuv::ns_async profile_msg_;
   TSQueue<ProfileQStor> profile_msg_q_;
+  std::map<std::string, AssetStream> cpu_profiles_;
   // ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   // std::atomic<bool> profile_on_exit_;
 

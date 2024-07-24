@@ -380,6 +380,7 @@ int GrpcAgent::stop() {
 /*static*/ void GrpcAgent::cpu_profile_cb_(int status,
                                            std::string profile,
                                            uint64_t thread_id,
+                                           std::string req_id,
                                            WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
   if (agent == nullptr) {
@@ -387,7 +388,7 @@ int GrpcAgent::stop() {
   }
 
   if (agent->profile_msg_q_.enqueue(
-        ProfileQStor { kCpu, status, std::move(profile), thread_id }) == 1) {
+        ProfileQStor { kCpu, status, std::move(profile), thread_id, std::move(req_id) }) == 1) {
     ASSERT_EQ(0, agent->profile_msg_.send());
   }
 }
@@ -831,13 +832,15 @@ void GrpcAgent::got_blocked_loop_msgs() {
 
 void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
   Debug("CPU Profile: %ld\n", stor.profile.size());
-  // if (stor.profile.size() > 0) {
-  //   grpcagent::BinaryAsset asset;
-  //   asset.set_data(stor.profile);
-  //   binary_assets_command_stream_->Write(std::move(asset));
-  // } else {
-  //   binary_assets_command_stream_->StartWritesDone();
-  // }
+  auto it = cpu_profiles_.try_emplace(stor.req_id, nsolid_service_stub_.get(), shared_from_this());
+  if (stor.profile.size() > 0) {
+    grpcagent::Asset asset;
+    asset.set_data(stor.profile);
+    it.first->second.Write(std::move(asset));
+  } else {
+    it.first->second.StartWritesDone();
+    cpu_profiles_.erase(it.first);
+  }
 }
 
 void GrpcAgent::got_logs() {
@@ -1052,14 +1055,18 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 }
 
 int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
+  std::cout << "Received CommandRequest: " << req.DebugString() << std::endl;
+
   const grpcagent::CPUProfileArgs& args = req.args().cpu_profile();
   uint64_t thread_id = args.thread_id();
   uint64_t duration = args.duration();
   // Get metadata
+  Debug("CPU Profile: Thread ID: %ld, Duration: %ld\n", thread_id, duration);
   return CpuProfiler::TakeProfile(GetEnvInst(thread_id),
                                   duration,
                                   cpu_profile_cb_,
                                   thread_id,
+                                  req.requestid(),
                                   weak_from_this());
 }
 
