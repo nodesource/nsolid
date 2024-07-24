@@ -872,7 +872,7 @@ void GrpcAgent::got_proc_metrics() {
 }
 
 void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
-  Debug("Command: %s\n", request.command().c_str());
+  Debug("Command: %s\n", request.DebugString().c_str());
   command_stream_->Write(grpcagent::CommandResponse());
   const std::string cmd = request.command();
   if (cmd == "info") {
@@ -1055,8 +1055,6 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 }
 
 int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
-  std::cout << "Received CommandRequest: " << req.DebugString() << std::endl;
-
   const grpcagent::CPUProfileArgs& args = req.args().cpu_profile();
   uint64_t thread_id = args.thread_id();
   uint64_t duration = args.duration();
