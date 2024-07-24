@@ -2,7 +2,15 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
-## 2024-07,08, Version 5.3.1 'Hydrogen'
+## 2024-07-24, Version 5.3.2 'Hydrogen'
+
+* \[[`3cdcd18567`](https://github.com/nodesource/nsolid/commit/3cdcd18567)] - **src:** initialize prev\_idle\_time\_ on ThreadMetrics (Santiago Gimeno) [nodesource/nsolid#156](https://github.com/nodesource/nsolid/pull/156)
+
+### Commits
+
+## 2024-07-08, Version 5.3.1 'Hydrogen'
+
+### Commits
 
 * \[[`e518606147`](https://github.com/nodesource/nsolid/commit/e518606147)] - Merge tag 'v18.20.4' into node-v18.20.4-nsolid-v5.3.1-release
 
