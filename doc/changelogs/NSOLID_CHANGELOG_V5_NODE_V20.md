@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-07-24, Version 20.16.0-nsolid-v5.3.2 'Iron'
+
+### Commits
+
+* \[[`a126f9a4ec`](https://github.com/nodesource/nsolid/commit/a126f9a4ec)] - Merge tag 'v20.16.0' into node-v20.16.0-nsolid-v5.3.2-release (Trevor Norris)
+* \[[`5da27a264d`](https://github.com/nodesource/nsolid/commit/5da27a264d)] - **src**: initialize prev\_idle\_time\_ on ThreadMetrics (Santiago Gimeno) [nodesource/nsolid#156](https://github.com/nodesource/nsolid/pull/156)
+
 ## 2024-07-08, Version 20.15.1-nsolid-v5.3.1 'Iron'
 
 ### Commits
