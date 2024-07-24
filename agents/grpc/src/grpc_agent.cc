@@ -715,8 +715,6 @@ int GrpcAgent::config(const json& config) {
       log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(opt);
       command_stream_ =
         std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
-      binary_assets_command_stream_ =
-        std::make_unique<BinaryAssetsCommandStream>(nsolid_service_stub_.get(), shared_from_this());
     }
   }
 
@@ -833,13 +831,13 @@ void GrpcAgent::got_blocked_loop_msgs() {
 
 void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
   Debug("CPU Profile: %ld\n", stor.profile.size());
-  if (stor.profile.size() > 0) {
-    grpcagent::BinaryAsset asset;
-    asset.set_data(stor.profile);
-    binary_assets_command_stream_->Write(std::move(asset));
-  } else {
-    binary_assets_command_stream_->StartWritesDone();
-  }
+  // if (stor.profile.size() > 0) {
+  //   grpcagent::BinaryAsset asset;
+  //   asset.set_data(stor.profile);
+  //   binary_assets_command_stream_->Write(std::move(asset));
+  // } else {
+  //   binary_assets_command_stream_->StartWritesDone();
+  // }
 }
 
 void GrpcAgent::got_logs() {
