@@ -285,6 +285,7 @@ ThreadMetrics::ThreadMetrics(SharedEnvInst envinst)
   stor_.thread_id = thread_id_;
   stor_.prev_call_time_ = uv_hrtime();
   stor_.current_hrtime_ = stor_.prev_call_time_;
+  stor_.prev_idle_time_ = uv_metrics_idle_time(envinst->event_loop());
 }
 
 
@@ -300,6 +301,8 @@ ThreadMetrics::ThreadMetrics(uint64_t thread_id)
   stor_.thread_id = thread_id_;
   stor_.prev_call_time_ = uv_hrtime();
   stor_.current_hrtime_ = stor_.prev_call_time_;
+  // Letting prev_idle_time_ be 0 is ok as this is only used by the EnvInst
+  // constructor.
 }
 
 

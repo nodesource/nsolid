@@ -37,4 +37,8 @@ for (let i = 0; i < 10; i++) {
   }));
 }
 
-binding.getMetrics();
+// Let then main thread be a bit idle so we can check that loop_utilization is
+// correctly calculdate.
+setTimeout(() => {
+  binding.getMetrics();
+}, 100);

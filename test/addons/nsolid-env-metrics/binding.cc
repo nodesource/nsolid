@@ -16,6 +16,7 @@ struct Metrics {
 
 static void got_env_metrics(SharedThreadMetrics tm_sp, Metrics* m) {
   assert(tm_sp == m->tm);
+  assert(tm_sp->Get().loop_utilization <= 1);
   cb_cntr++;
   delete m;
 }
