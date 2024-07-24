@@ -1938,7 +1938,8 @@ Enables timer mocking for the specified timers.
     The currently supported timer values are `'setInterval'`, `'setTimeout'`, `'setImmediate'`,
     and `'Date'`. **Default:** `['setInterval', 'setTimeout', 'setImmediate', 'Date']`.
     If no array is provided, all time related APIs (`'setInterval'`, `'clearInterval'`,
-    `'setTimeout'`, `'clearTimeout'`, and `'Date'`) will be mocked by default.
+    `'setTimeout'`, `'clearTimeout'`, `'setImmediate'`, `'clearImmediate'`, and
+    `'Date'`) will be mocked by default.
   * `now` {number | Date} An optional number or Date object representing the
     initial time (in milliseconds) to use as the value
     for `Date.now()`. **Default:** `0`.
@@ -1993,10 +1994,11 @@ mock.timers.enable({ apis: ['Date'], now: new Date() });
 
 Alternatively, if you call `mock.timers.enable()` without any parameters:
 
-All timers (`'setInterval'`, `'clearInterval'`, `'setTimeout'`, and `'clearTimeout'`)
-will be mocked. The `setInterval`, `clearInterval`, `setTimeout`, and `clearTimeout`
-functions from `node:timers`, `node:timers/promises`,
-and `globalThis` will be mocked. As well as the global `Date` object.
+All timers (`'setInterval'`, `'clearInterval'`, `'setTimeout'`, `'clearTimeout'`,
+`'setImmediate'`, and `'clearImmediate'`) will be mocked. The `setInterval`,
+`clearInterval`, `setTimeout`, `clearTimeout`, `setImmediate`, and
+`clearImmediate` functions from `node:timers`, `node:timers/promises`, and
+`globalThis` will be mocked. As well as the global `Date` object.
 
 ### `timers.reset()`
 
@@ -2026,7 +2028,7 @@ mock.timers.reset();
 
 Calls `timers.reset()`.
 
-### `timers.tick(milliseconds)`
+### `timers.tick([milliseconds])`
 
 <!-- YAML
 added:
@@ -2036,7 +2038,7 @@ added:
 Advances time for all mocked timers.
 
 * `milliseconds` {number} The amount of time, in milliseconds,
-  to advance the timers.
+  to advance the timers. **Default:** `1`.
 
 **Note:** This diverges from how `setTimeout` in Node.js behaves and accepts
 only positive numbers. In Node.js, `setTimeout` with negative numbers is
@@ -2096,10 +2098,10 @@ test('mocks setTimeout to be executed synchronously without having to actually w
   const nineSecs = 9000;
   setTimeout(fn, nineSecs);
 
-  const twoSeconds = 3000;
-  context.mock.timers.tick(twoSeconds);
-  context.mock.timers.tick(twoSeconds);
-  context.mock.timers.tick(twoSeconds);
+  const threeSeconds = 3000;
+  context.mock.timers.tick(threeSeconds);
+  context.mock.timers.tick(threeSeconds);
+  context.mock.timers.tick(threeSeconds);
 
   assert.strictEqual(fn.mock.callCount(), 1);
 });
@@ -2115,10 +2117,10 @@ test('mocks setTimeout to be executed synchronously without having to actually w
   const nineSecs = 9000;
   setTimeout(fn, nineSecs);
 
-  const twoSeconds = 3000;
-  context.mock.timers.tick(twoSeconds);
-  context.mock.timers.tick(twoSeconds);
-  context.mock.timers.tick(twoSeconds);
+  const threeSeconds = 3000;
+  context.mock.timers.tick(threeSeconds);
+  context.mock.timers.tick(threeSeconds);
+  context.mock.timers.tick(threeSeconds);
 
   assert.strictEqual(fn.mock.callCount(), 1);
 });
@@ -2168,8 +2170,8 @@ test('mocks setTimeout to be executed synchronously without having to actually w
 
 #### Using clear functions
 
-As mentioned, all clear functions from timers (`clearTimeout` and `clearInterval`)
-are implicity mocked. Take a look at this example using `setTimeout`:
+As mentioned, all clear functions from timers (`clearTimeout`, `clearInterval`,and
+`clearImmediate`) are implicitly mocked. Take a look at this example using `setTimeout`:
 
 ```mjs
 import assert from 'node:assert';
@@ -2182,7 +2184,7 @@ test('mocks setTimeout to be executed synchronously without having to actually w
   context.mock.timers.enable({ apis: ['setTimeout'] });
   const id = setTimeout(fn, 9999);
 
-  // Implicity mocked as well
+  // Implicitly mocked as well
   clearTimeout(id);
   context.mock.timers.tick(9999);
 
@@ -2202,7 +2204,7 @@ test('mocks setTimeout to be executed synchronously without having to actually w
   context.mock.timers.enable({ apis: ['setTimeout'] });
   const id = setTimeout(fn, 9999);
 
-  // Implicity mocked as well
+  // Implicitly mocked as well
   clearTimeout(id);
   context.mock.timers.tick(9999);
 
@@ -2722,11 +2724,7 @@ The corresponding execution ordered event is `'test:dequeue'`.
 ### Event: `'test:stderr'`
 
 * `data` {Object}
-  * `column` {number|undefined} The column number where the test is defined, or
-    `undefined` if the test was run through the REPL.
   * `file` {string} The path of the test file.
-  * `line` {number|undefined} The line number where the test is defined, or
-    `undefined` if the test was run through the REPL.
   * `message` {string} The message written to `stderr`.
 
 Emitted when a running test writes to `stderr`.
@@ -2737,11 +2735,7 @@ defined.
 ### Event: `'test:stdout'`
 
 * `data` {Object}
-  * `column` {number|undefined} The column number where the test is defined, or
-    `undefined` if the test was run through the REPL.
   * `file` {string} The path of the test file.
-  * `line` {number|undefined} The line number where the test is defined, or
-    `undefined` if the test was run through the REPL.
   * `message` {string} The message written to `stdout`.
 
 Emitted when a running test writes to `stdout`.
@@ -2886,6 +2880,24 @@ test('top level test', async (t) => {
 });
 ```
 
+### `context.assert`
+
+<!-- YAML
+added:
+  - v22.2.0
+-->
+
+An object containing assertion methods bound to `context`. The top-level
+functions from the `node:assert` module are exposed here for the purpose of
+creating test plans.
+
+```js
+test('test', (t) => {
+  t.plan(1);
+  t.assert.strictEqual(true, true);
+});
+```
+
 ### `context.diagnostic(message)`
 
 <!-- YAML
@@ -2905,6 +2917,14 @@ test('top level test', (t) => {
   t.diagnostic('A diagnostic message');
 });
 ```
+
+### `context.fullName`
+
+<!-- YAML
+added: v20.16.0
+-->
+
+The name of the test and each of its ancestors, separated by `>`.
 
 ### `context.name`
 
@@ -2937,7 +2957,7 @@ expected count, the test will fail.
 test('top level test', (t) => {
   t.plan(2);
   t.assert.ok('some relevant assertion here');
-  t.subtest('subtest', () => {});
+  t.test('subtest', () => {});
 });
 ```
 

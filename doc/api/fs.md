@@ -1023,7 +1023,8 @@ changes:
     that resolves to `true` or `false` **Default:** `undefined`.
     * `src` {string} source path to copy.
     * `dest` {string} destination path to copy to.
-    * Returns: {boolean|Promise}
+    * Returns: {boolean|Promise} A value that is coercible to `boolean` or
+      a `Promise` that fulfils with such value.
   * `force` {boolean} overwrite existing file or directory. The copy
     operation will ignore errors if you set this to false and the destination
     exists. Use the `errorOnExist` option to change this behavior.
@@ -2313,6 +2314,7 @@ changes:
 * `dest` {string|Buffer|URL} destination filename of the copy operation
 * `mode` {integer} modifiers for copy operation. **Default:** `0`.
 * `callback` {Function}
+  * `err` {Error}
 
 Asynchronously copies `src` to `dest`. By default, `dest` is overwritten if it
 already exists. No arguments other than a possible exception are given to the
@@ -2385,7 +2387,8 @@ changes:
     that resolves to `true` or `false` **Default:** `undefined`.
     * `src` {string} source path to copy.
     * `dest` {string} destination path to copy to.
-    * Returns: {boolean|Promise}
+    * Returns: {boolean|Promise} A value that is coercible to `boolean` or
+      a `Promise` that fulfils with such value.
   * `force` {boolean} overwrite existing file or directory. The copy
     operation will ignore errors if you set this to false and the destination
     exists. Use the `errorOnExist` option to change this behavior.
@@ -2398,6 +2401,7 @@ changes:
   * `verbatimSymlinks` {boolean} When `true`, path resolution for symlinks will
     be skipped. **Default:** `false`
 * `callback` {Function}
+  * `err` {Error}
 
 Asynchronously copies the entire directory structure from `src` to `dest`,
 including subdirectories and files.
@@ -5359,7 +5363,8 @@ changes:
     all of its contents will be skipped as well. **Default:** `undefined`
     * `src` {string} source path to copy.
     * `dest` {string} destination path to copy to.
-    * Returns: {boolean}
+    * Returns: {boolean} Any non-`Promise` value that is coercible
+      to `boolean`.
   * `force` {boolean} overwrite existing file or directory. The copy
     operation will ignore errors if you set this to false and the destination
     exists. Use the `errorOnExist` option to change this behavior.

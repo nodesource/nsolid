@@ -585,7 +585,7 @@ testMe.complete('obj.', common.mustCall(function(error, data) {
 
     data[0].forEach((key) => {
       if (!key || key === 'ele.biu') return;
-      assert.notStrictEqual(ele[key.substr(4)], undefined);
+      assert.notStrictEqual(ele[key.slice(4)], undefined);
     });
   }));
 });

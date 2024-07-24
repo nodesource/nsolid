@@ -67,11 +67,24 @@ const noop = () => {};
 const hasCrypto = Boolean(process.versions.openssl) &&
                   !process.env.NODE_SKIP_CRYPTO;
 
-const hasOpenSSL3 = hasCrypto &&
-    require('crypto').constants.OPENSSL_VERSION_NUMBER >= 0x30000000;
+// Synthesize OPENSSL_VERSION_NUMBER format with the layout 0xMNN00PPSL
+const opensslVersionNumber = (major = 0, minor = 0, patch = 0) => {
+  assert(major >= 0 && major <= 0xf);
+  assert(minor >= 0 && minor <= 0xff);
+  assert(patch >= 0 && patch <= 0xff);
+  return (major << 28) | (minor << 20) | (patch << 4);
+};
 
-const hasOpenSSL31 = hasCrypto &&
-    require('crypto').constants.OPENSSL_VERSION_NUMBER >= 0x30100000;
+let OPENSSL_VERSION_NUMBER;
+const hasOpenSSL = (major = 0, minor = 0, patch = 0) => {
+  if (!hasCrypto) return false;
+  if (OPENSSL_VERSION_NUMBER === undefined) {
+    const regexp = /(?<m>\d+)\.(?<n>\d+)\.(?<p>\d+)/;
+    const { m, n, p } = process.versions.openssl.match(regexp).groups;
+    OPENSSL_VERSION_NUMBER = opensslVersionNumber(m, n, p);
+  }
+  return OPENSSL_VERSION_NUMBER >= opensslVersionNumber(major, minor, patch);
+};
 
 const hasQuic = hasCrypto && !!process.config.variables.openssl_quic;
 
@@ -290,6 +303,7 @@ function platformTimeout(ms) {
 }
 
 let knownGlobals = [
+  AbortController,
   atob,
   btoa,
   clearImmediate,
@@ -301,15 +315,6 @@ let knownGlobals = [
   setTimeout,
   queueMicrotask,
 ];
-
-// TODO(@jasnell): This check can be temporary. AbortController is
-// not currently supported in either Node.js 12 or 10, making it
-// difficult to run tests comparatively on those versions. Once
-// all supported versions have AbortController as a global, this
-// check can be removed and AbortController can be added to the
-// knownGlobals list above.
-if (global.AbortController)
-  knownGlobals.push(global.AbortController);
 
 if (global.gc) {
   knownGlobals.push(global.gc);
@@ -975,8 +980,7 @@ const common = {
   getTTYfd,
   hasIntl,
   hasCrypto,
-  hasOpenSSL3,
-  hasOpenSSL31,
+  hasOpenSSL,
   hasQuic,
   hasMultiLocalhost,
   invalidArgTypeHelper,
@@ -1035,6 +1039,18 @@ const common = {
       return re.test(name) &&
              iFaces[name].some(({ family }) => family === 'IPv6');
     });
+  },
+
+  get hasOpenSSL3() {
+    return hasOpenSSL(3);
+  },
+
+  get hasOpenSSL31() {
+    return hasOpenSSL(3, 1);
+  },
+
+  get hasOpenSSL32() {
+    return hasOpenSSL(3, 2);
   },
 
   get inFreeBSDJail() {

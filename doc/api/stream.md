@@ -952,6 +952,17 @@ added: v12.3.0
 
 Getter for the property `objectMode` of a given `Writable` stream.
 
+##### `writable[Symbol.asyncDispose]()`
+
+<!-- YAML
+added: v20.16.0
+-->
+
+> Stability: 1 - Experimental
+
+Calls [`writable.destroy()`][writable-destroy] with an `AbortError` and returns
+a promise that fulfills when the stream is finished.
+
 ##### `writable.write(chunk[, encoding][, callback])`
 
 <!-- YAML
@@ -1278,9 +1289,11 @@ changes:
 -->
 
 The `'readable'` event is emitted when there is data available to be read from
-the stream or when the end of the stream has been reached. Effectively, the
-`'readable'` event indicates that the stream has new information. If data is
-available, [`stream.read()`][stream-read] will return that data.
+the stream, up to the configured high water mark (`state.highWaterMark`). Effectively,
+it indicates that the stream has new information within the buffer. If data is available
+within this buffer, [`stream.read()`][stream-read] can be called to retrieve that data.
+Additionally, the `'readable'` event may also be emitted when the end of the stream has been
+reached.
 
 ```js
 const readable = getReadableStreamSomehow();
@@ -1549,13 +1562,14 @@ readable.on('end', () => {
 });
 ```
 
-Each call to `readable.read()` returns a chunk of data, or `null`. The chunks
-are not concatenated. A `while` loop is necessary to consume all data
-currently in the buffer. When reading a large file `.read()` may return `null`,
-having consumed all buffered content so far, but there is still more data to
-come not yet buffered. In this case a new `'readable'` event will be emitted
-when there is more data in the buffer. Finally the `'end'` event will be
-emitted when there is no more data to come.
+Each call to `readable.read()` returns a chunk of data or `null`, signifying
+that there's no more data to read at that moment. These chunks aren't automatically
+concatenated. Because a single `read()` call does not return all the data, using
+a while loop may be necessary to continuously read chunks until all data is retrieved.
+When reading a large file, `.read()` might return `null` temporarily, indicating
+that it has consumed all buffered content but there may be more data yet to be
+buffered. In such cases, a new `'readable'` event is emitted once there's more
+data in the buffer, and the `'end'` event signifies the end of data transmission.
 
 Therefore to read a file's whole contents from a `readable`, it is necessary
 to collect chunks across multiple `'readable'` events:
@@ -3423,7 +3437,7 @@ added: v19.9.0
 * Returns: {integer}
 
 Returns the default highWaterMark used by streams.
-Defaults to `16384` (16 KiB), or `16` for `objectMode`.
+Defaults to `65536` (64 KiB), or `16` for `objectMode`.
 
 ### `stream.setDefaultHighWaterMark(objectMode, value)`
 

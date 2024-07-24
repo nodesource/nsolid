@@ -540,8 +540,8 @@ void SecureContext::Init(const FunctionCallbackInfo<Value>& args) {
                                  SSL_SESS_CACHE_NO_INTERNAL |
                                  SSL_SESS_CACHE_NO_AUTO_CLEAR);
 
-  SSL_CTX_set_min_proto_version(sc->ctx_.get(), min_version);
-  SSL_CTX_set_max_proto_version(sc->ctx_.get(), max_version);
+  CHECK(SSL_CTX_set_min_proto_version(sc->ctx_.get(), min_version));
+  CHECK(SSL_CTX_set_max_proto_version(sc->ctx_.get(), max_version));
 
   // OpenSSL 1.1.0 changed the ticket key size, but the OpenSSL 1.0.x size was
   // exposed in the public API. To retain compatibility, install a callback
@@ -998,6 +998,7 @@ void SecureContext::SetSessionTimeout(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsInt32());
 
   int32_t sessionTimeout = args[0].As<Int32>()->Value();
+  CHECK_GE(sessionTimeout, 0);
   SSL_CTX_set_timeout(sc->ctx_.get(), sessionTimeout);
 }
 

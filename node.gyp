@@ -161,6 +161,7 @@
       'src/permission/fs_permission.cc',
       'src/permission/inspector_permission.cc',
       'src/permission/permission.cc',
+      'src/permission/wasi_permission.cc',
       'src/permission/worker_permission.cc',
       'src/pipe_wrap.cc',
       'src/process_wrap.cc',
@@ -283,6 +284,7 @@
       'src/permission/fs_permission.h',
       'src/permission/inspector_permission.h',
       'src/permission/permission.h',
+      'src/permission/wasi_permission.h',
       'src/permission/worker_permission.h',
       'src/pipe_wrap.h',
       'src/req_wrap.h',
@@ -1307,6 +1309,7 @@
 
       'include_dirs': [
         'src',
+        'tools',
         'tools/msvs/genfiles',
         'deps/v8/include',
         'deps/cares/include',
