@@ -25,7 +25,6 @@ namespace nsolid {
 namespace grpc {
 
 // predeclarations
-class BinaryAssetsCommandStream;
 class CommandStream;
 class GrpcAgent;
 class GrpcClient;
@@ -215,7 +214,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   std::shared_ptr<GrpcClient> client_;
   std::unique_ptr<grpcagent::NSolidService::StubInterface> nsolid_service_stub_;
   std::unique_ptr<CommandStream> command_stream_;
-  std::unique_ptr<BinaryAssetsCommandStream> binary_assets_command_stream_;
 
   // For the gRPC server
   nsuv::ns_async command_msg_;

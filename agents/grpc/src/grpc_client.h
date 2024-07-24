@@ -45,11 +45,11 @@ class CommandStream: public ::grpc::ClientBidiReactor<grpcagent::CommandResponse
   TSQueue<grpcagent::CommandResponse> response_q_;
 };
 
-class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::BinaryAsset, grpcagent::EventResponse> {
+class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
 
   struct WriteState {
     bool write_done = true;
-    grpcagent::BinaryAsset asset;
+    grpcagent::Asset asset;
   };
 
  public:
@@ -60,11 +60,9 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::BinaryAsset, grp
 
   void OnDone(const ::grpc::Status& /*s*/) override;
 
-  void OnReadDone(bool ok) override;
+  void OnWriteDone(bool /*ok*/);
 
-  void OnWriteDone(bool /*ok*/) override;
-
-  void Write(grpcagent::BinaryAsset&& resp);
+  void Write(grpcagent::Asset&& resp);
 
  private:
 
@@ -73,9 +71,9 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::BinaryAsset, grp
  private:
   std::shared_ptr<GrpcAgent> agent_;
   ::grpc::ClientContext context_;
-  grpcagent::CommandRequest server_request_;
+  grpcagent::EventResponse event_response_;
   WriteState write_state_;
-  TSQueue<grpcagent::BinaryAsset> assets_q_;
+  TSQueue<grpcagent::Asset> assets_q_;
 };
 
 class GrpcClient {
