@@ -268,7 +268,6 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
 }
 
 GrpcAgent::~GrpcAgent() {
-  fprintf(stderr, "GrpcAgent::~GrpcAgent()\n");
 }
 
 void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
@@ -976,7 +975,6 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
         std::unique_ptr<google::protobuf::Arena> &&,
         const grpcagent::BlockedLoopEvent& event,
         grpcagent::EventResponse*) {
-      fprintf(stderr, "ExportBlockedLoop() success\n");
       return true;
     });
 }
@@ -1002,7 +1000,6 @@ void GrpcAgent::send_info_event(const char* req_id) {
         std::unique_ptr<google::protobuf::Arena>&&,
         const grpcagent::InfoEvent& info_event,
         grpcagent::EventResponse*) {
-      fprintf(stderr, "ExportInfo() success\n");
       return true;
     });
 }
@@ -1028,7 +1025,6 @@ void GrpcAgent::send_packages_event(const char* req_id) {
         std::unique_ptr<google::protobuf::Arena>&&,
         const grpcagent::PackagesEvent& info_event,
         grpcagent::EventResponse*) {
-      fprintf(stderr, "ExportPackages() success\n");
       return true;
     });
 }
@@ -1054,7 +1050,6 @@ void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
         std::unique_ptr<google::protobuf::Arena> &&,
         const grpcagent::UnblockedLoopEvent& event,
         grpcagent::EventResponse*) {
-      fprintf(stderr, "ExportUnblockedLoop() success\n");
       return true;
     });
 }
