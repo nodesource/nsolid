@@ -54,7 +54,8 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
 
  public:
   explicit AssetStream(grpcagent::NSolidService::StubInterface* stub,
-                       std::shared_ptr<GrpcAgent> agent);
+                       std::shared_ptr<GrpcAgent> agent,
+                       const std::string& req_id);
 
   ~AssetStream();
 
@@ -74,6 +75,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
   grpcagent::EventResponse event_response_;
   WriteState write_state_;
   TSQueue<grpcagent::Asset> assets_q_;
+  std::string req_id_;
 };
 
 class GrpcClient {
