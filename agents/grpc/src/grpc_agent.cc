@@ -12,6 +12,8 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
 
+using std::chrono::system_clock;
+using std::chrono::time_point;
 using json = nlohmann::json;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
 using opentelemetry::nostd::span;
@@ -49,14 +51,36 @@ JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)) {
 }
 
+std::pair<int64_t, int64_t> create_recorded(const time_point<system_clock>& ts) {
+  using std::chrono::duration_cast;
+  using std::chrono::seconds;
+  using std::chrono::nanoseconds;
+
+  system_clock::duration dur = ts.time_since_epoch();
+  return { duration_cast<seconds>(dur).count(),
+           duration_cast<nanoseconds>(dur % seconds(1)).count() };
+}
+
+void PopulateCommon(grpcagent::CommonResponse* common,
+                    const std::string& command,
+                    const char* req_id) {
+  common->set_command(command);
+  auto recorded = create_recorded(system_clock::now());
+  grpcagent::Time* time = common->mutable_recorded();
+  time->set_seconds(recorded.first);
+  time->set_nanoseconds(recorded.second);
+  if (req_id) {
+    common->set_requestid(req_id);
+  }
+}
+
 void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
                               const GrpcAgent::BlockedLoopStor& stor) {
   // Fill in the fields of the BlockedLoopEvent.
   nlohmann::json body = json::parse(stor.body, nullptr, false);
   ASSERT(!body.is_discarded());
 
-  grpcagent::CommonResponse* common = blocked_loop_event->mutable_common();
-  common->set_command("loop_blocked");
+  PopulateCommon(blocked_loop_event->mutable_common(), "loop_blocked", nullptr);
 
   grpcagent::BlockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
   blocked_body->set_thread_id(stor.thread_id);
@@ -94,11 +118,7 @@ void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
   DebugJSON("Process Info: \n%s\n", info);
 
   // Fill in the fields of the InfoResponse.
-  grpcagent::CommonResponse* common = info_event->mutable_common();
-  common->set_command("info");
-  if (req_id) {
-    common->set_requestid(req_id);
-  }
+  PopulateCommon(info_event->mutable_common(), "info", req_id);
 
   grpcagent::InfoBody* body = info_event->mutable_body();
   if (!info.is_null()) {
@@ -177,11 +197,7 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
   DebugJSON("Packages Info: \n%s\n", packages);
 
   // Fill in the fields of the InfoResponse.
-  grpcagent::CommonResponse* common = packages_event->mutable_common();
-  common->set_command("packages");
-  if (req_id) {
-    common->set_requestid(req_id);
-  }
+  PopulateCommon(packages_event->mutable_common(), "packages", req_id);
 
   grpcagent::PackagesBody* body = packages_event->mutable_body();
   for (const auto& package : packages) {
@@ -217,8 +233,7 @@ void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* blocked_loop_even
   nlohmann::json body = json::parse(stor.body, nullptr, false);
   ASSERT(!body.is_discarded());
 
-  grpcagent::CommonResponse* common = blocked_loop_event->mutable_common();
-  common->set_command("loop_unblocked");
+  PopulateCommon(blocked_loop_event->mutable_common(), "loop_unblocked", nullptr);
 
   grpcagent::UnblockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
   blocked_body->set_thread_id(stor.thread_id);
@@ -255,6 +270,10 @@ void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
   if (command_q_.enqueue(std::move(request)) == 1) {
     ASSERT_EQ(0, command_msg_.send());
   }
+}
+
+void GrpcAgent::remove_cpu_profile(const std::string& req_id) {
+  cpu_profiles_.erase(req_id);
 }
 
 int GrpcAgent::start() {
@@ -832,14 +851,14 @@ void GrpcAgent::got_blocked_loop_msgs() {
 
 void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
   Debug("CPU Profile: %ld\n", stor.profile.size());
-  auto it = cpu_profiles_.try_emplace(stor.req_id, nsolid_service_stub_.get(), shared_from_this());
+  auto it = cpu_profiles_.try_emplace(stor.req_id, nsolid_service_stub_.get(), shared_from_this(), stor.req_id);
   if (stor.profile.size() > 0) {
     grpcagent::Asset asset;
+    PopulateCommon(asset.mutable_common(), "cpu_profile", stor.req_id.c_str());
     asset.set_data(stor.profile);
     it.first->second.Write(std::move(asset));
   } else {
     it.first->second.StartWritesDone();
-    cpu_profiles_.erase(it.first);
   }
 }
 

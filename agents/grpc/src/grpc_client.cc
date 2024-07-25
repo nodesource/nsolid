@@ -68,7 +68,9 @@ void CommandStream::Write(grpcagent::CommandResponse&& resp) {
 
 AssetStream::AssetStream(
     grpcagent::NSolidService::StubInterface* stub,
-    std::shared_ptr<GrpcAgent> agent): agent_(agent) {
+    std::shared_ptr<GrpcAgent> agent,
+    const std::string& req_id): agent_(agent),
+                                req_id_(req_id){
   stub->async()->ExportAsset(&context_, &event_response_, this);
   StartCall();
  }
@@ -78,6 +80,9 @@ AssetStream::~AssetStream() {
 
 void AssetStream::OnDone(const ::grpc::Status& s) {
   fprintf(stderr, "AssetStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  if (agent_) {
+    agent_->remove_cpu_profile(req_id_);
+  }
 }
 
 void AssetStream::OnWriteDone(bool ok/*ok*/) {

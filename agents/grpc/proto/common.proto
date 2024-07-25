@@ -4,7 +4,7 @@ package grpcagent;
 
 message Time {
   uint64 seconds = 1;
-  uint32 nanoseconds = 2;
+  uint64 nanoseconds = 2;
 }
 
 message CommonResponse {
