@@ -55,6 +55,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void got_command_request(grpcagent::CommandRequest&& request);
 
+  void remove_cpu_profile(const std::string& req_id);
+
+
   int start();
 
   int stop();
