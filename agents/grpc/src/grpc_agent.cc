@@ -6,6 +6,7 @@
 #include "nsolid/nsolid_api.h"
 #include "nsolid/nsolid_util.h"
 #include "../../otlp/src/otlp_common.h"
+#include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter.h"
@@ -260,6 +261,10 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
   ASSERT_EQ(0, stop_lock_.init(true));
+  absl::InitializeLog();
+  // gpr_set_log_function([](gpr_log_func_args* args) {
+  //   Debug("gRPC: %s\n", args->message);
+  // });
 }
 
 GrpcAgent::~GrpcAgent() {
