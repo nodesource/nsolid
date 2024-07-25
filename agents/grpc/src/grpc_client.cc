@@ -35,13 +35,13 @@ CommandStream::~CommandStream() {
 }
 
 void CommandStream::OnDone(const ::grpc::Status& s) {
-  fprintf(stderr, "OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  // fprintf(stderr, "OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
 }
 
 void CommandStream::OnReadDone(bool ok) {
   if (ok) {
-    fprintf(stderr, "OnReadDone\n");
-    fprintf(stderr, "Command: %s\n", server_request_.command().c_str());
+    // fprintf(stderr, "OnReadDone\n");
+    // fprintf(stderr, "Command: %s\n", server_request_.command().c_str());
     agent_->got_command_request(std::move(server_request_));
     // Write(grpcagent::CommandResponse());
     StartRead(&server_request_);
@@ -49,7 +49,7 @@ void CommandStream::OnReadDone(bool ok) {
 }
 
 void CommandStream::OnWriteDone(bool ok/*ok*/) {
-  fprintf(stderr, "OnWriteDone: %d\n", ok);
+  // fprintf(stderr, "OnWriteDone: %d\n", ok);
   write_state_.write_done = true;
   NextWrite();
 }
@@ -79,14 +79,14 @@ AssetStream::~AssetStream() {
 }
 
 void AssetStream::OnDone(const ::grpc::Status& s) {
-  fprintf(stderr, "AssetStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  // fprintf(stderr, "AssetStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
   if (agent_) {
     agent_->remove_cpu_profile(req_id_);
   }
 }
 
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
-  fprintf(stderr, "AssetStream::OnWriteDone: %d\n", ok);
+  // fprintf(stderr, "AssetStream::OnWriteDone: %d\n", ok);
   write_state_.write_done = true;
   NextWrite();
 }
@@ -172,7 +172,7 @@ static int InternalDelegateAsyncExport(
       call_data->grpc_status = grpc_status;
       if (call_data->grpc_status.ok())
       {
-        fprintf(stderr, "InternalDelegateAsyncExport() success\n");
+        // fprintf(stderr, "InternalDelegateAsyncExport() success\n");
       }
       
       call_data->result_callback(call_data->grpc_status, std::move(call_data->arena), *call_data->event, call_data->event_response);
