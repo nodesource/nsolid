@@ -193,13 +193,13 @@ class Time final :
   void _internal_set_seconds(uint64_t value);
   public:
 
-  // uint32 nanoseconds = 2;
+  // uint64 nanoseconds = 2;
   void clear_nanoseconds();
-  uint32_t nanoseconds() const;
-  void set_nanoseconds(uint32_t value);
+  uint64_t nanoseconds() const;
+  void set_nanoseconds(uint64_t value);
   private:
-  uint32_t _internal_nanoseconds() const;
-  void _internal_set_nanoseconds(uint32_t value);
+  uint64_t _internal_nanoseconds() const;
+  void _internal_set_nanoseconds(uint64_t value);
   public:
 
   // @@protoc_insertion_point(class_scope:grpcagent.Time)
@@ -211,7 +211,7 @@ class Time final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     uint64_t seconds_;
-    uint32_t nanoseconds_;
+    uint64_t nanoseconds_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -437,22 +437,22 @@ inline void Time::set_seconds(uint64_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.Time.seconds)
 }
 
-// uint32 nanoseconds = 2;
+// uint64 nanoseconds = 2;
 inline void Time::clear_nanoseconds() {
-  _impl_.nanoseconds_ = 0u;
+  _impl_.nanoseconds_ = uint64_t{0u};
 }
-inline uint32_t Time::_internal_nanoseconds() const {
+inline uint64_t Time::_internal_nanoseconds() const {
   return _impl_.nanoseconds_;
 }
-inline uint32_t Time::nanoseconds() const {
+inline uint64_t Time::nanoseconds() const {
   // @@protoc_insertion_point(field_get:grpcagent.Time.nanoseconds)
   return _internal_nanoseconds();
 }
-inline void Time::_internal_set_nanoseconds(uint32_t value) {
+inline void Time::_internal_set_nanoseconds(uint64_t value) {
   
   _impl_.nanoseconds_ = value;
 }
-inline void Time::set_nanoseconds(uint32_t value) {
+inline void Time::set_nanoseconds(uint64_t value) {
   _internal_set_nanoseconds(value);
   // @@protoc_insertion_point(field_set:grpcagent.Time.nanoseconds)
 }
