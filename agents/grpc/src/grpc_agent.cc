@@ -643,19 +643,23 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   //   return;
   // }
 
-  std::vector<std::unique_ptr<Recordable>> recordables;
   Tracer::SpanStor s;
   while (agent->span_msg_q_.dequeue(s)) {
     auto recordable = agent->trace_exporter_->MakeRecordable();
     otlp::fill_recordable(recordable.get(), s);
-    recordables.push_back(std::move(recordable));
+    agent->recordables_.push_back(std::move(recordable));
   }
 
-  span<std::unique_ptr<Recordable>> batch(recordables);
-  auto result = agent->trace_exporter_->Export(batch);
-  Debug("# Spans Exported: %ld. Result: %d\n",
-        recordables.size(),
-        static_cast<int>(result));
+  if (agent->recordables_.size() > 1000) {
+    Debug("# Spans Exporting: %ld\n",
+        agent->recordables_.size());
+
+    auto result = agent->trace_exporter_->Export(agent->recordables_);
+    Debug("# Result: %d\n",
+          static_cast<int>(result));
+    
+    agent->recordables_.clear();
+  }
 }
 
 /*static*/void GrpcAgent::thr_metrics_cb_(SharedThreadMetrics metrics,
