@@ -5,8 +5,8 @@ import "common.proto";
 package grpcagent;
 
 message ReconfigureBody {
-  optional uint32 blockedLoopThreshold = 1;
-  optional uint32 interval = 2;
+  optional uint64 blockedLoopThreshold = 1;
+  optional uint64 interval = 2;
   optional bool pauseMetrics = 3;
   optional bool promiseTracking = 4;
   optional bool redactSnapshots = 5;
