@@ -129,6 +129,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void do_stop();
 
+  void flush_spans();
+
   void got_blocked_loop_msgs();
 
   void got_cpu_profile(const ProfileQStor& stor);
@@ -186,6 +188,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcExporter>
     trace_exporter_;
   std::vector<std::unique_ptr<opentelemetry::sdk::trace::Recordable>> recordables_;
+  nsuv::ns_timer flush_spans_timer_;
 
   // For the Metrics API
   uint64_t metrics_interval_;
