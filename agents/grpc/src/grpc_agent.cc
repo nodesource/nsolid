@@ -34,6 +34,9 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
+const char* kNSOLID_SPANS_FLUSH_INTERVAL = "NSOLID_SPANS_FLUSH_INTERVAL";
+const int NSOLID_SPANS_FLUSH_INTERVAL = 60000;
+
 template <typename... Args>
 inline void Debug(Args&&... args) {
   per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
@@ -651,14 +654,7 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   }
 
   if (agent->recordables_.size() > 1000) {
-    Debug("# Spans Exporting: %ld\n",
-        agent->recordables_.size());
-
-    auto result = agent->trace_exporter_->Export(agent->recordables_);
-    Debug("# Result: %d\n",
-          static_cast<int>(result));
-    
-    agent->recordables_.clear();
+    agent->flush_spans();
   }
 }
 
@@ -705,6 +701,7 @@ static string_vector tracing_fields({ "/tracingEnabled",
 
 
 int GrpcAgent::config(const json& config) {
+  int ret = 0;
   json old_config = config_;
   config_ = config;
   json diff = json::diff(old_config, config_);
@@ -791,10 +788,27 @@ int GrpcAgent::config(const json& config) {
       }
     }
 
-    return setup_metrics_timer(period);
+    ret = setup_metrics_timer(period);
   }
 
-  return 0;
+  if (!flush_spans_timer_.is_active()) {
+    uint64_t period = NSOLID_SPANS_FLUSH_INTERVAL;
+    std::string spans_flush_interval;
+    if (per_process::system_environment->Get(kNSOLID_SPANS_FLUSH_INTERVAL).To(&spans_flush_interval)) {
+      period = std::stoull(spans_flush_interval);
+    }
+
+    ret = flush_spans_timer_.start(+[](nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
+      SharedGrpcAgent agent = agent_wp.lock();
+      if (agent == nullptr) {
+        return;
+      }
+
+      agent->flush_spans();
+    }, period, period, weak_from_this());
+  }
+
+  return ret;
 }
 
 void GrpcAgent::do_start() {
@@ -809,6 +823,8 @@ void GrpcAgent::do_start() {
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, weak_from_this()));
 
   ASSERT_EQ(0, command_msg_.init(&loop_, command_msg_cb_, weak_from_this()));
+
+  ASSERT_EQ(0, flush_spans_timer_.init(&loop_));
 
   ASSERT_EQ(0, log_msg_.init(&loop_, log_msg_cb_, weak_from_this()));
 
@@ -839,11 +855,23 @@ void GrpcAgent::do_stop() {
   span_msg_.close();
   metrics_timer_.close();
   metrics_msg_.close();
+  flush_spans_timer_.close();
   command_msg_.close();
   config_msg_.close();
   blocked_loop_msg_.close();
   env_msg_.close();
   shutdown_.close();
+}
+
+void GrpcAgent::flush_spans() {
+  if (recordables_.size() > 0) {
+    Debug("# Spans Exporting: %ld\n", recordables_.size());
+
+    auto result = trace_exporter_->Export(recordables_);
+    Debug("# Result: %d\n", static_cast<int>(result));
+    
+    recordables_.clear();
+  }
 }
 
 void GrpcAgent::got_blocked_loop_msgs() {
@@ -956,6 +984,8 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   DebugJSON("Reconfigure out: \n%s\n", out);
 
   UpdateConfig(out.dump());
+
+  send_reconfigure();
 }
 
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {

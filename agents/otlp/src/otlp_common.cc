@@ -171,7 +171,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
         add_counter(metrics,                                                   \
                     process_start,                                             \
                     end,                                                       \
-                    #CName,                                                    \
+                    #JSName,                                                   \
                     Unit,                                                      \
                     type,                                                      \
                     value);                                                    \
@@ -179,7 +179,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
       break;                                                                   \
       case MetricsType::EGauge:                                                \
       {                                                                        \
-        add_gauge(metrics, process_start, end, #CName, Unit, type, value);     \
+        add_gauge(metrics, process_start, end, #JSName, Unit, type, value);    \
       }                                                                        \
       break;                                                                   \
       default:                                                                 \
@@ -230,7 +230,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
         add_counter(metrics,                                                   \
                     process_start,                                             \
                     end,                                                       \
-                    #CName,                                                    \
+                    #JSName,                                                    \
                     Unit,                                                      \
                     type,                                                      \
                     value,                                                     \
@@ -242,7 +242,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
         add_gauge(metrics,                                                     \
                   process_start,                                               \
                   end,                                                         \
-                  #CName,                                                      \
+                  #JSName,                                                      \
                   Unit,                                                        \
                   type,                                                        \
                   value,                                                       \
