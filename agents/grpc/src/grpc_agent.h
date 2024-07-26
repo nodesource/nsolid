@@ -8,6 +8,7 @@
 #include <grpcpp/grpcpp.h>
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "opentelemetry/version.h"
+#include "opentelemetry/sdk/trace/recordable.h"
 
 // Class pre-declaration
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -184,6 +185,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   uint32_t trace_flags_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcExporter>
     trace_exporter_;
+  std::vector<std::unique_ptr<opentelemetry::sdk::trace::Recordable>> recordables_;
 
   // For the Metrics API
   uint64_t metrics_interval_;
