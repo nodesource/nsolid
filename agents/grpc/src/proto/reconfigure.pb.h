@@ -272,30 +272,30 @@ class ReconfigureBody final :
   std::string* _internal_mutable_statsdtags();
   public:
 
-  // optional uint32 blockedLoopThreshold = 1;
+  // optional uint64 blockedLoopThreshold = 1;
   bool has_blockedloopthreshold() const;
   private:
   bool _internal_has_blockedloopthreshold() const;
   public:
   void clear_blockedloopthreshold();
-  uint32_t blockedloopthreshold() const;
-  void set_blockedloopthreshold(uint32_t value);
+  uint64_t blockedloopthreshold() const;
+  void set_blockedloopthreshold(uint64_t value);
   private:
-  uint32_t _internal_blockedloopthreshold() const;
-  void _internal_set_blockedloopthreshold(uint32_t value);
+  uint64_t _internal_blockedloopthreshold() const;
+  void _internal_set_blockedloopthreshold(uint64_t value);
   public:
 
-  // optional uint32 interval = 2;
+  // optional uint64 interval = 2;
   bool has_interval() const;
   private:
   bool _internal_has_interval() const;
   public:
   void clear_interval();
-  uint32_t interval() const;
-  void set_interval(uint32_t value);
+  uint64_t interval() const;
+  void set_interval(uint64_t value);
   private:
-  uint32_t _internal_interval() const;
-  void _internal_set_interval(uint32_t value);
+  uint64_t _internal_interval() const;
+  void _internal_set_interval(uint64_t value);
   public:
 
   // optional bool pauseMetrics = 3;
@@ -377,8 +377,8 @@ class ReconfigureBody final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr statsd_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr statsdbucket_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr statsdtags_;
-    uint32_t blockedloopthreshold_;
-    uint32_t interval_;
+    uint64_t blockedloopthreshold_;
+    uint64_t interval_;
     bool pausemetrics_;
     bool promisetracking_;
     bool redactsnapshots_;
@@ -576,7 +576,7 @@ class ReconfigureEvent final :
 #endif  // __GNUC__
 // ReconfigureBody
 
-// optional uint32 blockedLoopThreshold = 1;
+// optional uint64 blockedLoopThreshold = 1;
 inline bool ReconfigureBody::_internal_has_blockedloopthreshold() const {
   bool value = (_impl_._has_bits_[0] & 0x00000008u) != 0;
   return value;
@@ -585,26 +585,26 @@ inline bool ReconfigureBody::has_blockedloopthreshold() const {
   return _internal_has_blockedloopthreshold();
 }
 inline void ReconfigureBody::clear_blockedloopthreshold() {
-  _impl_.blockedloopthreshold_ = 0u;
+  _impl_.blockedloopthreshold_ = uint64_t{0u};
   _impl_._has_bits_[0] &= ~0x00000008u;
 }
-inline uint32_t ReconfigureBody::_internal_blockedloopthreshold() const {
+inline uint64_t ReconfigureBody::_internal_blockedloopthreshold() const {
   return _impl_.blockedloopthreshold_;
 }
-inline uint32_t ReconfigureBody::blockedloopthreshold() const {
+inline uint64_t ReconfigureBody::blockedloopthreshold() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.blockedLoopThreshold)
   return _internal_blockedloopthreshold();
 }
-inline void ReconfigureBody::_internal_set_blockedloopthreshold(uint32_t value) {
+inline void ReconfigureBody::_internal_set_blockedloopthreshold(uint64_t value) {
   _impl_._has_bits_[0] |= 0x00000008u;
   _impl_.blockedloopthreshold_ = value;
 }
-inline void ReconfigureBody::set_blockedloopthreshold(uint32_t value) {
+inline void ReconfigureBody::set_blockedloopthreshold(uint64_t value) {
   _internal_set_blockedloopthreshold(value);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.blockedLoopThreshold)
 }
 
-// optional uint32 interval = 2;
+// optional uint64 interval = 2;
 inline bool ReconfigureBody::_internal_has_interval() const {
   bool value = (_impl_._has_bits_[0] & 0x00000010u) != 0;
   return value;
@@ -613,21 +613,21 @@ inline bool ReconfigureBody::has_interval() const {
   return _internal_has_interval();
 }
 inline void ReconfigureBody::clear_interval() {
-  _impl_.interval_ = 0u;
+  _impl_.interval_ = uint64_t{0u};
   _impl_._has_bits_[0] &= ~0x00000010u;
 }
-inline uint32_t ReconfigureBody::_internal_interval() const {
+inline uint64_t ReconfigureBody::_internal_interval() const {
   return _impl_.interval_;
 }
-inline uint32_t ReconfigureBody::interval() const {
+inline uint64_t ReconfigureBody::interval() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.interval)
   return _internal_interval();
 }
-inline void ReconfigureBody::_internal_set_interval(uint32_t value) {
+inline void ReconfigureBody::_internal_set_interval(uint64_t value) {
   _impl_._has_bits_[0] |= 0x00000010u;
   _impl_.interval_ = value;
 }
-inline void ReconfigureBody::set_interval(uint32_t value) {
+inline void ReconfigureBody::set_interval(uint64_t value) {
   _internal_set_interval(value);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.interval)
 }

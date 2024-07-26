@@ -24,7 +24,7 @@ namespace grpcagent {
 PROTOBUF_CONSTEXPR Time::Time(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.seconds_)*/uint64_t{0u}
-  , /*decltype(_impl_.nanoseconds_)*/0u
+  , /*decltype(_impl_.nanoseconds_)*/uint64_t{0u}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct TimeDefaultTypeInternal {
   PROTOBUF_CONSTEXPR TimeDefaultTypeInternal()
@@ -86,7 +86,7 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_common_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\014common.proto\022\tgrpcagent\",\n\004Time\022\017\n\007sec"
-  "onds\030\001 \001(\004\022\023\n\013nanoseconds\030\002 \001(\r\"W\n\016Commo"
+  "onds\030\001 \001(\004\022\023\n\013nanoseconds\030\002 \001(\004\"W\n\016Commo"
   "nResponse\022\021\n\trequestId\030\001 \001(\t\022\017\n\007command\030"
   "\002 \001(\t\022!\n\010recorded\030\003 \001(\0132\017.grpcagent.Time"
   "b\006proto3"
@@ -141,7 +141,7 @@ inline void Time::SharedCtor(
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.seconds_){uint64_t{0u}}
-    , decltype(_impl_.nanoseconds_){0u}
+    , decltype(_impl_.nanoseconds_){uint64_t{0u}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -189,10 +189,10 @@ const char* Time::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
         } else
           goto handle_unusual;
         continue;
-      // uint32 nanoseconds = 2;
+      // uint64 nanoseconds = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
-          _impl_.nanoseconds_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          _impl_.nanoseconds_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -232,10 +232,10 @@ uint8_t* Time::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(1, this->_internal_seconds(), target);
   }
 
-  // uint32 nanoseconds = 2;
+  // uint64 nanoseconds = 2;
   if (this->_internal_nanoseconds() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(2, this->_internal_nanoseconds(), target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(2, this->_internal_nanoseconds(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -259,9 +259,9 @@ size_t Time::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_seconds());
   }
 
-  // uint32 nanoseconds = 2;
+  // uint64 nanoseconds = 2;
   if (this->_internal_nanoseconds() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_nanoseconds());
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_nanoseconds());
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);

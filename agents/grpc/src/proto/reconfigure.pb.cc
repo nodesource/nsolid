@@ -29,8 +29,8 @@ PROTOBUF_CONSTEXPR ReconfigureBody::ReconfigureBody(
   , /*decltype(_impl_.statsd_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.statsdbucket_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.statsdtags_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.blockedloopthreshold_)*/0u
-  , /*decltype(_impl_.interval_)*/0u
+  , /*decltype(_impl_.blockedloopthreshold_)*/uint64_t{0u}
+  , /*decltype(_impl_.interval_)*/uint64_t{0u}
   , /*decltype(_impl_.pausemetrics_)*/false
   , /*decltype(_impl_.promisetracking_)*/false
   , /*decltype(_impl_.redactsnapshots_)*/false
@@ -115,7 +115,7 @@ static const ::_pb::Message* const file_default_instances[] = {
 const char descriptor_table_protodef_reconfigure_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\021reconfigure.proto\022\tgrpcagent\032\014common.p"
   "roto\"\365\003\n\017ReconfigureBody\022!\n\024blockedLoopT"
-  "hreshold\030\001 \001(\rH\000\210\001\001\022\025\n\010interval\030\002 \001(\rH\001\210"
+  "hreshold\030\001 \001(\004H\000\210\001\001\022\025\n\010interval\030\002 \001(\004H\001\210"
   "\001\001\022\031\n\014pauseMetrics\030\003 \001(\010H\002\210\001\001\022\034\n\017promise"
   "Tracking\030\004 \001(\010H\003\210\001\001\022\034\n\017redactSnapshots\030\005"
   " \001(\010H\004\210\001\001\022\023\n\006statsd\030\006 \001(\tH\005\210\001\001\022\031\n\014statsd"
@@ -254,8 +254,8 @@ inline void ReconfigureBody::SharedCtor(
     , decltype(_impl_.statsd_){}
     , decltype(_impl_.statsdbucket_){}
     , decltype(_impl_.statsdtags_){}
-    , decltype(_impl_.blockedloopthreshold_){0u}
-    , decltype(_impl_.interval_){0u}
+    , decltype(_impl_.blockedloopthreshold_){uint64_t{0u}}
+    , decltype(_impl_.interval_){uint64_t{0u}}
     , decltype(_impl_.pausemetrics_){false}
     , decltype(_impl_.promisetracking_){false}
     , decltype(_impl_.redactsnapshots_){false}
@@ -337,20 +337,20 @@ const char* ReconfigureBody::_InternalParse(const char* ptr, ::_pbi::ParseContex
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // optional uint32 blockedLoopThreshold = 1;
+      // optional uint64 blockedLoopThreshold = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           _Internal::set_has_blockedloopthreshold(&has_bits);
-          _impl_.blockedloopthreshold_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          _impl_.blockedloopthreshold_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // optional uint32 interval = 2;
+      // optional uint64 interval = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           _Internal::set_has_interval(&has_bits);
-          _impl_.interval_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          _impl_.interval_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -475,16 +475,16 @@ uint8_t* ReconfigureBody::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // optional uint32 blockedLoopThreshold = 1;
+  // optional uint64 blockedLoopThreshold = 1;
   if (_internal_has_blockedloopthreshold()) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(1, this->_internal_blockedloopthreshold(), target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(1, this->_internal_blockedloopthreshold(), target);
   }
 
-  // optional uint32 interval = 2;
+  // optional uint64 interval = 2;
   if (_internal_has_interval()) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(2, this->_internal_interval(), target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(2, this->_internal_interval(), target);
   }
 
   // optional bool pauseMetrics = 3;
@@ -604,14 +604,14 @@ size_t ReconfigureBody::ByteSizeLong() const {
           this->_internal_statsdtags());
     }
 
-    // optional uint32 blockedLoopThreshold = 1;
+    // optional uint64 blockedLoopThreshold = 1;
     if (cached_has_bits & 0x00000008u) {
-      total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_blockedloopthreshold());
+      total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_blockedloopthreshold());
     }
 
-    // optional uint32 interval = 2;
+    // optional uint64 interval = 2;
     if (cached_has_bits & 0x00000010u) {
-      total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_interval());
+      total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_interval());
     }
 
     // optional bool pauseMetrics = 3;
