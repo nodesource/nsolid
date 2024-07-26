@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_EXPR_BUILDER_FACTORY_H
-#define GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_EXPR_BUILDER_FACTORY_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_EXPR_BUILDER_FACTORY_H
+#define GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_EXPR_BUILDER_FACTORY_H
 
 #include <memory>
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/security/authorization/mock_cel/cel_expression.h"
 #include "src/core/lib/security/authorization/mock_cel/flat_expr_builder.h"
@@ -40,4 +40,4 @@ inline std::unique_ptr<CelExpressionBuilder> CreateCelExpressionBuilder(
 }  // namespace mock_cel
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_EXPR_BUILDER_FACTORY_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_CEL_EXPR_BUILDER_FACTORY_H

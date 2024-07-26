@@ -22,83 +22,138 @@
 // Tracks the total memory allocated against it, so that future arenas can
 // pre-allocate the right amount of memory
 
-#ifndef GRPC_CORE_LIB_RESOURCE_QUOTA_ARENA_H
-#define GRPC_CORE_LIB_RESOURCE_QUOTA_ARENA_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_RESOURCE_QUOTA_ARENA_H
+#define GRPC_SRC_CORE_LIB_RESOURCE_QUOTA_ARENA_H
 
 #include <stddef.h>
 
 #include <atomic>
+#include <iosfwd>
 #include <memory>
-#include <new>
 #include <utility>
 
-#include "absl/meta/type_traits.h"
-#include "absl/utility/utility.h"
-
 #include <grpc/event_engine/memory_allocator.h>
+#include <grpc/support/port_platform.h>
 
-#include "src/core/lib/gpr/alloc.h"
 #include "src/core/lib/gprpp/construct_destruct.h"
 #include "src/core/lib/promise/context.h"
 #include "src/core/lib/resource_quota/memory_quota.h"
+#include "src/core/util/alloc.h"
 
 namespace grpc_core {
 
+class Arena;
+
+template <typename T>
+struct ArenaContextType;
+
 namespace arena_detail {
 
-template <typename Void, size_t kIndex, size_t kObjectSize,
-          size_t... kBucketSize>
-struct PoolIndexForSize;
+// Tracks all registered arena context types (these should only be registered
+// via ArenaContextTraits at static initialization time).
+class BaseArenaContextTraits {
+ public:
+  // Count of number of contexts that have been allocated.
+  static uint16_t NumContexts() {
+    return static_cast<uint16_t>(RegisteredTraits().size());
+  }
 
-template <size_t kObjectSize, size_t kIndex, size_t kSmallestRemainingBucket,
-          size_t... kBucketSizes>
-struct PoolIndexForSize<
-    absl::enable_if_t<kObjectSize <= kSmallestRemainingBucket>, kIndex,
-    kObjectSize, kSmallestRemainingBucket, kBucketSizes...> {
-  static constexpr size_t kPool = kIndex;
-  static constexpr size_t kSize = kSmallestRemainingBucket;
+  // Number of bytes required to store the context pointers on an arena.
+  static size_t ContextSize() { return NumContexts() * sizeof(void*); }
+
+  // Call the registered destruction function for a context.
+  static void Destroy(uint16_t id, void* ptr) {
+    if (ptr == nullptr) return;
+    RegisteredTraits()[id](ptr);
+  }
+
+ protected:
+  // Allocate a new context id and register the destruction function.
+  static uint16_t MakeId(void (*destroy)(void* ptr)) {
+    auto& traits = RegisteredTraits();
+    const uint16_t id = static_cast<uint16_t>(traits.size());
+    traits.push_back(destroy);
+    return id;
+  }
+
+ private:
+  static std::vector<void (*)(void*)>& RegisteredTraits() {
+    static NoDestruct<std::vector<void (*)(void*)>> registered_traits;
+    return *registered_traits;
+  }
 };
 
-template <size_t kObjectSize, size_t kIndex, size_t kSmallestRemainingBucket,
-          size_t... kBucketSizes>
-struct PoolIndexForSize<
-    absl::enable_if_t<(kObjectSize > kSmallestRemainingBucket)>, kIndex,
-    kObjectSize, kSmallestRemainingBucket, kBucketSizes...>
-    : public PoolIndexForSize<void, kIndex + 1, kObjectSize, kBucketSizes...> {
+// Traits for a specific context type.
+template <typename T>
+class ArenaContextTraits : public BaseArenaContextTraits {
+ public:
+  static uint16_t id() { return id_; }
+
+ private:
+  static const uint16_t id_;
 };
 
-template <size_t kObjectSize, size_t... kBucketSizes>
-constexpr size_t PoolFromObjectSize(
-    absl::integer_sequence<size_t, kBucketSizes...>) {
-  return PoolIndexForSize<void, 0, kObjectSize, kBucketSizes...>::kPool;
+template <typename T>
+void DestroyArenaContext(void* p) {
+  ArenaContextType<T>::Destroy(static_cast<T*>(p));
 }
 
-template <size_t kObjectSize, size_t... kBucketSizes>
-constexpr size_t AllocationSizeFromObjectSize(
-    absl::integer_sequence<size_t, kBucketSizes...>) {
-  return PoolIndexForSize<void, 0, kObjectSize, kBucketSizes...>::kSize;
-}
+template <typename T>
+const uint16_t ArenaContextTraits<T>::id_ =
+    BaseArenaContextTraits::MakeId(DestroyArenaContext<T>);
+
+template <typename T, typename A, typename B>
+struct IfArray {
+  using Result = A;
+};
+
+template <typename T, typename A, typename B>
+struct IfArray<T[], A, B> {
+  using Result = B;
+};
+
+struct UnrefDestroy {
+  void operator()(const Arena* arena) const;
+};
 
 }  // namespace arena_detail
 
-class Arena {
-  using PoolSizes = absl::integer_sequence<size_t, 256, 512, 768>;
+class ArenaFactory : public RefCounted<ArenaFactory> {
+ public:
+  virtual RefCountedPtr<Arena> MakeArena() = 0;
+  virtual void FinalizeArena(Arena* arena) = 0;
 
+  MemoryAllocator& allocator() { return allocator_; }
+
+ protected:
+  explicit ArenaFactory(MemoryAllocator allocator)
+      : allocator_(std::move(allocator)) {}
+
+ private:
+  MemoryAllocator allocator_;
+};
+
+RefCountedPtr<ArenaFactory> SimpleArenaAllocator(size_t initial_size = 1024);
+
+class Arena final : public RefCounted<Arena, NonPolymorphicRefCount,
+                                      arena_detail::UnrefDestroy> {
  public:
   // Create an arena, with \a initial_size bytes in the first allocated buffer.
-  static Arena* Create(size_t initial_size, MemoryAllocator* memory_allocator);
+  static RefCountedPtr<Arena> Create(size_t initial_size,
+                                     RefCountedPtr<ArenaFactory> arena_factory);
 
-  // Create an arena, with \a initial_size bytes in the first allocated buffer,
-  // and return both a void pointer to the returned arena and a void* with the
-  // first allocation.
-  static std::pair<Arena*, void*> CreateWithAlloc(
-      size_t initial_size, size_t alloc_size,
-      MemoryAllocator* memory_allocator);
+  // Destroy all `ManagedNew` allocated objects.
+  // Allows safe destruction of these objects even if they need context held by
+  // the arena.
+  // Idempotent.
+  // TODO(ctiller): eliminate ManagedNew.
+  void DestroyManagedNewObjects();
 
-  // Destroy an arena, returning the total number of bytes allocated.
-  size_t Destroy();
+  // Return the total amount of memory allocated by this arena.
+  size_t TotalUsedBytes() const {
+    return total_used_.load(std::memory_order_relaxed);
+  }
+
   // Allocate \a size bytes from the arena.
   void* Alloc(size_t size) {
     static constexpr size_t base_size =
@@ -112,6 +167,8 @@ class Arena {
     }
   }
 
+  // Allocates T from the arena.
+  // The caller is responsible for calling p->~T(), but should NOT delete.
   // TODO(roth): We currently assume that all callers need alignment of 16
   // bytes, which may be wrong in some cases. When we have time, we should
   // change this to instead use the alignment of the type being allocated by
@@ -119,11 +176,12 @@ class Arena {
   template <typename T, typename... Args>
   T* New(Args&&... args) {
     T* t = static_cast<T*>(Alloc(sizeof(T)));
-    Construct(t, std::forward<Args>(args)...);
+    new (t) T(std::forward<Args>(args)...);
     return t;
   }
 
   // Like New, but has the arena call p->~T() at arena destruction time.
+  // The caller should NOT delete.
   template <typename T, typename... Args>
   T* ManagedNew(Args&&... args) {
     auto* p = New<ManagedNewImpl<T>>(std::forward<Args>(args)...);
@@ -133,8 +191,8 @@ class Arena {
 
   class PooledDeleter {
    public:
-    explicit PooledDeleter(Arena* arena) : arena_(arena) {}
     PooledDeleter() = default;
+    explicit PooledDeleter(std::nullptr_t) : delete_(false) {}
     template <typename T>
     void operator()(T* p) {
       // TODO(ctiller): promise based filter hijacks ownership of some pointers
@@ -142,27 +200,100 @@ class Arena {
       // by setting the arena to nullptr.
       // This is a transitional hack and should be removed once promise based
       // filter is removed.
-      if (arena_ != nullptr) arena_->DeletePooled(p);
+      if (delete_) delete p;
     }
 
+    bool has_freelist() const { return delete_; }
+
    private:
-    Arena* arena_;
+    bool delete_ = true;
+  };
+
+  class ArrayPooledDeleter {
+   public:
+    ArrayPooledDeleter() = default;
+    explicit ArrayPooledDeleter(std::nullptr_t) : delete_(false) {}
+    template <typename T>
+    void operator()(T* p) {
+      // TODO(ctiller): promise based filter hijacks ownership of some pointers
+      // to make them appear as PoolPtr without really transferring ownership,
+      // by setting the arena to nullptr.
+      // This is a transitional hack and should be removed once promise based
+      // filter is removed.
+      if (delete_) delete[] p;
+    }
+
+    bool has_freelist() const { return delete_; }
+
+   private:
+    bool delete_ = true;
   };
 
   template <typename T>
-  using PoolPtr = std::unique_ptr<T, PooledDeleter>;
+  using PoolPtr =
+      std::unique_ptr<T, typename arena_detail::IfArray<
+                             T, PooledDeleter, ArrayPooledDeleter>::Result>;
 
+  // Make a unique_ptr to T that is allocated from the arena.
+  // When the pointer is released, the memory may be reused for other
+  // MakePooled(.*) calls.
+  // CAUTION: The amount of memory allocated is rounded up to the nearest
+  //          value in Arena::PoolSizes, and so this may pessimize total
+  //          arena size.
   template <typename T, typename... Args>
-  PoolPtr<T> MakePooled(Args&&... args) {
-    return PoolPtr<T>(
-        new (AllocPooled(
-            arena_detail::AllocationSizeFromObjectSize<sizeof(T)>(PoolSizes()),
-            &pools_[arena_detail::PoolFromObjectSize<sizeof(T)>(PoolSizes())]))
-            T(std::forward<Args>(args)...),
-        PooledDeleter(this));
+  static PoolPtr<T> MakePooled(Args&&... args) {
+    return PoolPtr<T>(new T(std::forward<Args>(args)...), PooledDeleter());
+  }
+
+  // Make a unique_ptr to an array of T that is allocated from the arena.
+  // When the pointer is released, the memory may be reused for other
+  // MakePooled(.*) calls.
+  // One can use MakePooledArray<char> to allocate a buffer of bytes.
+  // CAUTION: The amount of memory allocated is rounded up to the nearest
+  //          value in Arena::PoolSizes, and so this may pessimize total
+  //          arena size.
+  template <typename T>
+  PoolPtr<T[]> MakePooledArray(size_t n) {
+    return PoolPtr<T[]>(new T[n], ArrayPooledDeleter());
+  }
+
+  // Like MakePooled, but with manual memory management.
+  // The caller is responsible for calling DeletePooled() on the returned
+  // pointer, and expected to call it with the same type T as was passed to this
+  // function (else the free list returned to the arena will be corrupted).
+  template <typename T, typename... Args>
+  T* NewPooled(Args&&... args) {
+    return new T(std::forward<Args>(args)...);
+  }
+
+  template <typename T>
+  void DeletePooled(T* p) {
+    delete p;
+  }
+
+  // Context accessors
+  // Prefer to use the free-standing `GetContext<>` and `SetContext<>` functions
+  // for modern promise-based code -- however legacy filter stack based code
+  // often needs to access these directly.
+  template <typename T>
+  T* GetContext() {
+    return static_cast<T*>(
+        contexts()[arena_detail::ArenaContextTraits<T>::id()]);
+  }
+
+  template <typename T>
+  void SetContext(T* context) {
+    void*& slot = contexts()[arena_detail::ArenaContextTraits<T>::id()];
+    if (slot != nullptr) {
+      ArenaContextType<T>::Destroy(static_cast<T*>(slot));
+    }
+    slot = context;
+    DCHECK_EQ(GetContext<T>(), context);
   }
 
  private:
+  friend struct arena_detail::UnrefDestroy;
+
   struct Zone {
     Zone* prev;
   };
@@ -192,35 +323,20 @@ class Arena {
   //   quick optimization (avoiding an atomic fetch-add) for the common case
   //   where we wish to create an arena and then perform an immediate
   //   allocation.
-  explicit Arena(size_t initial_size, size_t initial_alloc,
-                 MemoryAllocator* memory_allocator)
-      : total_used_(GPR_ROUND_UP_TO_ALIGNMENT_SIZE(initial_alloc)),
-        initial_zone_size_(initial_size),
-        memory_allocator_(memory_allocator) {}
+  explicit Arena(size_t initial_size,
+                 RefCountedPtr<ArenaFactory> arena_factory);
 
   ~Arena();
 
   void* AllocZone(size_t size);
-
-  template <typename T>
-  void DeletePooled(T* p) {
-    p->~T();
-    FreePooled(
-        p, &pools_[arena_detail::PoolFromObjectSize<sizeof(T)>(PoolSizes())]);
-  }
-
-  struct FreePoolNode {
-    FreePoolNode* next;
-  };
-
-  void* AllocPooled(size_t alloc_size, std::atomic<FreePoolNode*>* head);
-  static void FreePooled(void* p, std::atomic<FreePoolNode*>* head);
+  void Destroy() const;
+  void** contexts() { return reinterpret_cast<void**>(this + 1); }
 
   // Keep track of the total used size. We use this in our call sizing
   // hysteresis.
-  std::atomic<size_t> total_used_{0};
-  std::atomic<size_t> total_allocated_{0};
   const size_t initial_zone_size_;
+  std::atomic<size_t> total_used_;
+  std::atomic<size_t> total_allocated_{initial_zone_size_};
   // If the initial arena allocation wasn't enough, we allocate additional zones
   // in a reverse linked list. Each additional zone consists of (1) a pointer to
   // the zone added before this zone (null if this is the first additional zone)
@@ -228,25 +344,30 @@ class Arena {
   // last zone; the zone list is reverse-walked during arena destruction only.
   std::atomic<Zone*> last_zone_{nullptr};
   std::atomic<ManagedNewObject*> managed_new_head_{nullptr};
-  std::atomic<FreePoolNode*> pools_[PoolSizes::size()]{};
-  // The backing memory quota
-  MemoryAllocator* const memory_allocator_;
+  RefCountedPtr<ArenaFactory> arena_factory_;
 };
-
-// Smart pointer for arenas when the final size is not required.
-struct ScopedArenaDeleter {
-  void operator()(Arena* arena) { arena->Destroy(); }
-};
-using ScopedArenaPtr = std::unique_ptr<Arena, ScopedArenaDeleter>;
-inline ScopedArenaPtr MakeScopedArena(size_t initial_size,
-                                      MemoryAllocator* memory_allocator) {
-  return ScopedArenaPtr(Arena::Create(initial_size, memory_allocator));
-}
 
 // Arenas form a context for activities
 template <>
 struct ContextType<Arena> {};
 
+namespace arena_detail {
+inline void UnrefDestroy::operator()(const Arena* arena) const {
+  arena->Destroy();
+}
+}  // namespace arena_detail
+
+namespace promise_detail {
+
+template <typename T>
+class Context<T, absl::void_t<decltype(ArenaContextType<T>::Destroy)>> {
+ public:
+  static T* get() { return GetContext<Arena>()->GetContext<T>(); }
+  static void set(T* value) { GetContext<Arena>()->SetContext(value); }
+};
+
+}  // namespace promise_detail
+
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_RESOURCE_QUOTA_ARENA_H
+#endif  // GRPC_SRC_CORE_LIB_RESOURCE_QUOTA_ARENA_H

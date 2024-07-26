@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_EVALUATOR_CORE_H
-#define GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_EVALUATOR_CORE_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_EVALUATOR_CORE_H
+#define GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_EVALUATOR_CORE_H
 
 #include <set>
 #include <string>
 
 #include "absl/status/statusor.h"
 #include "google/api/expr/v1alpha1/syntax.upb.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/security/authorization/mock_cel/activation.h"
 #include "src/core/lib/security/authorization/mock_cel/cel_expression.h"
@@ -63,4 +63,4 @@ class CelExpressionFlatImpl : public CelExpression {
 }  // namespace mock_cel
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_EVALUATOR_CORE_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_MOCK_CEL_EVALUATOR_CORE_H

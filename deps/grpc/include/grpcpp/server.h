@@ -19,14 +19,13 @@
 #ifndef GRPCPP_SERVER_H
 #define GRPCPP_SERVER_H
 
-#include <grpc/support/port_platform.h>
-
 #include <list>
 #include <memory>
 #include <vector>
 
 #include <grpc/compression.h>
 #include <grpc/support/atm.h>
+#include <grpc/support/port_platform.h>
 #include <grpcpp/channel.h>
 #include <grpcpp/completion_queue.h>
 #include <grpcpp/health_check_service_interface.h>
@@ -183,7 +182,8 @@ class Server : public ServerInterface, private internal::GrpcLibrary {
          std::vector<
              std::unique_ptr<experimental::ServerInterceptorFactoryInterface>>
              interceptor_creators = std::vector<std::unique_ptr<
-                 experimental::ServerInterceptorFactoryInterface>>());
+                 experimental::ServerInterceptorFactoryInterface>>(),
+         experimental::ServerMetricRecorder* server_metric_recorder = nullptr);
 
   /// Start the server.
   ///
@@ -253,6 +253,14 @@ class Server : public ServerInterface, private internal::GrpcLibrary {
 
   int max_receive_message_size() const override {
     return max_receive_message_size_;
+  }
+
+  bool call_metric_recording_enabled() const override {
+    return call_metric_recording_enabled_;
+  }
+
+  experimental::ServerMetricRecorder* server_metric_recorder() const override {
+    return server_metric_recorder_;
   }
 
   CompletionQueue* CallbackCQ() ABSL_LOCKS_EXCLUDED(mu_) override;
@@ -338,6 +346,12 @@ class Server : public ServerInterface, private internal::GrpcLibrary {
   // Shutdown.  Even though this is only used with NDEBUG, instantiate it in all
   // cases since otherwise the size will be inconsistent.
   std::vector<CompletionQueue*> cq_list_;
+
+  // Whetner per-call load reporting is enabled.
+  bool call_metric_recording_enabled_ = false;
+
+  // Interface to read or update server-wide metrics. Optional.
+  experimental::ServerMetricRecorder* server_metric_recorder_ = nullptr;
 };
 
 }  // namespace grpc

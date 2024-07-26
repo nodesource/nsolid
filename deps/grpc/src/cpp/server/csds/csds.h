@@ -16,17 +16,15 @@
 //
 //
 
-#ifndef GRPC_INTERNAL_CPP_SERVER_CSDS_H
-#define GRPC_INTERNAL_CPP_SERVER_CSDS_H
+#ifndef GRPC_SRC_CPP_SERVER_CSDS_CSDS_H
+#define GRPC_SRC_CPP_SERVER_CSDS_CSDS_H
 
 #include <grpc/support/port_platform.h>
-
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/sync_stream.h>
 
 #include "src/proto/grpc/testing/xds/v3/csds.grpc.pb.h"
-#include "src/proto/grpc/testing/xds/v3/csds.pb.h"
 
 namespace grpc {
 namespace xds {
@@ -55,4 +53,4 @@ class ClientStatusDiscoveryService final
 }  // namespace xds
 }  // namespace grpc
 
-#endif  // GRPC_INTERNAL_CPP_SERVER_CSDS_H
+#endif  // GRPC_SRC_CPP_SERVER_CSDS_CSDS_H

@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
-#define GRPC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
+#define GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
 
-#include <grpc/support/port_platform.h>
+#include <stdint.h>
 
 #include <functional>
 #include <string>
@@ -25,16 +25,18 @@
 
 #include "absl/strings/string_view.h"
 
+#include <grpc/support/port_platform.h>
+
 #include "src/core/lib/gprpp/orphanable.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
 #include "src/core/lib/gprpp/time.h"
-#include "src/core/lib/http/httpcli.h"
-#include "src/core/lib/http/parser.h"
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/iomgr/error.h"
 #include "src/core/lib/iomgr/polling_entity.h"
-#include "src/core/lib/json/json.h"
 #include "src/core/lib/security/credentials/oauth2/oauth2_credentials.h"
+#include "src/core/util/http_client/httpcli.h"
+#include "src/core/util/http_client/parser.h"
+#include "src/core/util/json/json.h"
 
 namespace grpc_core {
 
@@ -45,12 +47,16 @@ namespace grpc_core {
 class ExternalAccountCredentials
     : public grpc_oauth2_token_fetcher_credentials {
  public:
+  struct ServiceAccountImpersonation {
+    int32_t token_lifetime_seconds;
+  };
   // External account credentials json interface.
   struct Options {
     std::string type;
     std::string audience;
     std::string subject_token_type;
     std::string service_account_impersonation_url;
+    ServiceAccountImpersonation service_account_impersonation;
     std::string token_url;
     std::string token_info_url;
     Json credential_source;
@@ -95,6 +101,10 @@ class ExternalAccountCredentials
       HTTPRequestContext* ctx, const Options& options,
       std::function<void(std::string, grpc_error_handle)> cb) = 0;
 
+  virtual absl::string_view CredentialSourceType();
+
+  std::string MetricsHeaderValue();
+
  private:
   // This method implements the common token fetch logic and it will be called
   // when grpc_oauth2_token_fetcher_credentials request a new access token.
@@ -126,4 +136,4 @@ class ExternalAccountCredentials
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_EXTERNAL_EXTERNAL_ACCOUNT_CREDENTIALS_H

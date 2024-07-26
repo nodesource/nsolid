@@ -16,14 +16,12 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_BUFFER_LIST_H
-#define GRPC_CORE_LIB_IOMGR_BUFFER_LIST_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_BUFFER_LIST_H
+#define GRPC_SRC_CORE_LIB_IOMGR_BUFFER_LIST_H
 
 #include "absl/types/optional.h"
 
-#include <grpc/grpc.h>
+#include <grpc/support/port_platform.h>
 #include <grpc/support/time.h>
 
 #include "src/core/lib/gprpp/sync.h"
@@ -182,4 +180,4 @@ void grpc_tcp_set_write_timestamps_callback(
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_IOMGR_BUFFER_LIST_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_BUFFER_LIST_H

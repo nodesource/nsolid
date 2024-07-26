@@ -427,7 +427,8 @@ if (process.argv[2] === 'child') {
   const State = {
     None: 0,
     ProcMetrics: 1,
-    ThreadMetrics: 2
+    ThreadMetrics: 2,
+    Done: 3,
   };
 
   let nsolidId;
@@ -513,34 +514,68 @@ if (process.argv[2] === 'child') {
     assert.strictEqual(resourceMetrics.length, 1);
     checkResource(resourceMetrics[0].resource);
     checkScopeMetrics(resourceMetrics[0].scopeMetrics);
+
     if (resourceMetrics[0].scopeMetrics[0].metrics) {
-      context.metrics = [ ...resourceMetrics[0].scopeMetrics[0].metrics ];
+      context.metrics = [...resourceMetrics[0].scopeMetrics[0].metrics];
       if (context.state === State.None) {
-        context.expected = [ ...expectedProcMetrics ];
-        checkMetricsData(context);
-        if (context.expected.length === 0) {
-          context.state = State.ProcMetrics;
-          context.threadId = context.threadList.shift();
-          context.expected = [ ...expectedThreadMetrics ];
+        const initialState = determineInitialState(context.metrics);
+        if (!initialState) {
+          return;
         }
+        context.state = initialState.state;
+        context.expected = [...initialState.expectedMetrics];
+        context.threadId = initialState.threadId;
       }
 
-      while (context.state === State.ProcMetrics && context.metrics.length > 0) {
+      while (context.metrics.length > 0 && context.state !== State.Done) {
         checkMetricsData(context);
         if (context.expected.length === 0) {
-          context.threadId = context.threadList.shift();
-          if (context.threadId === undefined) {
-            context.state = State.ThreadMetrics;
-          } else {
-            context.expected = [ ...expectedThreadMetrics ];
-          }
+          updateStateAndExpected(context);
         }
+      }
+    }
+  }
+
+  function determineInitialState(metrics) {
+    // Check if the first metric contains the thread.id attribute to determine the initial state
+    const metric = metrics[0];
+    if (!metric) {
+      return null;
+    }
+    const attributes = metric[metric.data].dataPoints[0].attributes;
+    const attrIndex = attributes?.findIndex((a) => a.key === 'thread.id');
+    if (attrIndex > -1) {
+      const threadId = parseInt(attributes[attrIndex].value.intValue, 10);
+      // Remove threadId from context.threadList array
+      const threadList = context.threadList;
+      const index = threadList.indexOf(threadId);
+      if (index > -1) {
+        threadList.splice(index, 1);
+      }
+
+      return { state: State.ThreadMetrics, expectedMetrics: [...expectedThreadMetrics], threadId };
+    }
+
+    return { state: State.ProcMetrics, expectedMetrics: [...expectedProcMetrics] };
+  }
+
+  function updateStateAndExpected(context) {
+    if (context.state === State.ProcMetrics) {
+      context.state = State.Done;
+    } else if (context.state === State.ThreadMetrics) {
+      if (context.threadList.length === 0) {
+        context.state = State.ProcMetrics;
+        context.expected = [...expectedProcMetrics];
+      } else {
+        context.threadId = context.threadList.shift();
+        context.expected = [...expectedThreadMetrics];
       }
     }
   }
 
   const context = {
     state: State.None,
+    prevState: State.None,
     metrics: [],
     expected: [],
     threadId: null,
@@ -553,7 +588,7 @@ if (process.argv[2] === 'child') {
       otlpServer.start(mustSucceed(async (port) => {
         otlpServer.on('metrics', mustCallAtLeast((metrics) => {
           checkMetrics(metrics, context);
-          if (context.state === State.ThreadMetrics) {
+          if (context.state === State.Done) {
             child.send('exit');
           }
         }, 1));

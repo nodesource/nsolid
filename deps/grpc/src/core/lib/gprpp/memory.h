@@ -16,15 +16,14 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_GPRPP_MEMORY_H
-#define GRPC_CORE_LIB_GPRPP_MEMORY_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_MEMORY_H
+#define GRPC_SRC_CORE_LIB_GPRPP_MEMORY_H
 
 #include <memory>
 #include <type_traits>
 
 #include <grpc/support/alloc.h>
+#include <grpc/support/port_platform.h>
 
 namespace grpc_core {
 
@@ -50,4 +49,4 @@ T* Zalloc() {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_MEMORY_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_MEMORY_H

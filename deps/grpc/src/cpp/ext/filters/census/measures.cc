@@ -16,13 +16,14 @@
 //
 //
 
-#include <grpc/support/port_platform.h>
-
 #include "src/cpp/ext/filters/census/measures.h"
 
 #include "opencensus/stats/stats.h"
 
+#include <grpc/support/port_platform.h>
 #include <grpcpp/opencensus.h>
+
+#include "src/cpp/ext/filters/census/grpc_plugin.h"
 
 namespace grpc {
 
@@ -98,6 +99,15 @@ MeasureInt64 RpcClientStartedRpcs() {
   return measure;
 }
 
+MeasureDouble RpcClientTransportLatency() {
+  static const auto measure = MeasureDouble::Register(
+      experimental::kRpcClientTransportLatencyMeasureName,
+      "Time between first byte of request sent to last byte of response "
+      "received on the transport",
+      kUnitMilliseconds);
+  return measure;
+}
+
 // Client per-overall-client-call measures
 MeasureInt64 RpcClientRetriesPerCall() {
   static const auto measure =
@@ -170,5 +180,16 @@ MeasureInt64 RpcServerReceivedMessagesPerRpc() {
       "Number of messages received per RPC", kCount);
   return measure;
 }
+
+namespace internal {
+
+MeasureDouble RpcClientApiLatency() {
+  static const auto measure = MeasureDouble::Register(
+      kRpcClientApiLatencyMeasureName,
+      "End-to-end time taken to complete an RPC", kUnitMilliseconds);
+  return measure;
+}
+
+}  // namespace internal
 
 }  // namespace grpc

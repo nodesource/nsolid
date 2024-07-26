@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "asset.proto";
+import "blocked_loop.proto";
+import "command.proto";
+import "info.proto";
+import "packages.proto";
+import "reconfigure.proto";
+
+package grpcagent;
+
+service NSolidService {
+  rpc Command (stream CommandResponse) returns (stream CommandRequest) {}
+  rpc ExportAsset (stream Asset) returns (EventResponse) {}
+  rpc ExportInfo (InfoEvent) returns (EventResponse) {}
+  rpc ExportPackages (PackagesEvent) returns (EventResponse) {}
+  rpc ExportBlockedLoop (BlockedLoopEvent) returns (EventResponse) {}
+  rpc ExportUnblockedLoop (UnblockedLoopEvent) returns (EventResponse) {}
+  rpc ExportReconfigure (ReconfigureEvent) returns (EventResponse) {}
+}
+
+message EventResponse {
+  string error_message = 1;
+}

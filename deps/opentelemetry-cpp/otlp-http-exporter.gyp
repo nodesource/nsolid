@@ -8,6 +8,8 @@
         'exporters/otlp/src/otlp_grpc_client.cc',
         'exporters/otlp/src/otlp_grpc_exporter_options.cc',
         'exporters/otlp/src/otlp_grpc_exporter.cc',
+        'exporters/otlp/src/otlp_grpc_log_record_exporter.cc',
+        'exporters/otlp/src/otlp_grpc_log_record_exporter_options.cc',
         'exporters/otlp/src/otlp_grpc_metric_exporter_options.cc',
         'exporters/otlp/src/otlp_grpc_metric_exporter.cc',
         'exporters/otlp/src/otlp_grpc_utils.cc',
@@ -15,6 +17,8 @@
         'exporters/otlp/src/otlp_http_client.cc',
         'exporters/otlp/src/otlp_http_exporter.cc',
         'exporters/otlp/src/otlp_http_exporter_options.cc',
+        'exporters/otlp/src/otlp_http_log_record_exporter.cc',
+        'exporters/otlp/src/otlp_http_log_record_exporter_options.cc',
         'exporters/otlp/src/otlp_http_metric_exporter.cc',
         'exporters/otlp/src/otlp_http_metric_exporter_options.cc',
         'exporters/otlp/src/otlp_log_recordable.cc',
@@ -28,6 +32,7 @@
         'sdk/src/common/base64.cc',
         'sdk/src/common/env_variables.cc',
         'sdk/src/common/global_log_handler.cc',
+        'sdk/src/logs/exporter.cc',
         'sdk/src/logs/readable_log_record.cc',
         'sdk/src/resource/resource.cc',
         'sdk/src/resource/resource_detector.cc',
@@ -53,14 +58,21 @@
         '../../src'
       ],
       'defines': [
-        'BUILDING_LIBCURL'
+        'BUILDING_LIBCURL',
+        'HAVE_ABSEIL',
+        'ENABLE_ASYNC_EXPORT'
       ],
       'dependencies': [
         '../protobuf/protobuf.gyp:protobuf',
         '../curl/curl.gyp:curl',
         '../grpc/grpc.gyp:grpc++',
+        '../grpc/grpc.gyp:abseil',
       ],
       'direct_dependent_settings': {
+        'defines': [
+          'HAVE_ABSEIL',
+          'ENABLE_ASYNC_EXPORT'
+        ],
         'include_dirs': [
           'api/include',
           'exporters/otlp/include',

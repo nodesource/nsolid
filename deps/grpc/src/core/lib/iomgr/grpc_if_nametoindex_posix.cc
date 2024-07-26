@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <net/if.h>
 
-#include <grpc/support/log.h>
+#include "absl/log/log.h"
 
 #include "src/core/lib/gprpp/crash.h"
 #include "src/core/lib/iomgr/grpc_if_nametoindex.h"
@@ -33,11 +33,10 @@
 uint32_t grpc_if_nametoindex(char* name) {
   uint32_t out = if_nametoindex(name);
   if (out == 0) {
-    gpr_log(GPR_DEBUG, "if_nametoindex failed for name %s. errno %d", name,
-            errno);
+    VLOG(2) << "if_nametoindex failed for name " << name << ". errno " << errno;
   }
   return out;
 }
 
-#endif  // GRPC_IF_NAMETOINDEX == 1 && \
-       // defined(GRPC_POSIX_SOCKET_IF_NAMETOINDEX)
+#endif  // GRPC_IF_NAMETOINDEX == 1 &&
+        // defined(GRPC_POSIX_SOCKET_IF_NAMETOINDEX)

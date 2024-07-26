@@ -5,6 +5,7 @@
 #include "env-inl.h"
 #include "nlohmann/json.hpp"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
+#include "opentelemetry/sdk/logs/recordable.h"
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "opentelemetry/sdk/trace/recordable.h"
@@ -21,7 +22,9 @@ using std::chrono::microseconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
+using opentelemetry::common::SystemTimestamp;
 using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
+using LogsRecordable = opentelemetry::sdk::logs::Recordable;
 using opentelemetry::sdk::metrics::AggregationTemporality;
 using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::InstrumentDescriptor;
@@ -73,8 +76,8 @@ static void add_counter(std::vector<MetricData>& metrics,
   MetricData metric_data{
     InstrumentDescriptor{ name, "", unit, InstrumentType::kCounter, type},
     AggregationTemporality::kCumulative,
-    opentelemetry::common::SystemTimestamp{ start },
-    opentelemetry::common::SystemTimestamp{ end },
+    SystemTimestamp{ start },
+    SystemTimestamp{ end },
     std::vector<PointDataAttributes>{{ attrs, sum_point_data }}
   };
   metrics.push_back(metric_data);
@@ -94,8 +97,8 @@ static void add_gauge(std::vector<MetricData>& metrics,
     InstrumentDescriptor{
       name, "", unit, InstrumentType::kObservableGauge, type },
     AggregationTemporality::kCumulative,
-    opentelemetry::common::SystemTimestamp{ start },
-    opentelemetry::common::SystemTimestamp{ end },
+    SystemTimestamp{ start },
+    SystemTimestamp{ end },
     std::vector<PointDataAttributes>{{ attrs, lv_point_data }}
   };
   metrics.push_back(metric_data);
@@ -168,7 +171,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
         add_counter(metrics,                                                   \
                     process_start,                                             \
                     end,                                                       \
-                    #CName,                                                    \
+                    #JSName,                                                   \
                     Unit,                                                      \
                     type,                                                      \
                     value);                                                    \
@@ -176,7 +179,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
       break;                                                                   \
       case MetricsType::EGauge:                                                \
       {                                                                        \
-        add_gauge(metrics, process_start, end, #CName, Unit, type, value);     \
+        add_gauge(metrics, process_start, end, #JSName, Unit, type, value);    \
       }                                                                        \
       break;                                                                   \
       default:                                                                 \
@@ -227,7 +230,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
         add_counter(metrics,                                                   \
                     process_start,                                             \
                     end,                                                       \
-                    #CName,                                                    \
+                    #JSName,                                                    \
                     Unit,                                                      \
                     type,                                                      \
                     value,                                                     \
@@ -239,7 +242,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
         add_gauge(metrics,                                                     \
                   process_start,                                               \
                   end,                                                         \
-                  #CName,                                                      \
+                  #JSName,                                                      \
                   Unit,                                                        \
                   type,                                                        \
                   value,                                                       \
@@ -252,6 +255,18 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
 }
 NSOLID_ENV_METRICS_NUMBERS(V)
 #undef V
+}
+
+void fill_log_recordable(LogsRecordable* recordable,
+                         const LogWriteInfo& info) {
+  recordable->SetBody(info.msg);
+  recordable->SetSeverity(static_cast<opentelemetry::logs::Severity>(info.severity));
+  SystemTimestamp ts(duration_cast<time_point::duration>(
+    milliseconds(static_cast<uint64_t>(info.timestamp))));
+  recordable->SetTimestamp(ts);
+  recordable->SetObservedTimestamp(ts);
+  recordable->SetResource(*GetResource());
+  recordable->SetInstrumentationScope(*GetScope());
 }
 
 void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {

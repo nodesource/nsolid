@@ -16,14 +16,13 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_LOCKFREE_EVENT_H
-#define GRPC_CORE_LIB_IOMGR_LOCKFREE_EVENT_H
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_LOCKFREE_EVENT_H
+#define GRPC_SRC_CORE_LIB_IOMGR_LOCKFREE_EVENT_H
 
 // Lock free event notification for file descriptors
 
-#include <grpc/support/port_platform.h>
-
 #include <grpc/support/atm.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/closure.h"
 
@@ -69,4 +68,4 @@ class LockfreeEvent {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_IOMGR_LOCKFREE_EVENT_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_LOCKFREE_EVENT_H
