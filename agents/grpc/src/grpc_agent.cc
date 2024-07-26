@@ -231,6 +231,63 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
   }
 }
 
+void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
+                              const char* req_id) {
+  // Fill in the fields of the BlockedLoopEvent.
+  nlohmann::json config = json::parse(GetConfig(), nullptr, false);
+  ASSERT(!config.is_discarded());
+
+  PopulateCommon(reconfigure_event->mutable_common(), "reconfigure", req_id);
+
+  grpcagent::ReconfigureBody* body = reconfigure_event->mutable_body();
+  auto it = config.find("blockedLoopThreshold");
+  if (it != config.end()) {
+    body->set_blockedloopthreshold(*it);
+  }
+  it = config.find("interval");
+  if (it != config.end()) {
+    body->set_interval(*it);
+  }
+  it = config.find("pauseMetrics");
+  if (it != config.end()) {
+    body->set_pausemetrics(*it);
+  }
+  it = config.find("promiseTracking");
+  if (it != config.end()) {
+    body->set_promisetracking(*it);
+  }
+  it = config.find("redactSnapshots");
+  if (it != config.end()) {
+    body->set_redactsnapshots(*it);
+  }
+  it = config.find("statsd");
+  if (it != config.end()) {
+    body->set_statsd(*it);
+  }
+  it = config.find("statsdBucket");
+  if (it != config.end()) {
+    body->set_statsdbucket(*it);
+  }
+  it = config.find("statsdtags");
+  if (it != config.end()) {
+    body->set_blockedloopthreshold(*it);
+  }
+  it = config.find("tags");
+  if (it != config.end()) {
+    for (const auto& tag : *it) {
+      body->add_tags(tag.get<std::string>());
+    }
+  }
+  it = config.find("tracingEnabled");
+  if (it != config.end()) {
+    body->set_tracingenabled(*it);
+  }
+  it = config.find("tracingModulesBlacklist");
+  if (it != config.end()) {
+    body->set_tracingmodulesblacklist(*it);
+  }
+}
+
 void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* blocked_loop_event,
                                 const GrpcAgent::BlockedLoopStor& stor) {
   // Fill in the fields of the BlockedLoopEvent.
@@ -985,7 +1042,7 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
 
   UpdateConfig(out.dump());
 
-  send_reconfigure();
+  send_reconfigure_event(request.requestid().c_str());
 }
 
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
@@ -1058,6 +1115,31 @@ void GrpcAgent::send_packages_event(const char* req_id) {
     [](::grpc::Status,
         std::unique_ptr<google::protobuf::Arena>&&,
         const grpcagent::PackagesEvent& info_event,
+        grpcagent::EventResponse*) {
+      return true;
+    });
+}
+
+void GrpcAgent::send_reconfigure_event(const char* req_id) {
+  google::protobuf::ArenaOptions arena_options;
+  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  arena_options.initial_block_size = 1024;
+  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
+  // block to reduce memory fragments.
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+
+  auto reconfigure_event = google::protobuf::Arena::Create<grpcagent::ReconfigureEvent>(arena.get());
+  PopulateReconfigureEvent(reconfigure_event, req_id);
+
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
+
+  client_->DelegateAsyncExport(
+    nsolid_service_stub_.get(), std::move(context), std::move(arena),
+    std::move(*reconfigure_event),
+    [](::grpc::Status,
+        std::unique_ptr<google::protobuf::Arena>&&,
+        const grpcagent::ReconfigureEvent& info_event,
         grpcagent::EventResponse*) {
       return true;
     });
