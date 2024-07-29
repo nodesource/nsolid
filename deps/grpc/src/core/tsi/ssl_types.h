@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_CORE_TSI_SSL_TYPES_H
-#define GRPC_CORE_TSI_SSL_TYPES_H
+#ifndef GRPC_SRC_CORE_TSI_SSL_TYPES_H
+#define GRPC_SRC_CORE_TSI_SSL_TYPES_H
 
 // A collection of macros to cast between various integer types that are
 // used differently between BoringSSL and OpenSSL:
@@ -27,9 +27,9 @@
 //                      function
 //
 
-#include <grpc/support/port_platform.h>
-
 #include <openssl/ssl.h>
+
+#include <grpc/support/port_platform.h>
 
 #ifdef OPENSSL_IS_BORINGSSL
 #define TSI_INT_AS_SIZE(x) ((size_t)(x))
@@ -39,4 +39,4 @@
 #define TSI_SIZE_AS_SIZE(x) ((int)(x))
 #endif
 
-#endif  // GRPC_CORE_TSI_SSL_TYPES_H
+#endif  // GRPC_SRC_CORE_TSI_SSL_TYPES_H

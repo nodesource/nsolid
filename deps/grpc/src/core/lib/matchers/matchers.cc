@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <grpc/support/port_platform.h>
-
 #include "src/core/lib/matchers/matchers.h"
 
 #include <utility>
@@ -24,6 +22,8 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+
+#include <grpc/support/port_platform.h>
 
 namespace grpc_core {
 
@@ -158,12 +158,11 @@ std::string StringMatcher::ToString() const {
 absl::StatusOr<HeaderMatcher> HeaderMatcher::Create(
     absl::string_view name, Type type, absl::string_view matcher,
     int64_t range_start, int64_t range_end, bool present_match,
-    bool invert_match) {
+    bool invert_match, bool case_sensitive) {
   if (static_cast<int>(type) < 5) {
     // Only for EXACT, PREFIX, SUFFIX, SAFE_REGEX and CONTAINS.
-    absl::StatusOr<StringMatcher> string_matcher =
-        StringMatcher::Create(static_cast<StringMatcher::Type>(type), matcher,
-                              /*case_sensitive=*/true);
+    absl::StatusOr<StringMatcher> string_matcher = StringMatcher::Create(
+        static_cast<StringMatcher::Type>(type), matcher, case_sensitive);
     if (!string_matcher.ok()) {
       return string_matcher.status();
     }

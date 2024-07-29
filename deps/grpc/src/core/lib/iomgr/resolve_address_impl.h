@@ -14,12 +14,12 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_IMPL_H
-#define GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_IMPL_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_IMPL_H
+#define GRPC_SRC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_IMPL_H
 
 #include <stddef.h>
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/exec_ctx.h"
 #include "src/core/lib/iomgr/port.h"
@@ -56,4 +56,4 @@ class DNSCallbackExecCtxScheduler {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_IMPL_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_IMPL_H

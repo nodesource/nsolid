@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef GRPC_INTERNAL_CPP_EXT_GCP_OBSERVABILITY_GCP_OBSERVABILITY_CONFIG_H
-#define GRPC_INTERNAL_CPP_EXT_GCP_OBSERVABILITY_GCP_OBSERVABILITY_CONFIG_H
+#ifndef GRPC_SRC_CPP_EXT_GCP_OBSERVABILITY_CONFIG_H
+#define GRPC_SRC_CPP_EXT_GCP_OBSERVABILITY_CONFIG_H
 
 #include <stdint.h>
 
@@ -27,10 +27,12 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 
+#include <grpc/support/port_platform.h>
+
 #include "src/core/lib/gprpp/validation_errors.h"
-#include "src/core/lib/json/json.h"
-#include "src/core/lib/json/json_args.h"
-#include "src/core/lib/json/json_object_loader.h"
+#include "src/core/util/json/json.h"
+#include "src/core/util/json/json_args.h"
+#include "src/core/util/json/json_object_loader.h"
 
 namespace grpc {
 namespace internal {
@@ -82,7 +84,8 @@ struct GcpObservabilityConfig {
   };
 
   struct CloudTrace {
-    float sampling_rate = 0;
+    CloudTrace() : sampling_rate(0) {}
+    float sampling_rate;
 
     static const grpc_core::JsonLoaderInterface* JsonLoader(
         const grpc_core::JsonArgs&) {
@@ -125,4 +128,4 @@ struct GcpObservabilityConfig {
 }  // namespace internal
 }  // namespace grpc
 
-#endif  // GRPC_INTERNAL_CPP_EXT_GCP_OBSERVABILITY_GCP_OBSERVABILITY_CONFIG_H
+#endif  // GRPC_SRC_CPP_EXT_GCP_OBSERVABILITY_CONFIG_H

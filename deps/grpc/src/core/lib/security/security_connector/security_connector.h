@@ -16,19 +16,20 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_SECURITY_CONNECTOR_H
-#define GRPC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_SECURITY_CONNECTOR_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_SECURITY_CONNECTOR_H
+#define GRPC_SRC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_SECURITY_CONNECTOR_H
 
 #include <memory>
 
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 
+#include <grpc/credentials.h>
 #include <grpc/grpc.h>
 #include <grpc/grpc_security.h>
+#include <grpc/support/port_platform.h>
 
+#include "src/core/handshaker/handshaker.h"
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/debug/trace.h"
 #include "src/core/lib/gprpp/ref_counted.h"
@@ -39,10 +40,7 @@
 #include "src/core/lib/iomgr/error.h"
 #include "src/core/lib/iomgr/iomgr_fwd.h"
 #include "src/core/lib/promise/arena_promise.h"
-#include "src/core/lib/transport/handshaker.h"
 #include "src/core/tsi/transport_security_interface.h"
-
-extern grpc_core::DebugOnlyTraceFlag grpc_trace_security_connector_refcount;
 
 // --- URL schemes. ---
 
@@ -63,7 +61,7 @@ class grpc_security_connector
  public:
   explicit grpc_security_connector(absl::string_view url_scheme)
       : grpc_core::RefCounted<grpc_security_connector>(
-            GRPC_TRACE_FLAG_ENABLED(grpc_trace_security_connector_refcount)
+            GRPC_TRACE_FLAG_ENABLED(security_connector_refcount)
                 ? "security_connector_refcount"
                 : nullptr),
         url_scheme_(url_scheme) {}
@@ -197,4 +195,4 @@ class grpc_server_security_connector : public grpc_security_connector {
   grpc_core::RefCountedPtr<grpc_server_credentials> server_creds_;
 };
 
-#endif  // GRPC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_SECURITY_CONNECTOR_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_SECURITY_CONNECTOR_SECURITY_CONNECTOR_H

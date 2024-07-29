@@ -22,11 +22,14 @@
 #include <cstdlib>
 #include <functional>
 #include <map>
+#include <memory>
 #include <new>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
@@ -36,10 +39,10 @@
 #include <grpc/load_reporting.h>
 #include <grpc/status.h>
 #include <grpc/support/alloc.h>
-#include <grpc/support/log.h>
 #include <grpc/support/time.h>
 #include <grpcpp/completion_queue.h>
 #include <grpcpp/ext/call_metric_recorder.h>
+#include <grpcpp/ext/server_metric_recorder.h>
 #include <grpcpp/impl/call.h>
 #include <grpcpp/impl/call_op_set.h>
 #include <grpcpp/impl/call_op_set_interface.h>
@@ -58,6 +61,7 @@
 #include "src/core/lib/gprpp/sync.h"
 #include "src/core/lib/resource_quota/arena.h"
 #include "src/core/lib/surface/call.h"
+#include "src/cpp/server/backend_metric_recorder.h"
 
 namespace grpc {
 
@@ -151,8 +155,8 @@ class ServerContextBase::CompletionOp final
       return;
     }
     // Start a phony op so that we can return the tag
-    GPR_ASSERT(grpc_call_start_batch(call_.call(), nullptr, 0, core_cq_tag_,
-                                     nullptr) == GRPC_CALL_OK);
+    CHECK(grpc_call_start_batch(call_.call(), nullptr, 0, core_cq_tag_,
+                                nullptr) == GRPC_CALL_OK);
   }
 
  private:
@@ -193,8 +197,8 @@ void ServerContextBase::CompletionOp::FillOps(internal::Call* call) {
   interceptor_methods_.SetCallOpSetInterface(this);
   // The following call_start_batch is internally-generated so no need for an
   // explanatory log on failure.
-  GPR_ASSERT(grpc_call_start_batch(call->call(), &ops, 1, core_cq_tag_,
-                                   nullptr) == GRPC_CALL_OK);
+  CHECK(grpc_call_start_batch(call->call(), &ops, 1, core_cq_tag_, nullptr) ==
+        GRPC_CALL_OK);
   // No interceptors to run here
 }
 
@@ -298,7 +302,7 @@ ServerContextBase::CallWrapper::~CallWrapper() {
 void ServerContextBase::BeginCompletionOp(
     internal::Call* call, std::function<void(bool)> callback,
     grpc::internal::ServerCallbackCall* callback_controller) {
-  GPR_ASSERT(!completion_op_);
+  CHECK(!completion_op_);
   if (rpc_info_) {
     rpc_info_->Ref();
   }
@@ -342,7 +346,7 @@ void ServerContextBase::TryCancel() const {
       grpc_call_cancel_with_status(call_.call, GRPC_STATUS_CANCELLED,
                                    "Cancelled on the server side", nullptr);
   if (err != GRPC_CALL_OK) {
-    gpr_log(GPR_ERROR, "TryCancel failed with: %d", err);
+    LOG(ERROR) << "TryCancel failed with: " << err;
   }
 }
 
@@ -370,7 +374,7 @@ void ServerContextBase::set_compression_algorithm(
     grpc_core::Crash(absl::StrFormat(
         "Name for compression algorithm '%d' unknown.", algorithm));
   }
-  GPR_ASSERT(algorithm_name != nullptr);
+  CHECK_NE(algorithm_name, nullptr);
   AddInitialMetadata(GRPC_COMPRESSION_REQUEST_ALGORITHM_MD_KEY, algorithm_name);
 }
 
@@ -397,10 +401,15 @@ void ServerContextBase::SetLoadReportingCosts(
   }
 }
 
-void ServerContextBase::CreateCallMetricRecorder() {
-  GPR_ASSERT(call_metric_recorder_ == nullptr);
+void ServerContextBase::CreateCallMetricRecorder(
+    experimental::ServerMetricRecorder* server_metric_recorder) {
+  if (call_.call == nullptr) return;
+  CHECK_EQ(call_metric_recorder_, nullptr);
   grpc_core::Arena* arena = grpc_call_get_arena(call_.call);
-  call_metric_recorder_ = arena->New<experimental::CallMetricRecorder>(arena);
+  auto* backend_metric_state =
+      arena->New<BackendMetricState>(server_metric_recorder);
+  call_metric_recorder_ = backend_metric_state;
+  arena->SetContext<grpc_core::BackendMetricProvider>(backend_metric_state);
 }
 
 grpc::string_ref ServerContextBase::ExperimentalGetAuthority() const {

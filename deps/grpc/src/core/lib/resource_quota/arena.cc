@@ -16,23 +16,29 @@
 //
 //
 
-#include <grpc/support/port_platform.h>
-
 #include "src/core/lib/resource_quota/arena.h"
 
 #include <atomic>
 #include <new>
 
-#include <grpc/support/alloc.h>
+#include "absl/log/log.h"
 
-#include "src/core/lib/gpr/alloc.h"
+#include <grpc/support/alloc.h>
+#include <grpc/support/port_platform.h>
+
+#include "src/core/lib/resource_quota/resource_quota.h"
+#include "src/core/util/alloc.h"
+namespace grpc_core {
 
 namespace {
 
-void* ArenaStorage(size_t initial_size) {
+void* ArenaStorage(size_t& initial_size) {
   static constexpr size_t base_size =
-      GPR_ROUND_UP_TO_ALIGNMENT_SIZE(sizeof(grpc_core::Arena));
+      GPR_ROUND_UP_TO_ALIGNMENT_SIZE(sizeof(Arena));
   initial_size = GPR_ROUND_UP_TO_ALIGNMENT_SIZE(initial_size);
+  initial_size = std::max(
+      initial_size, GPR_ROUND_UP_TO_ALIGNMENT_SIZE(
+                        arena_detail::BaseArenaContextTraits::ContextSize()));
   size_t alloc_size = base_size + initial_size;
   static constexpr size_t alignment =
       (GPR_CACHELINE_SIZE > GPR_MAX_ALIGNMENT &&
@@ -44,9 +50,15 @@ void* ArenaStorage(size_t initial_size) {
 
 }  // namespace
 
-namespace grpc_core {
-
 Arena::~Arena() {
+  for (size_t i = 0; i < arena_detail::BaseArenaContextTraits::NumContexts();
+       ++i) {
+    arena_detail::BaseArenaContextTraits::Destroy(i, contexts()[i]);
+  }
+  DestroyManagedNewObjects();
+  arena_factory_->FinalizeArena(this);
+  arena_factory_->allocator().Release(
+      total_allocated_.load(std::memory_order_relaxed));
   Zone* z = last_zone_;
   while (z) {
     Zone* prev_z = z->prev;
@@ -56,22 +68,27 @@ Arena::~Arena() {
   }
 }
 
-Arena* Arena::Create(size_t initial_size, MemoryAllocator* memory_allocator) {
-  return new (ArenaStorage(initial_size))
-      Arena(initial_size, 0, memory_allocator);
+RefCountedPtr<Arena> Arena::Create(size_t initial_size,
+                                   RefCountedPtr<ArenaFactory> arena_factory) {
+  void* p = ArenaStorage(initial_size);
+  return RefCountedPtr<Arena>(
+      new (p) Arena(initial_size, std::move(arena_factory)));
 }
 
-std::pair<Arena*, void*> Arena::CreateWithAlloc(
-    size_t initial_size, size_t alloc_size, MemoryAllocator* memory_allocator) {
-  static constexpr size_t base_size =
-      GPR_ROUND_UP_TO_ALIGNMENT_SIZE(sizeof(Arena));
-  auto* new_arena = new (ArenaStorage(initial_size))
-      Arena(initial_size, alloc_size, memory_allocator);
-  void* first_alloc = reinterpret_cast<char*>(new_arena) + base_size;
-  return std::make_pair(new_arena, first_alloc);
+Arena::Arena(size_t initial_size, RefCountedPtr<ArenaFactory> arena_factory)
+    : initial_zone_size_(initial_size),
+      total_used_(GPR_ROUND_UP_TO_ALIGNMENT_SIZE(
+          arena_detail::BaseArenaContextTraits::ContextSize())),
+      arena_factory_(std::move(arena_factory)) {
+  for (size_t i = 0; i < arena_detail::BaseArenaContextTraits::NumContexts();
+       ++i) {
+    contexts()[i] = nullptr;
+  }
+  CHECK_GE(initial_size, arena_detail::BaseArenaContextTraits::ContextSize());
+  arena_factory_->allocator().Reserve(initial_size);
 }
 
-size_t Arena::Destroy() {
+void Arena::DestroyManagedNewObjects() {
   ManagedNewObject* p;
   // Outer loop: clear the managed new object list.
   // We do this repeatedly in case a destructor ends up allocating something.
@@ -82,11 +99,11 @@ size_t Arena::Destroy() {
       Destruct(std::exchange(p, p->next));
     }
   }
-  size_t size = total_used_.load(std::memory_order_relaxed);
-  memory_allocator_->Release(total_allocated_.load(std::memory_order_relaxed));
+}
+
+void Arena::Destroy() const {
   this->~Arena();
-  gpr_free_aligned(this);
-  return size;
+  gpr_free_aligned(const_cast<Arena*>(this));
 }
 
 void* Arena::AllocZone(size_t size) {
@@ -98,7 +115,7 @@ void* Arena::AllocZone(size_t size) {
   static constexpr size_t zone_base_size =
       GPR_ROUND_UP_TO_ALIGNMENT_SIZE(sizeof(Zone));
   size_t alloc_size = zone_base_size + size;
-  memory_allocator_->Reserve(alloc_size);
+  arena_factory_->allocator().Reserve(alloc_size);
   total_allocated_.fetch_add(alloc_size, std::memory_order_relaxed);
   Zone* z = new (gpr_malloc_aligned(alloc_size, GPR_MAX_ALIGNMENT)) Zone();
   auto* prev = last_zone_.load(std::memory_order_relaxed);
@@ -116,23 +133,27 @@ void Arena::ManagedNewObject::Link(std::atomic<ManagedNewObject*>* head) {
   }
 }
 
-void* Arena::AllocPooled(size_t alloc_size, std::atomic<FreePoolNode*>* head) {
-  FreePoolNode* p = head->load(std::memory_order_acquire);
-  while (p != nullptr) {
-    if (head->compare_exchange_weak(p, p->next, std::memory_order_acq_rel,
-                                    std::memory_order_relaxed)) {
-      return p;
-    }
-  }
-  return Alloc(alloc_size);
-}
+RefCountedPtr<ArenaFactory> SimpleArenaAllocator(size_t initial_size) {
+  class Allocator : public ArenaFactory {
+   public:
+    explicit Allocator(size_t initial_size)
+        : ArenaFactory(
+              ResourceQuota::Default()->memory_quota()->CreateMemoryAllocator(
+                  "simple-arena-allocator")),
+          initial_size_(initial_size) {}
 
-void Arena::FreePooled(void* p, std::atomic<FreePoolNode*>* head) {
-  FreePoolNode* node = static_cast<FreePoolNode*>(p);
-  node->next = head->load(std::memory_order_acquire);
-  while (!head->compare_exchange_weak(
-      node->next, node, std::memory_order_acq_rel, std::memory_order_relaxed)) {
-  }
+    RefCountedPtr<Arena> MakeArena() override {
+      return Arena::Create(initial_size_, Ref());
+    }
+
+    void FinalizeArena(Arena*) override {
+      // No-op.
+    }
+
+   private:
+    size_t initial_size_;
+  };
+  return MakeRefCounted<Allocator>(initial_size);
 }
 
 }  // namespace grpc_core

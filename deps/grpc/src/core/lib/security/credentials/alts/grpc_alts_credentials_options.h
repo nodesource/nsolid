@@ -16,12 +16,12 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_GRPC_ALTS_CREDENTIALS_OPTIONS_H
-#define GRPC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_GRPC_ALTS_CREDENTIALS_OPTIONS_H
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_GRPC_ALTS_CREDENTIALS_OPTIONS_H
+#define GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_GRPC_ALTS_CREDENTIALS_OPTIONS_H
 
-#include <grpc/support/port_platform.h>
-
+#include <grpc/credentials.h>
 #include <grpc/grpc_security.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/tsi/alts/handshaker/transport_security_common_api.h"
 
@@ -71,4 +71,4 @@ typedef struct grpc_alts_credentials_server_options {
 grpc_alts_credentials_options* grpc_alts_credentials_options_copy(
     const grpc_alts_credentials_options* options);
 
-#endif  // GRPC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_GRPC_ALTS_CREDENTIALS_OPTIONS_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_ALTS_GRPC_ALTS_CREDENTIALS_OPTIONS_H

@@ -16,12 +16,11 @@
 //
 //
 
-#ifndef GRPC_CORE_TSI_TRANSPORT_SECURITY_GRPC_H
-#define GRPC_CORE_TSI_TRANSPORT_SECURITY_GRPC_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_TSI_TRANSPORT_SECURITY_GRPC_H
+#define GRPC_SRC_CORE_TSI_TRANSPORT_SECURITY_GRPC_H
 
 #include <grpc/slice_buffer.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/tsi/transport_security.h"
 
@@ -80,4 +79,4 @@ struct tsi_zero_copy_grpc_protector {
   const tsi_zero_copy_grpc_protector_vtable* vtable;
 };
 
-#endif  // GRPC_CORE_TSI_TRANSPORT_SECURITY_GRPC_H
+#endif  // GRPC_SRC_CORE_TSI_TRANSPORT_SECURITY_GRPC_H

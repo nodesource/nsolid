@@ -16,16 +16,14 @@
 //
 //
 
-#ifndef GRPC_INTERNAL_CPP_SERVER_CHANNELZ_SERVICE_H
-#define GRPC_INTERNAL_CPP_SERVER_CHANNELZ_SERVICE_H
+#ifndef GRPC_SRC_CPP_SERVER_CHANNELZ_CHANNELZ_SERVICE_H
+#define GRPC_SRC_CPP_SERVER_CHANNELZ_CHANNELZ_SERVICE_H
 
 #include <grpc/support/port_platform.h>
-
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/status.h>
 
 #include "src/proto/grpc/channelz/channelz.grpc.pb.h"
-#include "src/proto/grpc/channelz/channelz.pb.h"
 
 namespace grpc {
 
@@ -64,4 +62,4 @@ class ChannelzService final : public channelz::v1::Channelz::Service {
 
 }  // namespace grpc
 
-#endif  // GRPC_INTERNAL_CPP_SERVER_CHANNELZ_SERVICE_H
+#endif  // GRPC_SRC_CPP_SERVER_CHANNELZ_CHANNELZ_SERVICE_H

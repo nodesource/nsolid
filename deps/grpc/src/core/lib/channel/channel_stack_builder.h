@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_CHANNEL_CHANNEL_STACK_BUILDER_H
-#define GRPC_CORE_LIB_CHANNEL_CHANNEL_STACK_BUILDER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_CHANNEL_CHANNEL_STACK_BUILDER_H
+#define GRPC_SRC_CORE_LIB_CHANNEL_CHANNEL_STACK_BUILDER_H
 
 #include <string>
 #include <vector>
@@ -23,13 +21,12 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 
-#include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/channel/channel_fwd.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
 #include "src/core/lib/surface/channel_stack_type.h"
-#include "src/core/lib/transport/transport_fwd.h"
 
 namespace grpc_core {
 
@@ -53,16 +50,6 @@ class ChannelStackBuilder {
   // Query the target.
   absl::string_view target() const { return target_; }
 
-  // Set the transport.
-  ChannelStackBuilder& SetTransport(grpc_transport* transport) {
-    GPR_ASSERT(transport_ == nullptr);
-    transport_ = transport;
-    return *this;
-  }
-
-  // Query the transport.
-  grpc_transport* transport() const { return transport_; }
-
   // Query the channel args.
   const ChannelArgs& channel_args() const { return args_; }
 
@@ -77,16 +64,15 @@ class ChannelStackBuilder {
   // The type of channel stack being built.
   grpc_channel_stack_type channel_stack_type() const { return type_; }
 
+  // TODO(ctiller): re-evaluate the need for AppendFilter, PrependFilter.
+  // Their usefulness is largely zero now that we have ordering constraints in
+  // channel init.
+
   // Helper to add a filter to the front of the stack.
   void PrependFilter(const grpc_channel_filter* filter);
 
   // Helper to add a filter to the end of the stack.
   void AppendFilter(const grpc_channel_filter* filter);
-
-  // Determine whether a promise-based call stack is able to be built.
-  // Iterates each filter and ensures that there's a promise factory there.
-  // This will go away once the promise conversion is completed.
-  virtual bool IsPromising() const = 0;
 
   // Build the channel stack.
   // After success, *result holds the new channel stack,
@@ -107,8 +93,6 @@ class ChannelStackBuilder {
   const grpc_channel_stack_type type_;
   // The target
   std::string target_{unknown_target()};
-  // The transport
-  grpc_transport* transport_ = nullptr;
   // Channel args
   ChannelArgs args_;
   // The in-progress stack
@@ -117,4 +101,4 @@ class ChannelStackBuilder {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_CHANNEL_CHANNEL_STACK_BUILDER_H
+#endif  // GRPC_SRC_CORE_LIB_CHANNEL_CHANNEL_STACK_BUILDER_H

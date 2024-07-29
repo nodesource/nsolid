@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_CORE_EXT_FILTERS_LOAD_REPORTING_SERVER_LOAD_REPORTING_FILTER_H
-#define GRPC_CORE_EXT_FILTERS_LOAD_REPORTING_SERVER_LOAD_REPORTING_FILTER_H
+#ifndef GRPC_SRC_CORE_EXT_FILTERS_LOAD_REPORTING_SERVER_LOAD_REPORTING_FILTER_H
+#define GRPC_SRC_CORE_EXT_FILTERS_LOAD_REPORTING_SERVER_LOAD_REPORTING_FILTER_H
 
 #include <grpc/support/port_platform.h>
 
@@ -34,18 +34,35 @@
 
 namespace grpc_core {
 
-class ServerLoadReportingFilter : public ChannelFilter {
+class ServerLoadReportingFilter
+    : public ImplementChannelFilter<ServerLoadReportingFilter> {
  public:
-  static absl::StatusOr<ServerLoadReportingFilter> Create(
+  static const grpc_channel_filter kFilter;
+
+  static absl::StatusOr<std::unique_ptr<ServerLoadReportingFilter>> Create(
       const ChannelArgs& args, ChannelFilter::Args);
 
   // Getters.
   const char* peer_identity() { return peer_identity_.c_str(); }
   size_t peer_identity_len() { return peer_identity_.length(); }
 
-  // Construct a promise for one call.
-  ArenaPromise<ServerMetadataHandle> MakeCallPromise(
-      CallArgs call_args, NextPromiseFactory next_promise_factory) override;
+  class Call {
+   public:
+    void OnClientInitialMetadata(ClientMetadata& md,
+                                 ServerLoadReportingFilter* filter);
+    static const NoInterceptor OnServerInitialMetadata;
+    void OnServerTrailingMetadata(ServerMetadata& md,
+                                  ServerLoadReportingFilter* filter);
+    static const NoInterceptor OnClientToServerMessage;
+    static const NoInterceptor OnClientToServerHalfClose;
+    static const NoInterceptor OnServerToClientMessage;
+    void OnFinalize(const grpc_call_final_info* final_info,
+                    ServerLoadReportingFilter* filter);
+
+   private:
+    std::string client_ip_and_lr_token_;
+    std::string target_host_;
+  };
 
  private:
   // The peer's authenticated identity.
@@ -54,4 +71,4 @@ class ServerLoadReportingFilter : public ChannelFilter {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_EXT_FILTERS_LOAD_REPORTING_SERVER_LOAD_REPORTING_FILTER_H
+#endif  // GRPC_SRC_CORE_EXT_FILTERS_LOAD_REPORTING_SERVER_LOAD_REPORTING_FILTER_H

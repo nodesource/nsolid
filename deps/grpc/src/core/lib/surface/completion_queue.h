@@ -16,29 +16,20 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SURFACE_COMPLETION_QUEUE_H
-#define GRPC_CORE_LIB_SURFACE_COMPLETION_QUEUE_H
+#ifndef GRPC_SRC_CORE_LIB_SURFACE_COMPLETION_QUEUE_H
+#define GRPC_SRC_CORE_LIB_SURFACE_COMPLETION_QUEUE_H
 
 // Internal API for completion queues
-
-#include <grpc/support/port_platform.h>
 
 #include <stdint.h>
 
 #include <grpc/grpc.h>
+#include <grpc/support/port_platform.h>
 
-#include "src/core/lib/debug/trace.h"
 #include "src/core/lib/gprpp/manual_constructor.h"
 #include "src/core/lib/gprpp/mpscq.h"
 #include "src/core/lib/iomgr/error.h"
 #include "src/core/lib/iomgr/iomgr_fwd.h"
-
-// These trace flags default to 1. The corresponding lines are only traced
-// if grpc_api_trace is also truthy
-extern grpc_core::TraceFlag grpc_cq_pluck_trace;
-extern grpc_core::TraceFlag grpc_trace_operation_failures;
-extern grpc_core::DebugOnlyTraceFlag grpc_trace_pending_tags;
-extern grpc_core::DebugOnlyTraceFlag grpc_trace_cq_refcount;
 
 typedef struct grpc_cq_completion {
   grpc_core::ManualConstructor<
@@ -97,4 +88,4 @@ grpc_completion_queue* grpc_completion_queue_create_internal(
     grpc_cq_completion_type completion_type, grpc_cq_polling_type polling_type,
     grpc_completion_queue_functor* shutdown_callback);
 
-#endif  // GRPC_CORE_LIB_SURFACE_COMPLETION_QUEUE_H
+#endif  // GRPC_SRC_CORE_LIB_SURFACE_COMPLETION_QUEUE_H

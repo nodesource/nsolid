@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_PROMISE_EXEC_CTX_WAKEUP_SCHEDULER_H
-#define GRPC_CORE_LIB_PROMISE_EXEC_CTX_WAKEUP_SCHEDULER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_PROMISE_EXEC_CTX_WAKEUP_SCHEDULER_H
+#define GRPC_SRC_CORE_LIB_PROMISE_EXEC_CTX_WAKEUP_SCHEDULER_H
 
 #include "absl/status/status.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/debug_location.h"
 #include "src/core/lib/iomgr/closure.h"
@@ -53,4 +53,4 @@ class ExecCtxWakeupScheduler {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_PROMISE_EXEC_CTX_WAKEUP_SCHEDULER_H
+#endif  // GRPC_SRC_CORE_LIB_PROMISE_EXEC_CTX_WAKEUP_SCHEDULER_H

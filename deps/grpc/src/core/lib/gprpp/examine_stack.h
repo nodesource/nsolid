@@ -16,14 +16,14 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_GPRPP_EXAMINE_STACK_H
-#define GRPC_CORE_LIB_GPRPP_EXAMINE_STACK_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_EXAMINE_STACK_H
+#define GRPC_SRC_CORE_LIB_GPRPP_EXAMINE_STACK_H
 
 #include <string>
 
 #include "absl/types/optional.h"
+
+#include <grpc/support/port_platform.h>
 
 namespace grpc_core {
 
@@ -42,4 +42,4 @@ absl::optional<std::string> GetCurrentStackTrace();
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_EXAMINE_STACK_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_EXAMINE_STACK_H

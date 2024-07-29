@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_GPRPP_TABLE_H
-#define GRPC_CORE_LIB_GPRPP_TABLE_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_TABLE_H
+#define GRPC_SRC_CORE_LIB_GPRPP_TABLE_H
 
 #include <stddef.h>
 
@@ -26,6 +24,8 @@
 
 #include "absl/meta/type_traits.h"
 #include "absl/utility/utility.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/bitset.h"
 
@@ -449,4 +449,4 @@ class Table {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_TABLE_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_TABLE_H

@@ -11,11 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include <grpc/support/port_platform.h>
-
 #include "src/core/lib/event_engine/channel_args_endpoint_config.h"
 
+#include <string>
+
 #include "absl/types/optional.h"
+
+#include <grpc/event_engine/event_engine.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/channel/channel_args.h"
 
@@ -33,6 +36,9 @@ absl::optional<absl::string_view> ChannelArgsEndpointConfig::GetString(
 }
 
 void* ChannelArgsEndpointConfig::GetVoidPointer(absl::string_view key) const {
+  if (key == GRPC_INTERNAL_ARG_EVENT_ENGINE) {
+    return args_.GetObject<EventEngine>();
+  }
   return args_.GetVoidPointer(key);
 }
 

@@ -16,10 +16,8 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_CREDENTIALS_COMPOSITE_COMPOSITE_CREDENTIALS_H
-#define GRPC_CORE_LIB_SECURITY_CREDENTIALS_COMPOSITE_COMPOSITE_CREDENTIALS_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_COMPOSITE_COMPOSITE_CREDENTIALS_H
+#define GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_COMPOSITE_COMPOSITE_CREDENTIALS_H
 
 #include <algorithm>
 #include <string>
@@ -28,18 +26,20 @@
 
 #include "absl/status/statusor.h"
 
+#include <grpc/credentials.h>
 #include <grpc/grpc.h>
 #include <grpc/grpc_security.h>
 #include <grpc/grpc_security_constants.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/channel/channel_args.h"
-#include "src/core/lib/gpr/useful.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
 #include "src/core/lib/gprpp/unique_type_name.h"
 #include "src/core/lib/promise/arena_promise.h"
 #include "src/core/lib/security/credentials/credentials.h"
 #include "src/core/lib/security/security_connector/security_connector.h"
 #include "src/core/lib/transport/transport.h"
+#include "src/core/util/useful.h"
 
 // -- Composite channel credentials. --
 
@@ -55,7 +55,7 @@ class grpc_composite_channel_credentials : public grpc_channel_credentials {
 
   grpc_core::RefCountedPtr<grpc_channel_credentials>
   duplicate_without_call_credentials() override {
-    return inner_creds_;
+    return inner_creds_->duplicate_without_call_credentials();
   }
 
   grpc_core::RefCountedPtr<grpc_channel_security_connector>
@@ -68,7 +68,9 @@ class grpc_composite_channel_credentials : public grpc_channel_credentials {
     return inner_creds_->update_arguments(std::move(args));
   }
 
-  grpc_core::UniqueTypeName type() const override;
+  static grpc_core::UniqueTypeName Type();
+
+  grpc_core::UniqueTypeName type() const override { return Type(); }
 
   const grpc_channel_credentials* inner_creds() const {
     return inner_creds_.get();
@@ -128,4 +130,4 @@ class grpc_composite_call_credentials : public grpc_call_credentials {
   CallCredentialsList inner_;
 };
 
-#endif  // GRPC_CORE_LIB_SECURITY_CREDENTIALS_COMPOSITE_COMPOSITE_CREDENTIALS_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_CREDENTIALS_COMPOSITE_COMPOSITE_CREDENTIALS_H

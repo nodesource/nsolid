@@ -14,7 +14,11 @@
 
 # The commit of GoogleTest to be used in the CMake tests in this directory.
 # Keep this in sync with the commit in the WORKSPACE file.
-readonly ABSL_GOOGLETEST_COMMIT="15460959cbbfa20e66ef0b5ab497367e47fc0a04"  # release-1.12.0
+# TODO(dmauro): After the next GoogleTest release, use the stable file required
+# by Bzlmod.  This means downloading a copy of the file and reuploading it to
+# avoid changing checksums if the compression is changed by GitHub.  It also
+# means stop referring to it as a commit and instead use the uploaded filename.
+readonly ABSL_GOOGLETEST_COMMIT="f8d7d77c06936315286eb55f8de22cd23c188571"
 
 # Avoid depending on GitHub by looking for a cached copy of the commit first.
 if [[ -r "${KOKORO_GFILE_DIR:-}/distdir/${ABSL_GOOGLETEST_COMMIT}.zip" ]]; then

@@ -16,16 +16,15 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_TCP_SERVER_H
-#define GRPC_CORE_LIB_IOMGR_TCP_SERVER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_TCP_SERVER_H
+#define GRPC_SRC_CORE_LIB_IOMGR_TCP_SERVER_H
 
 #include <vector>
 
 #include <grpc/event_engine/endpoint_config.h>
 #include <grpc/grpc.h>
 #include <grpc/impl/grpc_types.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/iomgr/endpoint.h"
@@ -153,4 +152,4 @@ void grpc_tcp_server_global_init();
 
 void grpc_set_tcp_server_impl(grpc_tcp_server_vtable* impl);
 
-#endif  // GRPC_CORE_LIB_IOMGR_TCP_SERVER_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_TCP_SERVER_H
