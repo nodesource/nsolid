@@ -53,14 +53,19 @@
         '../../src'
       ],
       'defines': [
-        'BUILDING_LIBCURL'
+        'BUILDING_LIBCURL',
+        'HAVE_ABSEIL',
       ],
       'dependencies': [
         '../protobuf/protobuf.gyp:protobuf',
         '../curl/curl.gyp:curl',
         '../grpc/grpc.gyp:grpc++',
+        '../grpc/grpc.gyp:abseil',
       ],
       'direct_dependent_settings': {
+        'defines': [
+          'HAVE_ABSEIL',
+        ],
         'include_dirs': [
           'api/include',
           'exporters/otlp/include',

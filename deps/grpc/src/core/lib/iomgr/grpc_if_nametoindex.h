@@ -16,15 +16,15 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_GRPC_IF_NAMETOINDEX_H
-#define GRPC_CORE_LIB_IOMGR_GRPC_IF_NAMETOINDEX_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_GRPC_IF_NAMETOINDEX_H
+#define GRPC_SRC_CORE_LIB_IOMGR_GRPC_IF_NAMETOINDEX_H
 
 #include <stddef.h>
+
+#include <grpc/support/port_platform.h>
 
 // Returns the interface index corresponding to the interface "name" provided.
 // Returns non-zero upon success, and zero upon failure.
 uint32_t grpc_if_nametoindex(char* name);
 
-#endif  // GRPC_CORE_LIB_IOMGR_GRPC_IF_NAMETOINDEX_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_GRPC_IF_NAMETOINDEX_H

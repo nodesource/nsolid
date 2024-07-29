@@ -16,12 +16,12 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_IOMGR_INTERNAL_H
-#define GRPC_CORE_LIB_IOMGR_IOMGR_INTERNAL_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_IOMGR_INTERNAL_H
+#define GRPC_SRC_CORE_LIB_IOMGR_IOMGR_INTERNAL_H
 
 #include <stdbool.h>
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/iomgr/error.h"
@@ -71,4 +71,4 @@ bool grpc_iomgr_platform_add_closure_to_background_poller(
 
 bool grpc_iomgr_abort_on_leaks(void);
 
-#endif  // GRPC_CORE_LIB_IOMGR_IOMGR_INTERNAL_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_IOMGR_INTERNAL_H

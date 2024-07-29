@@ -12,13 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "absl/container/internal/raw_hash_set.h"
-
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <numeric>
 #include <random>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include "absl/base/internal/raw_logging.h"
 #include "absl/container/internal/hash_function_defaults.h"
+#include "absl/container/internal/raw_hash_set.h"
 #include "absl/strings/str_format.h"
 #include "benchmark/benchmark.h"
 
@@ -138,7 +144,7 @@ struct string_generator {
   template <class RNG>
   std::string operator()(RNG& rng) const {
     std::string res;
-    res.resize(12);
+    res.resize(size);
     std::uniform_int_distribution<uint32_t> printable_ascii(0x20, 0x7E);
     std::generate(res.begin(), res.end(), [&] { return printable_ascii(rng); });
     return res;
@@ -201,41 +207,130 @@ void CacheInSteadyStateArgs(Benchmark* bm) {
 }
 BENCHMARK(BM_CacheInSteadyState)->Apply(CacheInSteadyStateArgs);
 
+void BM_EraseEmplace(benchmark::State& state) {
+  IntTable t;
+  int64_t size = state.range(0);
+  for (int64_t i = 0; i < size; ++i) {
+    t.emplace(i);
+  }
+  while (state.KeepRunningBatch(size)) {
+    for (int64_t i = 0; i < size; ++i) {
+      benchmark::DoNotOptimize(t);
+      t.erase(i);
+      t.emplace(i);
+    }
+  }
+}
+BENCHMARK(BM_EraseEmplace)->Arg(1)->Arg(2)->Arg(4)->Arg(8)->Arg(16)->Arg(100);
+
 void BM_EndComparison(benchmark::State& state) {
+  StringTable t = {{"a", "a"}, {"b", "b"}};
+  auto it = t.begin();
+  for (auto i : state) {
+    benchmark::DoNotOptimize(t);
+    benchmark::DoNotOptimize(it);
+    benchmark::DoNotOptimize(it != t.end());
+  }
+}
+BENCHMARK(BM_EndComparison);
+
+void BM_Iteration(benchmark::State& state) {
   std::random_device rd;
   std::mt19937 rng(rd());
   string_generator gen{12};
   StringTable t;
-  while (t.size() < state.range(0)) {
+
+  size_t capacity = state.range(0);
+  size_t size = state.range(1);
+  t.reserve(capacity);
+
+  while (t.size() < size) {
     t.emplace(gen(rng), gen(rng));
   }
 
-  for (auto _ : state) {
+  for (auto i : state) {
+    benchmark::DoNotOptimize(t);
     for (auto it = t.begin(); it != t.end(); ++it) {
-      benchmark::DoNotOptimize(it);
-      benchmark::DoNotOptimize(t);
-      benchmark::DoNotOptimize(it != t.end());
+      benchmark::DoNotOptimize(*it);
     }
   }
 }
-BENCHMARK(BM_EndComparison)->Arg(400);
 
-void BM_CopyCtor(benchmark::State& state) {
+BENCHMARK(BM_Iteration)
+    ->ArgPair(1, 1)
+    ->ArgPair(2, 2)
+    ->ArgPair(4, 4)
+    ->ArgPair(7, 7)
+    ->ArgPair(10, 10)
+    ->ArgPair(15, 15)
+    ->ArgPair(16, 16)
+    ->ArgPair(54, 54)
+    ->ArgPair(100, 100)
+    ->ArgPair(400, 400)
+    // empty
+    ->ArgPair(0, 0)
+    ->ArgPair(10, 0)
+    ->ArgPair(100, 0)
+    ->ArgPair(1000, 0)
+    ->ArgPair(10000, 0)
+    // sparse
+    ->ArgPair(100, 1)
+    ->ArgPair(1000, 10);
+
+void BM_CopyCtorSparseInt(benchmark::State& state) {
   std::random_device rd;
   std::mt19937 rng(rd());
   IntTable t;
   std::uniform_int_distribution<uint64_t> dist(0, ~uint64_t{});
 
-  while (t.size() < state.range(0)) {
+  size_t size = state.range(0);
+  t.reserve(size * 10);
+  while (t.size() < size) {
     t.emplace(dist(rng));
   }
 
-  for (auto _ : state) {
+  for (auto i : state) {
     IntTable t2 = t;
     benchmark::DoNotOptimize(t2);
   }
 }
-BENCHMARK(BM_CopyCtor)->Range(128, 4096);
+BENCHMARK(BM_CopyCtorSparseInt)->Range(128, 4096);
+
+void BM_CopyCtorInt(benchmark::State& state) {
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  IntTable t;
+  std::uniform_int_distribution<uint64_t> dist(0, ~uint64_t{});
+
+  size_t size = state.range(0);
+  while (t.size() < size) {
+    t.emplace(dist(rng));
+  }
+
+  for (auto i : state) {
+    IntTable t2 = t;
+    benchmark::DoNotOptimize(t2);
+  }
+}
+BENCHMARK(BM_CopyCtorInt)->Range(128, 4096);
+
+void BM_CopyCtorString(benchmark::State& state) {
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  StringTable t;
+  std::uniform_int_distribution<uint64_t> dist(0, ~uint64_t{});
+
+  size_t size = state.range(0);
+  while (t.size() < size) {
+    t.emplace(std::to_string(dist(rng)), std::to_string(dist(rng)));
+  }
+
+  for (auto i : state) {
+    StringTable t2 = t;
+    benchmark::DoNotOptimize(t2);
+  }
+}
+BENCHMARK(BM_CopyCtorString)->Range(128, 4096);
 
 void BM_CopyAssign(benchmark::State& state) {
   std::random_device rd;
@@ -292,28 +387,42 @@ void BM_NoOpReserveStringTable(benchmark::State& state) {
 BENCHMARK(BM_NoOpReserveStringTable);
 
 void BM_ReserveIntTable(benchmark::State& state) {
-  int reserve_size = state.range(0);
-  for (auto _ : state) {
+  constexpr size_t kBatchSize = 1024;
+  size_t reserve_size = static_cast<size_t>(state.range(0));
+
+  std::vector<IntTable> tables;
+  while (state.KeepRunningBatch(kBatchSize)) {
     state.PauseTiming();
-    IntTable t;
+    tables.clear();
+    tables.resize(kBatchSize);
     state.ResumeTiming();
-    benchmark::DoNotOptimize(t);
-    t.reserve(reserve_size);
+    for (auto& t : tables) {
+      benchmark::DoNotOptimize(t);
+      t.reserve(reserve_size);
+      benchmark::DoNotOptimize(t);
+    }
   }
 }
-BENCHMARK(BM_ReserveIntTable)->Range(128, 4096);
+BENCHMARK(BM_ReserveIntTable)->Range(1, 64);
 
 void BM_ReserveStringTable(benchmark::State& state) {
-  int reserve_size = state.range(0);
-  for (auto _ : state) {
+  constexpr size_t kBatchSize = 1024;
+  size_t reserve_size = static_cast<size_t>(state.range(0));
+
+  std::vector<StringTable> tables;
+  while (state.KeepRunningBatch(kBatchSize)) {
     state.PauseTiming();
-    StringTable t;
+    tables.clear();
+    tables.resize(kBatchSize);
     state.ResumeTiming();
-    benchmark::DoNotOptimize(t);
-    t.reserve(reserve_size);
+    for (auto& t : tables) {
+      benchmark::DoNotOptimize(t);
+      t.reserve(reserve_size);
+      benchmark::DoNotOptimize(t);
+    }
   }
 }
-BENCHMARK(BM_ReserveStringTable)->Range(128, 4096);
+BENCHMARK(BM_ReserveStringTable)->Range(1, 64);
 
 // Like std::iota, except that ctrl_t doesn't support operator++.
 template <typename CtrlIter>
@@ -401,6 +510,24 @@ void BM_DropDeletes(benchmark::State& state) {
 }
 BENCHMARK(BM_DropDeletes);
 
+void BM_Resize(benchmark::State& state) {
+  // For now just measure a small cheap hash table since we
+  // are mostly interested in the overhead of type-erasure
+  // in resize().
+  constexpr int kElements = 64;
+  const int kCapacity = kElements * 2;
+
+  IntTable table;
+  for (int i = 0; i < kElements; i++) {
+    table.insert(i);
+  }
+  for (auto unused : state) {
+    table.rehash(0);
+    table.rehash(kCapacity);
+  }
+}
+BENCHMARK(BM_Resize);
+
 }  // namespace
 }  // namespace container_internal
 ABSL_NAMESPACE_END
@@ -415,6 +542,12 @@ auto CodegenAbslRawHashSetInt64Find(absl::container_internal::IntTable* table,
 
 bool CodegenAbslRawHashSetInt64FindNeEnd(
     absl::container_internal::IntTable* table, int64_t key) {
+  return table->find(key) != table->end();
+}
+
+// This is useful because the find isn't inlined but the iterator comparison is.
+bool CodegenAbslRawHashSetStringFindNeEnd(
+    absl::container_internal::StringTable* table, const std::string& key) {
   return table->find(key) != table->end();
 }
 
@@ -437,7 +570,7 @@ void CodegenAbslRawHashSetInt64Iterate(
 int odr =
     (::benchmark::DoNotOptimize(std::make_tuple(
          &CodegenAbslRawHashSetInt64Find, &CodegenAbslRawHashSetInt64FindNeEnd,
-         &CodegenAbslRawHashSetInt64Insert,
-         &CodegenAbslRawHashSetInt64Contains,
+         &CodegenAbslRawHashSetStringFindNeEnd,
+         &CodegenAbslRawHashSetInt64Insert, &CodegenAbslRawHashSetInt64Contains,
          &CodegenAbslRawHashSetInt64Iterate)),
      1);

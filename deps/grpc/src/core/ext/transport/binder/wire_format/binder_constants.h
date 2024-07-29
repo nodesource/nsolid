@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_CONSTANTS_H
-#define GRPC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_CONSTANTS_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_CONSTANTS_H
+#define GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_CONSTANTS_H
 
 #include <cstdint>
 
 #include "absl/base/attributes.h"
+
+#include <grpc/support/port_platform.h>
 
 using transaction_code_t = uint32_t;
 
@@ -40,4 +40,4 @@ ABSL_CONST_INIT extern const int kFirstCallId;
 
 }  // namespace grpc_binder
 
-#endif  // GRPC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_CONSTANTS_H
+#endif  // GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_WIRE_FORMAT_BINDER_CONSTANTS_H

@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_GPRPP_SINGLE_SET_PTR_H
-#define GRPC_CORE_LIB_GPRPP_SINGLE_SET_PTR_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_SINGLE_SET_PTR_H
+#define GRPC_SRC_CORE_LIB_GPRPP_SINGLE_SET_PTR_H
 
 #include <atomic>
 #include <memory>
 
+#include "absl/log/check.h"
+
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
 namespace grpc_core {
 
@@ -62,17 +63,19 @@ class SingleSetPtr {
   void Reset() { Delete(p_.exchange(nullptr, std::memory_order_acq_rel)); }
 
   bool is_set() const {
-    T* p = p_.load(std::memory_order_acquire);
+    T* p = Get();
     return p != nullptr;
   }
 
+  T* Get() const { return p_.load(std::memory_order_acquire); }
+
   T* operator->() const {
-    T* p = p_.load(std::memory_order_acquire);
-    GPR_DEBUG_ASSERT(p != nullptr);
+    T* p = Get();
+    DCHECK_NE(p, nullptr);
     return p;
   }
 
-  T& operator*() const { return *operator->(); }
+  T& operator*() const { return *Get(); }
 
  private:
   static void Delete(T* p) {
@@ -84,4 +87,4 @@ class SingleSetPtr {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_SINGLE_SET_PTR_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_SINGLE_SET_PTR_H

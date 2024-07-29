@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_EXT_TRANSPORT_BINDER_CLIENT_CHANNEL_CREATE_IMPL_H
-#define GRPC_CORE_EXT_TRANSPORT_BINDER_CLIENT_CHANNEL_CREATE_IMPL_H
+#ifndef GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_CLIENT_CHANNEL_CREATE_IMPL_H
+#define GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_CLIENT_CHANNEL_CREATE_IMPL_H
 
 #include <grpc/support/port_platform.h>
-
 #include <grpcpp/security/binder_security_policy.h>
 
 #include "src/core/ext/transport/binder/wire_format/binder.h"
@@ -34,9 +33,10 @@ grpc_channel* CreateDirectBinderChannelImplForTesting(
         security_policy);
 
 // Creates a GRPC_CLIENT_CHANNEL channel
-grpc_channel* CreateClientBinderChannelImpl(const grpc_channel_args* args);
+grpc_channel* CreateClientBinderChannelImpl(std::string target,
+                                            const grpc_channel_args* args);
 
 }  // namespace internal
 }  // namespace grpc
 
-#endif  // GRPC_CORE_EXT_TRANSPORT_BINDER_CLIENT_CHANNEL_CREATE_IMPL_H
+#endif  // GRPC_SRC_CORE_EXT_TRANSPORT_BINDER_CLIENT_CHANNEL_CREATE_IMPL_H

@@ -16,10 +16,8 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_GPRPP_STATUS_HELPER_H
-#define GRPC_CORE_LIB_GPRPP_STATUS_HELPER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_STATUS_HELPER_H
+#define GRPC_SRC_CORE_LIB_GPRPP_STATUS_HELPER_H
 
 #include <stdint.h>
 
@@ -30,6 +28,8 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/debug_location.h"
 
@@ -48,8 +48,6 @@ namespace grpc_core {
 
 /// This enum should have the same value of grpc_error_ints
 enum class StatusIntProperty {
-  /// 'errno' from the operating system
-  kErrorNo,
   /// __LINE__ from the call site creating the error
   kFileLine,
   /// stream identifier: for errors that are associated with an individual
@@ -58,23 +56,10 @@ enum class StatusIntProperty {
   /// grpc status code representing this error
   // TODO(veblush): Remove this after grpc_error is replaced with absl::Status
   kRpcStatus,
-  /// offset into some binary blob (usually represented by
-  /// RAW_BYTES) where the error occurred
-  kOffset,
-  /// context sensitive index associated with the error
-  kIndex,
-  /// context sensitive size associated with the error
-  kSize,
   /// http2 error code associated with the error (see the HTTP2 RFC)
   kHttp2Error,
-  /// TSI status code associated with the error
-  kTsiCode,
-  /// WSAGetLastError() reported when this error occurred
-  kWsaError,
   /// File descriptor associated with this error
   kFd,
-  /// HTTP status (i.e. 404)
-  kHttpStatus,
   /// chttp2: did the error occur while a write was in progress
   kOccurredDuringWrite,
   /// channel connectivity state associated with the error
@@ -89,24 +74,8 @@ enum class StatusStrProperty {
   kDescription,
   /// source file in which this error occurred
   kFile,
-  /// operating system description of this error
-  kOsError,
-  /// syscall that generated this error
-  kSyscall,
   /// peer that we were trying to communicate when this error occurred
-  kTargetAddress,
-  /// grpc status message associated with this error
   kGrpcMessage,
-  /// hex dump (or similar) with the data that generated this error
-  kRawBytes,
-  /// tsi error string associated with this error
-  kTsiError,
-  /// filename that we were trying to read/write when this error occurred
-  kFilename,
-  /// key associated with the error
-  kKey,
-  /// value associated with the error
-  kValue,
 };
 
 /// This enum should have the same value of grpc_error_times
@@ -116,57 +85,61 @@ enum class StatusTimeProperty {
 };
 
 /// Creates a status with given additional information
-absl::Status StatusCreate(
-    absl::StatusCode code, absl::string_view msg, const DebugLocation& location,
-    std::vector<absl::Status> children) GRPC_MUST_USE_RESULT;
+absl::Status StatusCreate(absl::StatusCode code, absl::string_view msg,
+                          const DebugLocation& location,
+                          std::vector<absl::Status> children);
 
 /// Sets the int property to the status
 void StatusSetInt(absl::Status* status, StatusIntProperty key, intptr_t value);
 
 /// Gets the int property from the status
-absl::optional<intptr_t> StatusGetInt(
-    const absl::Status& status, StatusIntProperty key) GRPC_MUST_USE_RESULT;
+GRPC_MUST_USE_RESULT
+absl::optional<intptr_t> StatusGetInt(const absl::Status& status,
+                                      StatusIntProperty key);
 
 /// Sets the str property to the status
 void StatusSetStr(absl::Status* status, StatusStrProperty key,
                   absl::string_view value);
 
 /// Gets the str property from the status
-absl::optional<std::string> StatusGetStr(
-    const absl::Status& status, StatusStrProperty key) GRPC_MUST_USE_RESULT;
+GRPC_MUST_USE_RESULT absl::optional<std::string> StatusGetStr(
+    const absl::Status& status, StatusStrProperty key);
 
 /// Sets the time property to the status
 void StatusSetTime(absl::Status* status, StatusTimeProperty key,
                    absl::Time time);
 
 /// Gets the time property from the status
-absl::optional<absl::Time> StatusGetTime(
-    const absl::Status& status, StatusTimeProperty key) GRPC_MUST_USE_RESULT;
+GRPC_MUST_USE_RESULT absl::optional<absl::Time> StatusGetTime(
+    const absl::Status& status, StatusTimeProperty key);
 
 /// Adds a child status to status
 void StatusAddChild(absl::Status* status, absl::Status child);
 
 /// Returns all children status from a status
-std::vector<absl::Status> StatusGetChildren(absl::Status status)
-    GRPC_MUST_USE_RESULT;
+GRPC_MUST_USE_RESULT std::vector<absl::Status> StatusGetChildren(
+    absl::Status status);
 
 /// Returns a string representation from status
 /// Error status will be like
 ///   STATUS[:MESSAGE] [{PAYLOADS[, children:[CHILDREN-STATUS-LISTS]]}]
 /// e.g.
 ///   CANCELLATION:SampleMessage {errno:'2021', line:'54', children:[ABORTED]}
-std::string StatusToString(const absl::Status& status) GRPC_MUST_USE_RESULT;
+GRPC_MUST_USE_RESULT std::string StatusToString(const absl::Status& status);
+
+/// Adds prefix to the message of status.
+absl::Status AddMessagePrefix(absl::string_view prefix, absl::Status status);
 
 namespace internal {
 
 /// Builds a upb message, google_rpc_Status from a status
 /// This is for internal implementation & test only
-google_rpc_Status* StatusToProto(const absl::Status& status,
-                                 upb_Arena* arena) GRPC_MUST_USE_RESULT;
+GRPC_MUST_USE_RESULT google_rpc_Status* StatusToProto(
+    const absl::Status& status, upb_Arena* arena);
 
 /// Builds a status from a upb message, google_rpc_Status
 /// This is for internal implementation & test only
-absl::Status StatusFromProto(google_rpc_Status* msg) GRPC_MUST_USE_RESULT;
+absl::Status StatusFromProto(google_rpc_Status* msg);
 
 /// Returns ptr that is allocated in the heap memory and the given status is
 /// copied into. This ptr can be used to get Status later and should be
@@ -186,4 +159,4 @@ absl::Status StatusMoveFromHeapPtr(uintptr_t ptr);
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_STATUS_HELPER_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_STATUS_HELPER_H

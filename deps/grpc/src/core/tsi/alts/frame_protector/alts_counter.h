@@ -16,15 +16,14 @@
 //
 //
 
-#ifndef GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_COUNTER_H
-#define GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_COUNTER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_COUNTER_H
+#define GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_COUNTER_H
 
 #include <stdbool.h>
 #include <stdlib.h>
 
 #include <grpc/grpc.h>
+#include <grpc/support/port_platform.h>
 
 // Main struct for a crypter counter managed within seal/unseal operations.
 typedef struct alts_counter {
@@ -95,4 +94,4 @@ unsigned char* alts_counter_get_counter(alts_counter* crypter_counter);
 ///
 void alts_counter_destroy(alts_counter* crypter_counter);
 
-#endif  // GRPC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_COUNTER_H
+#endif  // GRPC_SRC_CORE_TSI_ALTS_FRAME_PROTECTOR_ALTS_COUNTER_H

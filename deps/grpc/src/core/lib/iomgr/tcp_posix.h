@@ -16,8 +16,8 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_TCP_POSIX_H
-#define GRPC_CORE_LIB_IOMGR_TCP_POSIX_H
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_TCP_POSIX_H
+#define GRPC_SRC_CORE_LIB_IOMGR_TCP_POSIX_H
 //
 // Low level TCP "bottom half" implementation, for use by transports built on
 // top of a TCP connection.
@@ -37,8 +37,6 @@
 #include "src/core/lib/iomgr/ev_posix.h"
 #include "src/core/lib/iomgr/port.h"
 #include "src/core/lib/iomgr/socket_utils_posix.h"
-
-extern grpc_core::TraceFlag grpc_tcp_trace;
 
 /// Create a tcp endpoint given a file desciptor and a read slice size.
 /// Takes ownership of \a fd. Takes ownership of the \a slice_allocator.
@@ -64,4 +62,4 @@ void grpc_tcp_posix_shutdown();
 
 #endif  // GRPC_POSIX_SOCKET_TCP
 
-#endif  // GRPC_CORE_LIB_IOMGR_TCP_POSIX_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_TCP_POSIX_H

@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_RESOURCE_QUOTA_PERIODIC_UPDATE_H
-#define GRPC_CORE_LIB_RESOURCE_QUOTA_PERIODIC_UPDATE_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_RESOURCE_QUOTA_PERIODIC_UPDATE_H
+#define GRPC_SRC_CORE_LIB_RESOURCE_QUOTA_PERIODIC_UPDATE_H
 
 #include <inttypes.h>
 
 #include <atomic>
 
 #include "absl/functional/function_ref.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/time.h"
 
@@ -68,4 +68,4 @@ class PeriodicUpdate {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_RESOURCE_QUOTA_PERIODIC_UPDATE_H
+#endif  // GRPC_SRC_CORE_LIB_RESOURCE_QUOTA_PERIODIC_UPDATE_H

@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_PROMISE_MPSC_H
-#define GRPC_CORE_LIB_PROMISE_MPSC_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_PROMISE_MPSC_H
+#define GRPC_SRC_CORE_LIB_PROMISE_MPSC_H
 
 #include <stddef.h>
 
@@ -24,8 +22,10 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/log/check.h"
 
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/ref_counted.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
@@ -62,7 +62,7 @@ class Center : public RefCounted<Center<T>> {
   bool PollReceiveBatch(std::vector<T>& dest) {
     ReleasableMutexLock lock(&mu_);
     if (queue_.empty()) {
-      receive_waker_ = Activity::current()->MakeNonOwningWaker();
+      receive_waker_ = GetContext<Activity>()->MakeNonOwningWaker();
       return false;
     }
     dest.swap(queue_);
@@ -87,14 +87,28 @@ class Center : public RefCounted<Center<T>> {
       receive_waker.Wakeup();
       return Poll<bool>(true);
     }
-    send_wakers_.AddPending(Activity::current()->MakeNonOwningWaker());
+    send_wakers_.AddPending(GetContext<Activity>()->MakeNonOwningWaker());
     return Pending{};
+  }
+
+  bool ImmediateSend(T t) {
+    ReleasableMutexLock lock(&mu_);
+    if (receiver_closed_) return false;
+    queue_.push_back(std::move(t));
+    auto receive_waker = std::move(receive_waker_);
+    lock.Release();
+    receive_waker.Wakeup();
+    return true;
   }
 
   // Mark that the receiver is closed.
   void ReceiverClosed() {
-    MutexLock lock(&mu_);
+    ReleasableMutexLock lock(&mu_);
+    if (receiver_closed_) return;
     receiver_closed_ = true;
+    auto wakeups = send_wakers_.TakeWakeupSet();
+    lock.Release();
+    wakeups.Wakeup();
   }
 
  private:
@@ -115,8 +129,8 @@ class MpscReceiver;
 template <typename T>
 class MpscSender {
  public:
-  MpscSender(const MpscSender&) = delete;
-  MpscSender& operator=(const MpscSender&) = delete;
+  MpscSender(const MpscSender&) = default;
+  MpscSender& operator=(const MpscSender&) = default;
   MpscSender(MpscSender&&) noexcept = default;
   MpscSender& operator=(MpscSender&&) noexcept = default;
 
@@ -124,7 +138,14 @@ class MpscSender {
   // Resolves to true if sent, false if the receiver was closed (and the value
   // will never be successfully sent).
   auto Send(T t) {
-    return [this, t = std::move(t)]() mutable { return center_->PollSend(t); };
+    return [center = center_, t = std::move(t)]() mutable -> Poll<bool> {
+      if (center == nullptr) return false;
+      return center->PollSend(t);
+    };
+  }
+
+  bool UnbufferedImmediateSend(T t) {
+    return center_->ImmediateSend(std::move(t));
   }
 
  private:
@@ -150,16 +171,19 @@ class MpscReceiver {
   ~MpscReceiver() {
     if (center_ != nullptr) center_->ReceiverClosed();
   }
+  void MarkClosed() {
+    if (center_ != nullptr) center_->ReceiverClosed();
+  }
   MpscReceiver(const MpscReceiver&) = delete;
   MpscReceiver& operator=(const MpscReceiver&) = delete;
   // Only movable until it's first polled, and so we don't need to contend with
   // a non-empty buffer during a legal move!
   MpscReceiver(MpscReceiver&& other) noexcept
       : center_(std::move(other.center_)) {
-    GPR_DEBUG_ASSERT(other.buffer_.empty());
+    DCHECK(other.buffer_.empty());
   }
   MpscReceiver& operator=(MpscReceiver&& other) noexcept {
-    GPR_DEBUG_ASSERT(other.buffer_.empty());
+    DCHECK(other.buffer_.empty());
     center_ = std::move(other.center_);
     return *this;
   }
@@ -194,4 +218,4 @@ class MpscReceiver {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_PROMISE_MPSC_H
+#endif  // GRPC_SRC_CORE_LIB_PROMISE_MPSC_H

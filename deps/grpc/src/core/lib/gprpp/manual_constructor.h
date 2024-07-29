@@ -16,17 +16,16 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_GPRPP_MANUAL_CONSTRUCTOR_H
-#define GRPC_CORE_LIB_GPRPP_MANUAL_CONSTRUCTOR_H
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_MANUAL_CONSTRUCTOR_H
+#define GRPC_SRC_CORE_LIB_GPRPP_MANUAL_CONSTRUCTOR_H
 
 // manually construct a region of memory with some type
 
-#include <grpc/support/port_platform.h>
-
 #include <stddef.h>
 
-#include <type_traits>
 #include <utility>
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/construct_destruct.h"
 
@@ -139,9 +138,9 @@ class ManualConstructor {
   void Destroy() { Destruct(get()); }
 
  private:
-  typename std::aligned_storage<sizeof(Type), alignof(Type)>::type space_;
+  alignas(Type) char space_[sizeof(Type)];
 };
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_MANUAL_CONSTRUCTOR_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_MANUAL_CONSTRUCTOR_H

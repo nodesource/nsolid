@@ -13,10 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_SECURITY_AUTHORIZATION_CEL_AUTHORIZATION_ENGINE_H
-#define GRPC_CORE_LIB_SECURITY_AUTHORIZATION_CEL_AUTHORIZATION_ENGINE_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_CEL_AUTHORIZATION_ENGINE_H
+#define GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_CEL_AUTHORIZATION_ENGINE_H
 
 #include <map>
 #include <memory>
@@ -26,7 +24,9 @@
 #include "absl/container/flat_hash_set.h"
 #include "envoy/config/rbac/v3/rbac.upb.h"
 #include "google/api/expr/v1alpha1/syntax.upb.h"
-#include "upb/upb.hpp"
+#include "upb/mem/arena.hpp"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/security/authorization/evaluate_args.h"
 #include "src/core/lib/security/authorization/mock_cel/activation.h"
@@ -81,4 +81,4 @@ class CelAuthorizationEngine {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_SECURITY_AUTHORIZATION_CEL_AUTHORIZATION_ENGINE_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_AUTHORIZATION_CEL_AUTHORIZATION_ENGINE_H

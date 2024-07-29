@@ -16,10 +16,8 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
-#define GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
+#define GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
 
 #include <stdint.h>
 
@@ -30,13 +28,13 @@
 #include "absl/types/optional.h"
 
 #include <grpc/event_engine/event_engine.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/event_engine/forkable.h"
 #include "src/core/lib/event_engine/posix_engine/timer.h"
-#include "src/core/lib/event_engine/thread_pool.h"
+#include "src/core/lib/event_engine/thread_pool/thread_pool.h"
 #include "src/core/lib/gprpp/notification.h"
 #include "src/core/lib/gprpp/sync.h"
-#include "src/core/lib/gprpp/thd.h"
 #include "src/core/lib/gprpp/time.h"
 
 namespace grpc_event_engine {
@@ -80,7 +78,6 @@ class TimerManager final : public grpc_event_engine::experimental::Forkable {
     TimerManager* const timer_manager_;
   };
 
-  void StartMainLoopThread();
   void RestartPostFork();
   void MainLoop();
   void RunSomeTimers(std::vector<experimental::EventEngine::Closure*> timers);
@@ -103,7 +100,6 @@ class TimerManager final : public grpc_event_engine::experimental::Forkable {
   uint64_t wakeups_ ABSL_GUARDED_BY(mu_) = false;
   // actual timer implementation
   std::unique_ptr<TimerList> timer_list_;
-  grpc_core::Thread main_thread_;
   std::shared_ptr<grpc_event_engine::experimental::ThreadPool> thread_pool_;
   absl::optional<grpc_core::Notification> main_loop_exit_signal_;
 };
@@ -111,4 +107,4 @@ class TimerManager final : public grpc_event_engine::experimental::Forkable {
 }  // namespace experimental
 }  // namespace grpc_event_engine
 
-#endif  // GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H
+#endif  // GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_TIMER_MANAGER_H

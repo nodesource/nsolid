@@ -16,16 +16,17 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_CLOSURE_H
-#define GRPC_CORE_LIB_IOMGR_CLOSURE_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_CLOSURE_H
+#define GRPC_SRC_CORE_LIB_IOMGR_CLOSURE_H
 
 #include <assert.h>
 #include <stdbool.h>
 
+#include "absl/log/check.h"
+
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/crash.h"
 #include "src/core/lib/gprpp/debug_location.h"
@@ -35,8 +36,6 @@
 
 struct grpc_closure;
 typedef struct grpc_closure grpc_closure;
-
-extern grpc_core::DebugOnlyTraceFlag grpc_trace_closure;
 
 typedef struct grpc_closure_list {
   grpc_closure* head;
@@ -86,6 +85,8 @@ struct grpc_closure {
   const char* file_initiated;
   int line_initiated;
 #endif
+
+  std::string DebugString() const;
 };
 
 #ifndef NDEBUG
@@ -291,16 +292,16 @@ class Closure {
       return;
     }
 #ifndef NDEBUG
-    if (grpc_trace_closure.enabled()) {
+    if (GRPC_TRACE_FLAG_ENABLED(closure)) {
       gpr_log(GPR_DEBUG, "running closure %p: created [%s:%d]: run [%s:%d]",
               closure, closure->file_created, closure->line_created,
               location.file(), location.line());
     }
-    GPR_ASSERT(closure->cb != nullptr);
+    CHECK_NE(closure->cb, nullptr);
 #endif
     closure->cb(closure->cb_arg, error);
 #ifndef NDEBUG
-    if (grpc_trace_closure.enabled()) {
+    if (GRPC_TRACE_FLAG_ENABLED(closure)) {
       gpr_log(GPR_DEBUG, "closure %p finished", closure);
     }
 #endif
@@ -308,4 +309,4 @@ class Closure {
 };
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_IOMGR_CLOSURE_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_CLOSURE_H

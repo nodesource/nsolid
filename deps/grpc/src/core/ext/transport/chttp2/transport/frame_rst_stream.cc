@@ -16,23 +16,25 @@
 //
 //
 
-#include <grpc/support/port_platform.h>
-
 #include "src/core/ext/transport/chttp2/transport/frame_rst_stream.h"
 
 #include <stddef.h>
 
+#include "absl/log/check.h"
+#include "absl/random/distributions.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 
 #include <grpc/slice_buffer.h>
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
-#include "src/core/ext/transport/chttp2/transport/frame.h"
-#include "src/core/ext/transport/chttp2/transport/http_trace.h"
 #include "src/core/ext/transport/chttp2/transport/internal.h"
+#include "src/core/ext/transport/chttp2/transport/legacy_frame.h"
+#include "src/core/ext/transport/chttp2/transport/ping_callbacks.h"
 #include "src/core/lib/debug/trace.h"
+#include "src/core/lib/experiments/experiments.h"
 #include "src/core/lib/gprpp/status_helper.h"
 #include "src/core/lib/transport/http2_errors.h"
 #include "src/core/lib/transport/metadata_batch.h"
@@ -103,12 +105,12 @@ grpc_error_handle grpc_chttp2_rst_stream_parser_parse(void* parser,
   s->stats.incoming.framing_bytes += static_cast<uint64_t>(end - cur);
 
   if (p->byte == 4) {
-    GPR_ASSERT(is_last);
+    CHECK(is_last);
     uint32_t reason = ((static_cast<uint32_t>(p->reason_bytes[0])) << 24) |
                       ((static_cast<uint32_t>(p->reason_bytes[1])) << 16) |
                       ((static_cast<uint32_t>(p->reason_bytes[2])) << 8) |
                       ((static_cast<uint32_t>(p->reason_bytes[3])));
-    if (GRPC_TRACE_FLAG_ENABLED(grpc_http_trace)) {
+    if (GRPC_TRACE_FLAG_ENABLED(http)) {
       gpr_log(GPR_INFO,
               "[chttp2 transport=%p stream=%p] received RST_STREAM(reason=%d)",
               t, s, reason);
@@ -122,6 +124,12 @@ grpc_error_handle grpc_chttp2_rst_stream_parser_parse(void* parser,
               absl::StrCat("Received RST_STREAM with error code ", reason)),
           grpc_core::StatusIntProperty::kHttp2Error,
           static_cast<intptr_t>(reason));
+    }
+    if (!t->is_client &&
+        absl::Bernoulli(t->bitgen, t->ping_on_rst_stream_percent / 100.0)) {
+      ++t->num_pending_induced_frames;
+      t->ping_callbacks.RequestPing();
+      grpc_chttp2_initiate_write(t, GRPC_CHTTP2_INITIATE_WRITE_KEEPALIVE_PING);
     }
     grpc_chttp2_mark_stream_closed(t, s, true, true, error);
   }
