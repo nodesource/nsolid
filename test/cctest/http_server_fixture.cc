@@ -1,4 +1,5 @@
 #include "http_server_fixture.h"
+#include <algorithm>
 #include "util.h"
 
 HttpServer::HttpServer(uv_loop_t* loop): loop_(loop) {
