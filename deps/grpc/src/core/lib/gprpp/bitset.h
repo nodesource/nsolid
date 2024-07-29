@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_GPRPP_BITSET_H
-#define GRPC_CORE_LIB_GPRPP_BITSET_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_BITSET_H
+#define GRPC_SRC_CORE_LIB_GPRPP_BITSET_H
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include <type_traits>
 
-#include "src/core/lib/gpr/useful.h"
+#include <grpc/support/port_platform.h>
+
+#include "src/core/util/useful.h"
 
 namespace grpc_core {
 
@@ -222,4 +222,4 @@ class BitSet<0> {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_BITSET_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_BITSET_H

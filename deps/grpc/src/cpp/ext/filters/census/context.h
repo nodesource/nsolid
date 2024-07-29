@@ -16,10 +16,8 @@
 //
 //
 
-#ifndef GRPC_INTERNAL_CPP_EXT_FILTERS_CENSUS_CONTEXT_H
-#define GRPC_INTERNAL_CPP_EXT_FILTERS_CENSUS_CONTEXT_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CPP_EXT_FILTERS_CENSUS_CONTEXT_H
+#define GRPC_SRC_CPP_EXT_FILTERS_CENSUS_CONTEXT_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -32,6 +30,7 @@
 #include <grpc/grpc.h>
 #include <grpc/slice.h>
 #include <grpc/status.h>
+#include <grpc/support/port_platform.h>
 #include <grpcpp/opencensus.h>
 
 #include "src/core/lib/channel/channel_stack.h"
@@ -98,4 +97,4 @@ inline absl::string_view GetMethod(const grpc_core::Slice& path) {
 
 }  // namespace grpc
 
-#endif  // GRPC_INTERNAL_CPP_EXT_FILTERS_CENSUS_CONTEXT_H
+#endif  // GRPC_SRC_CPP_EXT_FILTERS_CENSUS_CONTEXT_H

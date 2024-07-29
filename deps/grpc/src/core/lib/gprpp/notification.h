@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CORE_LIB_GPRPP_NOTIFICATION_H
-#define GRPC_CORE_LIB_GPRPP_NOTIFICATION_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_GPRPP_NOTIFICATION_H
+#define GRPC_SRC_CORE_LIB_GPRPP_NOTIFICATION_H
 
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/sync.h"
 
@@ -64,4 +64,4 @@ class Notification {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_GPRPP_NOTIFICATION_H
+#endif  // GRPC_SRC_CORE_LIB_GPRPP_NOTIFICATION_H

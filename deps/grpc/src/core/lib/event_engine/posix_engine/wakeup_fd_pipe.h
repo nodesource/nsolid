@@ -11,15 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_WAKEUP_FD_PIPE_H
-#define GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_WAKEUP_FD_PIPE_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_WAKEUP_FD_PIPE_H
+#define GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_WAKEUP_FD_PIPE_H
 
 #include <memory>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/event_engine/posix_engine/wakeup_fd_posix.h"
 
@@ -42,4 +42,4 @@ class PipeWakeupFd : public WakeupFd {
 }  // namespace experimental
 }  // namespace grpc_event_engine
 
-#endif  // GRPC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_WAKEUP_FD_PIPE_H
+#endif  // GRPC_SRC_CORE_LIB_EVENT_ENGINE_POSIX_ENGINE_WAKEUP_FD_PIPE_H

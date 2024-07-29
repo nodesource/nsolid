@@ -16,13 +16,13 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_SECURITY_UTIL_JSON_UTIL_H
-#define GRPC_CORE_LIB_SECURITY_UTIL_JSON_UTIL_H
+#ifndef GRPC_SRC_CORE_LIB_SECURITY_UTIL_JSON_UTIL_H
+#define GRPC_SRC_CORE_LIB_SECURITY_UTIL_JSON_UTIL_H
 
 #include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/error.h"
-#include "src/core/lib/json/json.h"
+#include "src/core/util/json/json.h"
 
 // Constants.
 #define GRPC_AUTH_JSON_TYPE_INVALID "invalid"
@@ -40,4 +40,4 @@ const char* grpc_json_get_string_property(const grpc_core::Json& json,
 bool grpc_copy_json_string_property(const grpc_core::Json& json,
                                     const char* prop_name, char** copied_value);
 
-#endif  // GRPC_CORE_LIB_SECURITY_UTIL_JSON_UTIL_H
+#endif  // GRPC_SRC_CORE_LIB_SECURITY_UTIL_JSON_UTIL_H

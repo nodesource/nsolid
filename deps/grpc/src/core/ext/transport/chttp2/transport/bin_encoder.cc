@@ -16,14 +16,15 @@
 //
 //
 
-#include <grpc/support/port_platform.h>
-
 #include "src/core/ext/transport/chttp2/transport/bin_encoder.h"
 
 #include <stdint.h>
 #include <string.h>
 
+#include "absl/log/check.h"
+
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/ext/transport/chttp2/transport/huffsyms.h"
 
@@ -88,8 +89,8 @@ grpc_slice grpc_chttp2_base64_encode(const grpc_slice& input) {
       break;
   }
 
-  GPR_ASSERT(out == (char*)GRPC_SLICE_END_PTR(output));
-  GPR_ASSERT(in == GRPC_SLICE_END_PTR(input));
+  CHECK(out == (char*)GRPC_SLICE_END_PTR(output));
+  CHECK(in == GRPC_SLICE_END_PTR(input));
   return output;
 }
 
@@ -132,7 +133,7 @@ grpc_slice grpc_chttp2_huffman_compress(const grpc_slice& input) {
                              static_cast<uint8_t>(0xffu >> temp_length));
   }
 
-  GPR_ASSERT(out == GRPC_SLICE_END_PTR(output));
+  CHECK(out == GRPC_SLICE_END_PTR(output));
 
   return output;
 }
@@ -149,7 +150,8 @@ static void enc_flush_some(huff_out* out) {
   }
 }
 
-static void enc_add2(huff_out* out, uint8_t a, uint8_t b) {
+static void enc_add2(huff_out* out, uint8_t a, uint8_t b, uint32_t* wire_size) {
+  *wire_size += 2;
   b64_huff_sym sa = huff_alphabet[a];
   b64_huff_sym sb = huff_alphabet[b];
   out->temp = (out->temp << (sa.length + sb.length)) |
@@ -159,7 +161,8 @@ static void enc_add2(huff_out* out, uint8_t a, uint8_t b) {
   enc_flush_some(out);
 }
 
-static void enc_add1(huff_out* out, uint8_t a) {
+static void enc_add1(huff_out* out, uint8_t a, uint32_t* wire_size) {
+  *wire_size += 1;
   b64_huff_sym sa = huff_alphabet[a];
   out->temp = (out->temp << sa.length) | sa.bits;
   out->temp_length += sa.length;
@@ -167,7 +170,7 @@ static void enc_add1(huff_out* out, uint8_t a) {
 }
 
 grpc_slice grpc_chttp2_base64_encode_and_huffman_compress(
-    const grpc_slice& input) {
+    const grpc_slice& input, uint32_t* wire_size) {
   size_t input_length = GRPC_SLICE_LENGTH(input);
   size_t input_triplets = input_length / 3;
   size_t tail_case = input_length % 3;
@@ -183,16 +186,17 @@ grpc_slice grpc_chttp2_base64_encode_and_huffman_compress(
   out.temp = 0;
   out.temp_length = 0;
   out.out = start_out;
+  *wire_size = 0;
 
   // encode full triplets
   for (i = 0; i < input_triplets; i++) {
     const uint8_t low_to_high = static_cast<uint8_t>((in[0] & 0x3) << 4);
     const uint8_t high_to_low = in[1] >> 4;
-    enc_add2(&out, in[0] >> 2, low_to_high | high_to_low);
+    enc_add2(&out, in[0] >> 2, low_to_high | high_to_low, wire_size);
 
     const uint8_t a = static_cast<uint8_t>((in[1] & 0xf) << 2);
     const uint8_t b = (in[2] >> 6);
-    enc_add2(&out, a | b, in[2] & 0x3f);
+    enc_add2(&out, a | b, in[2] & 0x3f, wire_size);
     in += 3;
   }
 
@@ -201,14 +205,15 @@ grpc_slice grpc_chttp2_base64_encode_and_huffman_compress(
     case 0:
       break;
     case 1:
-      enc_add2(&out, in[0] >> 2, static_cast<uint8_t>((in[0] & 0x3) << 4));
+      enc_add2(&out, in[0] >> 2, static_cast<uint8_t>((in[0] & 0x3) << 4),
+               wire_size);
       in += 1;
       break;
     case 2: {
       const uint8_t low_to_high = static_cast<uint8_t>((in[0] & 0x3) << 4);
       const uint8_t high_to_low = in[1] >> 4;
-      enc_add2(&out, in[0] >> 2, low_to_high | high_to_low);
-      enc_add1(&out, static_cast<uint8_t>((in[1] & 0xf) << 2));
+      enc_add2(&out, in[0] >> 2, low_to_high | high_to_low, wire_size);
+      enc_add1(&out, static_cast<uint8_t>((in[1] & 0xf) << 2), wire_size);
       in += 2;
       break;
     }
@@ -224,9 +229,9 @@ grpc_slice grpc_chttp2_base64_encode_and_huffman_compress(
         static_cast<uint8_t>(0xffu >> out.temp_length));
   }
 
-  GPR_ASSERT(out.out <= GRPC_SLICE_END_PTR(output));
+  CHECK(out.out <= GRPC_SLICE_END_PTR(output));
   GRPC_SLICE_SET_LENGTH(output, out.out - start_out);
 
-  GPR_ASSERT(in == GRPC_SLICE_END_PTR(input));
+  CHECK(in == GRPC_SLICE_END_PTR(input));
   return output;
 }

@@ -22,6 +22,8 @@
 #include <memory>
 #include <vector>
 
+#include "absl/log/absl_check.h"
+
 #include <grpc/support/log.h>
 #include <grpcpp/impl/rpc_method.h>
 #include <grpcpp/support/interceptor.h>
@@ -57,7 +59,10 @@ class ClientInterceptorFactoryInterface {
 namespace internal {
 extern experimental::ClientInterceptorFactoryInterface*
     g_global_client_interceptor_factory;
-}
+
+extern experimental::ClientInterceptorFactoryInterface*
+    g_global_client_stats_interceptor_factory;
+}  // namespace internal
 
 /// ClientRpcInfo represents the state of a particular RPC as it
 /// appears to an interceptor. It is created and owned by the library and
@@ -136,7 +141,7 @@ class ClientRpcInfo {
   // Runs interceptor at pos \a pos.
   void RunInterceptor(
       experimental::InterceptorBatchMethods* interceptor_methods, size_t pos) {
-    GPR_ASSERT(pos < interceptors_.size());
+    ABSL_CHECK_LT(pos, interceptors_.size());
     interceptors_[pos]->Intercept(interceptor_methods);
   }
 
@@ -144,9 +149,21 @@ class ClientRpcInfo {
       const std::vector<std::unique_ptr<
           experimental::ClientInterceptorFactoryInterface>>& creators,
       size_t interceptor_pos) {
-    if (interceptor_pos > creators.size()) {
+    // TODO(yashykt): This calculation seems broken for the case where an
+    // interceptor factor returns nullptr.
+    size_t num_interceptors =
+        creators.size() +
+        (internal::g_global_client_stats_interceptor_factory != nullptr) +
+        (internal::g_global_client_interceptor_factory != nullptr);
+    if (interceptor_pos > num_interceptors) {
       // No interceptors to register
       return;
+    }
+    if (internal::g_global_client_stats_interceptor_factory != nullptr) {
+      interceptors_.push_back(std::unique_ptr<experimental::Interceptor>(
+          internal::g_global_client_stats_interceptor_factory
+              ->CreateClientInterceptor(this)));
+      --interceptor_pos;
     }
     // NOTE: The following is not a range-based for loop because it will only
     //       iterate over a portion of the creators vector.

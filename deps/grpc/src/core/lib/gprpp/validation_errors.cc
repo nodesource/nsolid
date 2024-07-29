@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <grpc/support/port_platform.h>
-
 #include "src/core/lib/gprpp/validation_errors.h"
 
-#include <algorithm>
+#include <inttypes.h>
+
 #include <utility>
 
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/strip.h"
+
+#include <grpc/support/port_platform.h>
 
 namespace grpc_core {
 
@@ -35,15 +37,27 @@ void ValidationErrors::PushField(absl::string_view ext) {
 void ValidationErrors::PopField() { fields_.pop_back(); }
 
 void ValidationErrors::AddError(absl::string_view error) {
-  field_errors_[absl::StrJoin(fields_, "")].emplace_back(error);
+  auto key = absl::StrJoin(fields_, "");
+  if (field_errors_[key].size() >= max_error_count_) {
+    VLOG(2) << "Ignoring validation error: too many errors found ("
+            << max_error_count_ << ")";
+    return;
+  }
+  field_errors_[key].emplace_back(error);
 }
 
 bool ValidationErrors::FieldHasErrors() const {
   return field_errors_.find(absl::StrJoin(fields_, "")) != field_errors_.end();
 }
 
-absl::Status ValidationErrors::status(absl::string_view prefix) const {
+absl::Status ValidationErrors::status(absl::StatusCode code,
+                                      absl::string_view prefix) const {
   if (field_errors_.empty()) return absl::OkStatus();
+  return absl::Status(code, message(prefix));
+}
+
+std::string ValidationErrors::message(absl::string_view prefix) const {
+  if (field_errors_.empty()) return "";
   std::vector<std::string> errors;
   for (const auto& p : field_errors_) {
     if (p.second.size() > 1) {
@@ -54,8 +68,7 @@ absl::Status ValidationErrors::status(absl::string_view prefix) const {
           absl::StrCat("field:", p.first, " error:", p.second[0]));
     }
   }
-  return absl::InvalidArgumentError(
-      absl::StrCat(prefix, ": [", absl::StrJoin(errors, "; "), "]"));
+  return absl::StrCat(prefix, ": [", absl::StrJoin(errors, "; "), "]");
 }
 
 }  // namespace grpc_core

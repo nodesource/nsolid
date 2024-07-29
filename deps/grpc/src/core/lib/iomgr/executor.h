@@ -16,14 +16,14 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_IOMGR_EXECUTOR_H
-#define GRPC_CORE_LIB_IOMGR_EXECUTOR_H
+#ifndef GRPC_SRC_CORE_LIB_IOMGR_EXECUTOR_H
+#define GRPC_SRC_CORE_LIB_IOMGR_EXECUTOR_H
 
 #include <grpc/support/port_platform.h>
 
-#include "src/core/lib/gpr/spinlock.h"
 #include "src/core/lib/gprpp/thd.h"
 #include "src/core/lib/iomgr/closure.h"
+#include "src/core/util/spinlock.h"
 
 namespace grpc_core {
 
@@ -116,4 +116,4 @@ class Executor {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_CORE_LIB_IOMGR_EXECUTOR_H
+#endif  // GRPC_SRC_CORE_LIB_IOMGR_EXECUTOR_H

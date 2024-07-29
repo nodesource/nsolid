@@ -16,12 +16,11 @@
 //
 //
 
-#ifndef GRPC_CORE_LIB_TRANSPORT_STATUS_CONVERSION_H
-#define GRPC_CORE_LIB_TRANSPORT_STATUS_CONVERSION_H
-
-#include <grpc/support/port_platform.h>
+#ifndef GRPC_SRC_CORE_LIB_TRANSPORT_STATUS_CONVERSION_H
+#define GRPC_SRC_CORE_LIB_TRANSPORT_STATUS_CONVERSION_H
 
 #include <grpc/status.h>
+#include <grpc/support/port_platform.h>
 
 #include "src/core/lib/gprpp/time.h"
 #include "src/core/lib/transport/http2_errors.h"
@@ -35,4 +34,4 @@ grpc_status_code grpc_http2_error_to_grpc_status(grpc_http2_error_code error,
 grpc_status_code grpc_http2_status_to_grpc_status(int status);
 int grpc_status_to_http2_status(grpc_status_code status);
 
-#endif  // GRPC_CORE_LIB_TRANSPORT_STATUS_CONVERSION_H
+#endif  // GRPC_SRC_CORE_LIB_TRANSPORT_STATUS_CONVERSION_H
