@@ -1,5 +1,8 @@
 #include "grpc_client.h"
 #include "grpc_agent.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_client_options.h"
+
+using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 
 namespace node {
 namespace nsolid {
@@ -112,10 +115,11 @@ GrpcClient::~GrpcClient() {
 /**
   * Create gRPC channel.
   */
-std::shared_ptr<::grpc::Channel> GrpcClient::MakeChannel() {
+std::shared_ptr<::grpc::Channel>
+    GrpcClient::MakeChannel(const OtlpGrpcClientOptions& options) {
   std::shared_ptr<::grpc::Channel> channel;
   ::grpc::ChannelArguments grpc_arguments;
-  channel = ::grpc::CreateCustomChannel("localhost:50051", ::grpc::InsecureChannelCredentials(), grpc_arguments);
+  channel = ::grpc::CreateCustomChannel(options.endpoint, ::grpc::InsecureChannelCredentials(), grpc_arguments);
   return channel;
 }
 
@@ -136,8 +140,9 @@ std::unique_ptr<::grpc::ClientContext> GrpcClient::MakeClientContext(const std::
 /**
   * Create N|Solid service stub to communicate with the N|Solid Console.
   */
-std::unique_ptr<grpcagent::NSolidService::StubInterface> GrpcClient::MakeNSolidServiceStub() {
-  return grpcagent::NSolidService::NewStub(MakeChannel());
+std::unique_ptr<grpcagent::NSolidService::StubInterface>
+    GrpcClient::MakeNSolidServiceStub(const OtlpGrpcClientOptions& options) {
+  return grpcagent::NSolidService::NewStub(MakeChannel(options));
 }
 
 template <class EventType>

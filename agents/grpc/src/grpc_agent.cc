@@ -23,6 +23,7 @@ using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::trace::Recordable;
+using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporter;
@@ -776,25 +777,19 @@ int GrpcAgent::config(const json& config) {
   }
 
   if (utils::find_any_fields_in_diff(diff, { "/grpc" })) {
-    if (config_.contains("grpc")) {
+    auto it = config_.find("grpc");
+    if (it != config_.end()) {
       // Setup the client/s
-      client_ = std::make_shared<GrpcClient>();
-      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub();
-      OtlpGrpcExporterOptions options;
-      options.endpoint = "localhost:50051";
+      const std::string endpoint = *it;
+      OtlpGrpcClientOptions options;
+      options.endpoint = endpoint;
       options.metadata = {{"nsolid-agent-id", agent_id_},
                           {"nsolid-saas", saas_}};
-      trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options);
-      OtlpGrpcMetricExporterOptions opts;
-      opts.endpoint = "localhost:50051";
-      opts.metadata = {{"nsolid-agent-id", agent_id_},
-                       {"nsolid-saas", saas_}};
-      metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
-      OtlpGrpcLogRecordExporterOptions opt;
-      opt.endpoint = "localhost:50051";
-      opt.metadata =  {{"nsolid-agent-id", agent_id_},
-                       {"nsolid-saas", saas_}};
-      log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(opt);
+      client_ = std::make_shared<GrpcClient>();
+      trace_exporter_ = std::make_unique<OtlpGrpcExporter>(*static_cast<OtlpGrpcExporterOptions*>(&options));
+      metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(*static_cast<OtlpGrpcMetricExporterOptions*>(&options));
+      log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(*static_cast<OtlpGrpcLogRecordExporterOptions*>(&options));
+      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(options);
       command_stream_ =
         std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
     }
