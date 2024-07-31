@@ -1,4 +1,5 @@
 #include "grpc_client.h"
+#include "debug_utils-inl.h"
 #include "grpc_agent.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client_options.h"
 
@@ -7,6 +8,12 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 namespace node {
 namespace nsolid {
 namespace grpc {
+
+template <typename... Args>
+inline void Debug(Args&&... args) {
+  per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
+                     std::forward<Args>(args)...);
+}
 
 template <class EventType>
 class GrpcAsyncCallData {
@@ -29,6 +36,7 @@ class GrpcAsyncCallData {
 
 CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
                              std::shared_ptr<GrpcAgent> agent): agent_(agent) {
+  context_.set_wait_for_ready(true);
   stub->async()->Command(&context_, this);
   StartRead(&server_request_);
   StartCall();
@@ -38,7 +46,10 @@ CommandStream::~CommandStream() {
 }
 
 void CommandStream::OnDone(const ::grpc::Status& s) {
-  // fprintf(stderr, "OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  Debug("CommandStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  if (agent_) {
+    agent_->reset_command_stream();
+  }
 }
 
 void CommandStream::OnReadDone(bool ok) {
@@ -75,21 +86,22 @@ AssetStream::AssetStream(
     const std::string& req_id): agent_(agent),
                                 req_id_(req_id){
   stub->async()->ExportAsset(&context_, &event_response_, this);
+  AddHold();
   StartCall();
  }
 
 AssetStream::~AssetStream() {
+  Debug("AssetStream::~AssetStream: %s\n", req_id_.c_str());
 }
 
 void AssetStream::OnDone(const ::grpc::Status& s) {
-  // fprintf(stderr, "AssetStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  Debug("AssetStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
   if (agent_) {
     agent_->remove_cpu_profile(req_id_);
   }
 }
 
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
-  // fprintf(stderr, "AssetStream::OnWriteDone: %d\n", ok);
   write_state_.write_done = true;
   NextWrite();
 }

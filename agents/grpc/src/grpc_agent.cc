@@ -341,6 +341,11 @@ void GrpcAgent::remove_cpu_profile(const std::string& req_id) {
   cpu_profiles_.erase(req_id);
 }
 
+void GrpcAgent::reset_command_stream() {
+  command_stream_ =
+        std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
+}
+
 int GrpcAgent::start() {
   int r = 0;
   if (ready_ == false) {
@@ -790,8 +795,7 @@ int GrpcAgent::config(const json& config) {
       metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(*static_cast<OtlpGrpcMetricExporterOptions*>(&options));
       log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(*static_cast<OtlpGrpcLogRecordExporterOptions*>(&options));
       nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(options);
-      command_stream_ =
-        std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
+      reset_command_stream();
     }
   }
 
@@ -947,6 +951,7 @@ void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
     it.first->second.Write(std::move(asset));
   } else {
     it.first->second.StartWritesDone();
+    it.first->second.RemoveHold();
   }
 }
 
