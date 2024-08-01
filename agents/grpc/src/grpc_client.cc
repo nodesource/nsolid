@@ -91,17 +91,18 @@ AssetStream::AssetStream(
  }
 
 AssetStream::~AssetStream() {
-  Debug("AssetStream::~AssetStream: %s\n", req_id_.c_str());
+  Debug("[%s] AssetStream::~AssetStream\n", req_id_.c_str());
 }
 
 void AssetStream::OnDone(const ::grpc::Status& s) {
-  Debug("AssetStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  Debug("[%s] AssetStream::OnDone: %d. %s:%s\n", req_id_.c_str(), static_cast<unsigned>(s.error_code()), s.error_message().c_str(), s.error_details().c_str());
   if (agent_) {
     agent_->remove_cpu_profile(req_id_);
   }
 }
 
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
+  Debug("[%s] AssetStream::OnWriteDone: %d\n", req_id_.c_str(), ok);
   write_state_.write_done = true;
   NextWrite();
 }
