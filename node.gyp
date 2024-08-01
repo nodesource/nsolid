@@ -390,6 +390,8 @@
     'nsolid_sources': [
       'agents/src/http_client.cc',
       'agents/src/http_client.h',
+      'agents/src/span_collector.cc',
+      'agents/src/span_collector.h',
       'agents/otlp/src/datadog_metrics.cc',
       'agents/otlp/src/dynatrace_metrics.cc',
       'agents/otlp/src/http_client.cc',

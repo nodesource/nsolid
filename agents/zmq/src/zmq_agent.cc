@@ -9,6 +9,7 @@
 #include "zmq_endpoint.h"
 #include "zmq_errors.h"
 #include "nsolid/nsolid_heap_snapshot.h"
+#include "../../src/span_collector.h"
 
 
 namespace node {
@@ -73,7 +74,7 @@ const uint64_t NSEC_BEFORE_WARN = 10000000000;
 const uint64_t auth_timer_interval = 500;
 const uint64_t invalid_key_timer_interval = 500;
 constexpr uint64_t span_timer_interval = 100;
-constexpr size_t span_msg_q_max_size = 200;
+constexpr size_t span_msg_q_min_size = 200;
 
 const char MSG_1[] = "{"
   "\"agentId\":\"%s\""
@@ -722,10 +723,6 @@ void ZmqAgent::do_start() {
 
   ASSERT_EQ(0, custom_command_msg_.init(&loop_, custom_command_msg_cb, this));
 
-  ASSERT_EQ(0, span_msg_.init(&loop_, span_msg_cb, this));
-
-  ASSERT_EQ(0, span_timer_.init(&loop_));
-
   http_client_.reset(new zmq::ZmqHttpClient(&loop_));
 
   status(Initializing);
@@ -772,6 +769,7 @@ int ZmqAgent::stop(bool profile_stopped) {
 
 void ZmqAgent::do_stop() {
   send_exit();
+  span_collector_.reset();
   http_client_.reset(nullptr);
   command_handle_.reset(nullptr);
   data_handle_.reset(nullptr);
@@ -788,8 +786,6 @@ void ZmqAgent::do_stop() {
   heap_snapshot_msg_.close();
   blocked_loop_msg_.close();
   custom_command_msg_.close();
-  span_msg_.close();
-  span_timer_.close();
 
   config_.clear();
   saas_.clear();
@@ -856,21 +852,6 @@ void ZmqAgent::env_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
     } else {
       ASSERT_EQ(1, agent->env_metrics_map_.erase(thread_id));
     }
-  }
-}
-
-
-void ZmqAgent::got_trace(Tracer* tracer,
-                         const Tracer::SpanStor& stor,
-                         ZmqAgent* agent) {
-  // Check if the agent is already delete or if it's closing
-  if (!is_running || agent->span_msg_.is_closing()) {
-    return;
-  }
-
-  size_t size = agent->span_msg_q_.enqueue(stor);
-  if (size > span_msg_q_max_size) {
-    ASSERT_EQ(0, agent->span_msg_.send());
   }
 }
 
@@ -1456,7 +1437,7 @@ int ZmqAgent::config(const json& config) {
   }
 
   // Configure tracing flags
-  if (tracer_ == nullptr ||
+  if (span_collector_ == nullptr ||
       utils::find_any_fields_in_diff(diff, { "/tracingEnabled",
                                              "/tracingModulesBlacklist" })) {
     auto it = config_.find("tracingEnabled");
@@ -1479,23 +1460,18 @@ int ZmqAgent::config(const json& config) {
       trace_flags_ = 0;
     }
 
-    tracer_.reset(nullptr);
+    span_collector_.reset();
     if (trace_flags_) {
-      Tracer* tracer = Tracer::CreateInstance(trace_flags_, got_trace, this);
-      ASSERT_NOT_NULL(tracer);
-      tracer_.reset(tracer);
-    }
-
-    if (trace_flags_) {
-      ret = span_timer_.start(span_timer_cb, 0, span_timer_interval, this);
-      if (ret != 0) {
-        return ret;
-      }
-    } else {
-      ret = span_timer_.stop();
-      if (ret != 0) {
-        return ret;
-      }
+      span_collector_ = std::make_shared<SpanCollector>(&loop_,
+                                                        trace_flags_,
+                                                        span_msg_q_min_size,
+                                                        span_timer_interval);
+      span_collector_->Collect(+[](const std::vector<Tracer::SpanStor>& spans,
+                                   ZmqAgent* agent) {
+        if (is_running) {
+          agent->got_spans(spans);
+        }
+      }, this);
     }
   }
 
@@ -2039,22 +2015,6 @@ void ZmqAgent::custom_command_cb(std::string req_id,
   });
 
   ASSERT_EQ(0, agent->custom_command_msg_.send());
-}
-
-void ZmqAgent::span_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
-  std::vector<Tracer::SpanStor> spans;
-  Tracer::SpanStor stor;
-  while (agent->span_msg_q_.dequeue(stor)) {
-    spans.push_back(std::move(stor));
-  }
-
-  if (spans.size() > 0) {
-    agent->got_spans(spans);
-  }
-}
-
-void ZmqAgent::span_timer_cb(nsuv::ns_timer*, ZmqAgent* agent) {
-  agent->span_msg_cb(nullptr, agent);
 }
 
 void ZmqAgent::got_spans(const std::vector<Tracer::SpanStor>& spans) {
