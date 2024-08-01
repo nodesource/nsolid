@@ -1,9 +1,19 @@
 #include "grpc_client.h"
+#include "debug_utils-inl.h"
 #include "grpc_agent.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_client_options.h"
+
+using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 
 namespace node {
 namespace nsolid {
 namespace grpc {
+
+template <typename... Args>
+inline void Debug(Args&&... args) {
+  per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
+                     std::forward<Args>(args)...);
+}
 
 template <class EventType>
 class GrpcAsyncCallData {
@@ -36,7 +46,10 @@ CommandStream::~CommandStream() {
 }
 
 void CommandStream::OnDone(const ::grpc::Status& s) {
-  // fprintf(stderr, "OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  Debug("CommandStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  if (agent_) {
+    agent_->reset_command_stream();
+  }
 }
 
 void CommandStream::OnReadDone(bool ok) {
@@ -73,21 +86,23 @@ AssetStream::AssetStream(
     const std::string& req_id): agent_(agent),
                                 req_id_(req_id){
   stub->async()->ExportAsset(&context_, &event_response_, this);
+  AddHold();
   StartCall();
  }
 
 AssetStream::~AssetStream() {
+  Debug("[%s] AssetStream::~AssetStream\n", req_id_.c_str());
 }
 
 void AssetStream::OnDone(const ::grpc::Status& s) {
-  // fprintf(stderr, "AssetStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  Debug("[%s] AssetStream::OnDone: %d. %s:%s\n", req_id_.c_str(), static_cast<unsigned>(s.error_code()), s.error_message().c_str(), s.error_details().c_str());
   if (agent_) {
     agent_->remove_cpu_profile(req_id_);
   }
 }
 
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
-  // fprintf(stderr, "AssetStream::OnWriteDone: %d\n", ok);
+  Debug("[%s] AssetStream::OnWriteDone: %d\n", req_id_.c_str(), ok);
   write_state_.write_done = true;
   NextWrite();
 }
@@ -113,10 +128,11 @@ GrpcClient::~GrpcClient() {
 /**
   * Create gRPC channel.
   */
-std::shared_ptr<::grpc::Channel> GrpcClient::MakeChannel() {
+std::shared_ptr<::grpc::Channel>
+    GrpcClient::MakeChannel(const OtlpGrpcClientOptions& options) {
   std::shared_ptr<::grpc::Channel> channel;
   ::grpc::ChannelArguments grpc_arguments;
-  channel = ::grpc::CreateCustomChannel("localhost:50051", ::grpc::InsecureChannelCredentials(), grpc_arguments);
+  channel = ::grpc::CreateCustomChannel(options.endpoint, ::grpc::InsecureChannelCredentials(), grpc_arguments);
   return channel;
 }
 
@@ -137,8 +153,9 @@ std::unique_ptr<::grpc::ClientContext> GrpcClient::MakeClientContext(const std::
 /**
   * Create N|Solid service stub to communicate with the N|Solid Console.
   */
-std::unique_ptr<grpcagent::NSolidService::StubInterface> GrpcClient::MakeNSolidServiceStub() {
-  return grpcagent::NSolidService::NewStub(MakeChannel());
+std::unique_ptr<grpcagent::NSolidService::StubInterface>
+    GrpcClient::MakeNSolidServiceStub(const OtlpGrpcClientOptions& options) {
+  return grpcagent::NSolidService::NewStub(MakeChannel(options));
 }
 
 template <class EventType>

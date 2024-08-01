@@ -4,6 +4,15 @@
 #include <grpcpp/grpcpp.h>
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "nsolid/thread_safe.h"
+#include "opentelemetry/version.h"
+
+OPENTELEMETRY_BEGIN_NAMESPACE
+namespace exporter {
+namespace otlp {
+class OtlpGrpcClientOptions;
+}
+}
+OPENTELEMETRY_END_NAMESPACE
 
 namespace node {
 namespace nsolid {
@@ -12,7 +21,8 @@ namespace grpc {
 // predeclarations
 class GrpcAgent;
 
-class CommandStream: public ::grpc::ClientBidiReactor<grpcagent::CommandResponse, grpcagent::CommandRequest> {
+class CommandStream:
+  public::grpc::ClientBidiReactor<grpcagent::CommandResponse, grpcagent::CommandRequest> {
 
   struct WriteState {
     bool write_done = true;
@@ -87,7 +97,8 @@ class GrpcClient {
   /**
    * Create gRPC channel.
    */
-  static std::shared_ptr<::grpc::Channel> MakeChannel();
+  static std::shared_ptr<::grpc::Channel>
+    MakeChannel(const opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions& options);
 
   /**
    * Create gRPC client context to call RPC.
@@ -98,7 +109,8 @@ class GrpcClient {
   /**
    * Create N|Solid service stub to communicate with the N|Solid Console.
    */
-  static std::unique_ptr<grpcagent::NSolidService::StubInterface> MakeNSolidServiceStub();
+  static std::unique_ptr<grpcagent::NSolidService::StubInterface>
+      MakeNSolidServiceStub(const opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions& options);
 
   int DelegateAsyncExport(
       grpcagent::NSolidService::StubInterface* stub,
