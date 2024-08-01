@@ -1,5 +1,5 @@
-#ifndef AGENTS_COMMON_SRC_HTTP_CLIENT_H_
-#define AGENTS_COMMON_SRC_HTTP_CLIENT_H_
+#ifndef AGENTS_SRC_HTTP_CLIENT_H_
+#define AGENTS_SRC_HTTP_CLIENT_H_
 
 #include <curl/curl.h>
 #include <string>
@@ -26,7 +26,7 @@ class CurlContext {
   int start(int events, poll_cb cb);
 
  private:
- friend class HttpClient;
+  friend class HttpClient;
   HttpClient* http_client_;
   nsuv::ns_poll* poll_handle_;
   curl_socket_t sockfd_;

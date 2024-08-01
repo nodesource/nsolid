@@ -492,6 +492,7 @@
       ],
       'sources': [
         'agents/src/http_client.cc',
+        'agents/src/span_collector.cc',
         'agents/otlp/src/datadog_metrics.cc',
         'agents/otlp/src/dynatrace_metrics.cc',
         'agents/otlp/src/http_client.cc',
@@ -613,6 +614,7 @@
         'src/uv.cc',
         # headers to make for a more pleasant IDE experience
         'agents/src/http_client.h',
+        'agents/src/span_collector.h',
         'agents/otlp/src/datadog_metrics.h',
         'agents/otlp/src/dynatrace_metrics.h',
         'agents/otlp/src/http_client.h',

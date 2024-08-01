@@ -21,13 +21,20 @@ struct OtlpGrpcExporterOptions;
 }
 namespace sdk {
 namespace trace {
+class Recordable;
 class SpanExporter;
 }
 }
 OPENTELEMETRY_END_NAMESPACE
 
+using UniqRecordable =
+    std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::trace::Recordable>;
+using UniqRecordables = std::vector<UniqRecordable>;
+
 namespace node {
 namespace nsolid {
+
+class SpanCollector;
 
 namespace otlp {
 
@@ -68,17 +75,13 @@ class OTLPAgent {
 
   static void on_thread_remove_(SharedEnvInst, OTLPAgent* agent);
 
-  static void trace_hook_(Tracer* tracer,
-                          const Tracer::SpanStor& stor,
-                          OTLPAgent* agent);
-
-  static void span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent);
-
   static void metrics_timer_cb_(nsuv::ns_timer*, OTLPAgent*);
 
   static void metrics_msg_cb_(nsuv::ns_async*, OTLPAgent* agent);
 
   static void thr_metrics_cb_(SharedThreadMetrics, OTLPAgent*);
+
+  static UniqRecordable transf(const Tracer::SpanStor& span, OTLPAgent* agent);
 
   void do_start();
 
@@ -98,6 +101,8 @@ class OTLPAgent {
   void config_otlp_endpoint(const nlohmann::json& config);
 
   void got_proc_metrics();
+
+  void got_spans(const UniqRecordables& spans);
 
   void setup_trace_otlp_exporter(  // NOLINTNEXTLINE(runtime/references)
     OPENTELEMETRY_NAMESPACE::exporter::otlp::OtlpHttpExporterOptions& opts);
@@ -124,10 +129,8 @@ class OTLPAgent {
   TSQueue<std::tuple<SharedEnvInst, bool>> env_msg_q_;
 
   // For the Tracing API
-  std::unique_ptr<Tracer> tracer_;
-  nsuv::ns_async span_msg_;
-  TSQueue<Tracer::SpanStor> span_msg_q_;
   uint32_t trace_flags_;
+  std::shared_ptr<SpanCollector> span_collector_;
 
   std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::trace::SpanExporter>
     otlp_exporter_;

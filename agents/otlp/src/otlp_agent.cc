@@ -18,6 +18,7 @@
 #include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
 #include "opentelemetry/ext/http/client/curl/http_client_curl.h"
 #include "opentelemetry/trace/propagation/detail/hex.h"
+#include "../../src/span_collector.h"
 
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
 using nlohmann::json;
@@ -39,6 +40,9 @@ nsuv::ns_rwlock exit_lock_;
 namespace node {
 namespace nsolid {
 namespace otlp {
+
+constexpr uint64_t span_timer_interval = 1000;
+constexpr size_t span_msg_q_min_size = 200;
 
 template <typename... Args>
 inline void Debug(Args&&... args) {
@@ -167,7 +171,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
   }
 
   // Configure tracing flags
-  if (trace_flags_ == 0 ||
+  if (span_collector_ == nullptr ||
       utils::find_any_fields_in_diff(diff, tracing_fields)) {
     trace_flags_ = 0;
     if (otlp_exporter_ != nullptr) {
@@ -312,7 +316,6 @@ void OTLPAgent::do_start() {
   uv_mutex_lock(&start_lock_);
   ASSERT_EQ(0, shutdown_.init(&loop_, shutdown_cb_, this));
   ASSERT_EQ(0, env_msg_.init(&loop_, env_msg_cb_, this));
-  ASSERT_EQ(0, span_msg_.init(&loop_, span_msg_cb_, this));
   ASSERT_EQ(0, metrics_msg_.init(&loop_, metrics_msg_cb_, this));
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, this));
@@ -334,46 +337,17 @@ void OTLPAgent::do_stop() {
   ready_ = false;
   shutdown_.close();
   env_msg_.close();
-  span_msg_.close();
   metrics_msg_.close();
   metrics_timer_.close();
   config_msg_.close();
   metrics_exporter_.reset(nullptr);
+  span_collector_.reset();
 }
 
 
-void OTLPAgent::trace_hook_(Tracer* tracer,
-                            const Tracer::SpanStor& stor,
-                            OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
-    return;
-  }
-
-  agent->span_msg_q_.enqueue(stor);
-  ASSERT_EQ(0, agent->span_msg_.send());
-}
-
-
-void OTLPAgent::span_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
-  // Don't exit until all the pending spans are sent
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_) {
-    return;
-  }
-
-  using std::chrono::duration_cast;
-  using std::chrono::milliseconds;
-  using std::chrono::nanoseconds;
-  std::vector<std::unique_ptr<sdk::trace::Recordable>> recordables;
-  Tracer::SpanStor s;
-  while (agent->span_msg_q_.dequeue(s)) {
-    auto recordable = agent->otlp_exporter_->MakeRecordable();
-    fill_recordable(recordable.get(), s);
-    recordables.push_back(std::move(recordable));
-  }
-
-  auto result = agent->otlp_exporter_->Export(recordables);
+void OTLPAgent::got_spans(const UniqRecordables& recordables) {
+  auto result =
+      otlp_exporter_->Export(const_cast<UniqRecordables&>(recordables));
   Debug("# Spans Exported: %ld. Result: %d\n",
         recordables.size(),
         static_cast<int>(result));
@@ -615,14 +589,33 @@ int OTLPAgent::setup_metrics_timer(uint64_t period) {
 }
 
 void OTLPAgent::update_tracer(uint32_t flags) {
-  tracer_.reset(nullptr);
-  if (flags) {
-    Tracer* tracer = Tracer::CreateInstance(flags, trace_hook_, this);
-    ASSERT_NOT_NULL(tracer);
-    tracer_.reset(tracer);
+  Debug("Updating Tracer with flags: %u\n", flags);
+  span_collector_.reset();
+  if (trace_flags_) {
+    span_collector_ = std::make_shared<SpanCollector>(&loop_,
+                                                      trace_flags_,
+                                                      span_msg_q_min_size,
+                                                      span_timer_interval);
+    span_collector_->CollectAndTransform(
+        transf, +[](UniqRecordables& spans, OTLPAgent* agent) {
+      nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+      if (!is_running_) {
+        return;
+      }
+
+      agent->got_spans(spans);
+    }, this);
   }
 }
 
+UniqRecordable OTLPAgent::transf(const Tracer::SpanStor& span,
+                                 OTLPAgent* agent) {
+  // Transform the span
+  fprintf(stderr, "Transforming span\n");
+  auto recordable = agent->otlp_exporter_->MakeRecordable();
+  fill_recordable(recordable.get(), span);
+  return recordable;
+}
 }  // namespace otlp
 }  // namespace nsolid
 }  // namespace node
