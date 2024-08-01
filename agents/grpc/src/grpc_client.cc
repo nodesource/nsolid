@@ -26,6 +26,7 @@ class GrpcAsyncCallData {
 
 CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
                              std::shared_ptr<GrpcAgent> agent): agent_(agent) {
+  context_.set_wait_for_ready(true);
   stub->async()->Command(&context_, this);
   StartRead(&server_request_);
   StartCall();
