@@ -51,6 +51,7 @@ static unsigned int monitor_suffix = 0;
 namespace node {
 namespace nsolid {
 
+class SpanCollector;
 class ZmqAgent;
 class ZmqHandle;
 class ZmqCommandHandle;
@@ -524,10 +525,6 @@ class ZmqAgent {
 
   static void env_msg_cb(nsuv::ns_async*, ZmqAgent*);
 
-  static void got_trace(Tracer* tracer,
-                        const Tracer::SpanStor& stor,
-                        ZmqAgent* agent);
-
   static void shutdown_cb(nsuv::ns_async*, ZmqAgent*);
 
   static void metrics_msg_cb(nsuv::ns_async*, ZmqAgent*);
@@ -779,11 +776,8 @@ class ZmqAgent {
   TSQueue<custom_command_msg_q_tp_> custom_command_msg_q_;
 
   // Tracing
-  std::unique_ptr<Tracer> tracer_;
-  nsuv::ns_async span_msg_;
-  TSQueue<Tracer::SpanStor> span_msg_q_;
-  nsuv::ns_timer span_timer_;
   uint32_t trace_flags_;
+  std::shared_ptr<SpanCollector> span_collector_;
 
   // ZMQ message buffers
   char msg_slab_[65536];
