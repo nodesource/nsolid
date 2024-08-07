@@ -786,15 +786,35 @@ int GrpcAgent::config(const json& config) {
     if (it != config_.end()) {
       // Setup the client/s
       const std::string endpoint = *it;
-      OtlpGrpcClientOptions options;
-      options.endpoint = endpoint;
-      options.metadata = {{"nsolid-agent-id", agent_id_},
-                          {"nsolid-saas", saas_}};
       client_ = std::make_shared<GrpcClient>();
-      trace_exporter_ = std::make_unique<OtlpGrpcExporter>(*static_cast<OtlpGrpcExporterOptions*>(&options));
-      metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(*static_cast<OtlpGrpcMetricExporterOptions*>(&options));
-      log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(*static_cast<OtlpGrpcLogRecordExporterOptions*>(&options));
-      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(options);
+      {
+        OtlpGrpcExporterOptions options;
+        options.endpoint = endpoint;
+        options.metadata = {{"nsolid-agent-id", agent_id_},
+                            {"nsolid-saas", saas_}};
+        trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options);
+      }
+      {
+        OtlpGrpcMetricExporterOptions options;
+        options.endpoint = endpoint;
+        options.metadata = {{"nsolid-agent-id", agent_id_},
+                            {"nsolid-saas", saas_}};
+        metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(options);
+      }
+      {
+        OtlpGrpcLogRecordExporterOptions options;
+        options.endpoint = endpoint;
+        options.metadata = {{"nsolid-agent-id", agent_id_},
+                            {"nsolid-saas", saas_}};
+        log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(options);
+      }
+      {
+        OtlpGrpcClientOptions options;
+        options.endpoint = endpoint;
+        options.metadata = {{"nsolid-agent-id", agent_id_},
+                            {"nsolid-saas", saas_}};
+        nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(options);
+      }
       reset_command_stream();
     }
   }
