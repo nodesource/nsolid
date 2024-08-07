@@ -6,6 +6,7 @@
 #include "nsolid/nsolid_api.h"
 #include "nsolid/nsolid_util.h"
 #include "../../otlp/src/otlp_common.h"
+#include "../../src/span_collector.h"
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
@@ -35,8 +36,8 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
-const char* kNSOLID_SPANS_FLUSH_INTERVAL = "NSOLID_SPANS_FLUSH_INTERVAL";
-const int NSOLID_SPANS_FLUSH_INTERVAL = 60000;
+constexpr uint64_t span_timer_interval = 1000;
+constexpr size_t span_msg_q_min_size = 1000;
 
 template <typename... Args>
 inline void Debug(Args&&... args) {
@@ -697,30 +698,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   }
 }
 
-/*static*/void GrpcAgent::span_msg_cb_(nsuv::ns_async*, WeakGrpcAgent agent_wp) {
-  SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
-    return;
-  }
-
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
-
-  Tracer::SpanStor s;
-  while (agent->span_msg_q_.dequeue(s)) {
-    auto recordable = agent->trace_exporter_->MakeRecordable();
-    otlp::fill_recordable(recordable.get(), s);
-    agent->recordables_.push_back(std::move(recordable));
-  }
-
-  if (agent->recordables_.size() > 1000) {
-    agent->flush_spans();
-  }
-}
-
 /*static*/void GrpcAgent::thr_metrics_cb_(SharedThreadMetrics metrics,
                                           WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
@@ -736,26 +713,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
 
   if (agent->thr_metrics_msg_q_.enqueue(metrics->Get()) == 1) {
     ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
-  }
-}
-
-/*static*/void GrpcAgent::trace_hook_(Tracer* tracer,
-                                      const Tracer::SpanStor& stor,
-                                      WeakGrpcAgent agent_wp) {
-  
-  SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
-    return;
-  }
-
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
-
-  if (agent->span_msg_q_.enqueue(stor) == 1) {
-    ASSERT_EQ(0, agent->span_msg_.send());
   }
 }
 
@@ -867,22 +824,11 @@ int GrpcAgent::config(const json& config) {
     ret = setup_metrics_timer(period);
   }
 
-  if (!flush_spans_timer_.is_active()) {
-    uint64_t period = NSOLID_SPANS_FLUSH_INTERVAL;
-    std::string spans_flush_interval;
-    if (per_process::system_environment->Get(kNSOLID_SPANS_FLUSH_INTERVAL).To(&spans_flush_interval)) {
-      period = std::stoull(spans_flush_interval);
-    }
-
-    ret = flush_spans_timer_.start(+[](nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
-      SharedGrpcAgent agent = agent_wp.lock();
-      if (agent == nullptr) {
-        return;
-      }
-
-      agent->flush_spans();
-    }, period, period, weak_from_this());
-  }
+    // uint64_t period = NSOLID_SPANS_FLUSH_INTERVAL;
+    // std::string spans_flush_interval;
+    // if (per_process::system_environment->Get(kNSOLID_SPANS_FLUSH_INTERVAL).To(&spans_flush_interval)) {
+    //   period = std::stoull(spans_flush_interval);
+    // }
 
   return ret;
 }
@@ -900,8 +846,6 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, command_msg_.init(&loop_, command_msg_cb_, weak_from_this()));
 
-  ASSERT_EQ(0, flush_spans_timer_.init(&loop_));
-
   ASSERT_EQ(0, log_msg_.init(&loop_, log_msg_cb_, weak_from_this()));
 
   ASSERT_EQ(0, metrics_msg_.init(&loop_, metrics_msg_cb_, weak_from_this()));
@@ -909,8 +853,6 @@ void GrpcAgent::do_start() {
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
   ASSERT_EQ(0, profile_msg_.init(&loop_, profile_msg_cb_, weak_from_this()));
-
-  ASSERT_EQ(0, span_msg_.init(&loop_, span_msg_cb_, weak_from_this()));
 
   ready_ = true;
 
@@ -928,10 +870,8 @@ void GrpcAgent::do_start() {
 
 void GrpcAgent::do_stop() {
   ready_ = false;
-  span_msg_.close();
   metrics_timer_.close();
   metrics_msg_.close();
-  flush_spans_timer_.close();
   command_msg_.close();
   config_msg_.close();
   blocked_loop_msg_.close();
@@ -939,16 +879,14 @@ void GrpcAgent::do_stop() {
   shutdown_.close();
 }
 
-void GrpcAgent::flush_spans() {
-  if (recordables_.size() > 0) {
-    Debug("# Spans Exporting: %ld\n", recordables_.size());
 
-    auto result = trace_exporter_->Export(recordables_);
-    Debug("# Result: %d\n", static_cast<int>(result));
-    
-    recordables_.clear();
-  }
+void GrpcAgent::got_spans(const UniqRecordables& recordables) {
+  Debug("# Spans Exporting: %ld\n", recordables.size());
+  auto result =
+      trace_exporter_->Export(const_cast<UniqRecordables&>(recordables));
+  Debug("# Result: %d\n", static_cast<int>(result));
 }
+
 
 void GrpcAgent::got_blocked_loop_msgs() {
   BlockedLoopStor stor;
@@ -1225,11 +1163,32 @@ int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
 
 void GrpcAgent::update_tracer(uint32_t flags) {
   Debug("Tracer Flags: %d\n", flags);
-  tracer_.reset(nullptr);
-  if (flags) {
-    Tracer* tracer = Tracer::CreateInstance(flags, trace_hook_, weak_from_this());
-    ASSERT_NOT_NULL(tracer);
-    tracer_.reset(tracer);
+  span_collector_.reset();
+  if (trace_flags_) {
+    span_collector_ = std::make_shared<SpanCollector>(&loop_,
+                                                      trace_flags_,
+                                                      span_msg_q_min_size,
+                                                      span_timer_interval);
+    span_collector_->CollectAndTransform(
+      +[](const Tracer::SpanStor& span, WeakGrpcAgent agent_wp) -> UniqRecordable {
+        SharedGrpcAgent agent = agent_wp.lock();
+        if (agent == nullptr) {
+          return nullptr;
+        }
+
+        auto recordable = agent->trace_exporter_->MakeRecordable();
+        otlp::fill_recordable(recordable.get(), span);
+        return recordable;
+      },
+      +[](UniqRecordables& spans, WeakGrpcAgent agent_wp) {
+        SharedGrpcAgent agent = agent_wp.lock();
+        if (agent == nullptr) {
+          return;
+        }
+
+        agent->got_spans(spans);
+      },
+      weak_from_this());
   }
 }
 

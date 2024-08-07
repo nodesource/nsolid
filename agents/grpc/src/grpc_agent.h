@@ -19,10 +19,18 @@ class OtlpGrpcLogRecordExporter;
 class OtlpGrpcMetricExporter;
 }
 }
+namespace sdk {
+namespace trace {
+class Recordable;
+}
+}
 OPENTELEMETRY_END_NAMESPACE
 
 namespace node {
 namespace nsolid {
+
+class SpanCollector;
+
 namespace grpc {
 
 // predeclarations
@@ -31,6 +39,9 @@ class CommandStream;
 class GrpcAgent;
 class GrpcClient;
 
+using UniqRecordable =
+    std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::trace::Recordable>;
+using UniqRecordables = std::vector<UniqRecordable>;
 using SharedGrpcAgent = std::shared_ptr<GrpcAgent>;
 using WeakGrpcAgent = std::weak_ptr<GrpcAgent>;
 
@@ -130,8 +141,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void do_stop();
 
-  void flush_spans();
-
   void got_blocked_loop_msgs();
 
   void got_cpu_profile(const ProfileQStor& stor);
@@ -139,6 +148,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void got_logs();
 
   void got_proc_metrics();
+
+  void got_spans(const UniqRecordables& spans);
 
   void handle_command_request(grpcagent::CommandRequest&& request);
 
@@ -182,14 +193,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   TSQueue<BlockedLoopStor> blocked_loop_msg_q_;
 
   // For the Tracing API
-  std::unique_ptr<Tracer> tracer_;
-  nsuv::ns_async span_msg_;
-  TSQueue<Tracer::SpanStor> span_msg_q_;
   uint32_t trace_flags_;
+  std::shared_ptr<SpanCollector> span_collector_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcExporter>
     trace_exporter_;
   std::vector<std::unique_ptr<opentelemetry::sdk::trace::Recordable>> recordables_;
-  nsuv::ns_timer flush_spans_timer_;
 
   // For the Metrics API
   uint64_t metrics_interval_;
