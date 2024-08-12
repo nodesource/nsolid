@@ -15,6 +15,7 @@
 #include "asserts-cpp/asserts.h"
 #include "nlohmann/json.hpp"
 #include "http_client.h"
+#include "../../src/profile_collector.h"
 
 #define HANDLE_TYPES(X)                                                        \
   X(Command, "Command", ZMQ_SUB, "inproc://monitor-command", "command", false, \
@@ -349,8 +350,6 @@ class ZmqBulkHandle : public ZmqHandle {
 //   console, dynamically change the configuration of the agent/runtime, etc.
 
 class ZmqAgent {
-  struct ProfileQStor;
-
  public:
   enum Status {
 #define X(type, str)                                                          \
@@ -449,9 +448,6 @@ class ZmqAgent {
     const nlohmann::json& message,
     const std::string& req_id = utils::generate_unique_id());
 
-  template <typename Policy>
-  void got_prof(const ProfileQStor& stor);
-
   bool pending_profiles() const;
 
   int stop_profiling(uint64_t thread_id);
@@ -469,28 +465,14 @@ class ZmqAgent {
   bool profile_on_exit() { return profile_on_exit_.load(); }
 
  private:
-  enum ProfileType {
-    kCpu = 0,
-    kHeapProf,
-    kHeapSampl,
-    kNumberOfProfileTypes
-  };
-
   struct ProfileStor {
     std::string req_id;
-    json metadata;
     uint64_t timestamp;
-    bool trackAllocations = false;
-    uint64_t sample_interval = 0;
-    int stack_depth = 0;
-    v8::HeapProfiler::SamplingFlags flags = v8::HeapProfiler::kSamplingNoFlags;
+    ProfileOptions options;
   };
 
-  using StartProfiling = int (*)(uint64_t,
-                                 uint64_t,
-                                 const nlohmann::json&,
-                                 ProfileStor&,
-                                 ZmqAgent*);
+  using StartProfiling = int (ZmqAgent::*)(const nlohmann::json&,
+                                           ProfileStor&);
 
   using ProfileStorMap = std::map<uint64_t, ProfileStor>;
 
@@ -498,13 +480,6 @@ class ZmqAgent {
     ProfileStorMap pending_profiles_map;
     std::atomic<unsigned int> nr_profiles = 0;
     std::string last_main_profile;
-  };
-
-  struct ProfileQStor {
-    ProfileType type;
-    int status;
-    std::string profile;
-    uint64_t thread_id;
   };
 
   ZmqAgent();
@@ -543,8 +518,6 @@ class ZmqAgent {
                              std::string profile,
                              uint64_t thread_id,
                              ZmqAgent* agent);
-
-  static void profile_msg_cb(nsuv::ns_async*, ZmqAgent*);
 
   static void heap_profile_cb(int status,
                               std::string profile,
@@ -615,19 +588,23 @@ class ZmqAgent {
 
   int command_message(const nlohmann::json& message);
 
-  template <typename Policy>
-  int start_prof(
-    const nlohmann::json& message,
-    const std::string& req_id = utils::generate_unique_id());
-
   int do_start_prof(const nlohmann::json& message,
                     const std::string& req_id,
-                    ProfileType type,
-                    const char* cmd,
-                    StartProfiling start_profiling);
+                    ProfileType type);
 
-  void do_got_prof(const ProfileQStor& stor,
-                   ProfileType type,
+  // NOLINTNEXTLINE(runtime/references)
+  int do_start_cpu_prof(const nlohmann::json&, ProfileStor& stor);
+
+  // NOLINTNEXTLINE(runtime/references)
+  int do_start_heap_prof(const nlohmann::json&, ProfileStor& stor);
+
+  // NOLINTNEXTLINE(runtime/references)
+  int do_start_heap_sampl(const nlohmann::json&, ProfileStor& stor);
+
+  void do_got_prof(ProfileType type,
+                   uint64_t thread_id,
+                   int status,
+                   const std::string& profile,
                    const char* cmd,
                    const char* stop_cmd);
 
@@ -648,6 +625,8 @@ class ZmqAgent {
   void got_spans(const std::vector<Tracer::SpanStor>& spans);
 
   int got_metrics(const std::string& metrics);
+
+  void got_profile(const ProfileCollector::ProfileQStor& stor);
 
   // NOLINTNEXTLINE(runtime/int)
   void handle_auth_response(CURLcode, long, const std::string&);
@@ -755,10 +734,9 @@ class ZmqAgent {
   nsuv::ns_async update_state_msg_;
 
   // Profiling
-  nsuv::ns_async profile_msg_;
-  TSQueue<ProfileQStor> profile_msg_q_;
   ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;
+  std::shared_ptr<ProfileCollector> profile_collector_;
 
   // Heap Snapshot
   nsuv::ns_async heap_snapshot_msg_;
@@ -787,62 +765,7 @@ class ZmqAgent {
 
   // For status testing
   void(*status_cb_)(const std::string&);
-
-  class CPUProfilePolicy {
-   public:
-    static int start_profiling(uint64_t thread_id,
-                               uint64_t duration,
-                               const nlohmann::json& metadata,
-                               ProfileStor& stor,  // NOLINT(runtime/references)
-                               ZmqAgent* agent);
-
-    static constexpr const char* cmd = "profile";
-    static constexpr const char* stop_cmd = "profile_stop";
-    static constexpr ProfileType Type = ProfileType::kCpu;
-  };
-
-  class HeapProfilePolicy {
-   public:
-    static int start_profiling(uint64_t thread_id,
-                               uint64_t duration,
-                               const nlohmann::json& metadata,
-                               ProfileStor& stor,  // NOLINT(runtime/references)
-                               ZmqAgent* agent);
-
-    static constexpr const char* cmd = "heap_profile";
-    static constexpr const char* stop_cmd = "heap_profile_stop";
-    static constexpr ProfileType Type = ProfileType::kHeapProf;
-  };
-
-  class HeapSamplingPolicy {
-   public:
-    static int start_profiling(uint64_t thread_id,
-                               uint64_t duration,
-                               const nlohmann::json& metadata,
-                               ProfileStor& stor,  // NOLINT(runtime/references)
-                               ZmqAgent* agent);
-
-    static constexpr const char* cmd = "heap_sampling";
-    static constexpr const char* stop_cmd = "heap_sampling_stop";
-    static constexpr ProfileType Type = ProfileType::kHeapSampl;
-  };
 };
-
-
-template <typename Policy>
-int ZmqAgent::start_prof(const nlohmann::json& message,
-                         const std::string& req_id) {
-  return do_start_prof(message,
-                       req_id,
-                       Policy::Type,
-                       Policy::cmd,
-                       Policy::start_profiling);
-}
-
-template <typename Policy>
-void ZmqAgent::got_prof(const ProfileQStor& stor) {
-  do_got_prof(stor, Policy::Type, Policy::cmd, Policy::stop_cmd);
-}
 
 }  // namespace nsolid
 }  // namespace node
