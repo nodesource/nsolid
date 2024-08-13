@@ -339,7 +339,7 @@ void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
 }
 
 void GrpcAgent::remove_cpu_profile(const std::string& req_id) {
-  cpu_profiles_.erase(req_id);
+  // cpu_profiles_.erase(req_id);
 }
 
 void GrpcAgent::reset_command_stream() {
@@ -464,22 +464,6 @@ int GrpcAgent::stop() {
 
   if (r != 0) {
     agent->do_stop();
-  }
-}
-
-/*static*/ void GrpcAgent::cpu_profile_cb_(int status,
-                                           std::string profile,
-                                           uint64_t thread_id,
-                                           std::string req_id,
-                                           WeakGrpcAgent agent_wp) {
-  SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
-    return;
-  }
-
-  if (agent->profile_msg_q_.enqueue(
-        ProfileQStor { kCpu, status, std::move(profile), thread_id, std::move(req_id) }) == 1) {
-    ASSERT_EQ(0, agent->profile_msg_.send());
   }
 }
 
@@ -674,30 +658,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   }
 }
 
-/*static*/void GrpcAgent::profile_msg_cb_(nsuv::ns_async*, WeakGrpcAgent agent_wp) {
-  SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
-    return;
-  }
-
-  ProfileQStor stor;
-  while (agent->profile_msg_q_.dequeue(stor)) {
-    switch (stor.type) {
-      // case kHeapProf:
-      //   agent->got_prof<HeapProfilePolicy>(stor);
-      // break;
-      // case kHeapSampl:
-      //   agent->got_prof<HeapSamplingPolicy>(stor);
-      // break;
-      case kCpu:
-        agent->got_cpu_profile(stor);
-      break;
-      default:
-        ASSERT(false);
-    }
-  }
-}
-
 /*static*/void GrpcAgent::thr_metrics_cb_(SharedThreadMetrics metrics,
                                           WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
@@ -852,7 +812,18 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
-  ASSERT_EQ(0, profile_msg_.init(&loop_, profile_msg_cb_, weak_from_this()));
+  profile_collector_ = std::make_shared<ProfileCollector>(
+    &loop_,
+    +[](ProfileCollector::ProfileQStor&& stor, WeakGrpcAgent agent_wp) {
+      SharedGrpcAgent agent = agent_wp.lock();
+      if (agent == nullptr) {
+        return nullptr;
+      }
+
+      agent->got_profile(std::move(stor));
+    },
+    weak_from_this());
+  profile_collector_->initialize();
 
   ready_ = true;
 
@@ -870,6 +841,7 @@ void GrpcAgent::do_start() {
 
 void GrpcAgent::do_stop() {
   ready_ = false;
+  profile_collector_.reset();
   metrics_timer_.close();
   metrics_msg_.close();
   command_msg_.close();
@@ -899,20 +871,19 @@ void GrpcAgent::got_blocked_loop_msgs() {
   }
 }
 
-void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
-  Debug("CPU Profile: %ld\n", stor.profile.size());
-  auto it = cpu_profiles_.try_emplace(stor.req_id, nsolid_service_stub_.get(), shared_from_this(), stor.req_id);
-  if (stor.profile.size() > 0) {
-    grpcagent::Asset asset;
-    PopulateCommon(asset.mutable_common(), "cpu_profile", stor.req_id.c_str());
-    asset.set_thread_id(stor.thread_id);
-    asset.set_data(stor.profile);
-    it.first->second.Write(std::move(asset));
-  } else {
-    it.first->second.StartWritesDone();
-    it.first->second.RemoveHold();
-  }
-}
+// void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
+//   Debug("CPU Profile: %ld\n", stor.profile.size());
+//   auto it = cpu_profiles_.try_emplace(stor.req_id, nsolid_service_stub_.get(), shared_from_this(), stor.req_id);
+//   if (stor.profile.size() > 0) {
+//     grpcagent::Asset asset;
+//     PopulateCommon(asset.mutable_common(), "cpu_profile", stor.req_id.c_str());
+//     asset.set_data(stor.profile);
+//     it.first->second.Write(std::move(asset));
+//   } else {
+//     it.first->second.StartWritesDone();
+//     it.first->second.RemoveHold();
+//   }
+// }
 
 void GrpcAgent::got_logs() {
   std::vector<std::unique_ptr<LogsRecordable>> recordables;
@@ -942,6 +913,46 @@ void GrpcAgent::got_proc_metrics() {
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
 
+void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
+  switch (stor.type) {
+    case kCpu:
+    {
+      CPUProfileOptions opts = std::get<CPUProfileOptions>(stor.options);
+      do_got_prof(stor.type,
+                  opts.thread_id,
+                  stor.status,
+                  stor.profile,
+                  kProfile,
+                  kProfileStop);
+    }
+    break;
+    case kHeapProf:
+    {
+      HeapProfileOptions opts = std::get<HeapProfileOptions>(stor.options);
+      do_got_prof(stor.type,
+                  opts.thread_id,
+                  stor.status,
+                  stor.profile,
+                  kHeapProfile,
+                  kHeapProfileStop);
+    }
+    break;
+    case kHeapSampl:
+    {
+      HeapSamplingOptions opts = std::get<HeapSamplingOptions>(stor.options);
+      do_got_prof(stor.type,
+                  opts.thread_id,
+                  stor.status,
+                  stor.profile,
+                  kHeapSampling,
+                  kHeapSamplingStop);
+    }
+    break;
+    default:
+      ASSERT(false);
+  }
+}
+
 void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
   Debug("Command: %s\n", request.DebugString().c_str());
   command_stream_->Write(grpcagent::CommandResponse());
@@ -953,7 +964,11 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
   } else if (cmd == "reconfigure") {
     reconfigure(request);
   } else if (cmd == "cpu_profile") {
-    start_cpu_profile(request);
+    do_start_prof(request, ProfileType::kCpu);
+  } else if (cmd == "heap_profile") {
+    do_start_prof(request, ProfileType::kHeapProf);
+  } else if (cmd == "heap_sampling") {
+    do_start_prof(request, ProfileType::kHeapSampl);
   }
 }
 
@@ -1148,18 +1163,9 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
   return metrics_timer_.start(metrics_timer_cb_, period, period, weak_from_this());
 }
 
-int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
-  const grpcagent::CPUProfileArgs& args = req.args().cpu_profile();
-  uint64_t thread_id = args.thread_id();
-  uint64_t duration = args.duration();
-  // Get metadata
-  Debug("CPU Profile: Thread ID: %ld, Duration: %ld\n", thread_id, duration);
-  return CpuProfiler::TakeProfile(GetEnvInst(thread_id),
-                                  duration,
-                                  cpu_profile_cb_,
-                                  thread_id,
-                                  req.requestid(),
-                                  weak_from_this());
+int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
+                             ProfileType type) {
+  return 0;
 }
 
 void GrpcAgent::update_tracer(uint32_t flags) {

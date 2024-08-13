@@ -9,6 +9,7 @@
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "opentelemetry/version.h"
 #include "opentelemetry/sdk/trace/recordable.h"
+#include "../../src/profile_collector.h"
 
 // Class pre-declaration
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -80,19 +81,21 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   const std::string& saas() const { return saas_; }
 
  private:
-  enum ProfileType {
-    kCpu = 0,
-    kHeapProf,
-    kHeapSampl,
-    kNumberOfProfileTypes
+  struct ProfileStor {
+    std::string req_id;
+    uint64_t timestamp;
+    ProfileOptions options;
   };
 
-  struct ProfileQStor {
-    ProfileType type;
-    int status;
-    std::string profile;
-    uint64_t thread_id;
-    std::string req_id;
+  using StartProfiling = int (GrpcAgent::*)(const nlohmann::json&,
+                                            ProfileStor&);
+
+  using ProfileStorMap = std::map<uint64_t, ProfileStor>;
+
+  struct ProfileState {
+    ProfileStorMap pending_profiles_map;
+    std::atomic<unsigned int> nr_profiles = 0;
+    std::string last_main_profile;
   };
 
   GrpcAgent();
@@ -108,8 +111,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   static void config_agent_cb_(std::string, WeakGrpcAgent);
 
   static void config_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
-
-  static void cpu_profile_cb_(int, std::string, uint64_t, std::string, WeakGrpcAgent);
 
   static void env_creation_cb_(SharedEnvInst, WeakGrpcAgent);
 
@@ -145,13 +146,15 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void do_stop();
 
-  void got_blocked_loop_msgs();
+  int do_start_prof(const grpcagent::CommandRequest& req, ProfileType type);
 
-  void got_cpu_profile(const ProfileQStor& stor);
+  void got_blocked_loop_msgs();
 
   void got_logs();
 
   void got_proc_metrics();
+
+  void got_profile(const ProfileCollector::ProfileQStor& stor);
 
   void got_spans(const UniqRecordables& spans);
 
@@ -172,8 +175,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void setup_blocked_loop_hooks();
 
   int setup_metrics_timer(uint64_t period);
-
-  int start_cpu_profile(const grpcagent::CommandRequest& req);
 
   void update_tracer(uint32_t flags);
 
@@ -227,11 +228,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     log_exporter_;
 
   // Profiling
-  nsuv::ns_async profile_msg_;
-  TSQueue<ProfileQStor> profile_msg_q_;
-  std::map<std::string, AssetStream> cpu_profiles_;
-  // ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
-  // std::atomic<bool> profile_on_exit_;
+  ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
+  std::atomic<bool> profile_on_exit_;
+  std::shared_ptr<ProfileCollector> profile_collector_;
 
 
   // For the grpc client
