@@ -817,7 +817,7 @@ void GrpcAgent::do_start() {
     +[](ProfileCollector::ProfileQStor&& stor, WeakGrpcAgent agent_wp) {
       SharedGrpcAgent agent = agent_wp.lock();
       if (agent == nullptr) {
-        return nullptr;
+        return;
       }
 
       agent->got_profile(std::move(stor));
@@ -849,6 +849,43 @@ void GrpcAgent::do_stop() {
   blocked_loop_msg_.close();
   env_msg_.close();
   shutdown_.close();
+}
+
+void GrpcAgent::do_got_prof(ProfileType type,
+                            uint64_t thread_id,
+                            int status,
+                            const std::string& profile) {
+  bool profileStreamComplete = profile.length() == 0;
+  ProfileState& profile_state = profile_state_[type];
+  // get and remove associated data from pending_profiles_map
+  auto it = profile_state.pending_profiles_map.find(thread_id);
+  ASSERT(it != profile_state.pending_profiles_map.end());
+  ProfileStor prof_stor = it->second;
+  if (profileStreamComplete) {
+    profile_state.pending_profiles_map.erase(it);
+    profile_state.nr_profiles--;
+  }
+
+  if (profile_on_exit_ && thread_id == 0) {
+    // Store the req_id of the main thread profile
+    profile_state.last_main_profile = prof_stor.req_id;
+  }
+
+  // get start_ts and metadata from pending_profiles_map
+  if (status < 0) {
+    // Send error message back
+    return;
+  }
+
+  // if the profile is complete signal that
+  if (profileStreamComplete) {
+    
+  } else {
+    // send profile chunks
+  }
+
+  // Don't continue with the exit procedure until all profiles have finished.
+  check_exit_on_profile();
 }
 
 
@@ -921,9 +958,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       do_got_prof(stor.type,
                   opts.thread_id,
                   stor.status,
-                  stor.profile,
-                  kProfile,
-                  kProfileStop);
+                  stor.profile);
     }
     break;
     case kHeapProf:
@@ -932,9 +967,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       do_got_prof(stor.type,
                   opts.thread_id,
                   stor.status,
-                  stor.profile,
-                  kHeapProfile,
-                  kHeapProfileStop);
+                  stor.profile);
     }
     break;
     case kHeapSampl:
@@ -943,9 +976,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       do_got_prof(stor.type,
                   opts.thread_id,
                   stor.status,
-                  stor.profile,
-                  kHeapSampling,
-                  kHeapSamplingStop);
+                  stor.profile);
     }
     break;
     default:

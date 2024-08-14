@@ -145,6 +145,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void do_start();
 
   void do_stop();
+  
+  void do_got_prof(ProfileType type,
+                   uint64_t thread_id,
+                   int status,
+                   const std::string& profile);
 
   int do_start_prof(const grpcagent::CommandRequest& req, ProfileType type);
 
