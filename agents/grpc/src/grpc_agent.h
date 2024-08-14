@@ -75,6 +75,10 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   int stop();
 
+  const std::string& agent_id() const { return agent_id_; }
+
+  const std::string& saas() const { return saas_; }
+
  private:
   enum ProfileType {
     kCpu = 0,

@@ -36,6 +36,11 @@ class GrpcAsyncCallData {
 
 CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
                              std::shared_ptr<GrpcAgent> agent): agent_(agent) {
+  context_.AddMetadata("nsolid-agent-id", agent->agent_id());
+  const std::string& saas = agent_->saas();
+  if (!saas.empty()) {
+    context_.AddMetadata("nsolid-saas-token", saas);
+  }
   context_.set_wait_for_ready(true);
   stub->async()->Command(&context_, this);
   StartRead(&server_request_);
@@ -85,6 +90,11 @@ AssetStream::AssetStream(
     std::shared_ptr<GrpcAgent> agent,
     const std::string& req_id): agent_(agent),
                                 req_id_(req_id){
+  context_.AddMetadata("nsolid-agent-id", agent->agent_id());
+  const std::string& saas = agent_->saas();
+  if (!saas.empty()) {
+    context_.AddMetadata("nsolid-saas-token", saas);
+  }
   stub->async()->ExportAsset(&context_, &event_response_, this);
   AddHold();
   StartCall();
