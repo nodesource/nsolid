@@ -25,6 +25,7 @@ PROTOBUF_CONSTEXPR Asset::Asset(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.data_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.common_)*/nullptr
+  , /*decltype(_impl_.thread_id_)*/uint64_t{0u}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AssetDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AssetDefaultTypeInternal()
@@ -48,6 +49,7 @@ const uint32_t TableStruct_asset_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.common_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.thread_id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.data_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
@@ -59,16 +61,17 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 
 const char descriptor_table_protodef_asset_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\013asset.proto\022\tgrpcagent\032\014common.proto\"@"
+  "\n\013asset.proto\022\tgrpcagent\032\014common.proto\"S"
   "\n\005Asset\022)\n\006common\030\001 \001(\0132\031.grpcagent.Comm"
-  "onResponse\022\014\n\004data\030\002 \001(\tb\006proto3"
+  "onResponse\022\021\n\tthread_id\030\002 \001(\004\022\014\n\004data\030\003 "
+  "\001(\tb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_asset_2eproto_deps[1] = {
   &::descriptor_table_common_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_asset_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_asset_2eproto = {
-    false, false, 112, descriptor_table_protodef_asset_2eproto,
+    false, false, 131, descriptor_table_protodef_asset_2eproto,
     "asset.proto",
     &descriptor_table_asset_2eproto_once, descriptor_table_asset_2eproto_deps, 1, 1,
     schemas, file_default_instances, TableStruct_asset_2eproto::offsets,
@@ -112,6 +115,7 @@ Asset::Asset(const Asset& from)
   new (&_impl_) Impl_{
       decltype(_impl_.data_){}
     , decltype(_impl_.common_){nullptr}
+    , decltype(_impl_.thread_id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -126,6 +130,7 @@ Asset::Asset(const Asset& from)
   if (from._internal_has_common()) {
     _this->_impl_.common_ = new ::grpcagent::CommonResponse(*from._impl_.common_);
   }
+  _this->_impl_.thread_id_ = from._impl_.thread_id_;
   // @@protoc_insertion_point(copy_constructor:grpcagent.Asset)
 }
 
@@ -136,6 +141,7 @@ inline void Asset::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.data_){}
     , decltype(_impl_.common_){nullptr}
+    , decltype(_impl_.thread_id_){uint64_t{0u}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.data_.InitDefault();
@@ -174,6 +180,7 @@ void Asset::Clear() {
     delete _impl_.common_;
   }
   _impl_.common_ = nullptr;
+  _impl_.thread_id_ = uint64_t{0u};
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -191,9 +198,17 @@ const char* Asset::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
         } else
           goto handle_unusual;
         continue;
-      // string data = 2;
+      // uint64 thread_id = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.thread_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // string data = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           auto str = _internal_mutable_data();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -237,14 +252,20 @@ uint8_t* Asset::_InternalSerialize(
         _Internal::common(this).GetCachedSize(), target, stream);
   }
 
-  // string data = 2;
+  // uint64 thread_id = 2;
+  if (this->_internal_thread_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(2, this->_internal_thread_id(), target);
+  }
+
+  // string data = 3;
   if (!this->_internal_data().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_data().data(), static_cast<int>(this->_internal_data().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "grpcagent.Asset.data");
     target = stream->WriteStringMaybeAliased(
-        2, this->_internal_data(), target);
+        3, this->_internal_data(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -263,7 +284,7 @@ size_t Asset::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // string data = 2;
+  // string data = 3;
   if (!this->_internal_data().empty()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
@@ -275,6 +296,11 @@ size_t Asset::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.common_);
+  }
+
+  // uint64 thread_id = 2;
+  if (this->_internal_thread_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_thread_id());
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
@@ -302,6 +328,9 @@ void Asset::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
     _this->_internal_mutable_common()->::grpcagent::CommonResponse::MergeFrom(
         from._internal_common());
   }
+  if (from._internal_thread_id() != 0) {
+    _this->_internal_set_thread_id(from._internal_thread_id());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -325,7 +354,12 @@ void Asset::InternalSwap(Asset* other) {
       &_impl_.data_, lhs_arena,
       &other->_impl_.data_, rhs_arena
   );
-  swap(_impl_.common_, other->_impl_.common_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(Asset, _impl_.thread_id_)
+      + sizeof(Asset::_impl_.thread_id_)
+      - PROTOBUF_FIELD_OFFSET(Asset, _impl_.common_)>(
+          reinterpret_cast<char*>(&_impl_.common_),
+          reinterpret_cast<char*>(&other->_impl_.common_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata Asset::GetMetadata() const {

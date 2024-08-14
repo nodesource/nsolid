@@ -178,10 +178,11 @@ class Asset final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kDataFieldNumber = 2,
+    kDataFieldNumber = 3,
     kCommonFieldNumber = 1,
+    kThreadIdFieldNumber = 2,
   };
-  // string data = 2;
+  // string data = 3;
   void clear_data();
   const std::string& data() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -213,6 +214,15 @@ class Asset final :
       ::grpcagent::CommonResponse* common);
   ::grpcagent::CommonResponse* unsafe_arena_release_common();
 
+  // uint64 thread_id = 2;
+  void clear_thread_id();
+  uint64_t thread_id() const;
+  void set_thread_id(uint64_t value);
+  private:
+  uint64_t _internal_thread_id() const;
+  void _internal_set_thread_id(uint64_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:grpcagent.Asset)
  private:
   class _Internal;
@@ -223,6 +233,7 @@ class Asset final :
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr data_;
     ::grpcagent::CommonResponse* common_;
+    uint64_t thread_id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -324,7 +335,27 @@ inline void Asset::set_allocated_common(::grpcagent::CommonResponse* common) {
   // @@protoc_insertion_point(field_set_allocated:grpcagent.Asset.common)
 }
 
-// string data = 2;
+// uint64 thread_id = 2;
+inline void Asset::clear_thread_id() {
+  _impl_.thread_id_ = uint64_t{0u};
+}
+inline uint64_t Asset::_internal_thread_id() const {
+  return _impl_.thread_id_;
+}
+inline uint64_t Asset::thread_id() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Asset.thread_id)
+  return _internal_thread_id();
+}
+inline void Asset::_internal_set_thread_id(uint64_t value) {
+  
+  _impl_.thread_id_ = value;
+}
+inline void Asset::set_thread_id(uint64_t value) {
+  _internal_set_thread_id(value);
+  // @@protoc_insertion_point(field_set:grpcagent.Asset.thread_id)
+}
+
+// string data = 3;
 inline void Asset::clear_data() {
   _impl_.data_.ClearToEmpty();
 }
