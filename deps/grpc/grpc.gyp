@@ -1106,8 +1106,12 @@
     {
       'target_name': 'grpc_cpp_plugin',
       'type': 'executable',
+      'defines': [
+        'GRPC_CUSTOM_CSHARP_GETCLASSNAME',
+      ],
       'dependencies': [
-        '../protobuf/protobuf.gyp:protobuf'
+        '../protobuf/protobuf.gyp:protobuf',
+        'abseil',
       ],
       'include_dirs': [
         './',
@@ -1116,6 +1120,7 @@
       'sources': [
         'src/compiler/cpp_plugin.cc',
         'src/compiler/cpp_generator.cc',
+        'src/compiler/proto_parser_helper.cc',
       ],
     },
     {

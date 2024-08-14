@@ -6,5 +6,6 @@ package grpcagent;
 
 message Asset {
   CommonResponse common = 1;
-  string data = 2;
+  uint64 thread_id = 2;
+  string data = 3;
 }

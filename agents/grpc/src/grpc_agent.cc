@@ -905,6 +905,7 @@ void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
   if (stor.profile.size() > 0) {
     grpcagent::Asset asset;
     PopulateCommon(asset.mutable_common(), "cpu_profile", stor.req_id.c_str());
+    asset.set_thread_id(stor.thread_id);
     asset.set_data(stor.profile);
     it.first->second.Write(std::move(asset));
   } else {
