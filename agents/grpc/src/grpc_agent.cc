@@ -885,7 +885,7 @@ void GrpcAgent::do_got_prof(ProfileType type,
   }
 
   // Don't continue with the exit procedure until all profiles have finished.
-  check_exit_on_profile();
+  // check_exit_on_profile();
 }
 
 
