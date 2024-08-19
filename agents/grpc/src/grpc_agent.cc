@@ -1196,6 +1196,24 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 
 int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
                              ProfileType type) {
+  StartProfiling start_profiling = nullptr;
+  ProfileOptions options;
+  switch (type) {
+    case ProfileType::kCpu:
+      start_profiling = &GrpcAgent::do_start_cpu_prof;
+      options = CPUProfileOptions{/* initialize with appropriate values */};
+      break;
+    case ProfileType::kHeapProf:
+      start_profiling = &GrpcAgent::do_start_heap_prof;
+      options = HeapProfileOptions{/* initialize with appropriate values */};
+      break;
+    case ProfileType::kHeapSampl:
+      start_profiling = &GrpcAgent::do_start_heap_sampl;
+      options = HeapSamplingOptions{/* initialize with appropriate values */};
+      break;
+    default:
+      ASSERT(false);
+  }
   return 0;
 }
 

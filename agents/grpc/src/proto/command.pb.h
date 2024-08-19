@@ -30,7 +30,7 @@
 #include <google/protobuf/repeated_field.h>  // IWYU pragma: export
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/unknown_field_set.h>
-#include "cpu_profile.pb.h"
+#include "profile.pb.h"
 #include "reconfigure.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
@@ -112,6 +112,8 @@ class CommandArgs final :
   enum ArgsCase {
     kReconfigure = 1,
     kCpuProfile = 2,
+    kHeapProfile = 3,
+    kHeapSampling = 4,
     ARGS_NOT_SET = 0,
   };
 
@@ -195,6 +197,8 @@ class CommandArgs final :
   enum : int {
     kReconfigureFieldNumber = 1,
     kCpuProfileFieldNumber = 2,
+    kHeapProfileFieldNumber = 3,
+    kHeapSamplingFieldNumber = 4,
   };
   // .grpcagent.ReconfigureBody reconfigure = 1;
   bool has_reconfigure() const;
@@ -232,6 +236,42 @@ class CommandArgs final :
       ::grpcagent::CPUProfileArgs* cpu_profile);
   ::grpcagent::CPUProfileArgs* unsafe_arena_release_cpu_profile();
 
+  // .grpcagent.HeapProfileArgs heap_profile = 3;
+  bool has_heap_profile() const;
+  private:
+  bool _internal_has_heap_profile() const;
+  public:
+  void clear_heap_profile();
+  const ::grpcagent::HeapProfileArgs& heap_profile() const;
+  PROTOBUF_NODISCARD ::grpcagent::HeapProfileArgs* release_heap_profile();
+  ::grpcagent::HeapProfileArgs* mutable_heap_profile();
+  void set_allocated_heap_profile(::grpcagent::HeapProfileArgs* heap_profile);
+  private:
+  const ::grpcagent::HeapProfileArgs& _internal_heap_profile() const;
+  ::grpcagent::HeapProfileArgs* _internal_mutable_heap_profile();
+  public:
+  void unsafe_arena_set_allocated_heap_profile(
+      ::grpcagent::HeapProfileArgs* heap_profile);
+  ::grpcagent::HeapProfileArgs* unsafe_arena_release_heap_profile();
+
+  // .grpcagent.HeapSamplingArgs heap_sampling = 4;
+  bool has_heap_sampling() const;
+  private:
+  bool _internal_has_heap_sampling() const;
+  public:
+  void clear_heap_sampling();
+  const ::grpcagent::HeapSamplingArgs& heap_sampling() const;
+  PROTOBUF_NODISCARD ::grpcagent::HeapSamplingArgs* release_heap_sampling();
+  ::grpcagent::HeapSamplingArgs* mutable_heap_sampling();
+  void set_allocated_heap_sampling(::grpcagent::HeapSamplingArgs* heap_sampling);
+  private:
+  const ::grpcagent::HeapSamplingArgs& _internal_heap_sampling() const;
+  ::grpcagent::HeapSamplingArgs* _internal_mutable_heap_sampling();
+  public:
+  void unsafe_arena_set_allocated_heap_sampling(
+      ::grpcagent::HeapSamplingArgs* heap_sampling);
+  ::grpcagent::HeapSamplingArgs* unsafe_arena_release_heap_sampling();
+
   void clear_args();
   ArgsCase args_case() const;
   // @@protoc_insertion_point(class_scope:grpcagent.CommandArgs)
@@ -239,6 +279,8 @@ class CommandArgs final :
   class _Internal;
   void set_has_reconfigure();
   void set_has_cpu_profile();
+  void set_has_heap_profile();
+  void set_has_heap_sampling();
 
   inline bool has_args() const;
   inline void clear_has_args();
@@ -252,6 +294,8 @@ class CommandArgs final :
         ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized _constinit_;
       ::grpcagent::ReconfigureBody* reconfigure_;
       ::grpcagent::CPUProfileArgs* cpu_profile_;
+      ::grpcagent::HeapProfileArgs* heap_profile_;
+      ::grpcagent::HeapSamplingArgs* heap_sampling_;
     } args_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     uint32_t _oneof_case_[1];
@@ -769,6 +813,138 @@ inline ::grpcagent::CPUProfileArgs* CommandArgs::_internal_mutable_cpu_profile()
 inline ::grpcagent::CPUProfileArgs* CommandArgs::mutable_cpu_profile() {
   ::grpcagent::CPUProfileArgs* _msg = _internal_mutable_cpu_profile();
   // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.cpu_profile)
+  return _msg;
+}
+
+// .grpcagent.HeapProfileArgs heap_profile = 3;
+inline bool CommandArgs::_internal_has_heap_profile() const {
+  return args_case() == kHeapProfile;
+}
+inline bool CommandArgs::has_heap_profile() const {
+  return _internal_has_heap_profile();
+}
+inline void CommandArgs::set_has_heap_profile() {
+  _impl_._oneof_case_[0] = kHeapProfile;
+}
+inline ::grpcagent::HeapProfileArgs* CommandArgs::release_heap_profile() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.heap_profile)
+  if (_internal_has_heap_profile()) {
+    clear_has_args();
+    ::grpcagent::HeapProfileArgs* temp = _impl_.args_.heap_profile_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.args_.heap_profile_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::grpcagent::HeapProfileArgs& CommandArgs::_internal_heap_profile() const {
+  return _internal_has_heap_profile()
+      ? *_impl_.args_.heap_profile_
+      : reinterpret_cast< ::grpcagent::HeapProfileArgs&>(::grpcagent::_HeapProfileArgs_default_instance_);
+}
+inline const ::grpcagent::HeapProfileArgs& CommandArgs::heap_profile() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.heap_profile)
+  return _internal_heap_profile();
+}
+inline ::grpcagent::HeapProfileArgs* CommandArgs::unsafe_arena_release_heap_profile() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.heap_profile)
+  if (_internal_has_heap_profile()) {
+    clear_has_args();
+    ::grpcagent::HeapProfileArgs* temp = _impl_.args_.heap_profile_;
+    _impl_.args_.heap_profile_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void CommandArgs::unsafe_arena_set_allocated_heap_profile(::grpcagent::HeapProfileArgs* heap_profile) {
+  clear_args();
+  if (heap_profile) {
+    set_has_heap_profile();
+    _impl_.args_.heap_profile_ = heap_profile;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.heap_profile)
+}
+inline ::grpcagent::HeapProfileArgs* CommandArgs::_internal_mutable_heap_profile() {
+  if (!_internal_has_heap_profile()) {
+    clear_args();
+    set_has_heap_profile();
+    _impl_.args_.heap_profile_ = CreateMaybeMessage< ::grpcagent::HeapProfileArgs >(GetArenaForAllocation());
+  }
+  return _impl_.args_.heap_profile_;
+}
+inline ::grpcagent::HeapProfileArgs* CommandArgs::mutable_heap_profile() {
+  ::grpcagent::HeapProfileArgs* _msg = _internal_mutable_heap_profile();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.heap_profile)
+  return _msg;
+}
+
+// .grpcagent.HeapSamplingArgs heap_sampling = 4;
+inline bool CommandArgs::_internal_has_heap_sampling() const {
+  return args_case() == kHeapSampling;
+}
+inline bool CommandArgs::has_heap_sampling() const {
+  return _internal_has_heap_sampling();
+}
+inline void CommandArgs::set_has_heap_sampling() {
+  _impl_._oneof_case_[0] = kHeapSampling;
+}
+inline ::grpcagent::HeapSamplingArgs* CommandArgs::release_heap_sampling() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.heap_sampling)
+  if (_internal_has_heap_sampling()) {
+    clear_has_args();
+    ::grpcagent::HeapSamplingArgs* temp = _impl_.args_.heap_sampling_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.args_.heap_sampling_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::grpcagent::HeapSamplingArgs& CommandArgs::_internal_heap_sampling() const {
+  return _internal_has_heap_sampling()
+      ? *_impl_.args_.heap_sampling_
+      : reinterpret_cast< ::grpcagent::HeapSamplingArgs&>(::grpcagent::_HeapSamplingArgs_default_instance_);
+}
+inline const ::grpcagent::HeapSamplingArgs& CommandArgs::heap_sampling() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.heap_sampling)
+  return _internal_heap_sampling();
+}
+inline ::grpcagent::HeapSamplingArgs* CommandArgs::unsafe_arena_release_heap_sampling() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.heap_sampling)
+  if (_internal_has_heap_sampling()) {
+    clear_has_args();
+    ::grpcagent::HeapSamplingArgs* temp = _impl_.args_.heap_sampling_;
+    _impl_.args_.heap_sampling_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void CommandArgs::unsafe_arena_set_allocated_heap_sampling(::grpcagent::HeapSamplingArgs* heap_sampling) {
+  clear_args();
+  if (heap_sampling) {
+    set_has_heap_sampling();
+    _impl_.args_.heap_sampling_ = heap_sampling;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.heap_sampling)
+}
+inline ::grpcagent::HeapSamplingArgs* CommandArgs::_internal_mutable_heap_sampling() {
+  if (!_internal_has_heap_sampling()) {
+    clear_args();
+    set_has_heap_sampling();
+    _impl_.args_.heap_sampling_ = CreateMaybeMessage< ::grpcagent::HeapSamplingArgs >(GetArenaForAllocation());
+  }
+  return _impl_.args_.heap_sampling_;
+}
+inline ::grpcagent::HeapSamplingArgs* CommandArgs::mutable_heap_sampling() {
+  ::grpcagent::HeapSamplingArgs* _msg = _internal_mutable_heap_sampling();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.heap_sampling)
   return _msg;
 }
 

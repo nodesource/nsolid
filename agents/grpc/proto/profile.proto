@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+// import "common.proto";
+
+package grpcagent;
+
+message ProfileArgs {
+  uint64 thread_id = 1;
+  uint64 duration = 2;
+  map<string, string> metadata = 3;
+}
+
+message CPUProfileArgs {
+  ProfileArgs args = 1;
+}
+
+message HeapProfileArgs {
+  ProfileArgs args = 1;
+  bool track_allocations = 2;
+  bool redacted = 3;
+}
+
+message HeapSamplingArgs {
+  ProfileArgs args = 1;
+  uint64 sample_interval = 2;
+  uint32 stack_depth = 3;
+  uint32 flags = 4;
+}

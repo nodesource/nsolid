@@ -5,7 +5,7 @@
 
 syntax = "proto3";
 
-import "cpu_profile.proto";
+import "profile.proto";
 import "reconfigure.proto";
 
 package grpcagent;
@@ -14,6 +14,8 @@ message CommandArgs {
   oneof args {
     ReconfigureBody reconfigure = 1;
     CPUProfileArgs cpu_profile = 2;
+    HeapProfileArgs heap_profile = 3;
+    HeapSamplingArgs heap_sampling = 4;
   }
 }
 
