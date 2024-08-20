@@ -5,6 +5,7 @@
 #include "base64_version.h"
 #include "brotli/encode.h"
 #include "cjs_module_lexer_version.h"
+#include "curl/curlver.h"
 #include "llhttp.h"
 #include "nghttp2/nghttp2ver.h"
 #include "node.h"
@@ -122,6 +123,7 @@ Metadata::Versions::Versions() {
 
   simdutf = SIMDUTF_VERSION;
   ada = ADA_VERSION;
+  curl = LIBCURL_VERSION;
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {
