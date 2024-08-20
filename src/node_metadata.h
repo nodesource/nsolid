@@ -64,6 +64,7 @@ namespace node {
   V(nbytes)                                                                    \
   NODE_VERSIONS_KEY_AMARO(V)                                                   \
   NODE_VERSIONS_KEY_UNDICI(V)                                                  \
+  V(curl)                                                                      \
   V(cjs_module_lexer)
 
 #if HAVE_OPENSSL

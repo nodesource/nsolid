@@ -5,6 +5,7 @@
 #include "ares.h"
 #include "brotli/encode.h"
 #include "cjs_module_lexer_version.h"
+#include "curl/curlver.h"
 #include "llhttp.h"
 #include "nbytes.h"
 #include "nghttp2/nghttp2ver.h"
@@ -154,6 +155,7 @@ Metadata::Versions::Versions() {
   sqlite = SQLITE_VERSION;
   ada = ADA_VERSION;
   nbytes = NBYTES_VERSION;
+  curl = LIBCURL_VERSION;
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {

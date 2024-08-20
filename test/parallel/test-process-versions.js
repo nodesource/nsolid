@@ -25,6 +25,7 @@ const expected_keys = [
   'ada',
   'cjs_module_lexer',
   'nbytes',
+  'curl',
 ];
 
 const hasUndici = process.config.variables.node_builtin_shareable_builtins.includes('deps/undici/undici.js');
