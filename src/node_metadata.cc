@@ -8,6 +8,7 @@
 #include "curl/curlver.h"
 #include "llhttp.h"
 #include "nghttp2/nghttp2ver.h"
+#include "nlohmann/json.h"
 #include "node.h"
 #include "simdutf.h"
 #include "undici_version.h"
@@ -134,6 +135,12 @@ Metadata::Versions::Versions() {
   simdutf = SIMDUTF_VERSION;
   ada = ADA_VERSION;
   curl = LIBCURL_VERSION;
+  nlohmann =
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MAJOR)
+    "."
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MINOR)
+    "."
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_PATCH);
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {
