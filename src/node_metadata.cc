@@ -9,6 +9,7 @@
 #include "llhttp.h"
 #include "nbytes.h"
 #include "nghttp2/nghttp2ver.h"
+#include "nlohmann/json.h"
 #include "node.h"
 #include "simdjson.h"
 #include "simdutf.h"
@@ -156,6 +157,12 @@ Metadata::Versions::Versions() {
   ada = ADA_VERSION;
   nbytes = NBYTES_VERSION;
   curl = LIBCURL_VERSION;
+  nlohmann =
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MAJOR)
+    "."
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MINOR)
+    "."
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_PATCH);
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {
