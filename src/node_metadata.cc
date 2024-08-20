@@ -12,6 +12,7 @@
 #include "nlohmann/json.h"
 #include "node.h"
 #include "simdjson.h"
+#include "opentelemetry/version.h"
 #include "simdutf.h"
 #include "sqlite3.h"
 #include "undici_version.h"
@@ -163,6 +164,7 @@ Metadata::Versions::Versions() {
     NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MINOR)
     "."
     NODE_STRINGIFY(NLOHMANN_JSON_VERSION_PATCH);
+  opentelemetry = OPENTELEMETRY_VERSION;
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {

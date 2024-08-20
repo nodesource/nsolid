@@ -66,6 +66,7 @@ namespace node {
   NODE_VERSIONS_KEY_UNDICI(V)                                                  \
   V(curl)                                                                      \
   V(nlohmann)                                                                  \
+  V(opentelemetry)                                                             \
   V(cjs_module_lexer)
 
 #if HAVE_OPENSSL
