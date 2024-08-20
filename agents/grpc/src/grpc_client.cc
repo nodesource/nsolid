@@ -87,11 +87,9 @@ void CommandStream::Write(grpcagent::CommandResponse&& resp) {
 
 AssetStream::AssetStream(
     grpcagent::NSolidService::StubInterface* stub,
-    std::shared_ptr<GrpcAgent> agent,
-    const std::string& req_id): agent_(agent),
-                                req_id_(req_id){
-  context_.AddMetadata("nsolid-agent-id", agent->agent_id());
-  const std::string& saas = agent_->saas();
+    const std::string& agent_id,
+    const std::string& saas) {
+  context_.AddMetadata("nsolid-agent-id", agent_id);
   if (!saas.empty()) {
     context_.AddMetadata("nsolid-saas-token", saas);
   }
@@ -101,18 +99,16 @@ AssetStream::AssetStream(
  }
 
 AssetStream::~AssetStream() {
-  Debug("[%s] AssetStream::~AssetStream\n", req_id_.c_str());
+  Debug("AssetStream::~AssetStream\n");
 }
 
 void AssetStream::OnDone(const ::grpc::Status& s) {
-  Debug("[%s] AssetStream::OnDone: %d. %s:%s\n", req_id_.c_str(), static_cast<unsigned>(s.error_code()), s.error_message().c_str(), s.error_details().c_str());
-  if (agent_) {
-    agent_->remove_cpu_profile(req_id_);
-  }
+  Debug("AssetStream::OnDone: %d. %s:%s\n", static_cast<unsigned>(s.error_code()), s.error_message().c_str(), s.error_details().c_str());
+  delete this;
 }
 
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
-  Debug("[%s] AssetStream::OnWriteDone: %d\n", req_id_.c_str(), ok);
+  Debug("AssetStream::OnWriteDone: %d\n", ok);
   write_state_.write_done = true;
   NextWrite();
 }

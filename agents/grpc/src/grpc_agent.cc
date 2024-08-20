@@ -338,7 +338,7 @@ void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
   }
 }
 
-void GrpcAgent::remove_cpu_profile(const std::string& req_id) {
+void GrpcAgent::remove_cpu_profile(uint64_t thread_id) {
   // cpu_profiles_.erase(req_id);
 }
 
@@ -855,6 +855,7 @@ void GrpcAgent::do_got_prof(ProfileType type,
                             uint64_t thread_id,
                             int status,
                             const std::string& profile) {
+  Debug("do_got_prof: %ld\n", profile.length());
   bool profileStreamComplete = profile.length() == 0;
   ProfileState& profile_state = profile_state_[type];
   // get and remove associated data from pending_profiles_map
@@ -879,9 +880,14 @@ void GrpcAgent::do_got_prof(ProfileType type,
 
   // if the profile is complete signal that
   if (profileStreamComplete) {
-    
+    prof_stor.stream->StartWritesDone();
+    prof_stor.stream->RemoveHold();
   } else {
     // send profile chunks
+    grpcagent::Asset asset;
+    PopulateCommon(asset.mutable_common(), "cpu_profile", prof_stor.req_id.c_str());
+    asset.set_data(profile);
+    prof_stor.stream->Write(std::move(asset));
   }
 
   // Don't continue with the exit procedure until all profiles have finished.
@@ -1214,7 +1220,8 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
     return err;
   }
 
-  ProfileStor stor{ req.requestid(), uv_now(&loop_), std::move(options) };
+  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(), agent_id_, saas_);
+  ProfileStor stor{ req.requestid(), uv_now(&loop_), stream, std::move(options) };
   auto iter = profile_state.pending_profiles_map.emplace(thread_id,
                                                          std::move(stor));
   ASSERT_NE(iter.second, false);
@@ -1225,6 +1232,7 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
 
 int GrpcAgent::do_start_cpu_prof(const grpcagent::ProfileArgs& args,
                                  ProfileOptions& opts) {
+  Debug("do_start_cpu_prof\n");
   CPUProfileOptions& options = std::get<CPUProfileOptions>(opts);
   int err = profile_collector_->StartCPUProfile(options);
   if (err < 0) {
