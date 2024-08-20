@@ -1,5 +1,6 @@
 #include "grpc_agent.h"
 #include "grpc_client.h"
+#include "grpc_utils.h"
 
 #include "asserts-cpp/asserts.h"
 #include "debug_utils-inl.h"
@@ -1229,7 +1230,7 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
   std::visit([&](auto& opt) {
     opt.thread_id = thread_id;
     opt.duration = duration;
-    // opt.metadata = std::move(metadata);
+    opt.metadata_pb = std::move(args.metadata());
   }, options);
 
   err = (this->*start_profiling)(args, options);
