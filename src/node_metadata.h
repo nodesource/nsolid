@@ -56,6 +56,7 @@ namespace node {
   NODE_VERSIONS_KEY_UNDICI(V)                                                  \
   V(cjs_module_lexer)                                                          \
   V(curl)                                                                      \
+  V(nlohmann)                                                                  \
   V(base64)
 
 #if HAVE_OPENSSL
