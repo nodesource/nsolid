@@ -21,23 +21,14 @@ namespace _pb = ::PROTOBUF_NAMESPACE_ID;
 namespace _pbi = _pb::internal;
 
 namespace grpcagent {
-PROTOBUF_CONSTEXPR ProfileArgs_MetadataEntry_DoNotUse::ProfileArgs_MetadataEntry_DoNotUse(
-    ::_pbi::ConstantInitialized) {}
-struct ProfileArgs_MetadataEntry_DoNotUseDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR ProfileArgs_MetadataEntry_DoNotUseDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~ProfileArgs_MetadataEntry_DoNotUseDefaultTypeInternal() {}
-  union {
-    ProfileArgs_MetadataEntry_DoNotUse _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ProfileArgs_MetadataEntry_DoNotUseDefaultTypeInternal _ProfileArgs_MetadataEntry_DoNotUse_default_instance_;
 PROTOBUF_CONSTEXPR ProfileArgs::ProfileArgs(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.metadata_)*/{::_pbi::ConstantInitialized()}
+    /*decltype(_impl_.metadata_)*/nullptr
   , /*decltype(_impl_.thread_id_)*/uint64_t{0u}
   , /*decltype(_impl_.duration_)*/uint64_t{0u}
-  , /*decltype(_impl_._cached_size_)*/{}} {}
+  , /*decltype(_impl_.args_)*/{}
+  , /*decltype(_impl_._cached_size_)*/{}
+  , /*decltype(_impl_._oneof_case_)*/{}} {}
 struct ProfileArgsDefaultTypeInternal {
   PROTOBUF_CONSTEXPR ProfileArgsDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
@@ -48,9 +39,7 @@ struct ProfileArgsDefaultTypeInternal {
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ProfileArgsDefaultTypeInternal _ProfileArgs_default_instance_;
 PROTOBUF_CONSTEXPR CPUProfileArgs::CPUProfileArgs(
-    ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.args_)*/nullptr
-  , /*decltype(_impl_._cached_size_)*/{}} {}
+    ::_pbi::ConstantInitialized) {}
 struct CPUProfileArgsDefaultTypeInternal {
   PROTOBUF_CONSTEXPR CPUProfileArgsDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
@@ -62,8 +51,7 @@ struct CPUProfileArgsDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CPUProfileArgsDefaultTypeInternal _CPUProfileArgs_default_instance_;
 PROTOBUF_CONSTEXPR HeapProfileArgs::HeapProfileArgs(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.args_)*/nullptr
-  , /*decltype(_impl_.track_allocations_)*/false
+    /*decltype(_impl_.track_allocations_)*/false
   , /*decltype(_impl_.redacted_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct HeapProfileArgsDefaultTypeInternal {
@@ -77,8 +65,7 @@ struct HeapProfileArgsDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 HeapProfileArgsDefaultTypeInternal _HeapProfileArgs_default_instance_;
 PROTOBUF_CONSTEXPR HeapSamplingArgs::HeapSamplingArgs(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.args_)*/nullptr
-  , /*decltype(_impl_.sample_interval_)*/uint64_t{0u}
+    /*decltype(_impl_.sample_interval_)*/uint64_t{0u}
   , /*decltype(_impl_.stack_depth_)*/0u
   , /*decltype(_impl_.flags_)*/0u
   , /*decltype(_impl_._cached_size_)*/{}} {}
@@ -92,44 +79,36 @@ struct HeapSamplingArgsDefaultTypeInternal {
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 HeapSamplingArgsDefaultTypeInternal _HeapSamplingArgs_default_instance_;
 }  // namespace grpcagent
-static ::_pb::Metadata file_level_metadata_profile_2eproto[5];
+static ::_pb::Metadata file_level_metadata_profile_2eproto[4];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_profile_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_profile_2eproto = nullptr;
 
 const uint32_t TableStruct_profile_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs_MetadataEntry_DoNotUse, _has_bits_),
-  PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs_MetadataEntry_DoNotUse, _internal_metadata_),
-  ~0u,  // no _extensions_
-  ~0u,  // no _oneof_case_
-  ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs_MetadataEntry_DoNotUse, key_),
-  PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs_MetadataEntry_DoNotUse, value_),
-  0,
-  1,
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _internal_metadata_),
   ~0u,  // no _extensions_
-  ~0u,  // no _oneof_case_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _impl_._oneof_case_[0]),
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _impl_.thread_id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _impl_.duration_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _impl_.metadata_),
+  ::_pbi::kInvalidFieldOffsetTag,
+  ::_pbi::kInvalidFieldOffsetTag,
+  ::_pbi::kInvalidFieldOffsetTag,
+  PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _impl_.args_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::CPUProfileArgs, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grpcagent::CPUProfileArgs, _impl_.args_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapProfileArgs, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grpcagent::HeapProfileArgs, _impl_.args_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapProfileArgs, _impl_.track_allocations_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapProfileArgs, _impl_.redacted_),
   ~0u,  // no _has_bits_
@@ -138,21 +117,18 @@ const uint32_t TableStruct_profile_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSamplingArgs, _impl_.args_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSamplingArgs, _impl_.sample_interval_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSamplingArgs, _impl_.stack_depth_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSamplingArgs, _impl_.flags_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, 8, -1, sizeof(::grpcagent::ProfileArgs_MetadataEntry_DoNotUse)},
-  { 10, -1, -1, sizeof(::grpcagent::ProfileArgs)},
-  { 19, -1, -1, sizeof(::grpcagent::CPUProfileArgs)},
-  { 26, -1, -1, sizeof(::grpcagent::HeapProfileArgs)},
-  { 35, -1, -1, sizeof(::grpcagent::HeapSamplingArgs)},
+  { 0, -1, -1, sizeof(::grpcagent::ProfileArgs)},
+  { 13, -1, -1, sizeof(::grpcagent::CPUProfileArgs)},
+  { 19, -1, -1, sizeof(::grpcagent::HeapProfileArgs)},
+  { 27, -1, -1, sizeof(::grpcagent::HeapSamplingArgs)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
-  &::grpcagent::_ProfileArgs_MetadataEntry_DoNotUse_default_instance_._instance,
   &::grpcagent::_ProfileArgs_default_instance_._instance,
   &::grpcagent::_CPUProfileArgs_default_instance_._instance,
   &::grpcagent::_HeapProfileArgs_default_instance_._instance,
@@ -160,24 +136,28 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 
 const char descriptor_table_protodef_profile_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\rprofile.proto\022\tgrpcagent\"\233\001\n\013ProfileAr"
-  "gs\022\021\n\tthread_id\030\001 \001(\004\022\020\n\010duration\030\002 \001(\004\022"
-  "6\n\010metadata\030\003 \003(\0132$.grpcagent.ProfileArg"
-  "s.MetadataEntry\032/\n\rMetadataEntry\022\013\n\003key\030"
-  "\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"6\n\016CPUProfileAr"
-  "gs\022$\n\004args\030\001 \001(\0132\026.grpcagent.ProfileArgs"
-  "\"d\n\017HeapProfileArgs\022$\n\004args\030\001 \001(\0132\026.grpc"
-  "agent.ProfileArgs\022\031\n\021track_allocations\030\002"
-  " \001(\010\022\020\n\010redacted\030\003 \001(\010\"u\n\020HeapSamplingAr"
-  "gs\022$\n\004args\030\001 \001(\0132\026.grpcagent.ProfileArgs"
-  "\022\027\n\017sample_interval\030\002 \001(\004\022\023\n\013stack_depth"
-  "\030\003 \001(\r\022\r\n\005flags\030\004 \001(\rb\006proto3"
+  "\n\rprofile.proto\022\tgrpcagent\032\034google/proto"
+  "buf/struct.proto\"\201\002\n\013ProfileArgs\022\021\n\tthre"
+  "ad_id\030\001 \001(\004\022\020\n\010duration\030\002 \001(\004\022)\n\010metadat"
+  "a\030\003 \001(\0132\027.google.protobuf.Struct\0220\n\013cpu_"
+  "profile\030\004 \001(\0132\031.grpcagent.CPUProfileArgs"
+  "H\000\0222\n\014heap_profile\030\005 \001(\0132\032.grpcagent.Hea"
+  "pProfileArgsH\000\0224\n\rheap_sampling\030\006 \001(\0132\033."
+  "grpcagent.HeapSamplingArgsH\000B\006\n\004args\"\020\n\016"
+  "CPUProfileArgs\">\n\017HeapProfileArgs\022\031\n\021tra"
+  "ck_allocations\030\001 \001(\010\022\020\n\010redacted\030\002 \001(\010\"O"
+  "\n\020HeapSamplingArgs\022\027\n\017sample_interval\030\001 "
+  "\001(\004\022\023\n\013stack_depth\030\002 \001(\r\022\r\n\005flags\030\003 \001(\rb"
+  "\006proto3"
   ;
+static const ::_pbi::DescriptorTable* const descriptor_table_profile_2eproto_deps[1] = {
+  &::descriptor_table_google_2fprotobuf_2fstruct_2eproto,
+};
 static ::_pbi::once_flag descriptor_table_profile_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_profile_2eproto = {
-    false, false, 469, descriptor_table_protodef_profile_2eproto,
+    false, false, 487, descriptor_table_protodef_profile_2eproto,
     "profile.proto",
-    &descriptor_table_profile_2eproto_once, nullptr, 0, 5,
+    &descriptor_table_profile_2eproto_once, descriptor_table_profile_2eproto_deps, 1, 4,
     schemas, file_default_instances, TableStruct_profile_2eproto::offsets,
     file_level_metadata_profile_2eproto, file_level_enum_descriptors_profile_2eproto,
     file_level_service_descriptors_profile_2eproto,
@@ -192,47 +172,126 @@ namespace grpcagent {
 
 // ===================================================================
 
-ProfileArgs_MetadataEntry_DoNotUse::ProfileArgs_MetadataEntry_DoNotUse() {}
-ProfileArgs_MetadataEntry_DoNotUse::ProfileArgs_MetadataEntry_DoNotUse(::PROTOBUF_NAMESPACE_ID::Arena* arena)
-    : SuperType(arena) {}
-void ProfileArgs_MetadataEntry_DoNotUse::MergeFrom(const ProfileArgs_MetadataEntry_DoNotUse& other) {
-  MergeFromInternal(other);
-}
-::PROTOBUF_NAMESPACE_ID::Metadata ProfileArgs_MetadataEntry_DoNotUse::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_profile_2eproto_getter, &descriptor_table_profile_2eproto_once,
-      file_level_metadata_profile_2eproto[0]);
-}
-
-// ===================================================================
-
 class ProfileArgs::_Internal {
  public:
+  static const ::PROTOBUF_NAMESPACE_ID::Struct& metadata(const ProfileArgs* msg);
+  static const ::grpcagent::CPUProfileArgs& cpu_profile(const ProfileArgs* msg);
+  static const ::grpcagent::HeapProfileArgs& heap_profile(const ProfileArgs* msg);
+  static const ::grpcagent::HeapSamplingArgs& heap_sampling(const ProfileArgs* msg);
 };
 
+const ::PROTOBUF_NAMESPACE_ID::Struct&
+ProfileArgs::_Internal::metadata(const ProfileArgs* msg) {
+  return *msg->_impl_.metadata_;
+}
+const ::grpcagent::CPUProfileArgs&
+ProfileArgs::_Internal::cpu_profile(const ProfileArgs* msg) {
+  return *msg->_impl_.args_.cpu_profile_;
+}
+const ::grpcagent::HeapProfileArgs&
+ProfileArgs::_Internal::heap_profile(const ProfileArgs* msg) {
+  return *msg->_impl_.args_.heap_profile_;
+}
+const ::grpcagent::HeapSamplingArgs&
+ProfileArgs::_Internal::heap_sampling(const ProfileArgs* msg) {
+  return *msg->_impl_.args_.heap_sampling_;
+}
+void ProfileArgs::clear_metadata() {
+  if (GetArenaForAllocation() == nullptr && _impl_.metadata_ != nullptr) {
+    delete _impl_.metadata_;
+  }
+  _impl_.metadata_ = nullptr;
+}
+void ProfileArgs::set_allocated_cpu_profile(::grpcagent::CPUProfileArgs* cpu_profile) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_args();
+  if (cpu_profile) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(cpu_profile);
+    if (message_arena != submessage_arena) {
+      cpu_profile = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, cpu_profile, submessage_arena);
+    }
+    set_has_cpu_profile();
+    _impl_.args_.cpu_profile_ = cpu_profile;
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.ProfileArgs.cpu_profile)
+}
+void ProfileArgs::set_allocated_heap_profile(::grpcagent::HeapProfileArgs* heap_profile) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_args();
+  if (heap_profile) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(heap_profile);
+    if (message_arena != submessage_arena) {
+      heap_profile = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, heap_profile, submessage_arena);
+    }
+    set_has_heap_profile();
+    _impl_.args_.heap_profile_ = heap_profile;
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.ProfileArgs.heap_profile)
+}
+void ProfileArgs::set_allocated_heap_sampling(::grpcagent::HeapSamplingArgs* heap_sampling) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_args();
+  if (heap_sampling) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(heap_sampling);
+    if (message_arena != submessage_arena) {
+      heap_sampling = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, heap_sampling, submessage_arena);
+    }
+    set_has_heap_sampling();
+    _impl_.args_.heap_sampling_ = heap_sampling;
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.ProfileArgs.heap_sampling)
+}
 ProfileArgs::ProfileArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  if (arena != nullptr && !is_message_owned) {
-    arena->OwnCustomDestructor(this, &ProfileArgs::ArenaDtor);
-  }
   // @@protoc_insertion_point(arena_constructor:grpcagent.ProfileArgs)
 }
 ProfileArgs::ProfileArgs(const ProfileArgs& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   ProfileArgs* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      /*decltype(_impl_.metadata_)*/{}
+      decltype(_impl_.metadata_){nullptr}
     , decltype(_impl_.thread_id_){}
     , decltype(_impl_.duration_){}
-    , /*decltype(_impl_._cached_size_)*/{}};
+    , decltype(_impl_.args_){}
+    , /*decltype(_impl_._cached_size_)*/{}
+    , /*decltype(_impl_._oneof_case_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  _this->_impl_.metadata_.MergeFrom(from._impl_.metadata_);
+  if (from._internal_has_metadata()) {
+    _this->_impl_.metadata_ = new ::PROTOBUF_NAMESPACE_ID::Struct(*from._impl_.metadata_);
+  }
   ::memcpy(&_impl_.thread_id_, &from._impl_.thread_id_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.duration_) -
     reinterpret_cast<char*>(&_impl_.thread_id_)) + sizeof(_impl_.duration_));
+  clear_has_args();
+  switch (from.args_case()) {
+    case kCpuProfile: {
+      _this->_internal_mutable_cpu_profile()->::grpcagent::CPUProfileArgs::MergeFrom(
+          from._internal_cpu_profile());
+      break;
+    }
+    case kHeapProfile: {
+      _this->_internal_mutable_heap_profile()->::grpcagent::HeapProfileArgs::MergeFrom(
+          from._internal_heap_profile());
+      break;
+    }
+    case kHeapSampling: {
+      _this->_internal_mutable_heap_sampling()->::grpcagent::HeapSamplingArgs::MergeFrom(
+          from._internal_heap_sampling());
+      break;
+    }
+    case ARGS_NOT_SET: {
+      break;
+    }
+  }
   // @@protoc_insertion_point(copy_constructor:grpcagent.ProfileArgs)
 }
 
@@ -241,18 +300,20 @@ inline void ProfileArgs::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      /*decltype(_impl_.metadata_)*/{::_pbi::ArenaInitialized(), arena}
+      decltype(_impl_.metadata_){nullptr}
     , decltype(_impl_.thread_id_){uint64_t{0u}}
     , decltype(_impl_.duration_){uint64_t{0u}}
+    , decltype(_impl_.args_){}
     , /*decltype(_impl_._cached_size_)*/{}
+    , /*decltype(_impl_._oneof_case_)*/{}
   };
+  clear_has_args();
 }
 
 ProfileArgs::~ProfileArgs() {
   // @@protoc_insertion_point(destructor:grpcagent.ProfileArgs)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
-    ArenaDtor(this);
     return;
   }
   SharedDtor();
@@ -260,17 +321,44 @@ ProfileArgs::~ProfileArgs() {
 
 inline void ProfileArgs::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  _impl_.metadata_.Destruct();
-  _impl_.metadata_.~MapField();
+  if (this != internal_default_instance()) delete _impl_.metadata_;
+  if (has_args()) {
+    clear_args();
+  }
 }
 
-void ProfileArgs::ArenaDtor(void* object) {
-  ProfileArgs* _this = reinterpret_cast< ProfileArgs* >(object);
-  _this->_impl_.metadata_.Destruct();
-}
 void ProfileArgs::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
+
+void ProfileArgs::clear_args() {
+// @@protoc_insertion_point(one_of_clear_start:grpcagent.ProfileArgs)
+  switch (args_case()) {
+    case kCpuProfile: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.args_.cpu_profile_;
+      }
+      break;
+    }
+    case kHeapProfile: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.args_.heap_profile_;
+      }
+      break;
+    }
+    case kHeapSampling: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.args_.heap_sampling_;
+      }
+      break;
+    }
+    case ARGS_NOT_SET: {
+      break;
+    }
+  }
+  _impl_._oneof_case_[0] = ARGS_NOT_SET;
+}
+
 
 void ProfileArgs::Clear() {
 // @@protoc_insertion_point(message_clear_start:grpcagent.ProfileArgs)
@@ -278,10 +366,14 @@ void ProfileArgs::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.metadata_.Clear();
+  if (GetArenaForAllocation() == nullptr && _impl_.metadata_ != nullptr) {
+    delete _impl_.metadata_;
+  }
+  _impl_.metadata_ = nullptr;
   ::memset(&_impl_.thread_id_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.duration_) -
       reinterpret_cast<char*>(&_impl_.thread_id_)) + sizeof(_impl_.duration_));
+  clear_args();
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -307,16 +399,35 @@ const char* ProfileArgs::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
         } else
           goto handle_unusual;
         continue;
-      // map<string, string> metadata = 3;
+      // .google.protobuf.Struct metadata = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
-          ptr -= 1;
-          do {
-            ptr += 1;
-            ptr = ctx->ParseMessage(&_impl_.metadata_, ptr);
-            CHK_(ptr);
-            if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<26>(ptr));
+          ptr = ctx->ParseMessage(_internal_mutable_metadata(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .grpcagent.CPUProfileArgs cpu_profile = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+          ptr = ctx->ParseMessage(_internal_mutable_cpu_profile(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .grpcagent.HeapProfileArgs heap_profile = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+          ptr = ctx->ParseMessage(_internal_mutable_heap_profile(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .grpcagent.HeapSamplingArgs heap_sampling = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
+          ptr = ctx->ParseMessage(_internal_mutable_heap_sampling(), ptr);
+          CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
@@ -361,34 +472,32 @@ uint8_t* ProfileArgs::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(2, this->_internal_duration(), target);
   }
 
-  // map<string, string> metadata = 3;
-  if (!this->_internal_metadata().empty()) {
-    using MapType = ::_pb::Map<std::string, std::string>;
-    using WireHelper = ProfileArgs_MetadataEntry_DoNotUse::Funcs;
-    const auto& map_field = this->_internal_metadata();
-    auto check_utf8 = [](const MapType::value_type& entry) {
-      (void)entry;
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-        entry.first.data(), static_cast<int>(entry.first.length()),
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-        "grpcagent.ProfileArgs.MetadataEntry.key");
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-        entry.second.data(), static_cast<int>(entry.second.length()),
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-        "grpcagent.ProfileArgs.MetadataEntry.value");
-    };
+  // .google.protobuf.Struct metadata = 3;
+  if (this->_internal_has_metadata()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(3, _Internal::metadata(this),
+        _Internal::metadata(this).GetCachedSize(), target, stream);
+  }
 
-    if (stream->IsSerializationDeterministic() && map_field.size() > 1) {
-      for (const auto& entry : ::_pbi::MapSorterPtr<MapType>(map_field)) {
-        target = WireHelper::InternalSerialize(3, entry.first, entry.second, target, stream);
-        check_utf8(entry);
-      }
-    } else {
-      for (const auto& entry : map_field) {
-        target = WireHelper::InternalSerialize(3, entry.first, entry.second, target, stream);
-        check_utf8(entry);
-      }
-    }
+  // .grpcagent.CPUProfileArgs cpu_profile = 4;
+  if (_internal_has_cpu_profile()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(4, _Internal::cpu_profile(this),
+        _Internal::cpu_profile(this).GetCachedSize(), target, stream);
+  }
+
+  // .grpcagent.HeapProfileArgs heap_profile = 5;
+  if (_internal_has_heap_profile()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(5, _Internal::heap_profile(this),
+        _Internal::heap_profile(this).GetCachedSize(), target, stream);
+  }
+
+  // .grpcagent.HeapSamplingArgs heap_sampling = 6;
+  if (_internal_has_heap_sampling()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(6, _Internal::heap_sampling(this),
+        _Internal::heap_sampling(this).GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -407,13 +516,11 @@ size_t ProfileArgs::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // map<string, string> metadata = 3;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(this->_internal_metadata_size());
-  for (::PROTOBUF_NAMESPACE_ID::Map< std::string, std::string >::const_iterator
-      it = this->_internal_metadata().begin();
-      it != this->_internal_metadata().end(); ++it) {
-    total_size += ProfileArgs_MetadataEntry_DoNotUse::Funcs::ByteSizeLong(it->first, it->second);
+  // .google.protobuf.Struct metadata = 3;
+  if (this->_internal_has_metadata()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.metadata_);
   }
 
   // uint64 thread_id = 1;
@@ -426,6 +533,32 @@ size_t ProfileArgs::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_duration());
   }
 
+  switch (args_case()) {
+    // .grpcagent.CPUProfileArgs cpu_profile = 4;
+    case kCpuProfile: {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.args_.cpu_profile_);
+      break;
+    }
+    // .grpcagent.HeapProfileArgs heap_profile = 5;
+    case kHeapProfile: {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.args_.heap_profile_);
+      break;
+    }
+    // .grpcagent.HeapSamplingArgs heap_sampling = 6;
+    case kHeapSampling: {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.args_.heap_sampling_);
+      break;
+    }
+    case ARGS_NOT_SET: {
+      break;
+    }
+  }
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -444,12 +577,35 @@ void ProfileArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PR
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  _this->_impl_.metadata_.MergeFrom(from._impl_.metadata_);
+  if (from._internal_has_metadata()) {
+    _this->_internal_mutable_metadata()->::PROTOBUF_NAMESPACE_ID::Struct::MergeFrom(
+        from._internal_metadata());
+  }
   if (from._internal_thread_id() != 0) {
     _this->_internal_set_thread_id(from._internal_thread_id());
   }
   if (from._internal_duration() != 0) {
     _this->_internal_set_duration(from._internal_duration());
+  }
+  switch (from.args_case()) {
+    case kCpuProfile: {
+      _this->_internal_mutable_cpu_profile()->::grpcagent::CPUProfileArgs::MergeFrom(
+          from._internal_cpu_profile());
+      break;
+    }
+    case kHeapProfile: {
+      _this->_internal_mutable_heap_profile()->::grpcagent::HeapProfileArgs::MergeFrom(
+          from._internal_heap_profile());
+      break;
+    }
+    case kHeapSampling: {
+      _this->_internal_mutable_heap_sampling()->::grpcagent::HeapSamplingArgs::MergeFrom(
+          from._internal_heap_sampling());
+      break;
+    }
+    case ARGS_NOT_SET: {
+      break;
+    }
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -468,16 +624,57 @@ bool ProfileArgs::IsInitialized() const {
 void ProfileArgs::InternalSwap(ProfileArgs* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  _impl_.metadata_.InternalSwap(&other->_impl_.metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(ProfileArgs, _impl_.duration_)
       + sizeof(ProfileArgs::_impl_.duration_)
-      - PROTOBUF_FIELD_OFFSET(ProfileArgs, _impl_.thread_id_)>(
-          reinterpret_cast<char*>(&_impl_.thread_id_),
-          reinterpret_cast<char*>(&other->_impl_.thread_id_));
+      - PROTOBUF_FIELD_OFFSET(ProfileArgs, _impl_.metadata_)>(
+          reinterpret_cast<char*>(&_impl_.metadata_),
+          reinterpret_cast<char*>(&other->_impl_.metadata_));
+  swap(_impl_.args_, other->_impl_.args_);
+  swap(_impl_._oneof_case_[0], other->_impl_._oneof_case_[0]);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata ProfileArgs::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_profile_2eproto_getter, &descriptor_table_profile_2eproto_once,
+      file_level_metadata_profile_2eproto[0]);
+}
+
+// ===================================================================
+
+class CPUProfileArgs::_Internal {
+ public:
+};
+
+CPUProfileArgs::CPUProfileArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase(arena, is_message_owned) {
+  // @@protoc_insertion_point(arena_constructor:grpcagent.CPUProfileArgs)
+}
+CPUProfileArgs::CPUProfileArgs(const CPUProfileArgs& from)
+  : ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase() {
+  CPUProfileArgs* const _this = this; (void)_this;
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  // @@protoc_insertion_point(copy_constructor:grpcagent.CPUProfileArgs)
+}
+
+
+
+
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData CPUProfileArgs::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyImpl,
+    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeImpl,
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*CPUProfileArgs::GetClassData() const { return &_class_data_; }
+
+
+
+
+
+
+
+::PROTOBUF_NAMESPACE_ID::Metadata CPUProfileArgs::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_profile_2eproto_getter, &descriptor_table_profile_2eproto_once,
       file_level_metadata_profile_2eproto[1]);
@@ -485,208 +682,10 @@ void ProfileArgs::InternalSwap(ProfileArgs* other) {
 
 // ===================================================================
 
-class CPUProfileArgs::_Internal {
- public:
-  static const ::grpcagent::ProfileArgs& args(const CPUProfileArgs* msg);
-};
-
-const ::grpcagent::ProfileArgs&
-CPUProfileArgs::_Internal::args(const CPUProfileArgs* msg) {
-  return *msg->_impl_.args_;
-}
-CPUProfileArgs::CPUProfileArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grpcagent.CPUProfileArgs)
-}
-CPUProfileArgs::CPUProfileArgs(const CPUProfileArgs& from)
-  : ::PROTOBUF_NAMESPACE_ID::Message() {
-  CPUProfileArgs* const _this = this; (void)_this;
-  new (&_impl_) Impl_{
-      decltype(_impl_.args_){nullptr}
-    , /*decltype(_impl_._cached_size_)*/{}};
-
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  if (from._internal_has_args()) {
-    _this->_impl_.args_ = new ::grpcagent::ProfileArgs(*from._impl_.args_);
-  }
-  // @@protoc_insertion_point(copy_constructor:grpcagent.CPUProfileArgs)
-}
-
-inline void CPUProfileArgs::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
-  (void)arena;
-  (void)is_message_owned;
-  new (&_impl_) Impl_{
-      decltype(_impl_.args_){nullptr}
-    , /*decltype(_impl_._cached_size_)*/{}
-  };
-}
-
-CPUProfileArgs::~CPUProfileArgs() {
-  // @@protoc_insertion_point(destructor:grpcagent.CPUProfileArgs)
-  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
-  (void)arena;
-    return;
-  }
-  SharedDtor();
-}
-
-inline void CPUProfileArgs::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  if (this != internal_default_instance()) delete _impl_.args_;
-}
-
-void CPUProfileArgs::SetCachedSize(int size) const {
-  _impl_._cached_size_.Set(size);
-}
-
-void CPUProfileArgs::Clear() {
-// @@protoc_insertion_point(message_clear_start:grpcagent.CPUProfileArgs)
-  uint32_t cached_has_bits = 0;
-  // Prevent compiler warnings about cached_has_bits being unused
-  (void) cached_has_bits;
-
-  if (GetArenaForAllocation() == nullptr && _impl_.args_ != nullptr) {
-    delete _impl_.args_;
-  }
-  _impl_.args_ = nullptr;
-  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
-}
-
-const char* CPUProfileArgs::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
-#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
-  while (!ctx->Done(&ptr)) {
-    uint32_t tag;
-    ptr = ::_pbi::ReadTag(ptr, &tag);
-    switch (tag >> 3) {
-      // .grpcagent.ProfileArgs args = 1;
-      case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          ptr = ctx->ParseMessage(_internal_mutable_args(), ptr);
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      default:
-        goto handle_unusual;
-    }  // switch
-  handle_unusual:
-    if ((tag == 0) || ((tag & 7) == 4)) {
-      CHK_(ptr);
-      ctx->SetLastTag(tag);
-      goto message_done;
-    }
-    ptr = UnknownFieldParse(
-        tag,
-        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
-        ptr, ctx);
-    CHK_(ptr != nullptr);
-  }  // while
-message_done:
-  return ptr;
-failure:
-  ptr = nullptr;
-  goto message_done;
-#undef CHK_
-}
-
-uint8_t* CPUProfileArgs::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grpcagent.CPUProfileArgs)
-  uint32_t cached_has_bits = 0;
-  (void) cached_has_bits;
-
-  // .grpcagent.ProfileArgs args = 1;
-  if (this->_internal_has_args()) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(1, _Internal::args(this),
-        _Internal::args(this).GetCachedSize(), target, stream);
-  }
-
-  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
-  }
-  // @@protoc_insertion_point(serialize_to_array_end:grpcagent.CPUProfileArgs)
-  return target;
-}
-
-size_t CPUProfileArgs::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grpcagent.CPUProfileArgs)
-  size_t total_size = 0;
-
-  uint32_t cached_has_bits = 0;
-  // Prevent compiler warnings about cached_has_bits being unused
-  (void) cached_has_bits;
-
-  // .grpcagent.ProfileArgs args = 1;
-  if (this->_internal_has_args()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.args_);
-  }
-
-  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
-}
-
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData CPUProfileArgs::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    CPUProfileArgs::MergeImpl
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*CPUProfileArgs::GetClassData() const { return &_class_data_; }
-
-
-void CPUProfileArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<CPUProfileArgs*>(&to_msg);
-  auto& from = static_cast<const CPUProfileArgs&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grpcagent.CPUProfileArgs)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
-  (void) cached_has_bits;
-
-  if (from._internal_has_args()) {
-    _this->_internal_mutable_args()->::grpcagent::ProfileArgs::MergeFrom(
-        from._internal_args());
-  }
-  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-}
-
-void CPUProfileArgs::CopyFrom(const CPUProfileArgs& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grpcagent.CPUProfileArgs)
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-bool CPUProfileArgs::IsInitialized() const {
-  return true;
-}
-
-void CPUProfileArgs::InternalSwap(CPUProfileArgs* other) {
-  using std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_.args_, other->_impl_.args_);
-}
-
-::PROTOBUF_NAMESPACE_ID::Metadata CPUProfileArgs::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_profile_2eproto_getter, &descriptor_table_profile_2eproto_once,
-      file_level_metadata_profile_2eproto[2]);
-}
-
-// ===================================================================
-
 class HeapProfileArgs::_Internal {
  public:
-  static const ::grpcagent::ProfileArgs& args(const HeapProfileArgs* msg);
 };
 
-const ::grpcagent::ProfileArgs&
-HeapProfileArgs::_Internal::args(const HeapProfileArgs* msg) {
-  return *msg->_impl_.args_;
-}
 HeapProfileArgs::HeapProfileArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
@@ -697,15 +696,11 @@ HeapProfileArgs::HeapProfileArgs(const HeapProfileArgs& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   HeapProfileArgs* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.args_){nullptr}
-    , decltype(_impl_.track_allocations_){}
+      decltype(_impl_.track_allocations_){}
     , decltype(_impl_.redacted_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  if (from._internal_has_args()) {
-    _this->_impl_.args_ = new ::grpcagent::ProfileArgs(*from._impl_.args_);
-  }
   ::memcpy(&_impl_.track_allocations_, &from._impl_.track_allocations_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.redacted_) -
     reinterpret_cast<char*>(&_impl_.track_allocations_)) + sizeof(_impl_.redacted_));
@@ -717,8 +712,7 @@ inline void HeapProfileArgs::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.args_){nullptr}
-    , decltype(_impl_.track_allocations_){false}
+      decltype(_impl_.track_allocations_){false}
     , decltype(_impl_.redacted_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -735,7 +729,6 @@ HeapProfileArgs::~HeapProfileArgs() {
 
 inline void HeapProfileArgs::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  if (this != internal_default_instance()) delete _impl_.args_;
 }
 
 void HeapProfileArgs::SetCachedSize(int size) const {
@@ -748,10 +741,6 @@ void HeapProfileArgs::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  if (GetArenaForAllocation() == nullptr && _impl_.args_ != nullptr) {
-    delete _impl_.args_;
-  }
-  _impl_.args_ = nullptr;
   ::memset(&_impl_.track_allocations_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.redacted_) -
       reinterpret_cast<char*>(&_impl_.track_allocations_)) + sizeof(_impl_.redacted_));
@@ -764,25 +753,17 @@ const char* HeapProfileArgs::_InternalParse(const char* ptr, ::_pbi::ParseContex
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // .grpcagent.ProfileArgs args = 1;
+      // bool track_allocations = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          ptr = ctx->ParseMessage(_internal_mutable_args(), ptr);
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      // bool track_allocations = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           _impl_.track_allocations_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // bool redacted = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+      // bool redacted = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           _impl_.redacted_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -817,23 +798,16 @@ uint8_t* HeapProfileArgs::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .grpcagent.ProfileArgs args = 1;
-  if (this->_internal_has_args()) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(1, _Internal::args(this),
-        _Internal::args(this).GetCachedSize(), target, stream);
-  }
-
-  // bool track_allocations = 2;
+  // bool track_allocations = 1;
   if (this->_internal_track_allocations() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_track_allocations(), target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(1, this->_internal_track_allocations(), target);
   }
 
-  // bool redacted = 3;
+  // bool redacted = 2;
   if (this->_internal_redacted() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteBoolToArray(3, this->_internal_redacted(), target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_redacted(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -852,19 +826,12 @@ size_t HeapProfileArgs::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .grpcagent.ProfileArgs args = 1;
-  if (this->_internal_has_args()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.args_);
-  }
-
-  // bool track_allocations = 2;
+  // bool track_allocations = 1;
   if (this->_internal_track_allocations() != 0) {
     total_size += 1 + 1;
   }
 
-  // bool redacted = 3;
+  // bool redacted = 2;
   if (this->_internal_redacted() != 0) {
     total_size += 1 + 1;
   }
@@ -887,10 +854,6 @@ void HeapProfileArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const 
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_args()) {
-    _this->_internal_mutable_args()->::grpcagent::ProfileArgs::MergeFrom(
-        from._internal_args());
-  }
   if (from._internal_track_allocations() != 0) {
     _this->_internal_set_track_allocations(from._internal_track_allocations());
   }
@@ -917,28 +880,23 @@ void HeapProfileArgs::InternalSwap(HeapProfileArgs* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(HeapProfileArgs, _impl_.redacted_)
       + sizeof(HeapProfileArgs::_impl_.redacted_)
-      - PROTOBUF_FIELD_OFFSET(HeapProfileArgs, _impl_.args_)>(
-          reinterpret_cast<char*>(&_impl_.args_),
-          reinterpret_cast<char*>(&other->_impl_.args_));
+      - PROTOBUF_FIELD_OFFSET(HeapProfileArgs, _impl_.track_allocations_)>(
+          reinterpret_cast<char*>(&_impl_.track_allocations_),
+          reinterpret_cast<char*>(&other->_impl_.track_allocations_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata HeapProfileArgs::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_profile_2eproto_getter, &descriptor_table_profile_2eproto_once,
-      file_level_metadata_profile_2eproto[3]);
+      file_level_metadata_profile_2eproto[2]);
 }
 
 // ===================================================================
 
 class HeapSamplingArgs::_Internal {
  public:
-  static const ::grpcagent::ProfileArgs& args(const HeapSamplingArgs* msg);
 };
 
-const ::grpcagent::ProfileArgs&
-HeapSamplingArgs::_Internal::args(const HeapSamplingArgs* msg) {
-  return *msg->_impl_.args_;
-}
 HeapSamplingArgs::HeapSamplingArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
@@ -949,16 +907,12 @@ HeapSamplingArgs::HeapSamplingArgs(const HeapSamplingArgs& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   HeapSamplingArgs* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.args_){nullptr}
-    , decltype(_impl_.sample_interval_){}
+      decltype(_impl_.sample_interval_){}
     , decltype(_impl_.stack_depth_){}
     , decltype(_impl_.flags_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  if (from._internal_has_args()) {
-    _this->_impl_.args_ = new ::grpcagent::ProfileArgs(*from._impl_.args_);
-  }
   ::memcpy(&_impl_.sample_interval_, &from._impl_.sample_interval_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.flags_) -
     reinterpret_cast<char*>(&_impl_.sample_interval_)) + sizeof(_impl_.flags_));
@@ -970,8 +924,7 @@ inline void HeapSamplingArgs::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.args_){nullptr}
-    , decltype(_impl_.sample_interval_){uint64_t{0u}}
+      decltype(_impl_.sample_interval_){uint64_t{0u}}
     , decltype(_impl_.stack_depth_){0u}
     , decltype(_impl_.flags_){0u}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -989,7 +942,6 @@ HeapSamplingArgs::~HeapSamplingArgs() {
 
 inline void HeapSamplingArgs::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  if (this != internal_default_instance()) delete _impl_.args_;
 }
 
 void HeapSamplingArgs::SetCachedSize(int size) const {
@@ -1002,10 +954,6 @@ void HeapSamplingArgs::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  if (GetArenaForAllocation() == nullptr && _impl_.args_ != nullptr) {
-    delete _impl_.args_;
-  }
-  _impl_.args_ = nullptr;
   ::memset(&_impl_.sample_interval_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.flags_) -
       reinterpret_cast<char*>(&_impl_.sample_interval_)) + sizeof(_impl_.flags_));
@@ -1018,33 +966,25 @@ const char* HeapSamplingArgs::_InternalParse(const char* ptr, ::_pbi::ParseConte
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // .grpcagent.ProfileArgs args = 1;
+      // uint64 sample_interval = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          ptr = ctx->ParseMessage(_internal_mutable_args(), ptr);
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      // uint64 sample_interval = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           _impl_.sample_interval_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // uint32 stack_depth = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+      // uint32 stack_depth = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           _impl_.stack_depth_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // uint32 flags = 4;
-      case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+      // uint32 flags = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
           _impl_.flags_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -1079,29 +1019,22 @@ uint8_t* HeapSamplingArgs::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .grpcagent.ProfileArgs args = 1;
-  if (this->_internal_has_args()) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(1, _Internal::args(this),
-        _Internal::args(this).GetCachedSize(), target, stream);
-  }
-
-  // uint64 sample_interval = 2;
+  // uint64 sample_interval = 1;
   if (this->_internal_sample_interval() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(2, this->_internal_sample_interval(), target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(1, this->_internal_sample_interval(), target);
   }
 
-  // uint32 stack_depth = 3;
+  // uint32 stack_depth = 2;
   if (this->_internal_stack_depth() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(3, this->_internal_stack_depth(), target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(2, this->_internal_stack_depth(), target);
   }
 
-  // uint32 flags = 4;
+  // uint32 flags = 3;
   if (this->_internal_flags() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(4, this->_internal_flags(), target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(3, this->_internal_flags(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1120,24 +1053,17 @@ size_t HeapSamplingArgs::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .grpcagent.ProfileArgs args = 1;
-  if (this->_internal_has_args()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.args_);
-  }
-
-  // uint64 sample_interval = 2;
+  // uint64 sample_interval = 1;
   if (this->_internal_sample_interval() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_sample_interval());
   }
 
-  // uint32 stack_depth = 3;
+  // uint32 stack_depth = 2;
   if (this->_internal_stack_depth() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_stack_depth());
   }
 
-  // uint32 flags = 4;
+  // uint32 flags = 3;
   if (this->_internal_flags() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_flags());
   }
@@ -1160,10 +1086,6 @@ void HeapSamplingArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_args()) {
-    _this->_internal_mutable_args()->::grpcagent::ProfileArgs::MergeFrom(
-        from._internal_args());
-  }
   if (from._internal_sample_interval() != 0) {
     _this->_internal_set_sample_interval(from._internal_sample_interval());
   }
@@ -1193,24 +1115,20 @@ void HeapSamplingArgs::InternalSwap(HeapSamplingArgs* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(HeapSamplingArgs, _impl_.flags_)
       + sizeof(HeapSamplingArgs::_impl_.flags_)
-      - PROTOBUF_FIELD_OFFSET(HeapSamplingArgs, _impl_.args_)>(
-          reinterpret_cast<char*>(&_impl_.args_),
-          reinterpret_cast<char*>(&other->_impl_.args_));
+      - PROTOBUF_FIELD_OFFSET(HeapSamplingArgs, _impl_.sample_interval_)>(
+          reinterpret_cast<char*>(&_impl_.sample_interval_),
+          reinterpret_cast<char*>(&other->_impl_.sample_interval_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata HeapSamplingArgs::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_profile_2eproto_getter, &descriptor_table_profile_2eproto_once,
-      file_level_metadata_profile_2eproto[4]);
+      file_level_metadata_profile_2eproto[3]);
 }
 
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace grpcagent
 PROTOBUF_NAMESPACE_OPEN
-template<> PROTOBUF_NOINLINE ::grpcagent::ProfileArgs_MetadataEntry_DoNotUse*
-Arena::CreateMaybeMessage< ::grpcagent::ProfileArgs_MetadataEntry_DoNotUse >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grpcagent::ProfileArgs_MetadataEntry_DoNotUse >(arena);
-}
 template<> PROTOBUF_NOINLINE ::grpcagent::ProfileArgs*
 Arena::CreateMaybeMessage< ::grpcagent::ProfileArgs >(Arena* arena) {
   return Arena::CreateMessageInternal< ::grpcagent::ProfileArgs >(arena);

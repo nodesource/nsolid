@@ -87,8 +87,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     ProfileOptions options;
   };
 
-  using StartProfiling = int (GrpcAgent::*)(const nlohmann::json&,
-                                            ProfileStor&);
+  using StartProfiling = int (GrpcAgent::*)(const grpcagent::ProfileArgs& args,
+                                            ProfileOptions& opts);
 
   using ProfileStorMap = std::map<uint64_t, ProfileStor>;
 
@@ -151,7 +151,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
                    int status,
                    const std::string& profile);
 
-  int do_start_prof(const grpcagent::CommandRequest& req, ProfileType type);
+  int do_start_prof(const grpcagent::CommandRequest& req,
+                    const ProfileType& type);
+
+  int do_start_cpu_prof(const grpcagent::ProfileArgs& args,
+                        ProfileOptions& opts);
 
   void got_blocked_loop_msgs();
 

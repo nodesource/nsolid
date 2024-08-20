@@ -996,10 +996,10 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
     reconfigure(request);
   } else if (cmd == "cpu_profile") {
     do_start_prof(request, ProfileType::kCpu);
-  } else if (cmd == "heap_profile") {
-    do_start_prof(request, ProfileType::kHeapProf);
-  } else if (cmd == "heap_sampling") {
-    do_start_prof(request, ProfileType::kHeapSampl);
+  // } else if (cmd == "heap_profile") {
+  //   do_start_heap_prof(request);
+  // } else if (cmd == "heap_sampling") {
+  //   do_start_heap_sampl(request);
   }
 }
 
@@ -1195,25 +1195,68 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 }
 
 int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
-                             ProfileType type) {
-  StartProfiling start_profiling = nullptr;
+                             const ProfileType& type) {
+  const grpcagent::ProfileArgs& args = req.args().profile();
+  uint64_t thread_id = args.thread_id();
+  uint64_t duration = args.duration();
+  ProfileState& profile_state = profile_state_[type];
+  if (profile_state.pending_profiles_map.find(thread_id) !=
+      profile_state.pending_profiles_map.end()) {
+    // Send error message back
+    return UV_EEXIST;
+  }
+
+  int err;
   ProfileOptions options;
+  StartProfiling start_profiling = nullptr;
+  // metadata ?
   switch (type) {
     case ProfileType::kCpu:
-      start_profiling = &GrpcAgent::do_start_cpu_prof;
       options = CPUProfileOptions{/* initialize with appropriate values */};
+      start_profiling = &GrpcAgent::do_start_cpu_prof;
       break;
     case ProfileType::kHeapProf:
-      start_profiling = &GrpcAgent::do_start_heap_prof;
       options = HeapProfileOptions{/* initialize with appropriate values */};
       break;
     case ProfileType::kHeapSampl:
-      start_profiling = &GrpcAgent::do_start_heap_sampl;
       options = HeapSamplingOptions{/* initialize with appropriate values */};
       break;
     default:
       ASSERT(false);
   }
+
+  // Set common fields in options
+  std::visit([&](auto& opt) {
+    opt.thread_id = thread_id;
+    opt.duration = duration;
+    // opt.metadata = std::move(metadata);
+  }, options);
+
+  err = (this->*start_profiling)(args, options);
+
+  if (err < 0) {
+    // Send error message back
+    return err;
+  }
+
+  ProfileStor stor{ req.requestid(), uv_now(&loop_), std::move(options) };
+  auto iter = profile_state.pending_profiles_map.emplace(thread_id,
+                                                         std::move(stor));
+  ASSERT_NE(iter.second, false);
+  profile_state.nr_profiles++;
+
+  return 0;
+}
+
+int GrpcAgent::do_start_cpu_prof(const grpcagent::ProfileArgs& args,
+                                 ProfileOptions& opts) {
+  CPUProfileOptions& options = std::get<CPUProfileOptions>(opts);
+  int err = profile_collector_->StartCPUProfile(options);
+  if (err < 0) {
+    // Send error message back
+    return err;
+  }
+
   return 0;
 }
 

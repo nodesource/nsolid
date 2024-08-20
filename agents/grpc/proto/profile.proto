@@ -1,28 +1,30 @@
 syntax = "proto3";
 
-// import "common.proto";
+import "google/protobuf/struct.proto";
 
 package grpcagent;
 
 message ProfileArgs {
   uint64 thread_id = 1;
   uint64 duration = 2;
-  map<string, string> metadata = 3;
+  google.protobuf.Struct metadata = 3;
+  oneof args {
+    CPUProfileArgs cpu_profile = 4;
+    HeapProfileArgs heap_profile = 5;
+    HeapSamplingArgs heap_sampling = 6;
+  }
 }
 
 message CPUProfileArgs {
-  ProfileArgs args = 1;
 }
 
 message HeapProfileArgs {
-  ProfileArgs args = 1;
-  bool track_allocations = 2;
-  bool redacted = 3;
+  bool track_allocations = 1;
+  bool redacted = 2;
 }
 
 message HeapSamplingArgs {
-  ProfileArgs args = 1;
-  uint64 sample_interval = 2;
-  uint32 stack_depth = 3;
-  uint32 flags = 4;
+  uint64 sample_interval = 1;
+  uint32 stack_depth = 2;
+  uint32 flags = 3;
 }

@@ -111,9 +111,7 @@ class CommandArgs final :
   }
   enum ArgsCase {
     kReconfigure = 1,
-    kCpuProfile = 2,
-    kHeapProfile = 3,
-    kHeapSampling = 4,
+    kProfile = 2,
     ARGS_NOT_SET = 0,
   };
 
@@ -196,9 +194,7 @@ class CommandArgs final :
 
   enum : int {
     kReconfigureFieldNumber = 1,
-    kCpuProfileFieldNumber = 2,
-    kHeapProfileFieldNumber = 3,
-    kHeapSamplingFieldNumber = 4,
+    kProfileFieldNumber = 2,
   };
   // .grpcagent.ReconfigureBody reconfigure = 1;
   bool has_reconfigure() const;
@@ -218,59 +214,23 @@ class CommandArgs final :
       ::grpcagent::ReconfigureBody* reconfigure);
   ::grpcagent::ReconfigureBody* unsafe_arena_release_reconfigure();
 
-  // .grpcagent.CPUProfileArgs cpu_profile = 2;
-  bool has_cpu_profile() const;
+  // .grpcagent.ProfileArgs profile = 2;
+  bool has_profile() const;
   private:
-  bool _internal_has_cpu_profile() const;
+  bool _internal_has_profile() const;
   public:
-  void clear_cpu_profile();
-  const ::grpcagent::CPUProfileArgs& cpu_profile() const;
-  PROTOBUF_NODISCARD ::grpcagent::CPUProfileArgs* release_cpu_profile();
-  ::grpcagent::CPUProfileArgs* mutable_cpu_profile();
-  void set_allocated_cpu_profile(::grpcagent::CPUProfileArgs* cpu_profile);
+  void clear_profile();
+  const ::grpcagent::ProfileArgs& profile() const;
+  PROTOBUF_NODISCARD ::grpcagent::ProfileArgs* release_profile();
+  ::grpcagent::ProfileArgs* mutable_profile();
+  void set_allocated_profile(::grpcagent::ProfileArgs* profile);
   private:
-  const ::grpcagent::CPUProfileArgs& _internal_cpu_profile() const;
-  ::grpcagent::CPUProfileArgs* _internal_mutable_cpu_profile();
+  const ::grpcagent::ProfileArgs& _internal_profile() const;
+  ::grpcagent::ProfileArgs* _internal_mutable_profile();
   public:
-  void unsafe_arena_set_allocated_cpu_profile(
-      ::grpcagent::CPUProfileArgs* cpu_profile);
-  ::grpcagent::CPUProfileArgs* unsafe_arena_release_cpu_profile();
-
-  // .grpcagent.HeapProfileArgs heap_profile = 3;
-  bool has_heap_profile() const;
-  private:
-  bool _internal_has_heap_profile() const;
-  public:
-  void clear_heap_profile();
-  const ::grpcagent::HeapProfileArgs& heap_profile() const;
-  PROTOBUF_NODISCARD ::grpcagent::HeapProfileArgs* release_heap_profile();
-  ::grpcagent::HeapProfileArgs* mutable_heap_profile();
-  void set_allocated_heap_profile(::grpcagent::HeapProfileArgs* heap_profile);
-  private:
-  const ::grpcagent::HeapProfileArgs& _internal_heap_profile() const;
-  ::grpcagent::HeapProfileArgs* _internal_mutable_heap_profile();
-  public:
-  void unsafe_arena_set_allocated_heap_profile(
-      ::grpcagent::HeapProfileArgs* heap_profile);
-  ::grpcagent::HeapProfileArgs* unsafe_arena_release_heap_profile();
-
-  // .grpcagent.HeapSamplingArgs heap_sampling = 4;
-  bool has_heap_sampling() const;
-  private:
-  bool _internal_has_heap_sampling() const;
-  public:
-  void clear_heap_sampling();
-  const ::grpcagent::HeapSamplingArgs& heap_sampling() const;
-  PROTOBUF_NODISCARD ::grpcagent::HeapSamplingArgs* release_heap_sampling();
-  ::grpcagent::HeapSamplingArgs* mutable_heap_sampling();
-  void set_allocated_heap_sampling(::grpcagent::HeapSamplingArgs* heap_sampling);
-  private:
-  const ::grpcagent::HeapSamplingArgs& _internal_heap_sampling() const;
-  ::grpcagent::HeapSamplingArgs* _internal_mutable_heap_sampling();
-  public:
-  void unsafe_arena_set_allocated_heap_sampling(
-      ::grpcagent::HeapSamplingArgs* heap_sampling);
-  ::grpcagent::HeapSamplingArgs* unsafe_arena_release_heap_sampling();
+  void unsafe_arena_set_allocated_profile(
+      ::grpcagent::ProfileArgs* profile);
+  ::grpcagent::ProfileArgs* unsafe_arena_release_profile();
 
   void clear_args();
   ArgsCase args_case() const;
@@ -278,9 +238,7 @@ class CommandArgs final :
  private:
   class _Internal;
   void set_has_reconfigure();
-  void set_has_cpu_profile();
-  void set_has_heap_profile();
-  void set_has_heap_sampling();
+  void set_has_profile();
 
   inline bool has_args() const;
   inline void clear_has_args();
@@ -293,9 +251,7 @@ class CommandArgs final :
       constexpr ArgsUnion() : _constinit_{} {}
         ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized _constinit_;
       ::grpcagent::ReconfigureBody* reconfigure_;
-      ::grpcagent::CPUProfileArgs* cpu_profile_;
-      ::grpcagent::HeapProfileArgs* heap_profile_;
-      ::grpcagent::HeapSamplingArgs* heap_sampling_;
+      ::grpcagent::ProfileArgs* profile_;
     } args_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     uint32_t _oneof_case_[1];
@@ -750,201 +706,69 @@ inline ::grpcagent::ReconfigureBody* CommandArgs::mutable_reconfigure() {
   return _msg;
 }
 
-// .grpcagent.CPUProfileArgs cpu_profile = 2;
-inline bool CommandArgs::_internal_has_cpu_profile() const {
-  return args_case() == kCpuProfile;
+// .grpcagent.ProfileArgs profile = 2;
+inline bool CommandArgs::_internal_has_profile() const {
+  return args_case() == kProfile;
 }
-inline bool CommandArgs::has_cpu_profile() const {
-  return _internal_has_cpu_profile();
+inline bool CommandArgs::has_profile() const {
+  return _internal_has_profile();
 }
-inline void CommandArgs::set_has_cpu_profile() {
-  _impl_._oneof_case_[0] = kCpuProfile;
+inline void CommandArgs::set_has_profile() {
+  _impl_._oneof_case_[0] = kProfile;
 }
-inline ::grpcagent::CPUProfileArgs* CommandArgs::release_cpu_profile() {
-  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.cpu_profile)
-  if (_internal_has_cpu_profile()) {
+inline ::grpcagent::ProfileArgs* CommandArgs::release_profile() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.profile)
+  if (_internal_has_profile()) {
     clear_has_args();
-    ::grpcagent::CPUProfileArgs* temp = _impl_.args_.cpu_profile_;
+    ::grpcagent::ProfileArgs* temp = _impl_.args_.profile_;
     if (GetArenaForAllocation() != nullptr) {
       temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
     }
-    _impl_.args_.cpu_profile_ = nullptr;
+    _impl_.args_.profile_ = nullptr;
     return temp;
   } else {
     return nullptr;
   }
 }
-inline const ::grpcagent::CPUProfileArgs& CommandArgs::_internal_cpu_profile() const {
-  return _internal_has_cpu_profile()
-      ? *_impl_.args_.cpu_profile_
-      : reinterpret_cast< ::grpcagent::CPUProfileArgs&>(::grpcagent::_CPUProfileArgs_default_instance_);
+inline const ::grpcagent::ProfileArgs& CommandArgs::_internal_profile() const {
+  return _internal_has_profile()
+      ? *_impl_.args_.profile_
+      : reinterpret_cast< ::grpcagent::ProfileArgs&>(::grpcagent::_ProfileArgs_default_instance_);
 }
-inline const ::grpcagent::CPUProfileArgs& CommandArgs::cpu_profile() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.cpu_profile)
-  return _internal_cpu_profile();
+inline const ::grpcagent::ProfileArgs& CommandArgs::profile() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.profile)
+  return _internal_profile();
 }
-inline ::grpcagent::CPUProfileArgs* CommandArgs::unsafe_arena_release_cpu_profile() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.cpu_profile)
-  if (_internal_has_cpu_profile()) {
+inline ::grpcagent::ProfileArgs* CommandArgs::unsafe_arena_release_profile() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.profile)
+  if (_internal_has_profile()) {
     clear_has_args();
-    ::grpcagent::CPUProfileArgs* temp = _impl_.args_.cpu_profile_;
-    _impl_.args_.cpu_profile_ = nullptr;
+    ::grpcagent::ProfileArgs* temp = _impl_.args_.profile_;
+    _impl_.args_.profile_ = nullptr;
     return temp;
   } else {
     return nullptr;
   }
 }
-inline void CommandArgs::unsafe_arena_set_allocated_cpu_profile(::grpcagent::CPUProfileArgs* cpu_profile) {
+inline void CommandArgs::unsafe_arena_set_allocated_profile(::grpcagent::ProfileArgs* profile) {
   clear_args();
-  if (cpu_profile) {
-    set_has_cpu_profile();
-    _impl_.args_.cpu_profile_ = cpu_profile;
+  if (profile) {
+    set_has_profile();
+    _impl_.args_.profile_ = profile;
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.cpu_profile)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.profile)
 }
-inline ::grpcagent::CPUProfileArgs* CommandArgs::_internal_mutable_cpu_profile() {
-  if (!_internal_has_cpu_profile()) {
+inline ::grpcagent::ProfileArgs* CommandArgs::_internal_mutable_profile() {
+  if (!_internal_has_profile()) {
     clear_args();
-    set_has_cpu_profile();
-    _impl_.args_.cpu_profile_ = CreateMaybeMessage< ::grpcagent::CPUProfileArgs >(GetArenaForAllocation());
+    set_has_profile();
+    _impl_.args_.profile_ = CreateMaybeMessage< ::grpcagent::ProfileArgs >(GetArenaForAllocation());
   }
-  return _impl_.args_.cpu_profile_;
+  return _impl_.args_.profile_;
 }
-inline ::grpcagent::CPUProfileArgs* CommandArgs::mutable_cpu_profile() {
-  ::grpcagent::CPUProfileArgs* _msg = _internal_mutable_cpu_profile();
-  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.cpu_profile)
-  return _msg;
-}
-
-// .grpcagent.HeapProfileArgs heap_profile = 3;
-inline bool CommandArgs::_internal_has_heap_profile() const {
-  return args_case() == kHeapProfile;
-}
-inline bool CommandArgs::has_heap_profile() const {
-  return _internal_has_heap_profile();
-}
-inline void CommandArgs::set_has_heap_profile() {
-  _impl_._oneof_case_[0] = kHeapProfile;
-}
-inline ::grpcagent::HeapProfileArgs* CommandArgs::release_heap_profile() {
-  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.heap_profile)
-  if (_internal_has_heap_profile()) {
-    clear_has_args();
-    ::grpcagent::HeapProfileArgs* temp = _impl_.args_.heap_profile_;
-    if (GetArenaForAllocation() != nullptr) {
-      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-    }
-    _impl_.args_.heap_profile_ = nullptr;
-    return temp;
-  } else {
-    return nullptr;
-  }
-}
-inline const ::grpcagent::HeapProfileArgs& CommandArgs::_internal_heap_profile() const {
-  return _internal_has_heap_profile()
-      ? *_impl_.args_.heap_profile_
-      : reinterpret_cast< ::grpcagent::HeapProfileArgs&>(::grpcagent::_HeapProfileArgs_default_instance_);
-}
-inline const ::grpcagent::HeapProfileArgs& CommandArgs::heap_profile() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.heap_profile)
-  return _internal_heap_profile();
-}
-inline ::grpcagent::HeapProfileArgs* CommandArgs::unsafe_arena_release_heap_profile() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.heap_profile)
-  if (_internal_has_heap_profile()) {
-    clear_has_args();
-    ::grpcagent::HeapProfileArgs* temp = _impl_.args_.heap_profile_;
-    _impl_.args_.heap_profile_ = nullptr;
-    return temp;
-  } else {
-    return nullptr;
-  }
-}
-inline void CommandArgs::unsafe_arena_set_allocated_heap_profile(::grpcagent::HeapProfileArgs* heap_profile) {
-  clear_args();
-  if (heap_profile) {
-    set_has_heap_profile();
-    _impl_.args_.heap_profile_ = heap_profile;
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.heap_profile)
-}
-inline ::grpcagent::HeapProfileArgs* CommandArgs::_internal_mutable_heap_profile() {
-  if (!_internal_has_heap_profile()) {
-    clear_args();
-    set_has_heap_profile();
-    _impl_.args_.heap_profile_ = CreateMaybeMessage< ::grpcagent::HeapProfileArgs >(GetArenaForAllocation());
-  }
-  return _impl_.args_.heap_profile_;
-}
-inline ::grpcagent::HeapProfileArgs* CommandArgs::mutable_heap_profile() {
-  ::grpcagent::HeapProfileArgs* _msg = _internal_mutable_heap_profile();
-  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.heap_profile)
-  return _msg;
-}
-
-// .grpcagent.HeapSamplingArgs heap_sampling = 4;
-inline bool CommandArgs::_internal_has_heap_sampling() const {
-  return args_case() == kHeapSampling;
-}
-inline bool CommandArgs::has_heap_sampling() const {
-  return _internal_has_heap_sampling();
-}
-inline void CommandArgs::set_has_heap_sampling() {
-  _impl_._oneof_case_[0] = kHeapSampling;
-}
-inline ::grpcagent::HeapSamplingArgs* CommandArgs::release_heap_sampling() {
-  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.heap_sampling)
-  if (_internal_has_heap_sampling()) {
-    clear_has_args();
-    ::grpcagent::HeapSamplingArgs* temp = _impl_.args_.heap_sampling_;
-    if (GetArenaForAllocation() != nullptr) {
-      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-    }
-    _impl_.args_.heap_sampling_ = nullptr;
-    return temp;
-  } else {
-    return nullptr;
-  }
-}
-inline const ::grpcagent::HeapSamplingArgs& CommandArgs::_internal_heap_sampling() const {
-  return _internal_has_heap_sampling()
-      ? *_impl_.args_.heap_sampling_
-      : reinterpret_cast< ::grpcagent::HeapSamplingArgs&>(::grpcagent::_HeapSamplingArgs_default_instance_);
-}
-inline const ::grpcagent::HeapSamplingArgs& CommandArgs::heap_sampling() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.heap_sampling)
-  return _internal_heap_sampling();
-}
-inline ::grpcagent::HeapSamplingArgs* CommandArgs::unsafe_arena_release_heap_sampling() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.heap_sampling)
-  if (_internal_has_heap_sampling()) {
-    clear_has_args();
-    ::grpcagent::HeapSamplingArgs* temp = _impl_.args_.heap_sampling_;
-    _impl_.args_.heap_sampling_ = nullptr;
-    return temp;
-  } else {
-    return nullptr;
-  }
-}
-inline void CommandArgs::unsafe_arena_set_allocated_heap_sampling(::grpcagent::HeapSamplingArgs* heap_sampling) {
-  clear_args();
-  if (heap_sampling) {
-    set_has_heap_sampling();
-    _impl_.args_.heap_sampling_ = heap_sampling;
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.heap_sampling)
-}
-inline ::grpcagent::HeapSamplingArgs* CommandArgs::_internal_mutable_heap_sampling() {
-  if (!_internal_has_heap_sampling()) {
-    clear_args();
-    set_has_heap_sampling();
-    _impl_.args_.heap_sampling_ = CreateMaybeMessage< ::grpcagent::HeapSamplingArgs >(GetArenaForAllocation());
-  }
-  return _impl_.args_.heap_sampling_;
-}
-inline ::grpcagent::HeapSamplingArgs* CommandArgs::mutable_heap_sampling() {
-  ::grpcagent::HeapSamplingArgs* _msg = _internal_mutable_heap_sampling();
-  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.heap_sampling)
+inline ::grpcagent::ProfileArgs* CommandArgs::mutable_profile() {
+  ::grpcagent::ProfileArgs* _msg = _internal_mutable_profile();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.profile)
   return _msg;
 }
 
