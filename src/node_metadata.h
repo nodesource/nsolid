@@ -67,6 +67,7 @@ namespace node {
   V(curl)                                                                      \
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
+  V(zmq)                                                                       \
   V(cjs_module_lexer)
 
 #if HAVE_OPENSSL
