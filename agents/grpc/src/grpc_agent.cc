@@ -1,6 +1,5 @@
 #include "grpc_agent.h"
 #include "grpc_client.h"
-#include "grpc_utils.h"
 
 #include "asserts-cpp/asserts.h"
 #include "debug_utils-inl.h"
