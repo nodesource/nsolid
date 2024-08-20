@@ -10,6 +10,7 @@
 #include "nghttp2/nghttp2ver.h"
 #include "nlohmann/json.h"
 #include "node.h"
+#include "opentelemetry/version.h"
 #include "simdutf.h"
 #include "undici_version.h"
 #include "util.h"
@@ -141,6 +142,7 @@ Metadata::Versions::Versions() {
     NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MINOR)
     "."
     NODE_STRINGIFY(NLOHMANN_JSON_VERSION_PATCH);
+  opentelemetry = OPENTELEMETRY_VERSION;
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {
