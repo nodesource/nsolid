@@ -58,6 +58,7 @@ namespace node {
   V(curl)                                                                      \
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
+  V(zmq)                                                                       \
   V(base64)
 
 #if HAVE_OPENSSL

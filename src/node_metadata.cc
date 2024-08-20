@@ -1,4 +1,5 @@
 #include "node_metadata.h"
+#include <zmq.h>
 #include "acorn_version.h"
 #include "ada.h"
 #include "ares.h"
@@ -143,6 +144,12 @@ Metadata::Versions::Versions() {
     "."
     NODE_STRINGIFY(NLOHMANN_JSON_VERSION_PATCH);
   opentelemetry = OPENTELEMETRY_VERSION;
+  zmq =
+    NODE_STRINGIFY(ZMQ_VERSION_MAJOR)
+    "."
+    NODE_STRINGIFY(ZMQ_VERSION_MINOR)
+    "."
+    NODE_STRINGIFY(ZMQ_VERSION_PATCH);
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {
