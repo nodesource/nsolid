@@ -952,37 +952,12 @@ void GrpcAgent::got_proc_metrics() {
 }
 
 void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
-  switch (stor.type) {
-    case kCpu:
-    {
-      CPUProfileOptions opts = std::get<CPUProfileOptions>(stor.options);
-      do_got_prof(stor.type,
-                  opts.thread_id,
-                  stor.status,
-                  stor.profile);
-    }
-    break;
-    case kHeapProf:
-    {
-      HeapProfileOptions opts = std::get<HeapProfileOptions>(stor.options);
-      do_got_prof(stor.type,
-                  opts.thread_id,
-                  stor.status,
-                  stor.profile);
-    }
-    break;
-    case kHeapSampl:
-    {
-      HeapSamplingOptions opts = std::get<HeapSamplingOptions>(stor.options);
-      do_got_prof(stor.type,
-                  opts.thread_id,
-                  stor.status,
-                  stor.profile);
-    }
-    break;
-    default:
-      ASSERT(false);
-  }
+  uint64_t thread_id;
+  std::visit([&thread_id](auto& opt) {
+    thread_id = opt.thread_id;
+  }, stor.options);
+
+  do_got_prof(stor.type, thread_id, stor.status, stor.profile);
 }
 
 void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
@@ -997,10 +972,10 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
     reconfigure(request);
   } else if (cmd == "cpu_profile") {
     do_start_prof(request, ProfileType::kCpu);
-  // } else if (cmd == "heap_profile") {
-  //   do_start_heap_prof(request);
-  // } else if (cmd == "heap_sampling") {
-  //   do_start_heap_sampl(request);
+  } else if (cmd == "heap_profile") {
+    do_start_prof(request, ProfileType::kHeapProf);
+  } else if (cmd == "heap_sampling") {
+    do_start_prof(request, ProfileType::kHeapSampl);
   }
 }
 
