@@ -25,6 +25,7 @@ PROTOBUF_CONSTEXPR Asset::Asset(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.data_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.common_)*/nullptr
+  , /*decltype(_impl_.metadata_)*/nullptr
   , /*decltype(_impl_.thread_id_)*/uint64_t{0u}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AssetDefaultTypeInternal {
@@ -50,6 +51,7 @@ const uint32_t TableStruct_asset_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.common_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.thread_id_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.metadata_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.data_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
@@ -61,19 +63,22 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 
 const char descriptor_table_protodef_asset_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\013asset.proto\022\tgrpcagent\032\014common.proto\"S"
-  "\n\005Asset\022)\n\006common\030\001 \001(\0132\031.grpcagent.Comm"
-  "onResponse\022\021\n\tthread_id\030\002 \001(\004\022\014\n\004data\030\003 "
-  "\001(\tb\006proto3"
+  "\n\013asset.proto\022\tgrpcagent\032\014common.proto\032\034"
+  "google/protobuf/struct.proto\"~\n\005Asset\022)\n"
+  "\006common\030\001 \001(\0132\031.grpcagent.CommonResponse"
+  "\022\021\n\tthread_id\030\002 \001(\004\022)\n\010metadata\030\003 \001(\0132\027."
+  "google.protobuf.Struct\022\014\n\004data\030\004 \001(\tb\006pr"
+  "oto3"
   ;
-static const ::_pbi::DescriptorTable* const descriptor_table_asset_2eproto_deps[1] = {
+static const ::_pbi::DescriptorTable* const descriptor_table_asset_2eproto_deps[2] = {
   &::descriptor_table_common_2eproto,
+  &::descriptor_table_google_2fprotobuf_2fstruct_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_asset_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_asset_2eproto = {
-    false, false, 131, descriptor_table_protodef_asset_2eproto,
+    false, false, 204, descriptor_table_protodef_asset_2eproto,
     "asset.proto",
-    &descriptor_table_asset_2eproto_once, descriptor_table_asset_2eproto_deps, 1, 1,
+    &descriptor_table_asset_2eproto_once, descriptor_table_asset_2eproto_deps, 2, 1,
     schemas, file_default_instances, TableStruct_asset_2eproto::offsets,
     file_level_metadata_asset_2eproto, file_level_enum_descriptors_asset_2eproto,
     file_level_service_descriptors_asset_2eproto,
@@ -91,17 +96,28 @@ namespace grpcagent {
 class Asset::_Internal {
  public:
   static const ::grpcagent::CommonResponse& common(const Asset* msg);
+  static const ::PROTOBUF_NAMESPACE_ID::Struct& metadata(const Asset* msg);
 };
 
 const ::grpcagent::CommonResponse&
 Asset::_Internal::common(const Asset* msg) {
   return *msg->_impl_.common_;
 }
+const ::PROTOBUF_NAMESPACE_ID::Struct&
+Asset::_Internal::metadata(const Asset* msg) {
+  return *msg->_impl_.metadata_;
+}
 void Asset::clear_common() {
   if (GetArenaForAllocation() == nullptr && _impl_.common_ != nullptr) {
     delete _impl_.common_;
   }
   _impl_.common_ = nullptr;
+}
+void Asset::clear_metadata() {
+  if (GetArenaForAllocation() == nullptr && _impl_.metadata_ != nullptr) {
+    delete _impl_.metadata_;
+  }
+  _impl_.metadata_ = nullptr;
 }
 Asset::Asset(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -115,6 +131,7 @@ Asset::Asset(const Asset& from)
   new (&_impl_) Impl_{
       decltype(_impl_.data_){}
     , decltype(_impl_.common_){nullptr}
+    , decltype(_impl_.metadata_){nullptr}
     , decltype(_impl_.thread_id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
@@ -130,6 +147,9 @@ Asset::Asset(const Asset& from)
   if (from._internal_has_common()) {
     _this->_impl_.common_ = new ::grpcagent::CommonResponse(*from._impl_.common_);
   }
+  if (from._internal_has_metadata()) {
+    _this->_impl_.metadata_ = new ::PROTOBUF_NAMESPACE_ID::Struct(*from._impl_.metadata_);
+  }
   _this->_impl_.thread_id_ = from._impl_.thread_id_;
   // @@protoc_insertion_point(copy_constructor:grpcagent.Asset)
 }
@@ -141,6 +161,7 @@ inline void Asset::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.data_){}
     , decltype(_impl_.common_){nullptr}
+    , decltype(_impl_.metadata_){nullptr}
     , decltype(_impl_.thread_id_){uint64_t{0u}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -163,6 +184,7 @@ inline void Asset::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.data_.Destroy();
   if (this != internal_default_instance()) delete _impl_.common_;
+  if (this != internal_default_instance()) delete _impl_.metadata_;
 }
 
 void Asset::SetCachedSize(int size) const {
@@ -180,6 +202,10 @@ void Asset::Clear() {
     delete _impl_.common_;
   }
   _impl_.common_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && _impl_.metadata_ != nullptr) {
+    delete _impl_.metadata_;
+  }
+  _impl_.metadata_ = nullptr;
   _impl_.thread_id_ = uint64_t{0u};
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
@@ -206,9 +232,17 @@ const char* Asset::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
         } else
           goto handle_unusual;
         continue;
-      // string data = 3;
+      // .google.protobuf.Struct metadata = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+          ptr = ctx->ParseMessage(_internal_mutable_metadata(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // string data = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
           auto str = _internal_mutable_data();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -258,14 +292,21 @@ uint8_t* Asset::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(2, this->_internal_thread_id(), target);
   }
 
-  // string data = 3;
+  // .google.protobuf.Struct metadata = 3;
+  if (this->_internal_has_metadata()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(3, _Internal::metadata(this),
+        _Internal::metadata(this).GetCachedSize(), target, stream);
+  }
+
+  // string data = 4;
   if (!this->_internal_data().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_data().data(), static_cast<int>(this->_internal_data().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "grpcagent.Asset.data");
     target = stream->WriteStringMaybeAliased(
-        3, this->_internal_data(), target);
+        4, this->_internal_data(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -284,7 +325,7 @@ size_t Asset::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // string data = 3;
+  // string data = 4;
   if (!this->_internal_data().empty()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
@@ -296,6 +337,13 @@ size_t Asset::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.common_);
+  }
+
+  // .google.protobuf.Struct metadata = 3;
+  if (this->_internal_has_metadata()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.metadata_);
   }
 
   // uint64 thread_id = 2;
@@ -327,6 +375,10 @@ void Asset::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
   if (from._internal_has_common()) {
     _this->_internal_mutable_common()->::grpcagent::CommonResponse::MergeFrom(
         from._internal_common());
+  }
+  if (from._internal_has_metadata()) {
+    _this->_internal_mutable_metadata()->::PROTOBUF_NAMESPACE_ID::Struct::MergeFrom(
+        from._internal_metadata());
   }
   if (from._internal_thread_id() != 0) {
     _this->_internal_set_thread_id(from._internal_thread_id());

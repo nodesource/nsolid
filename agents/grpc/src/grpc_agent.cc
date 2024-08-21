@@ -1268,7 +1268,7 @@ int GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
 
 int GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
                                    ProfileOptions& opts) {
-  Debug("do_start_heap_prof\n");
+  Debug("do_start_heap_sampl\n");
   HeapSamplingOptions& options = std::get<HeapSamplingOptions>(opts);
   const auto& heap_sampling = args.heap_sampling();
   options.sample_interval = heap_sampling.sample_interval();

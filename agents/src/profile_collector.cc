@@ -23,6 +23,8 @@ ProfileCollector::~ProfileCollector() {
 }
 
 int ProfileCollector::StartCPUProfile(const CPUProfileOptions& options) {
+  fprintf(stderr, "ProfileCollector::StartCPUProfile: %ld, %ld\n",
+          options.thread_id, options.duration);
   return CpuProfiler::TakeProfile(GetEnvInst(options.thread_id),
                                   options.duration,
                                   profile_cb,

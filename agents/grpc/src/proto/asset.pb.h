@@ -31,6 +31,7 @@
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/unknown_field_set.h>
 #include "common.pb.h"
+#include <google/protobuf/struct.pb.h>
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_asset_2eproto
@@ -178,11 +179,12 @@ class Asset final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kDataFieldNumber = 3,
+    kDataFieldNumber = 4,
     kCommonFieldNumber = 1,
+    kMetadataFieldNumber = 3,
     kThreadIdFieldNumber = 2,
   };
-  // string data = 3;
+  // string data = 4;
   void clear_data();
   const std::string& data() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -214,6 +216,24 @@ class Asset final :
       ::grpcagent::CommonResponse* common);
   ::grpcagent::CommonResponse* unsafe_arena_release_common();
 
+  // .google.protobuf.Struct metadata = 3;
+  bool has_metadata() const;
+  private:
+  bool _internal_has_metadata() const;
+  public:
+  void clear_metadata();
+  const ::PROTOBUF_NAMESPACE_ID::Struct& metadata() const;
+  PROTOBUF_NODISCARD ::PROTOBUF_NAMESPACE_ID::Struct* release_metadata();
+  ::PROTOBUF_NAMESPACE_ID::Struct* mutable_metadata();
+  void set_allocated_metadata(::PROTOBUF_NAMESPACE_ID::Struct* metadata);
+  private:
+  const ::PROTOBUF_NAMESPACE_ID::Struct& _internal_metadata() const;
+  ::PROTOBUF_NAMESPACE_ID::Struct* _internal_mutable_metadata();
+  public:
+  void unsafe_arena_set_allocated_metadata(
+      ::PROTOBUF_NAMESPACE_ID::Struct* metadata);
+  ::PROTOBUF_NAMESPACE_ID::Struct* unsafe_arena_release_metadata();
+
   // uint64 thread_id = 2;
   void clear_thread_id();
   uint64_t thread_id() const;
@@ -233,6 +253,7 @@ class Asset final :
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr data_;
     ::grpcagent::CommonResponse* common_;
+    ::PROTOBUF_NAMESPACE_ID::Struct* metadata_;
     uint64_t thread_id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -355,7 +376,92 @@ inline void Asset::set_thread_id(uint64_t value) {
   // @@protoc_insertion_point(field_set:grpcagent.Asset.thread_id)
 }
 
-// string data = 3;
+// .google.protobuf.Struct metadata = 3;
+inline bool Asset::_internal_has_metadata() const {
+  return this != internal_default_instance() && _impl_.metadata_ != nullptr;
+}
+inline bool Asset::has_metadata() const {
+  return _internal_has_metadata();
+}
+inline const ::PROTOBUF_NAMESPACE_ID::Struct& Asset::_internal_metadata() const {
+  const ::PROTOBUF_NAMESPACE_ID::Struct* p = _impl_.metadata_;
+  return p != nullptr ? *p : reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Struct&>(
+      ::PROTOBUF_NAMESPACE_ID::_Struct_default_instance_);
+}
+inline const ::PROTOBUF_NAMESPACE_ID::Struct& Asset::metadata() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Asset.metadata)
+  return _internal_metadata();
+}
+inline void Asset::unsafe_arena_set_allocated_metadata(
+    ::PROTOBUF_NAMESPACE_ID::Struct* metadata) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.metadata_);
+  }
+  _impl_.metadata_ = metadata;
+  if (metadata) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.Asset.metadata)
+}
+inline ::PROTOBUF_NAMESPACE_ID::Struct* Asset::release_metadata() {
+  
+  ::PROTOBUF_NAMESPACE_ID::Struct* temp = _impl_.metadata_;
+  _impl_.metadata_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::PROTOBUF_NAMESPACE_ID::Struct* Asset::unsafe_arena_release_metadata() {
+  // @@protoc_insertion_point(field_release:grpcagent.Asset.metadata)
+  
+  ::PROTOBUF_NAMESPACE_ID::Struct* temp = _impl_.metadata_;
+  _impl_.metadata_ = nullptr;
+  return temp;
+}
+inline ::PROTOBUF_NAMESPACE_ID::Struct* Asset::_internal_mutable_metadata() {
+  
+  if (_impl_.metadata_ == nullptr) {
+    auto* p = CreateMaybeMessage<::PROTOBUF_NAMESPACE_ID::Struct>(GetArenaForAllocation());
+    _impl_.metadata_ = p;
+  }
+  return _impl_.metadata_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::Struct* Asset::mutable_metadata() {
+  ::PROTOBUF_NAMESPACE_ID::Struct* _msg = _internal_mutable_metadata();
+  // @@protoc_insertion_point(field_mutable:grpcagent.Asset.metadata)
+  return _msg;
+}
+inline void Asset::set_allocated_metadata(::PROTOBUF_NAMESPACE_ID::Struct* metadata) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.metadata_);
+  }
+  if (metadata) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(metadata));
+    if (message_arena != submessage_arena) {
+      metadata = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, metadata, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.metadata_ = metadata;
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.Asset.metadata)
+}
+
+// string data = 4;
 inline void Asset::clear_data() {
   _impl_.data_.ClearToEmpty();
 }
