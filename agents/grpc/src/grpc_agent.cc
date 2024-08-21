@@ -1173,10 +1173,11 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 }
 
 int GrpcAgent::take_snapshot(const grpcagent::CommandRequest& req) {
-  ret = Snapshot::TakeSnapshot(GetEnvInst(thread_id),
-                               redact,
-                               heap_snapshot_cb,
-                               weak_from_this());
+  const grpcagent::SnapshotArgs& args = req.args().snapshot();
+  // ret = Snapshot::TakeSnapshot(GetEnvInst(thread_id),
+  //                              redact,
+  //                              heap_snapshot_cb,
+  //                              weak_from_this());
 }
 
 int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
