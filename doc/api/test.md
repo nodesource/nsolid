@@ -473,6 +473,9 @@ used as an in depth coverage report.
 node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info
 ```
 
+* No test results are reported by this reporter.
+* This reporter should ideally be used alongside another reporter.
+
 ### Limitations
 
 The test runner's code coverage functionality does not support excluding
@@ -494,9 +497,9 @@ test('spies on a function', () => {
     return a + b;
   });
 
-  assert.strictEqual(sum.mock.calls.length, 0);
+  assert.strictEqual(sum.mock.callCount(), 0);
   assert.strictEqual(sum(3, 4), 7);
-  assert.strictEqual(sum.mock.calls.length, 1);
+  assert.strictEqual(sum.mock.callCount(), 1);
 
   const call = sum.mock.calls[0];
   assert.deepStrictEqual(call.arguments, [3, 4]);
@@ -518,9 +521,9 @@ test('spies on a function', () => {
     return a + b;
   });
 
-  assert.strictEqual(sum.mock.calls.length, 0);
+  assert.strictEqual(sum.mock.callCount(), 0);
   assert.strictEqual(sum(3, 4), 7);
-  assert.strictEqual(sum.mock.calls.length, 1);
+  assert.strictEqual(sum.mock.callCount(), 1);
 
   const call = sum.mock.calls[0];
   assert.deepStrictEqual(call.arguments, [3, 4]);
@@ -548,9 +551,9 @@ test('spies on an object method', (t) => {
   };
 
   t.mock.method(number, 'add');
-  assert.strictEqual(number.add.mock.calls.length, 0);
+  assert.strictEqual(number.add.mock.callCount(), 0);
   assert.strictEqual(number.add(3), 8);
-  assert.strictEqual(number.add.mock.calls.length, 1);
+  assert.strictEqual(number.add.mock.callCount(), 1);
 
   const call = number.add.mock.calls[0];
 
@@ -1186,6 +1189,12 @@ changes:
   * `signal` {AbortSignal} Allows aborting an in-progress test execution.
   * `testNamePatterns` {string|RegExp|Array} A String, RegExp or a RegExp Array,
     that can be used to only run tests whose name matches the provided pattern.
+    Test name patterns are interpreted as JavaScript regular expressions.
+    For each test that is executed, any corresponding test hooks, such as
+    `beforeEach()`, are also run.
+    **Default:** `undefined`.
+  * `testSkipPatterns` {string|RegExp|Array} A String, RegExp or a RegExp Array,
+    that can be used to exclude running tests whose name matches the provided pattern.
     Test name patterns are interpreted as JavaScript regular expressions.
     For each test that is executed, any corresponding test hooks, such as
     `beforeEach()`, are also run.
@@ -1845,9 +1854,9 @@ test('spies on an object method', (t) => {
   };
 
   t.mock.method(number, 'subtract');
-  assert.strictEqual(number.subtract.mock.calls.length, 0);
+  assert.strictEqual(number.subtract.mock.callCount(), 0);
   assert.strictEqual(number.subtract(3), 2);
-  assert.strictEqual(number.subtract.mock.calls.length, 1);
+  assert.strictEqual(number.subtract.mock.callCount(), 1);
 
   const call = number.subtract.mock.calls[0];
 
@@ -2086,7 +2095,7 @@ test('mocks setTimeout to be executed synchronously without having to actually w
 });
 ```
 
-Alternativelly, the `.tick` function can be called many times
+Alternatively, the `.tick` function can be called many times
 
 ```mjs
 import assert from 'node:assert';
@@ -3131,9 +3140,9 @@ behaves in the same fashion as the top level [`test()`][] function.
 test('top level test', async (t) => {
   await t.test(
     'This is a subtest',
-    { only: false, skip: false, concurrency: 1, todo: false, plan: 4 },
+    { only: false, skip: false, concurrency: 1, todo: false, plan: 1 },
     (t) => {
-      assert.ok('some relevant assertion here');
+      t.assert.ok('some relevant assertion here');
     },
   );
 });

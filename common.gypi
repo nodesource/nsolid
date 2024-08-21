@@ -118,6 +118,7 @@
       ['target_arch in "arm ia32 mips mipsel ppc"', {
         'v8_enable_pointer_compression': 0,
         'v8_enable_31bit_smis_on_64bit_arch': 0,
+        'v8_enable_sandbox': 0
       }],
       ['target_arch in "ppc64 s390x"', {
         'v8_enable_backtrace': 1,
@@ -557,6 +558,9 @@
               '-Wl,-brtl',
             ],
           }, {                                             # else it's `AIX`
+            'variables': {
+              'gcc_major': '<!(<(python) -c "import os; import subprocess; CXX=os.environ.get(\'CXX\', \'g++\'); subprocess.run([CXX, \'-dumpversion\'])")'
+            },
             # Disable the following compiler warning:
             #
             #   warning: visibility attribute not supported in this
@@ -567,7 +571,7 @@
             # out more relevant warnings.
             'cflags': [ '-Wno-attributes' ],
             'ldflags': [
-              '-Wl,-blibpath:/usr/lib:/lib:/opt/freeware/lib/pthread/ppc64',
+              '-Wl,-blibpath:/usr/lib:/lib:/opt/freeware/lib/gcc/powerpc-ibm-aix7.3.0.0/>(gcc_major)/pthread/ppc64:/opt/freeware/lib/gcc/powerpc-ibm-aix7.2.0.0/>(gcc_major)/pthread/ppc64:/opt/freeware/lib/pthread/ppc64',
             ],
           }],
         ],

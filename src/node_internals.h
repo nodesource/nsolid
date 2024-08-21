@@ -123,7 +123,6 @@ class NodeArrayBufferAllocator : public ArrayBufferAllocator {
   void* Allocate(size_t size) override;  // Defined in src/node.cc
   void* AllocateUninitialized(size_t size) override;
   void Free(void* data, size_t size) override;
-  void* Reallocate(void* data, size_t old_size, size_t size) override;
   virtual void RegisterPointer(void* data, size_t size) {
     total_mem_usage_.fetch_add(size, std::memory_order_relaxed);
   }
@@ -151,7 +150,6 @@ class DebuggingArrayBufferAllocator final : public NodeArrayBufferAllocator {
   void* Allocate(size_t size) override;
   void* AllocateUninitialized(size_t size) override;
   void Free(void* data, size_t size) override;
-  void* Reallocate(void* data, size_t old_size, size_t size) override;
   void RegisterPointer(void* data, size_t size) override;
   void UnregisterPointer(void* data, size_t size) override;
 
@@ -365,7 +363,7 @@ bool HasSignalJSHandler(int signum);
 
 #ifdef _WIN32
 typedef SYSTEMTIME TIME_TYPE;
-#else  // UNIX, OSX
+#else  // UNIX, macOS
 typedef struct tm TIME_TYPE;
 #endif
 

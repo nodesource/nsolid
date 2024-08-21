@@ -974,6 +974,18 @@ added: v11.8.0
 
 Use the specified file as a security policy.
 
+### `--experimental-require-module`
+
+<!-- YAML
+added: v20.17.0
+-->
+
+> Stability: 1.1 - Active Development
+
+Supports loading a synchronous ES module graph in `require()`.
+
+See [Loading ECMAScript modules using `require()`][].
+
 ### `--experimental-sea-config`
 
 <!-- YAML
@@ -1318,7 +1330,8 @@ accepted. Avoid using this option.
 added: v6.3.0
 -->
 
-Activate inspector on `host:port`. Default is `127.0.0.1:9229`.
+Activate inspector on `host:port`. Default is `127.0.0.1:9229`. If port `0` is
+specified, a random available port will be used.
 
 V8 inspector integration allows tools such as Chrome DevTools and IDEs to debug
 and profile Node.js instances. The tools attach to Node.js instances via a
@@ -1352,7 +1365,8 @@ added: v7.6.0
 -->
 
 Activate inspector on `host:port` and break at start of user script.
-Default `host:port` is `127.0.0.1:9229`.
+Default `host:port` is `127.0.0.1:9229`. If port `0` is specified,
+a random available port will be used.
 
 See [V8 Inspector integration for Node.js][] for further explanation on Node.js debugger.
 
@@ -1365,7 +1379,8 @@ added: v7.6.0
 Set the `host:port` to be used when the inspector is activated.
 Useful when activating the inspector by sending the `SIGUSR1` signal.
 
-Default host is `127.0.0.1`.
+Default host is `127.0.0.1`. If port `0` is specified,
+a random available port will be used.
 
 See the [security warning][] below regarding the `host`
 parameter usage.
@@ -1384,7 +1399,8 @@ added: v20.15.0
 -->
 
 Activate inspector on `host:port` and wait for debugger to be attached.
-Default `host:port` is `127.0.0.1:9229`.
+Default `host:port` is `127.0.0.1:9229`. If port `0` is specified,
+a random available port will be used.
 
 See [V8 Inspector integration for Node.js][] for further explanation on Node.js debugger.
 
@@ -1695,6 +1711,18 @@ changes:
 
 Identical to `-e` but prints the result.
 
+### `--experimental-print-required-tla`
+
+<!-- YAML
+added: v20.17.0
+-->
+
+This flag is only useful when `--experimental-require-module` is enabled.
+
+If the ES module being `require()`'d contains top-level await, this flag
+allows Node.js to evaluate the module, try to locate the
+top-level awaits, and print their location to help users find them.
+
 ### `--prof`
 
 <!-- YAML
@@ -1979,6 +2007,40 @@ added: v20.10.0
 
 The maximum number of test files that the test runner CLI will execute
 concurrently. The default value is `os.availableParallelism() - 1`.
+
+### `--test-coverage-exclude`
+
+<!-- YAML
+added:
+  - v22.5.0
+-->
+
+> Stability: 1 - Experimental
+
+Excludes specific files from code coverage using a glob pattern, which can match
+both absolute and relative file paths.
+
+This option may be specified multiple times to exclude multiple glob patterns.
+
+If both `--test-coverage-exclude` and `--test-coverage-include` are provided,
+files must meet **both** criteria to be included in the coverage report.
+
+### `--test-coverage-include`
+
+<!-- YAML
+added:
+  - v22.5.0
+-->
+
+> Stability: 1 - Experimental
+
+Includes specific files in code coverage using a glob pattern, which can match
+both absolute and relative file paths.
+
+This option may be specified multiple times to include multiple glob patterns.
+
+If both `--test-coverage-exclude` and `--test-coverage-include` are provided,
+files must meet **both** criteria to be included in the coverage report.
 
 ### `--test-force-exit`
 
@@ -2642,6 +2704,8 @@ one is included in the list below.
 * `--experimental-network-imports`
 * `--experimental-permission`
 * `--experimental-policy`
+* `--experimental-print-required-tla`
+* `--experimental-require-module`
 * `--experimental-shadow-realm`
 * `--experimental-specifier-resolution`
 * `--experimental-top-level-await`
@@ -3111,6 +3175,7 @@ done
 [ExperimentalWarning: `vm.measureMemory` is an experimental feature]: vm.md#vmmeasurememoryoptions
 [Fetch API]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 [File System Permissions]: permissions.md#file-system-permissions
+[Loading ECMAScript modules using `require()`]: modules.md#loading-ecmascript-modules-using-require
 [Module customization hooks]: module.md#customization-hooks
 [Module customization hooks: enabling]: module.md#enabling
 [Modules loaders]: packages.md#modules-loaders
