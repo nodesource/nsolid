@@ -158,6 +158,12 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   int do_start_cpu_prof(const grpcagent::ProfileArgs& args,
                         ProfileOptions& opts);
 
+  int do_start_heap_prof(const grpcagent::ProfileArgs& args,
+                         ProfileOptions& opts);
+
+  int do_start_heap_sampl(const grpcagent::ProfileArgs& args,
+                          ProfileOptions& opts);
+
   void got_blocked_loop_msgs();
 
   void got_logs();

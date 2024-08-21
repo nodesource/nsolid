@@ -885,7 +885,7 @@ void GrpcAgent::do_got_prof(ProfileType type,
   } else {
     // send profile chunks
     grpcagent::Asset asset;
-    PopulateCommon(asset.mutable_common(), "cpu_profile", prof_stor.req_id.c_str());
+    PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], prof_stor.req_id.c_str());
     asset.set_data(profile);
     prof_stor.stream->Write(std::move(asset));
   }
@@ -1198,9 +1198,11 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
       break;
     case ProfileType::kHeapProf:
       options = HeapProfileOptions{/* initialize with appropriate values */};
+      start_profiling = &GrpcAgent::do_start_heap_prof;
       break;
     case ProfileType::kHeapSampl:
       options = HeapSamplingOptions{/* initialize with appropriate values */};
+      start_profiling = &GrpcAgent::do_start_heap_sampl;
       break;
     default:
       ASSERT(false);
@@ -1235,6 +1237,44 @@ int GrpcAgent::do_start_cpu_prof(const grpcagent::ProfileArgs& args,
   Debug("do_start_cpu_prof\n");
   CPUProfileOptions& options = std::get<CPUProfileOptions>(opts);
   int err = profile_collector_->StartCPUProfile(options);
+  if (err < 0) {
+    // Send error message back
+    return err;
+  }
+
+  return 0;
+}
+
+int GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
+                                  ProfileOptions& opts) {
+  Debug("do_start_heap_prof\n");
+  HeapProfileOptions& options = std::get<HeapProfileOptions>(opts);
+  const auto& heap_profile = args.heap_profile();
+  options.track_allocations = heap_profile.track_allocations();
+  auto it = config_.find("redactSnapshots");
+  if (it != config_.end()) {
+    if (it->is_boolean()) {
+      options.redacted = *it;
+    }
+  }
+  int err = profile_collector_->StartHeapProfile(options);
+  if (err < 0) {
+    // Send error message back
+    return err;
+  }
+
+  return 0;
+}
+
+int GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
+                                   ProfileOptions& opts) {
+  Debug("do_start_heap_prof\n");
+  HeapSamplingOptions& options = std::get<HeapSamplingOptions>(opts);
+  const auto& heap_sampling = args.heap_sampling();
+  options.sample_interval = heap_sampling.sample_interval();
+  options.stack_depth = heap_sampling.stack_depth();
+  options.flags = static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());
+  int err = profile_collector_->StartHeapSampling(options);
   if (err < 0) {
     // Send error message back
     return err;
