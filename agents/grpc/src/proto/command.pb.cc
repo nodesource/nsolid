@@ -79,6 +79,7 @@ const uint32_t TableStruct_command_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   ~0u,  // no _inlined_string_donated_
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
+  ::_pbi::kInvalidFieldOffsetTag,
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandArgs, _impl_.args_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::CommandRequest, _internal_metadata_),
@@ -101,8 +102,8 @@ const uint32_t TableStruct_command_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::grpcagent::CommandArgs)},
-  { 9, -1, -1, sizeof(::grpcagent::CommandRequest)},
-  { 20, -1, -1, sizeof(::grpcagent::CommandResponse)},
+  { 10, -1, -1, sizeof(::grpcagent::CommandRequest)},
+  { 21, -1, -1, sizeof(::grpcagent::CommandResponse)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -113,24 +114,27 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_command_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\rcommand.proto\022\tgrpcagent\032\rprofile.prot"
-  "o\032\021reconfigure.proto\"s\n\013CommandArgs\0221\n\013r"
-  "econfigure\030\001 \001(\0132\032.grpcagent.Reconfigure"
-  "BodyH\000\022)\n\007profile\030\002 \001(\0132\026.grpcagent.Prof"
-  "ileArgsH\000B\006\n\004args\"w\n\016CommandRequest\022\021\n\tr"
-  "equestId\030\001 \001(\t\022\017\n\007version\030\002 \001(\r\022\n\n\002id\030\003 "
-  "\001(\t\022\017\n\007command\030\004 \001(\t\022$\n\004args\030\005 \001(\0132\026.grp"
-  "cagent.CommandArgs\"(\n\017CommandResponse\022\025\n"
-  "\rerror_message\030\001 \001(\tb\006proto3"
+  "o\032\021reconfigure.proto\032\016snapshot.proto\"\240\001\n"
+  "\013CommandArgs\0221\n\013reconfigure\030\001 \001(\0132\032.grpc"
+  "agent.ReconfigureBodyH\000\022)\n\007profile\030\002 \001(\013"
+  "2\026.grpcagent.ProfileArgsH\000\022+\n\010snapshot\030\003"
+  " \001(\0132\027.grpcagent.SnapshotArgsH\000B\006\n\004args\""
+  "w\n\016CommandRequest\022\021\n\trequestId\030\001 \001(\t\022\017\n\007"
+  "version\030\002 \001(\r\022\n\n\002id\030\003 \001(\t\022\017\n\007command\030\004 \001"
+  "(\t\022$\n\004args\030\005 \001(\0132\026.grpcagent.CommandArgs"
+  "\"(\n\017CommandResponse\022\025\n\rerror_message\030\001 \001"
+  "(\tb\006proto3"
   ;
-static const ::_pbi::DescriptorTable* const descriptor_table_command_2eproto_deps[2] = {
+static const ::_pbi::DescriptorTable* const descriptor_table_command_2eproto_deps[3] = {
   &::descriptor_table_profile_2eproto,
   &::descriptor_table_reconfigure_2eproto,
+  &::descriptor_table_snapshot_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_command_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_command_2eproto = {
-    false, false, 348, descriptor_table_protodef_command_2eproto,
+    false, false, 410, descriptor_table_protodef_command_2eproto,
     "command.proto",
-    &descriptor_table_command_2eproto_once, descriptor_table_command_2eproto_deps, 2, 3,
+    &descriptor_table_command_2eproto_once, descriptor_table_command_2eproto_deps, 3, 3,
     schemas, file_default_instances, TableStruct_command_2eproto::offsets,
     file_level_metadata_command_2eproto, file_level_enum_descriptors_command_2eproto,
     file_level_service_descriptors_command_2eproto,
@@ -149,6 +153,7 @@ class CommandArgs::_Internal {
  public:
   static const ::grpcagent::ReconfigureBody& reconfigure(const CommandArgs* msg);
   static const ::grpcagent::ProfileArgs& profile(const CommandArgs* msg);
+  static const ::grpcagent::SnapshotArgs& snapshot(const CommandArgs* msg);
 };
 
 const ::grpcagent::ReconfigureBody&
@@ -158,6 +163,10 @@ CommandArgs::_Internal::reconfigure(const CommandArgs* msg) {
 const ::grpcagent::ProfileArgs&
 CommandArgs::_Internal::profile(const CommandArgs* msg) {
   return *msg->_impl_.args_.profile_;
+}
+const ::grpcagent::SnapshotArgs&
+CommandArgs::_Internal::snapshot(const CommandArgs* msg) {
+  return *msg->_impl_.args_.snapshot_;
 }
 void CommandArgs::set_allocated_reconfigure(::grpcagent::ReconfigureBody* reconfigure) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
@@ -207,6 +216,30 @@ void CommandArgs::clear_profile() {
     clear_has_args();
   }
 }
+void CommandArgs::set_allocated_snapshot(::grpcagent::SnapshotArgs* snapshot) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_args();
+  if (snapshot) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(snapshot));
+    if (message_arena != submessage_arena) {
+      snapshot = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, snapshot, submessage_arena);
+    }
+    set_has_snapshot();
+    _impl_.args_.snapshot_ = snapshot;
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandArgs.snapshot)
+}
+void CommandArgs::clear_snapshot() {
+  if (_internal_has_snapshot()) {
+    if (GetArenaForAllocation() == nullptr) {
+      delete _impl_.args_.snapshot_;
+    }
+    clear_has_args();
+  }
+}
 CommandArgs::CommandArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
@@ -232,6 +265,11 @@ CommandArgs::CommandArgs(const CommandArgs& from)
     case kProfile: {
       _this->_internal_mutable_profile()->::grpcagent::ProfileArgs::MergeFrom(
           from._internal_profile());
+      break;
+    }
+    case kSnapshot: {
+      _this->_internal_mutable_snapshot()->::grpcagent::SnapshotArgs::MergeFrom(
+          from._internal_snapshot());
       break;
     }
     case ARGS_NOT_SET: {
@@ -288,6 +326,12 @@ void CommandArgs::clear_args() {
       }
       break;
     }
+    case kSnapshot: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.args_.snapshot_;
+      }
+      break;
+    }
     case ARGS_NOT_SET: {
       break;
     }
@@ -324,6 +368,14 @@ const char* CommandArgs::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_profile(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .grpcagent.SnapshotArgs snapshot = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+          ptr = ctx->ParseMessage(_internal_mutable_snapshot(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -371,6 +423,13 @@ uint8_t* CommandArgs::_InternalSerialize(
         _Internal::profile(this).GetCachedSize(), target, stream);
   }
 
+  // .grpcagent.SnapshotArgs snapshot = 3;
+  if (_internal_has_snapshot()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(3, _Internal::snapshot(this),
+        _Internal::snapshot(this).GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -400,6 +459,13 @@ size_t CommandArgs::ByteSizeLong() const {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
           *_impl_.args_.profile_);
+      break;
+    }
+    // .grpcagent.SnapshotArgs snapshot = 3;
+    case kSnapshot: {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.args_.snapshot_);
       break;
     }
     case ARGS_NOT_SET: {
@@ -433,6 +499,11 @@ void CommandArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PR
     case kProfile: {
       _this->_internal_mutable_profile()->::grpcagent::ProfileArgs::MergeFrom(
           from._internal_profile());
+      break;
+    }
+    case kSnapshot: {
+      _this->_internal_mutable_snapshot()->::grpcagent::SnapshotArgs::MergeFrom(
+          from._internal_snapshot());
       break;
     }
     case ARGS_NOT_SET: {

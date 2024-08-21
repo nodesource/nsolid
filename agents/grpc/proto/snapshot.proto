@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "google/protobuf/struct.proto";
+
+package grpcagent;
+
+message SnapshotArgs {
+  uint64 thread_id = 1;
+  google.protobuf.Struct metadata = 2;
+}
