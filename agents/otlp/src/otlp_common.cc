@@ -1,6 +1,8 @@
 #include "otlp_common.h"
 // NOLINTNEXTLINE(build/c++11)
 #include <chrono>
+// NOLINTNEXTLINE(build/c++11)
+#include <mutex>
 #include "asserts-cpp/asserts.h"
 #include "env-inl.h"
 #include "nlohmann/json.hpp"
@@ -55,9 +57,17 @@ namespace otlp {
 static const size_t kTraceIdSize             = 32;
 static const size_t kSpanIdSize              = 16;
 
-static time_point process_start(duration_cast<time_point::duration>(
-    microseconds(static_cast<uint64_t>(
-        performance::performance_process_start_timestamp))));
+static std::once_flag process_start_flag;
+
+static time_point process_start() {
+  static time_point start;
+  std::call_once(process_start_flag, []() {
+    start = time_point(duration_cast<time_point::duration>(
+      microseconds(static_cast<uint64_t>(
+          performance::performance_process_start_timestamp))));
+  });
+  return start;
+}
 
 static std::vector<std::string> discarded_metrics = {
   "thread_id", "timestamp"
@@ -169,7 +179,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
       case MetricsType::ECounter:                                              \
       {                                                                        \
         add_counter(metrics,                                                   \
-                    process_start,                                             \
+                    process_start(),                                           \
                     end,                                                       \
                     #CName,                                                    \
                     Unit,                                                      \
@@ -179,7 +189,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
       break;                                                                   \
       case MetricsType::EGauge:                                                \
       {                                                                        \
-        add_gauge(metrics, process_start, end, #CName, Unit, type, value);     \
+        add_gauge(metrics, process_start(), end, #CName, Unit, type, value);   \
       }                                                                        \
       break;                                                                   \
       default:                                                                 \
@@ -228,7 +238,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
       case MetricsType::ECounter:                                              \
       {                                                                        \
         add_counter(metrics,                                                   \
-                    process_start,                                             \
+                    process_start(),                                           \
                     end,                                                       \
                     #CName,                                                    \
                     Unit,                                                      \
@@ -240,7 +250,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
       case MetricsType::EGauge:                                                \
       {                                                                        \
         add_gauge(metrics,                                                     \
-                  process_start,                                               \
+                  process_start(),                                             \
                   end,                                                         \
                   #CName,                                                      \
                   Unit,                                                        \
