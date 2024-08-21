@@ -2,6 +2,18 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-08-23, Version 20.17.0-nsolid-v5.3.3 'Iron'
+
+### Commits
+
+* \[[`a60cc53ec1`](https://github.com/nodesource/nsolid/commit/a60cc53ec1)] - **src:** fix heapSampling crash if sampleInterval is 0 (Santiago Gimeno) [nodesource/nsolid#171](https://github.com/nodesource/nsolid/pull/171)
+* \[[`19ae4c17a5`](https://github.com/nodesource/nsolid/commit/19ae4c17a5)] - Merge tag 'v20.17.0' into node-v20.17.0-nsolid-v5.3.3-release (Trevor Norris)
+* \[[`3ea993c2e3`](https://github.com/nodesource/nsolid/commit/3ea993c2e3)] - **agents**: implement SpanCollector helper class (Santiago Gimeno) [nodesource/nsolid#160](https://github.com/nodesource/nsolid/pull/160)
+* \[[`45f251344f`](https://github.com/nodesource/nsolid/commit/45f251344f)] - **agents**: preliminar changes to support logs in otlp (Santiago Gimeno) [nodesource/nsolid#152](https://github.com/nodesource/nsolid/pull/152)
+* \[[`3e19163718`](https://github.com/nodesource/nsolid/commit/3e19163718)] - **test**: include missing \<algorithm> header (Santiago Gimeno) [nodesource/nsolid#159](https://github.com/nodesource/nsolid/pull/159)
+* \[[`6ac07af10a`](https://github.com/nodesource/nsolid/commit/6ac07af10a)] - **deps**: update grpc to 1.65.2 (Santiago Gimeno) [nodesource/nsolid#159](https://github.com/nodesource/nsolid/pull/159)
+* \[[`5e0f55d8b8`](https://github.com/nodesource/nsolid/commit/5e0f55d8b8)] - **tools**: add update-grpc updater (Santiago Gimeno) [nodesource/nsolid#159](https://github.com/nodesource/nsolid/pull/159)
+
 ## 2024-07-24, Version 20.16.0-nsolid-v5.3.2 'Iron'
 
 ### Commits
