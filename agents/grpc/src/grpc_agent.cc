@@ -851,50 +851,6 @@ void GrpcAgent::do_stop() {
   shutdown_.close();
 }
 
-void GrpcAgent::do_got_prof(ProfileType type,
-                            uint64_t thread_id,
-                            int status,
-                            const std::string& profile) {
-  Debug("do_got_prof: %ld\n", profile.length());
-  bool profileStreamComplete = profile.length() == 0;
-  ProfileState& profile_state = profile_state_[type];
-  // get and remove associated data from pending_profiles_map
-  auto it = profile_state.pending_profiles_map.find(thread_id);
-  ASSERT(it != profile_state.pending_profiles_map.end());
-  ProfileStor prof_stor = it->second;
-  if (profileStreamComplete) {
-    profile_state.pending_profiles_map.erase(it);
-    profile_state.nr_profiles--;
-  }
-
-  if (profile_on_exit_ && thread_id == 0) {
-    // Store the req_id of the main thread profile
-    profile_state.last_main_profile = prof_stor.req_id;
-  }
-
-  // get start_ts and metadata from pending_profiles_map
-  if (status < 0) {
-    // Send error message back
-    return;
-  }
-
-  // if the profile is complete signal that
-  if (profileStreamComplete) {
-    prof_stor.stream->WritesDone();
-  } else {
-    // send profile chunks
-    grpcagent::Asset asset;
-    PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], prof_stor.req_id.c_str());
-    // asset.mutable_metadata()->CopyFrom(prof_stor.metadata_pb);
-    asset.set_data(profile);
-    prof_stor.stream->Write(std::move(asset));
-  }
-
-  // Don't continue with the exit procedure until all profiles have finished.
-  // check_exit_on_profile();
-}
-
-
 void GrpcAgent::got_spans(const UniqRecordables& recordables) {
   Debug("# Spans Exporting: %ld\n", recordables.size());
   auto result =
@@ -965,7 +921,6 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     metadata = opt.metadata_pb;
   }, stor.options);
 
-  // do_got_prof(stor.type, thread_id, stor.status, stor.profile);
   bool profileStreamComplete = stor.profile.length() == 0;
   ProfileState& profile_state = profile_state_[stor.type];
   // get and remove associated data from pending_profiles_map
@@ -1021,6 +976,8 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
     do_start_prof(request, ProfileType::kHeapProf);
   } else if (cmd == "heap_sampling") {
     do_start_prof(request, ProfileType::kHeapSampl);
+  } else if (cmd == "snapshot") {
+    take_snapshot(request);
   }
 }
 
@@ -1213,6 +1170,13 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
   // There's no need to stop the timer previously as uv_timer_start() stops the
   // timer if active.
   return metrics_timer_.start(metrics_timer_cb_, period, period, weak_from_this());
+}
+
+int GrpcAgent::take_snapshot(const grpcagent::CommandRequest& req) {
+  ret = Snapshot::TakeSnapshot(GetEnvInst(thread_id),
+                               redact,
+                               heap_snapshot_cb,
+                               weak_from_this());
 }
 
 int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,

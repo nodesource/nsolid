@@ -146,11 +146,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void do_start();
 
   void do_stop();
-  
-  void do_got_prof(ProfileType type,
-                   uint64_t thread_id,
-                   int status,
-                   const std::string& profile);
 
   int do_start_prof(const grpcagent::CommandRequest& req,
                     const ProfileType& type);
@@ -191,6 +186,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void setup_blocked_loop_hooks();
 
   int setup_metrics_timer(uint64_t period);
+
+  int take_snapshot(const grpcagent::CommandRequest& req);
 
   void update_tracer(uint32_t flags);
 
