@@ -130,6 +130,11 @@ void AssetStream::Write(grpcagent::Asset&& asset) {
   NextWrite(); 
 }
 
+void AssetStream::WritesDone() {
+  StartWritesDone();
+  RemoveHold();
+}
+
 GrpcClient::GrpcClient() {
 }
 

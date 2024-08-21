@@ -880,8 +880,7 @@ void GrpcAgent::do_got_prof(ProfileType type,
 
   // if the profile is complete signal that
   if (profileStreamComplete) {
-    prof_stor.stream->StartWritesDone();
-    prof_stor.stream->RemoveHold();
+    prof_stor.stream->WritesDone();
   } else {
     // send profile chunks
     grpcagent::Asset asset;

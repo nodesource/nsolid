@@ -75,6 +75,8 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
 
   void Write(grpcagent::Asset&& resp);
 
+  void WritesDone();
+
  private:
 
   void NextWrite();
