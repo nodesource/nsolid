@@ -1,6 +1,7 @@
 #include "grpc_client.h"
 #include "debug_utils-inl.h"
 #include "grpc_agent.h"
+#include "asserts-cpp/asserts.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client_options.h"
 
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
@@ -89,6 +90,7 @@ AssetStream::AssetStream(
     grpcagent::NSolidService::StubInterface* stub,
     const std::string& agent_id,
     const std::string& saas) {
+  ASSERT_EQ(0, lock_.init(true));
   context_.AddMetadata("nsolid-agent-id", agent_id);
   if (!saas.empty()) {
     context_.AddMetadata("nsolid-saas-token", saas);
@@ -108,13 +110,15 @@ void AssetStream::OnDone(const ::grpc::Status& s) {
 }
 
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
-  Debug("AssetStream::OnWriteDone: %d\n", ok);
+  Debug("[%ld] AssetStream::OnWriteDone: %d\n", pthread_self(), ok);
+  nsuv::ns_mutex::scoped_lock lock(lock_);
   write_state_.write_done = true;
   NextWrite();
 }
 
 void AssetStream::NextWrite() {
   if (write_state_.write_done && assets_q_.dequeue(write_state_.asset)) {
+    Debug("[%ld] AssetStream::StartWrite\n", pthread_self());
     StartWrite(&write_state_.asset);
     write_state_.write_done = false;
   }
@@ -122,6 +126,7 @@ void AssetStream::NextWrite() {
 
 void AssetStream::Write(grpcagent::Asset&& asset) {
   assets_q_.enqueue(std::move(asset));
+  nsuv::ns_mutex::scoped_lock lock(lock_);
   NextWrite(); 
 }
 

@@ -886,6 +886,7 @@ void GrpcAgent::do_got_prof(ProfileType type,
     // send profile chunks
     grpcagent::Asset asset;
     PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], prof_stor.req_id.c_str());
+    // asset.mutable_metadata()->CopyFrom(prof_stor.metadata_pb);
     asset.set_data(profile);
     prof_stor.stream->Write(std::move(asset));
   }
@@ -957,12 +958,52 @@ void GrpcAgent::got_proc_metrics() {
 }
 
 void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
+  Debug("got_profile: %ld\n", stor.profile.length());
+  google::protobuf::Struct metadata;
   uint64_t thread_id;
-  std::visit([&thread_id](auto& opt) {
+  std::visit([&metadata,&thread_id](auto& opt) {
     thread_id = opt.thread_id;
+    metadata = opt.metadata_pb;
   }, stor.options);
 
-  do_got_prof(stor.type, thread_id, stor.status, stor.profile);
+  // do_got_prof(stor.type, thread_id, stor.status, stor.profile);
+  bool profileStreamComplete = stor.profile.length() == 0;
+  ProfileState& profile_state = profile_state_[stor.type];
+  // get and remove associated data from pending_profiles_map
+  auto it = profile_state.pending_profiles_map.find(thread_id);
+  ASSERT(it != profile_state.pending_profiles_map.end());
+  ProfileStor prof_stor = it->second;
+  if (profileStreamComplete) {
+    profile_state.pending_profiles_map.erase(it);
+    profile_state.nr_profiles--;
+  }
+
+  if (profile_on_exit_ && thread_id == 0) {
+    // Store the req_id of the main thread profile
+    profile_state.last_main_profile = prof_stor.req_id;
+  }
+
+  // get start_ts and metadata from pending_profiles_map
+  if (stor.status < 0) {
+    // Send error message back
+    return;
+  }
+
+  // if the profile is complete signal that
+  if (profileStreamComplete) {
+    prof_stor.stream->StartWritesDone();
+    prof_stor.stream->RemoveHold();
+  } else {
+    // send profile chunks
+    grpcagent::Asset asset;
+    PopulateCommon(asset.mutable_common(), ProfileTypeStr[stor.type], prof_stor.req_id.c_str());
+    asset.mutable_metadata()->CopyFrom(metadata);
+    asset.set_data(stor.profile);
+    prof_stor.stream->Write(std::move(asset));
+  }
+
+  // Don't continue with the exit procedure until all profiles have finished.
+  // check_exit_on_profile();
 }
 
 void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {

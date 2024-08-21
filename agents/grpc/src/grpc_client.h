@@ -84,6 +84,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
   grpcagent::EventResponse event_response_;
   WriteState write_state_;
   TSQueue<grpcagent::Asset> assets_q_;
+  nsuv::ns_mutex lock_;
 };
 
 class GrpcClient {
