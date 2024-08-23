@@ -977,7 +977,7 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
   } else if (cmd == "heap_sampling") {
     do_start_prof(request, ProfileType::kHeapSampl);
   } else if (cmd == "snapshot") {
-    take_snapshot(request);
+    do_start_prof(request, ProfileType::kHeapSnapshot);
   }
 }
 
@@ -1230,6 +1230,9 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
       options = HeapSamplingOptions{/* initialize with appropriate values */};
       start_profiling = &GrpcAgent::do_start_heap_sampl;
       break;
+    case ProfileType::kHeapSnapshot:
+      start_profiling = &GrpcAgent::do_start_heapsnapshot;
+      break;
     default:
       ASSERT(false);
   }
@@ -1297,6 +1300,23 @@ int GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
   Debug("do_start_heap_sampl\n");
   HeapSamplingOptions& options = std::get<HeapSamplingOptions>(opts);
   const auto& heap_sampling = args.heap_sampling();
+  options.sample_interval = heap_sampling.sample_interval();
+  options.stack_depth = heap_sampling.stack_depth();
+  options.flags = static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());
+  int err = profile_collector_->StartHeapSampling(options);
+  if (err < 0) {
+    // Send error message back
+    return err;
+  }
+
+  return 0;
+}
+
+int GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
+                                      ProfileOptions& opts) {
+  Debug("do_start_heap_snapshot\n");
+  HeapSnapshotOptions& options = std::get<HeapSnapshotOptions>(opts);
+  const auto& snapshot = args.snapshot();
   options.sample_interval = heap_sampling.sample_interval();
   options.stack_depth = heap_sampling.stack_depth();
   options.flags = static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());

@@ -12,6 +12,7 @@ message ProfileArgs {
     CPUProfileArgs cpu_profile = 4;
     HeapProfileArgs heap_profile = 5;
     HeapSamplingArgs heap_sampling = 6;
+    HeapSnapshotArgs heap_snapshot = 7;
   }
 }
 
@@ -27,4 +28,8 @@ message HeapSamplingArgs {
   uint64 sample_interval = 1;
   uint32 stack_depth = 2;
   uint32 flags = 3;
+}
+
+message HeapSnapshotArgs {
+  bool redacted = 1;
 }

@@ -32,7 +32,6 @@
 #include <google/protobuf/unknown_field_set.h>
 #include "profile.pb.h"
 #include "reconfigure.pb.h"
-#include "snapshot.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_command_2eproto
@@ -113,7 +112,6 @@ class CommandArgs final :
   enum ArgsCase {
     kReconfigure = 1,
     kProfile = 2,
-    kSnapshot = 3,
     ARGS_NOT_SET = 0,
   };
 
@@ -197,7 +195,6 @@ class CommandArgs final :
   enum : int {
     kReconfigureFieldNumber = 1,
     kProfileFieldNumber = 2,
-    kSnapshotFieldNumber = 3,
   };
   // .grpcagent.ReconfigureBody reconfigure = 1;
   bool has_reconfigure() const;
@@ -235,24 +232,6 @@ class CommandArgs final :
       ::grpcagent::ProfileArgs* profile);
   ::grpcagent::ProfileArgs* unsafe_arena_release_profile();
 
-  // .grpcagent.SnapshotArgs snapshot = 3;
-  bool has_snapshot() const;
-  private:
-  bool _internal_has_snapshot() const;
-  public:
-  void clear_snapshot();
-  const ::grpcagent::SnapshotArgs& snapshot() const;
-  PROTOBUF_NODISCARD ::grpcagent::SnapshotArgs* release_snapshot();
-  ::grpcagent::SnapshotArgs* mutable_snapshot();
-  void set_allocated_snapshot(::grpcagent::SnapshotArgs* snapshot);
-  private:
-  const ::grpcagent::SnapshotArgs& _internal_snapshot() const;
-  ::grpcagent::SnapshotArgs* _internal_mutable_snapshot();
-  public:
-  void unsafe_arena_set_allocated_snapshot(
-      ::grpcagent::SnapshotArgs* snapshot);
-  ::grpcagent::SnapshotArgs* unsafe_arena_release_snapshot();
-
   void clear_args();
   ArgsCase args_case() const;
   // @@protoc_insertion_point(class_scope:grpcagent.CommandArgs)
@@ -260,7 +239,6 @@ class CommandArgs final :
   class _Internal;
   void set_has_reconfigure();
   void set_has_profile();
-  void set_has_snapshot();
 
   inline bool has_args() const;
   inline void clear_has_args();
@@ -274,7 +252,6 @@ class CommandArgs final :
         ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized _constinit_;
       ::grpcagent::ReconfigureBody* reconfigure_;
       ::grpcagent::ProfileArgs* profile_;
-      ::grpcagent::SnapshotArgs* snapshot_;
     } args_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     uint32_t _oneof_case_[1];
@@ -792,72 +769,6 @@ inline ::grpcagent::ProfileArgs* CommandArgs::_internal_mutable_profile() {
 inline ::grpcagent::ProfileArgs* CommandArgs::mutable_profile() {
   ::grpcagent::ProfileArgs* _msg = _internal_mutable_profile();
   // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.profile)
-  return _msg;
-}
-
-// .grpcagent.SnapshotArgs snapshot = 3;
-inline bool CommandArgs::_internal_has_snapshot() const {
-  return args_case() == kSnapshot;
-}
-inline bool CommandArgs::has_snapshot() const {
-  return _internal_has_snapshot();
-}
-inline void CommandArgs::set_has_snapshot() {
-  _impl_._oneof_case_[0] = kSnapshot;
-}
-inline ::grpcagent::SnapshotArgs* CommandArgs::release_snapshot() {
-  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.snapshot)
-  if (_internal_has_snapshot()) {
-    clear_has_args();
-    ::grpcagent::SnapshotArgs* temp = _impl_.args_.snapshot_;
-    if (GetArenaForAllocation() != nullptr) {
-      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-    }
-    _impl_.args_.snapshot_ = nullptr;
-    return temp;
-  } else {
-    return nullptr;
-  }
-}
-inline const ::grpcagent::SnapshotArgs& CommandArgs::_internal_snapshot() const {
-  return _internal_has_snapshot()
-      ? *_impl_.args_.snapshot_
-      : reinterpret_cast< ::grpcagent::SnapshotArgs&>(::grpcagent::_SnapshotArgs_default_instance_);
-}
-inline const ::grpcagent::SnapshotArgs& CommandArgs::snapshot() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.snapshot)
-  return _internal_snapshot();
-}
-inline ::grpcagent::SnapshotArgs* CommandArgs::unsafe_arena_release_snapshot() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.snapshot)
-  if (_internal_has_snapshot()) {
-    clear_has_args();
-    ::grpcagent::SnapshotArgs* temp = _impl_.args_.snapshot_;
-    _impl_.args_.snapshot_ = nullptr;
-    return temp;
-  } else {
-    return nullptr;
-  }
-}
-inline void CommandArgs::unsafe_arena_set_allocated_snapshot(::grpcagent::SnapshotArgs* snapshot) {
-  clear_args();
-  if (snapshot) {
-    set_has_snapshot();
-    _impl_.args_.snapshot_ = snapshot;
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.snapshot)
-}
-inline ::grpcagent::SnapshotArgs* CommandArgs::_internal_mutable_snapshot() {
-  if (!_internal_has_snapshot()) {
-    clear_args();
-    set_has_snapshot();
-    _impl_.args_.snapshot_ = CreateMaybeMessage< ::grpcagent::SnapshotArgs >(GetArenaForAllocation());
-  }
-  return _impl_.args_.snapshot_;
-}
-inline ::grpcagent::SnapshotArgs* CommandArgs::mutable_snapshot() {
-  ::grpcagent::SnapshotArgs* _msg = _internal_mutable_snapshot();
-  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.snapshot)
   return _msg;
 }
 

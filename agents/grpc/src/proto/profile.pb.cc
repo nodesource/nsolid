@@ -78,8 +78,21 @@ struct HeapSamplingArgsDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 HeapSamplingArgsDefaultTypeInternal _HeapSamplingArgs_default_instance_;
+PROTOBUF_CONSTEXPR HeapSnapshotArgs::HeapSnapshotArgs(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.redacted_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct HeapSnapshotArgsDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR HeapSnapshotArgsDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~HeapSnapshotArgsDefaultTypeInternal() {}
+  union {
+    HeapSnapshotArgs _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 HeapSnapshotArgsDefaultTypeInternal _HeapSnapshotArgs_default_instance_;
 }  // namespace grpcagent
-static ::_pb::Metadata file_level_metadata_profile_2eproto[4];
+static ::_pb::Metadata file_level_metadata_profile_2eproto[5];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_profile_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_profile_2eproto = nullptr;
 
@@ -93,6 +106,7 @@ const uint32_t TableStruct_profile_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _impl_.thread_id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _impl_.duration_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::ProfileArgs, _impl_.metadata_),
+  ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
@@ -120,12 +134,20 @@ const uint32_t TableStruct_profile_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSamplingArgs, _impl_.sample_interval_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSamplingArgs, _impl_.stack_depth_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSamplingArgs, _impl_.flags_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSnapshotArgs, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::HeapSnapshotArgs, _impl_.redacted_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::grpcagent::ProfileArgs)},
-  { 13, -1, -1, sizeof(::grpcagent::CPUProfileArgs)},
-  { 19, -1, -1, sizeof(::grpcagent::HeapProfileArgs)},
-  { 27, -1, -1, sizeof(::grpcagent::HeapSamplingArgs)},
+  { 14, -1, -1, sizeof(::grpcagent::CPUProfileArgs)},
+  { 20, -1, -1, sizeof(::grpcagent::HeapProfileArgs)},
+  { 28, -1, -1, sizeof(::grpcagent::HeapSamplingArgs)},
+  { 37, -1, -1, sizeof(::grpcagent::HeapSnapshotArgs)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -133,31 +155,34 @@ static const ::_pb::Message* const file_default_instances[] = {
   &::grpcagent::_CPUProfileArgs_default_instance_._instance,
   &::grpcagent::_HeapProfileArgs_default_instance_._instance,
   &::grpcagent::_HeapSamplingArgs_default_instance_._instance,
+  &::grpcagent::_HeapSnapshotArgs_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_profile_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\rprofile.proto\022\tgrpcagent\032\034google/proto"
-  "buf/struct.proto\"\201\002\n\013ProfileArgs\022\021\n\tthre"
+  "buf/struct.proto\"\267\002\n\013ProfileArgs\022\021\n\tthre"
   "ad_id\030\001 \001(\004\022\020\n\010duration\030\002 \001(\004\022)\n\010metadat"
   "a\030\003 \001(\0132\027.google.protobuf.Struct\0220\n\013cpu_"
   "profile\030\004 \001(\0132\031.grpcagent.CPUProfileArgs"
   "H\000\0222\n\014heap_profile\030\005 \001(\0132\032.grpcagent.Hea"
   "pProfileArgsH\000\0224\n\rheap_sampling\030\006 \001(\0132\033."
-  "grpcagent.HeapSamplingArgsH\000B\006\n\004args\"\020\n\016"
-  "CPUProfileArgs\">\n\017HeapProfileArgs\022\031\n\021tra"
-  "ck_allocations\030\001 \001(\010\022\020\n\010redacted\030\002 \001(\010\"O"
-  "\n\020HeapSamplingArgs\022\027\n\017sample_interval\030\001 "
-  "\001(\004\022\023\n\013stack_depth\030\002 \001(\r\022\r\n\005flags\030\003 \001(\rb"
-  "\006proto3"
+  "grpcagent.HeapSamplingArgsH\000\0224\n\rheap_sna"
+  "pshot\030\007 \001(\0132\033.grpcagent.HeapSnapshotArgs"
+  "H\000B\006\n\004args\"\020\n\016CPUProfileArgs\">\n\017HeapProf"
+  "ileArgs\022\031\n\021track_allocations\030\001 \001(\010\022\020\n\010re"
+  "dacted\030\002 \001(\010\"O\n\020HeapSamplingArgs\022\027\n\017samp"
+  "le_interval\030\001 \001(\004\022\023\n\013stack_depth\030\002 \001(\r\022\r"
+  "\n\005flags\030\003 \001(\r\"$\n\020HeapSnapshotArgs\022\020\n\010red"
+  "acted\030\001 \001(\010b\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_profile_2eproto_deps[1] = {
   &::descriptor_table_google_2fprotobuf_2fstruct_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_profile_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_profile_2eproto = {
-    false, false, 487, descriptor_table_protodef_profile_2eproto,
+    false, false, 579, descriptor_table_protodef_profile_2eproto,
     "profile.proto",
-    &descriptor_table_profile_2eproto_once, descriptor_table_profile_2eproto_deps, 1, 4,
+    &descriptor_table_profile_2eproto_once, descriptor_table_profile_2eproto_deps, 1, 5,
     schemas, file_default_instances, TableStruct_profile_2eproto::offsets,
     file_level_metadata_profile_2eproto, file_level_enum_descriptors_profile_2eproto,
     file_level_service_descriptors_profile_2eproto,
@@ -178,6 +203,7 @@ class ProfileArgs::_Internal {
   static const ::grpcagent::CPUProfileArgs& cpu_profile(const ProfileArgs* msg);
   static const ::grpcagent::HeapProfileArgs& heap_profile(const ProfileArgs* msg);
   static const ::grpcagent::HeapSamplingArgs& heap_sampling(const ProfileArgs* msg);
+  static const ::grpcagent::HeapSnapshotArgs& heap_snapshot(const ProfileArgs* msg);
 };
 
 const ::PROTOBUF_NAMESPACE_ID::Struct&
@@ -195,6 +221,10 @@ ProfileArgs::_Internal::heap_profile(const ProfileArgs* msg) {
 const ::grpcagent::HeapSamplingArgs&
 ProfileArgs::_Internal::heap_sampling(const ProfileArgs* msg) {
   return *msg->_impl_.args_.heap_sampling_;
+}
+const ::grpcagent::HeapSnapshotArgs&
+ProfileArgs::_Internal::heap_snapshot(const ProfileArgs* msg) {
+  return *msg->_impl_.args_.heap_snapshot_;
 }
 void ProfileArgs::clear_metadata() {
   if (GetArenaForAllocation() == nullptr && _impl_.metadata_ != nullptr) {
@@ -247,6 +277,21 @@ void ProfileArgs::set_allocated_heap_sampling(::grpcagent::HeapSamplingArgs* hea
   }
   // @@protoc_insertion_point(field_set_allocated:grpcagent.ProfileArgs.heap_sampling)
 }
+void ProfileArgs::set_allocated_heap_snapshot(::grpcagent::HeapSnapshotArgs* heap_snapshot) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  clear_args();
+  if (heap_snapshot) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(heap_snapshot);
+    if (message_arena != submessage_arena) {
+      heap_snapshot = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, heap_snapshot, submessage_arena);
+    }
+    set_has_heap_snapshot();
+    _impl_.args_.heap_snapshot_ = heap_snapshot;
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.ProfileArgs.heap_snapshot)
+}
 ProfileArgs::ProfileArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
@@ -286,6 +331,11 @@ ProfileArgs::ProfileArgs(const ProfileArgs& from)
     case kHeapSampling: {
       _this->_internal_mutable_heap_sampling()->::grpcagent::HeapSamplingArgs::MergeFrom(
           from._internal_heap_sampling());
+      break;
+    }
+    case kHeapSnapshot: {
+      _this->_internal_mutable_heap_snapshot()->::grpcagent::HeapSnapshotArgs::MergeFrom(
+          from._internal_heap_snapshot());
       break;
     }
     case ARGS_NOT_SET: {
@@ -349,6 +399,12 @@ void ProfileArgs::clear_args() {
     case kHeapSampling: {
       if (GetArenaForAllocation() == nullptr) {
         delete _impl_.args_.heap_sampling_;
+      }
+      break;
+    }
+    case kHeapSnapshot: {
+      if (GetArenaForAllocation() == nullptr) {
+        delete _impl_.args_.heap_snapshot_;
       }
       break;
     }
@@ -431,6 +487,14 @@ const char* ProfileArgs::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
         } else
           goto handle_unusual;
         continue;
+      // .grpcagent.HeapSnapshotArgs heap_snapshot = 7;
+      case 7:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
+          ptr = ctx->ParseMessage(_internal_mutable_heap_snapshot(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -500,6 +564,13 @@ uint8_t* ProfileArgs::_InternalSerialize(
         _Internal::heap_sampling(this).GetCachedSize(), target, stream);
   }
 
+  // .grpcagent.HeapSnapshotArgs heap_snapshot = 7;
+  if (_internal_has_heap_snapshot()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(7, _Internal::heap_snapshot(this),
+        _Internal::heap_snapshot(this).GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -555,6 +626,13 @@ size_t ProfileArgs::ByteSizeLong() const {
           *_impl_.args_.heap_sampling_);
       break;
     }
+    // .grpcagent.HeapSnapshotArgs heap_snapshot = 7;
+    case kHeapSnapshot: {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *_impl_.args_.heap_snapshot_);
+      break;
+    }
     case ARGS_NOT_SET: {
       break;
     }
@@ -601,6 +679,11 @@ void ProfileArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PR
     case kHeapSampling: {
       _this->_internal_mutable_heap_sampling()->::grpcagent::HeapSamplingArgs::MergeFrom(
           from._internal_heap_sampling());
+      break;
+    }
+    case kHeapSnapshot: {
+      _this->_internal_mutable_heap_snapshot()->::grpcagent::HeapSnapshotArgs::MergeFrom(
+          from._internal_heap_snapshot());
       break;
     }
     case ARGS_NOT_SET: {
@@ -1126,6 +1209,184 @@ void HeapSamplingArgs::InternalSwap(HeapSamplingArgs* other) {
       file_level_metadata_profile_2eproto[3]);
 }
 
+// ===================================================================
+
+class HeapSnapshotArgs::_Internal {
+ public:
+};
+
+HeapSnapshotArgs::HeapSnapshotArgs(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:grpcagent.HeapSnapshotArgs)
+}
+HeapSnapshotArgs::HeapSnapshotArgs(const HeapSnapshotArgs& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  HeapSnapshotArgs* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.redacted_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _this->_impl_.redacted_ = from._impl_.redacted_;
+  // @@protoc_insertion_point(copy_constructor:grpcagent.HeapSnapshotArgs)
+}
+
+inline void HeapSnapshotArgs::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.redacted_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+HeapSnapshotArgs::~HeapSnapshotArgs() {
+  // @@protoc_insertion_point(destructor:grpcagent.HeapSnapshotArgs)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void HeapSnapshotArgs::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void HeapSnapshotArgs::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void HeapSnapshotArgs::Clear() {
+// @@protoc_insertion_point(message_clear_start:grpcagent.HeapSnapshotArgs)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.redacted_ = false;
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* HeapSnapshotArgs::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // bool redacted = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.redacted_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* HeapSnapshotArgs::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:grpcagent.HeapSnapshotArgs)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // bool redacted = 1;
+  if (this->_internal_redacted() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(1, this->_internal_redacted(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:grpcagent.HeapSnapshotArgs)
+  return target;
+}
+
+size_t HeapSnapshotArgs::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grpcagent.HeapSnapshotArgs)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // bool redacted = 1;
+  if (this->_internal_redacted() != 0) {
+    total_size += 1 + 1;
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData HeapSnapshotArgs::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    HeapSnapshotArgs::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*HeapSnapshotArgs::GetClassData() const { return &_class_data_; }
+
+
+void HeapSnapshotArgs::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<HeapSnapshotArgs*>(&to_msg);
+  auto& from = static_cast<const HeapSnapshotArgs&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grpcagent.HeapSnapshotArgs)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_redacted() != 0) {
+    _this->_internal_set_redacted(from._internal_redacted());
+  }
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void HeapSnapshotArgs::CopyFrom(const HeapSnapshotArgs& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grpcagent.HeapSnapshotArgs)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool HeapSnapshotArgs::IsInitialized() const {
+  return true;
+}
+
+void HeapSnapshotArgs::InternalSwap(HeapSnapshotArgs* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_.redacted_, other->_impl_.redacted_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata HeapSnapshotArgs::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_profile_2eproto_getter, &descriptor_table_profile_2eproto_once,
+      file_level_metadata_profile_2eproto[4]);
+}
+
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace grpcagent
 PROTOBUF_NAMESPACE_OPEN
@@ -1144,6 +1405,10 @@ Arena::CreateMaybeMessage< ::grpcagent::HeapProfileArgs >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::grpcagent::HeapSamplingArgs*
 Arena::CreateMaybeMessage< ::grpcagent::HeapSamplingArgs >(Arena* arena) {
   return Arena::CreateMessageInternal< ::grpcagent::HeapSamplingArgs >(arena);
+}
+template<> PROTOBUF_NOINLINE ::grpcagent::HeapSnapshotArgs*
+Arena::CreateMaybeMessage< ::grpcagent::HeapSnapshotArgs >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grpcagent::HeapSnapshotArgs >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE
 

@@ -7,7 +7,6 @@ syntax = "proto3";
 
 import "profile.proto";
 import "reconfigure.proto";
-import "snapshot.proto";
 
 package grpcagent;
 
@@ -15,7 +14,6 @@ message CommandArgs {
   oneof args {
     ReconfigureBody reconfigure = 1;
     ProfileArgs profile = 2;
-    SnapshotArgs snapshot = 3;
   }
 }
 

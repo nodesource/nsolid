@@ -241,7 +241,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     log_exporter_;
 
   // Profiling
-  ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
+  ProfileState profile_state_[ProfileType::kNumberOfProfileTypes - 1];
   std::atomic<bool> profile_on_exit_;
   std::shared_ptr<ProfileCollector> profile_collector_;
 
