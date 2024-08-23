@@ -7,6 +7,7 @@ const nsolid = require('nsolid');
 const { internalBinding } = require('internal/test/binding');
 
 const {
+  UV_EINVAL,
   UV_ESRCH,
 } = internalBinding('uv');
 
@@ -96,6 +97,17 @@ const {
   stream.on('error', common.mustCall((err) => {
     assert.strictEqual(err.message, 'Heap sampling could not be started');
     assert.strictEqual(err.code, UV_ESRCH);
+  }));
+}
+
+{
+  // Using a sampleInterval of 0 should result in an error as it causes a crash
+  // on v8.
+  const opts = { sampleInterval: 0 };
+  const stream = nsolid.heapSamplingStream(0, 12000, opts);
+  stream.on('error', common.mustCall((err) => {
+    assert.strictEqual(err.message, 'Heap sampling could not be started');
+    assert.strictEqual(err.code, UV_EINVAL);
   }));
 }
 

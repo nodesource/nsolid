@@ -19,6 +19,11 @@ int NSolidHeapSnapshot::StartSamplingProfiler(
     uint64_t duration,
     internal::user_data data,
     Snapshot::snapshot_proxy_sig proxy) {
+  // Using a sampleInterval of 0 causes a v8 crash.
+  if (sample_interval == 0) {
+    return UV_EINVAL;
+  }
+
   uint64_t thread_id = envinst->thread_id();
   uint64_t snaphot_id =
     in_progress_timers_.fetch_add(1, std::memory_order_relaxed);
