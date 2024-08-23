@@ -7,7 +7,6 @@ const nsolid = require('nsolid');
 const { internalBinding } = require('internal/test/binding');
 
 const {
-  UV_EINVAL,
   UV_ESRCH,
 } = internalBinding('uv');
 
@@ -104,10 +103,21 @@ const {
   // Using a sampleInterval of 0 should result in an error as it causes a crash
   // on v8.
   const opts = { sampleInterval: 0 };
-  const stream = nsolid.heapSamplingStream(0, 12000, opts);
-  stream.on('error', common.mustCall((err) => {
-    assert.strictEqual(err.message, 'Heap sampling could not be started');
-    assert.strictEqual(err.code, UV_EINVAL);
+  assert.throws(() => {
+    nsolid.heapSamplingStream(0, 12000, opts);
+  }, common.expectsError({
+    code: 'ERR_OUT_OF_RANGE',
+    message: 'The value of "options.sampleInterval" is out of range. It must be >= 1. Received 0',
+  }));
+}
+
+{
+  // Using a duration of 0 should result in an error
+  assert.throws(() => {
+    nsolid.heapSamplingStream(10, 0);
+  }, common.expectsError({
+    code: 'ERR_OUT_OF_RANGE',
+    message: 'The value of "duration" is out of range. It must be >= 1. Received 0',
   }));
 }
 
