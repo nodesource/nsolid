@@ -2,7 +2,25 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-08-23, Version 5.3.3 'Hydrogen'
+
+### Commits
+
+* \[[`656531dc91`](https://github.com/nodesource/nsolid/commit/656531dc91)] - **src**: fix heapSampling crash if sampleInterval is 0 (Santiago Gimeno) [nodesource/nsolid#171](https://github.com/nodesource/nsolid/pull/171)
+* \[[`78f2c64ea4`](https://github.com/nodesource/nsolid/commit/78f2c64ea4)] - **benchmark**: fix napi/ref addon (Michaël Zasso) [#53233](https://github.com/nodejs/node/pull/53233)
+* \[[`a359ecbf88`](https://github.com/nodesource/nsolid/commit/a359ecbf88)] - **agents**: fix process\_start calculation (Santiago Gimeno) [nodesource/nsolid#169](https://github.com/nodesource/nsolid/pull/169)
+* \[[`8c531100a8`](https://github.com/nodesource/nsolid/commit/8c531100a8)] - **agents**: implement SpanCollector helper class (Santiago Gimeno) [nodesource/nsolid#160](https://github.com/nodesource/nsolid/pull/160)
+* \[[`fda0c4e6f5`](https://github.com/nodesource/nsolid/commit/fda0c4e6f5)] - **agents**: preliminar changes to support logs in otlp (Santiago Gimeno) [nodesource/nsolid#152](https://github.com/nodesource/nsolid/pull/152)
+* \[[`a72fc834f1`](https://github.com/nodesource/nsolid/commit/a72fc834f1)] - **test**: include missing \<algorithm> header (Santiago Gimeno) [nodesource/nsolid#159](https://github.com/nodesource/nsolid/pull/159)
+* \[[`b63755cf92`](https://github.com/nodesource/nsolid/commit/b63755cf92)] - **deps**: update grpc to 1.65.2 (Santiago Gimeno) [nodesource/nsolid#159](https://github.com/nodesource/nsolid/pull/159)
+* \[[`6a9847cf86`](https://github.com/nodesource/nsolid/commit/6a9847cf86)] - **tools**: add update-grpc updater (Santiago Gimeno) [nodesource/nsolid#159](https://github.com/nodesource/nsolid/pull/159)
+* \[[`6089251c61`](https://github.com/nodesource/nsolid/commit/6089251c61)] - **agents**: refactor out some otlp methods (Santiago Gimeno) [nodesource/nsolid#151](https://github.com/nodesource/nsolid/pull/151)
+* \[[`bef35400dd`](https://github.com/nodesource/nsolid/commit/bef35400dd)] - **doc**: fix NSOLID\_CHANGELOG\_V5\_NODE\_V20 format (Santiago Gimeno) [nodesource/nsolid#148](https://github.com/nodesource/nsolid/pull/148)
+* \[[`b76cfe6902`](https://github.com/nodesource/nsolid/commit/b76cfe6902)] - **deps**: update opentelemetry-cpp to 1.16.0 (Santiago Gimeno) [nodesource/nsolid#148](https://github.com/nodesource/nsolid/pull/148)
+
 ## 2024-07-24, Version 5.3.2 'Hydrogen'
+
+### Commits
 
 * \[[`3cdcd18567`](https://github.com/nodesource/nsolid/commit/3cdcd18567)] - **src:** initialize prev\_idle\_time\_ on ThreadMetrics (Santiago Gimeno) [nodesource/nsolid#156](https://github.com/nodesource/nsolid/pull/156)
 
