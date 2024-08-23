@@ -1174,6 +1174,27 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 
 int GrpcAgent::take_snapshot(const grpcagent::CommandRequest& req) {
   const grpcagent::SnapshotArgs& args = req.args().snapshot();
+  bool disable_snapshots = false;
+  auto conf_it = config_.find("disableSnapshots");
+  if (conf_it != config_.end()) {
+    disable_snapshots = *conf_it;
+  }
+
+  if (disable_snapshots == true) {
+    // Send error message back
+    return UV_EINVAL;
+  }
+
+  bool redact = false;
+  conf_it = config_.find("redactSnapshots");
+  if (conf_it != config_.end()) {
+    if (conf_it->is_boolean()) {
+      redact = *conf_it;
+    }
+  }
+
+  uint64_t thread_id = args.thread_id();
+
   // ret = Snapshot::TakeSnapshot(GetEnvInst(thread_id),
   //                              redact,
   //                              heap_snapshot_cb,
