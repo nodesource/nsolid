@@ -945,8 +945,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
 
   // if the profile is complete signal that
   if (profileStreamComplete) {
-    prof_stor.stream->StartWritesDone();
-    prof_stor.stream->RemoveHold();
+    prof_stor.stream->WritesDone();
   } else {
     // send profile chunks
     grpcagent::Asset asset;
@@ -1172,35 +1171,6 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
   return metrics_timer_.start(metrics_timer_cb_, period, period, weak_from_this());
 }
 
-int GrpcAgent::take_snapshot(const grpcagent::CommandRequest& req) {
-  const grpcagent::SnapshotArgs& args = req.args().snapshot();
-  bool disable_snapshots = false;
-  auto conf_it = config_.find("disableSnapshots");
-  if (conf_it != config_.end()) {
-    disable_snapshots = *conf_it;
-  }
-
-  if (disable_snapshots == true) {
-    // Send error message back
-    return UV_EINVAL;
-  }
-
-  bool redact = false;
-  conf_it = config_.find("redactSnapshots");
-  if (conf_it != config_.end()) {
-    if (conf_it->is_boolean()) {
-      redact = *conf_it;
-    }
-  }
-
-  uint64_t thread_id = args.thread_id();
-
-  // ret = Snapshot::TakeSnapshot(GetEnvInst(thread_id),
-  //                              redact,
-  //                              heap_snapshot_cb,
-  //                              weak_from_this());
-}
-
 int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
                              const ProfileType& type) {
   const grpcagent::ProfileArgs& args = req.args().profile();
@@ -1231,7 +1201,8 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
       start_profiling = &GrpcAgent::do_start_heap_sampl;
       break;
     case ProfileType::kHeapSnapshot:
-      start_profiling = &GrpcAgent::do_start_heapsnapshot;
+      options = HeapSnapshotOptions{/* initialize with appropriate values */};
+      start_profiling = &GrpcAgent::do_start_heap_snapshot;
       break;
     default:
       ASSERT(false);
@@ -1315,12 +1286,27 @@ int GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
 int GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
                                       ProfileOptions& opts) {
   Debug("do_start_heap_snapshot\n");
+
+  bool disable_snapshots = false;
+  auto it = config_.find("disableSnapshots");
+  if (it != config_.end()) {
+    disable_snapshots = *it;
+  }
+
+  if (disable_snapshots == true) {
+    // Send error message back
+    return UV_EINVAL;
+  }
+
   HeapSnapshotOptions& options = std::get<HeapSnapshotOptions>(opts);
-  const auto& snapshot = args.snapshot();
-  options.sample_interval = heap_sampling.sample_interval();
-  options.stack_depth = heap_sampling.stack_depth();
-  options.flags = static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());
-  int err = profile_collector_->StartHeapSampling(options);
+  it = config_.find("redactSnapshots");
+  if (it != config_.end()) {
+    if (it->is_boolean()) {
+      options.redacted = *it;
+    }
+  }
+
+  int err = profile_collector_->StartHeapSnapshot(options);
   if (err < 0) {
     // Send error message back
     return err;

@@ -159,6 +159,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   int do_start_heap_sampl(const grpcagent::ProfileArgs& args,
                           ProfileOptions& opts);
 
+  int do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
+                             ProfileOptions& opts);
+
   void got_blocked_loop_msgs();
 
   void got_logs();
@@ -186,8 +189,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void setup_blocked_loop_hooks();
 
   int setup_metrics_timer(uint64_t period);
-
-  int take_snapshot(const grpcagent::CommandRequest& req);
 
   void update_tracer(uint32_t flags);
 
@@ -241,7 +242,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     log_exporter_;
 
   // Profiling
-  ProfileState profile_state_[ProfileType::kNumberOfProfileTypes - 1];
+  ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;
   std::shared_ptr<ProfileCollector> profile_collector_;
 
