@@ -1272,7 +1272,15 @@ int GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
   HeapSamplingOptions& options = std::get<HeapSamplingOptions>(opts);
   const auto& heap_sampling = args.heap_sampling();
   options.sample_interval = heap_sampling.sample_interval();
+  if (options.sample_interval == 0) {
+    options.sample_interval = 512 * 1024;
+  }
+
   options.stack_depth = heap_sampling.stack_depth();
+  if (options.stack_depth == 0) {
+    options.stack_depth = 16;
+  }
+
   options.flags = static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());
   int err = profile_collector_->StartHeapSampling(options);
   if (err < 0) {
