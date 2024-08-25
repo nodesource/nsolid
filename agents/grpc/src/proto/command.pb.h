@@ -30,6 +30,7 @@
 #include <google/protobuf/repeated_field.h>  // IWYU pragma: export
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/unknown_field_set.h>
+#include "common.pb.h"
 #include "profile.pb.h"
 #include "reconfigure.pb.h"
 // @@protoc_insertion_point(includes)
@@ -50,6 +51,9 @@ namespace grpcagent {
 class CommandArgs;
 struct CommandArgsDefaultTypeInternal;
 extern CommandArgsDefaultTypeInternal _CommandArgs_default_instance_;
+class CommandError;
+struct CommandErrorDefaultTypeInternal;
+extern CommandErrorDefaultTypeInternal _CommandError_default_instance_;
 class CommandRequest;
 struct CommandRequestDefaultTypeInternal;
 extern CommandRequestDefaultTypeInternal _CommandRequest_default_instance_;
@@ -59,6 +63,7 @@ extern CommandResponseDefaultTypeInternal _CommandResponse_default_instance_;
 }  // namespace grpcagent
 PROTOBUF_NAMESPACE_OPEN
 template<> ::grpcagent::CommandArgs* Arena::CreateMaybeMessage<::grpcagent::CommandArgs>(Arena*);
+template<> ::grpcagent::CommandError* Arena::CreateMaybeMessage<::grpcagent::CommandError>(Arena*);
 template<> ::grpcagent::CommandRequest* Arena::CreateMaybeMessage<::grpcagent::CommandRequest>(Arena*);
 template<> ::grpcagent::CommandResponse* Arena::CreateMaybeMessage<::grpcagent::CommandResponse>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
@@ -599,20 +604,30 @@ class CommandResponse final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kErrorMessageFieldNumber = 1,
+    kMessageFieldNumber = 2,
+    kCodeFieldNumber = 1,
   };
-  // string error_message = 1;
-  void clear_error_message();
-  const std::string& error_message() const;
+  // string message = 2;
+  void clear_message();
+  const std::string& message() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
-  void set_error_message(ArgT0&& arg0, ArgT... args);
-  std::string* mutable_error_message();
-  PROTOBUF_NODISCARD std::string* release_error_message();
-  void set_allocated_error_message(std::string* error_message);
+  void set_message(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_message();
+  PROTOBUF_NODISCARD std::string* release_message();
+  void set_allocated_message(std::string* message);
   private:
-  const std::string& _internal_error_message() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_error_message(const std::string& value);
-  std::string* _internal_mutable_error_message();
+  const std::string& _internal_message() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_message(const std::string& value);
+  std::string* _internal_mutable_message();
+  public:
+
+  // uint32 code = 1;
+  void clear_code();
+  uint32_t code() const;
+  void set_code(uint32_t value);
+  private:
+  uint32_t _internal_code() const;
+  void _internal_set_code(uint32_t value);
   public:
 
   // @@protoc_insertion_point(class_scope:grpcagent.CommandResponse)
@@ -623,7 +638,192 @@ class CommandResponse final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr error_message_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr message_;
+    uint32_t code_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_command_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CommandError final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:grpcagent.CommandError) */ {
+ public:
+  inline CommandError() : CommandError(nullptr) {}
+  ~CommandError() override;
+  explicit PROTOBUF_CONSTEXPR CommandError(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CommandError(const CommandError& from);
+  CommandError(CommandError&& from) noexcept
+    : CommandError() {
+    *this = ::std::move(from);
+  }
+
+  inline CommandError& operator=(const CommandError& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CommandError& operator=(CommandError&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CommandError& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CommandError* internal_default_instance() {
+    return reinterpret_cast<const CommandError*>(
+               &_CommandError_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    3;
+
+  friend void swap(CommandError& a, CommandError& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CommandError* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CommandError* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CommandError* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CommandError>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CommandError& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CommandError& from) {
+    CommandError::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CommandError* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "grpcagent.CommandError";
+  }
+  protected:
+  explicit CommandError(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kMessageFieldNumber = 3,
+    kCommonFieldNumber = 1,
+    kCodeFieldNumber = 2,
+  };
+  // string message = 3;
+  void clear_message();
+  const std::string& message() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_message(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_message();
+  PROTOBUF_NODISCARD std::string* release_message();
+  void set_allocated_message(std::string* message);
+  private:
+  const std::string& _internal_message() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_message(const std::string& value);
+  std::string* _internal_mutable_message();
+  public:
+
+  // .grpcagent.CommonResponse common = 1;
+  bool has_common() const;
+  private:
+  bool _internal_has_common() const;
+  public:
+  void clear_common();
+  const ::grpcagent::CommonResponse& common() const;
+  PROTOBUF_NODISCARD ::grpcagent::CommonResponse* release_common();
+  ::grpcagent::CommonResponse* mutable_common();
+  void set_allocated_common(::grpcagent::CommonResponse* common);
+  private:
+  const ::grpcagent::CommonResponse& _internal_common() const;
+  ::grpcagent::CommonResponse* _internal_mutable_common();
+  public:
+  void unsafe_arena_set_allocated_common(
+      ::grpcagent::CommonResponse* common);
+  ::grpcagent::CommonResponse* unsafe_arena_release_common();
+
+  // uint32 code = 2;
+  void clear_code();
+  uint32_t code() const;
+  void set_code(uint32_t value);
+  private:
+  uint32_t _internal_code() const;
+  void _internal_set_code(uint32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:grpcagent.CommandError)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr message_;
+    ::grpcagent::CommonResponse* common_;
+    uint32_t code_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1049,59 +1249,240 @@ inline void CommandRequest::set_allocated_args(::grpcagent::CommandArgs* args) {
 
 // CommandResponse
 
-// string error_message = 1;
-inline void CommandResponse::clear_error_message() {
-  _impl_.error_message_.ClearToEmpty();
+// uint32 code = 1;
+inline void CommandResponse::clear_code() {
+  _impl_.code_ = 0u;
 }
-inline const std::string& CommandResponse::error_message() const {
-  // @@protoc_insertion_point(field_get:grpcagent.CommandResponse.error_message)
-  return _internal_error_message();
+inline uint32_t CommandResponse::_internal_code() const {
+  return _impl_.code_;
+}
+inline uint32_t CommandResponse::code() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandResponse.code)
+  return _internal_code();
+}
+inline void CommandResponse::_internal_set_code(uint32_t value) {
+  
+  _impl_.code_ = value;
+}
+inline void CommandResponse::set_code(uint32_t value) {
+  _internal_set_code(value);
+  // @@protoc_insertion_point(field_set:grpcagent.CommandResponse.code)
+}
+
+// string message = 2;
+inline void CommandResponse::clear_message() {
+  _impl_.message_.ClearToEmpty();
+}
+inline const std::string& CommandResponse::message() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandResponse.message)
+  return _internal_message();
 }
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
-void CommandResponse::set_error_message(ArgT0&& arg0, ArgT... args) {
+void CommandResponse::set_message(ArgT0&& arg0, ArgT... args) {
  
- _impl_.error_message_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:grpcagent.CommandResponse.error_message)
+ _impl_.message_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:grpcagent.CommandResponse.message)
 }
-inline std::string* CommandResponse::mutable_error_message() {
-  std::string* _s = _internal_mutable_error_message();
-  // @@protoc_insertion_point(field_mutable:grpcagent.CommandResponse.error_message)
+inline std::string* CommandResponse::mutable_message() {
+  std::string* _s = _internal_mutable_message();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandResponse.message)
   return _s;
 }
-inline const std::string& CommandResponse::_internal_error_message() const {
-  return _impl_.error_message_.Get();
+inline const std::string& CommandResponse::_internal_message() const {
+  return _impl_.message_.Get();
 }
-inline void CommandResponse::_internal_set_error_message(const std::string& value) {
+inline void CommandResponse::_internal_set_message(const std::string& value) {
   
-  _impl_.error_message_.Set(value, GetArenaForAllocation());
+  _impl_.message_.Set(value, GetArenaForAllocation());
 }
-inline std::string* CommandResponse::_internal_mutable_error_message() {
+inline std::string* CommandResponse::_internal_mutable_message() {
   
-  return _impl_.error_message_.Mutable(GetArenaForAllocation());
+  return _impl_.message_.Mutable(GetArenaForAllocation());
 }
-inline std::string* CommandResponse::release_error_message() {
-  // @@protoc_insertion_point(field_release:grpcagent.CommandResponse.error_message)
-  return _impl_.error_message_.Release();
+inline std::string* CommandResponse::release_message() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandResponse.message)
+  return _impl_.message_.Release();
 }
-inline void CommandResponse::set_allocated_error_message(std::string* error_message) {
-  if (error_message != nullptr) {
+inline void CommandResponse::set_allocated_message(std::string* message) {
+  if (message != nullptr) {
     
   } else {
     
   }
-  _impl_.error_message_.SetAllocated(error_message, GetArenaForAllocation());
+  _impl_.message_.SetAllocated(message, GetArenaForAllocation());
 #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (_impl_.error_message_.IsDefault()) {
-    _impl_.error_message_.Set("", GetArenaForAllocation());
+  if (_impl_.message_.IsDefault()) {
+    _impl_.message_.Set("", GetArenaForAllocation());
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandResponse.error_message)
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandResponse.message)
+}
+
+// -------------------------------------------------------------------
+
+// CommandError
+
+// .grpcagent.CommonResponse common = 1;
+inline bool CommandError::_internal_has_common() const {
+  return this != internal_default_instance() && _impl_.common_ != nullptr;
+}
+inline bool CommandError::has_common() const {
+  return _internal_has_common();
+}
+inline const ::grpcagent::CommonResponse& CommandError::_internal_common() const {
+  const ::grpcagent::CommonResponse* p = _impl_.common_;
+  return p != nullptr ? *p : reinterpret_cast<const ::grpcagent::CommonResponse&>(
+      ::grpcagent::_CommonResponse_default_instance_);
+}
+inline const ::grpcagent::CommonResponse& CommandError::common() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandError.common)
+  return _internal_common();
+}
+inline void CommandError::unsafe_arena_set_allocated_common(
+    ::grpcagent::CommonResponse* common) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.common_);
+  }
+  _impl_.common_ = common;
+  if (common) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandError.common)
+}
+inline ::grpcagent::CommonResponse* CommandError::release_common() {
+  
+  ::grpcagent::CommonResponse* temp = _impl_.common_;
+  _impl_.common_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::grpcagent::CommonResponse* CommandError::unsafe_arena_release_common() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandError.common)
+  
+  ::grpcagent::CommonResponse* temp = _impl_.common_;
+  _impl_.common_ = nullptr;
+  return temp;
+}
+inline ::grpcagent::CommonResponse* CommandError::_internal_mutable_common() {
+  
+  if (_impl_.common_ == nullptr) {
+    auto* p = CreateMaybeMessage<::grpcagent::CommonResponse>(GetArenaForAllocation());
+    _impl_.common_ = p;
+  }
+  return _impl_.common_;
+}
+inline ::grpcagent::CommonResponse* CommandError::mutable_common() {
+  ::grpcagent::CommonResponse* _msg = _internal_mutable_common();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandError.common)
+  return _msg;
+}
+inline void CommandError::set_allocated_common(::grpcagent::CommonResponse* common) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.common_);
+  }
+  if (common) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(common));
+    if (message_arena != submessage_arena) {
+      common = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, common, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.common_ = common;
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandError.common)
+}
+
+// uint32 code = 2;
+inline void CommandError::clear_code() {
+  _impl_.code_ = 0u;
+}
+inline uint32_t CommandError::_internal_code() const {
+  return _impl_.code_;
+}
+inline uint32_t CommandError::code() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandError.code)
+  return _internal_code();
+}
+inline void CommandError::_internal_set_code(uint32_t value) {
+  
+  _impl_.code_ = value;
+}
+inline void CommandError::set_code(uint32_t value) {
+  _internal_set_code(value);
+  // @@protoc_insertion_point(field_set:grpcagent.CommandError.code)
+}
+
+// string message = 3;
+inline void CommandError::clear_message() {
+  _impl_.message_.ClearToEmpty();
+}
+inline const std::string& CommandError::message() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandError.message)
+  return _internal_message();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void CommandError::set_message(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.message_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:grpcagent.CommandError.message)
+}
+inline std::string* CommandError::mutable_message() {
+  std::string* _s = _internal_mutable_message();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandError.message)
+  return _s;
+}
+inline const std::string& CommandError::_internal_message() const {
+  return _impl_.message_.Get();
+}
+inline void CommandError::_internal_set_message(const std::string& value) {
+  
+  _impl_.message_.Set(value, GetArenaForAllocation());
+}
+inline std::string* CommandError::_internal_mutable_message() {
+  
+  return _impl_.message_.Mutable(GetArenaForAllocation());
+}
+inline std::string* CommandError::release_message() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandError.message)
+  return _impl_.message_.Release();
+}
+inline void CommandError::set_allocated_message(std::string* message) {
+  if (message != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.message_.SetAllocated(message, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.message_.IsDefault()) {
+    _impl_.message_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandError.message)
 }
 
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

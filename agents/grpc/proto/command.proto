@@ -5,6 +5,7 @@
 
 syntax = "proto3";
 
+import "common.proto";
 import "profile.proto";
 import "reconfigure.proto";
 
@@ -26,5 +27,12 @@ message CommandRequest {
 }
 
 message CommandResponse {
-  string error_message = 1;
+  uint32 code = 1;
+  string message = 2;
+}
+
+message CommandError {
+  CommonResponse common = 1;
+  uint32 code = 2;
+  string message = 3;
 }
