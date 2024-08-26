@@ -59,6 +59,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
 
   struct WriteState {
     bool write_done = true;
+    bool write_done_called = false;
     grpcagent::Asset asset;
   };
 

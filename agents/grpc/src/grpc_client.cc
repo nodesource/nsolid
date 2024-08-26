@@ -112,15 +112,21 @@ void AssetStream::OnDone(const ::grpc::Status& s) {
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
   Debug("[%ld] AssetStream::OnWriteDone: %d\n", pthread_self(), ok);
   nsuv::ns_mutex::scoped_lock lock(lock_);
-  write_state_.write_done = true;
+  write_state_.write_done = ok;
   NextWrite();
 }
 
 void AssetStream::NextWrite() {
-  if (write_state_.write_done && assets_q_.dequeue(write_state_.asset)) {
-    Debug("[%ld] AssetStream::StartWrite\n", pthread_self());
-    StartWrite(&write_state_.asset);
-    write_state_.write_done = false;
+  if (write_state_.write_done) {
+    if (assets_q_.dequeue(write_state_.asset)) {
+      Debug("[%ld] AssetStream::StartWrite\n", pthread_self());
+      StartWrite(&write_state_.asset);
+      write_state_.write_done = false;
+    } else if (write_state_.write_done_called) {
+      Debug("[%ld] AssetStream::StartWritesDone\n", pthread_self());
+      StartWritesDone();
+      RemoveHold();
+    }
   }
 }
 
@@ -131,8 +137,7 @@ void AssetStream::Write(grpcagent::Asset&& asset) {
 }
 
 void AssetStream::WritesDone() {
-  StartWritesDone();
-  RemoveHold();
+  write_state_.write_done_called = true;
 }
 
 GrpcClient::GrpcClient() {

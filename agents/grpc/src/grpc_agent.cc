@@ -76,13 +76,15 @@ std::pair<int64_t, int64_t> create_recorded(const time_point<system_clock>& ts) 
 
 ErrorStor fill_error_stor(const ErrorType& type) {
 #define X(type, code, str, runtime_code) \
-  return {code, str"(##runtime_code)"};
+  return {code, str "(" #runtime_code ")"};
 GRPC_ERRORS(X)
 #undef X
 }
 
 ErrorType translate_error(int err) {
   switch (err) {
+    case 0:
+      return ErrorType::ESuccess;
     case EBADF:
     case ESRCH:
       return ErrorType::EThreadGoneError;
