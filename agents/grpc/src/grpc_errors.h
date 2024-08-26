@@ -3,10 +3,11 @@
 
 #define GRPC_ERRORS(X)                                                           \
   X(EInfoParsingError, 500, "Internal Runtime Error", 1000)                      \
-  X(ECPUProfInProgressError, 409, "'cpu_profile' already in progress", 1001)     \
-  X(EHeapProfInProgressError, 409, "'heap_profile' already in progress", 1002)   \
-  X(EHeapSamplInProgressError, 409, "'heap_sampling' already in progress", 1003) \
-  X(EHeapSnapProgressError, 409, "'heap_snapshot' already in progress", 1004)
+  X(EInProgressError, 409, "Operation already in progress", 1001)                \
+  X(EThreadGoneError, 410, "Thread already gone", 1002)                          \
+  X(EProfSnapshotError, 500, "Profile/Snapshot creation failure", 1003)          \
+  X(ESnapshotDisabled, 500, "Heap Snapshots disabled", 1004)                     \
+  X(ENoMemory, 500, "Internal Runtime Error", 1005)
 
 namespace node {
 namespace nsolid {
@@ -18,6 +19,8 @@ struct ErrorStor {
 };
 
 enum class ErrorType {
+  ESuccess = 0,
+  EUnknown = 1,
 #define X(type, code, str, runtime_code) type,
   GRPC_ERRORS(X)
 #undef X

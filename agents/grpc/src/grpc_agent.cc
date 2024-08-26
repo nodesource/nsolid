@@ -1,6 +1,5 @@
 #include "grpc_agent.h"
 #include "grpc_client.h"
-#include "grpc_errors.h"
 
 #include "asserts-cpp/asserts.h"
 #include "debug_utils-inl.h"
@@ -80,6 +79,20 @@ ErrorStor fill_error_stor(const ErrorType& type) {
   return {code, str"(##runtime_code)"};
 GRPC_ERRORS(X)
 #undef X
+}
+
+ErrorType translate_error(int err) {
+  switch (err) {
+    case EBADF:
+    case ESRCH:
+      return ErrorType::EThreadGoneError;
+    case UV_EEXIST:
+      return ErrorType::EInProgressError;
+    case UV_ENOMEM:
+      return ErrorType::ENoMemory;
+    default:
+      return ErrorType::EUnknown;
+  }
 }
 
 void PopulateCommon(grpcagent::CommonResponse* common,
@@ -1013,7 +1026,7 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   if (body.tags_size() > 0) {
       out["tags"] = json::array();
       for (int i = 0; i < body.tags_size(); i++) {
-          out["tags"].push_back(body.tags(i));
+        out["tags"].push_back(body.tags(i));
       }
   }
   if (body.has_tracingenabled()) {
@@ -1033,7 +1046,7 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
 void GrpcAgent::send_asset_error(const std::string& req_id,
                                  const ProfileType& type,
                                  const ProfileStor& stor,
-                                 int error) {
+                                 const ErrorType& error) {
   grpcagent::Asset asset;
   google::protobuf::Struct metadata;
   uint64_t thread_id;
@@ -1042,30 +1055,7 @@ void GrpcAgent::send_asset_error(const std::string& req_id,
     metadata = std::move(opt.metadata_pb);
   }, stor.options);
   PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], req_id.c_str());
-
-  ErrorType error_type;
-  // Calculate exact error type.
-  switch (error) {
-    case UV_EEXIST:
-      switch (type) {
-        case ProfileType::kCpu:
-          error_type = ErrorType::ECPUProfInProgressError;
-        break;
-        case ProfileType::kHeapProf:
-          error_type = ErrorType::EHeapProfInProgressError;
-        break;
-        case ProfileType::kHeapSampl:
-          error_type = ErrorType::EHeapSamplInProgressError;
-        break;
-        case ProfileType::kHeapSnapshot:
-          error_type = ErrorType::EHeapSnapProgressError;
-        break;
-      }
-    break;
-  }
-
-
-  PopulateError(asset.mutable_common(), error_type);
+  PopulateError(asset.mutable_common(), error);
   asset.mutable_metadata()->CopyFrom(metadata);
   stor.stream->Write(std::move(asset));
   stor.stream->WritesDone();
@@ -1224,16 +1214,16 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
   return metrics_timer_.start(metrics_timer_cb_, period, period, weak_from_this());
 }
 
-int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
+ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
                              const ProfileType& type) {
-  int err = 0;
+  ErrorType err = ErrorType::ESuccess;
   const grpcagent::ProfileArgs& args = req.args().profile();
   uint64_t thread_id = args.thread_id();
   uint64_t duration = args.duration();
   ProfileState& profile_state = profile_state_[type];
   if (profile_state.pending_profiles_map.find(thread_id) !=
       profile_state.pending_profiles_map.end()) {
-    err = UV_EEXIST;
+    err = ErrorType::EInProgressError;
   }
 
   ProfileOptions options;
@@ -1271,12 +1261,14 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
 
   AssetStream* stream = new AssetStream(nsolid_service_stub_.get(), agent_id_, saas_);
   ProfileStor stor{ req.requestid(), uv_now(&loop_), stream, std::move(options) };
-  if (err >= 0) {
+  if (err == ErrorType::ESuccess) {
     auto iter = profile_state.pending_profiles_map.emplace(thread_id,
                                                            std::move(stor));
     ASSERT_NE(iter.second, false);
     profile_state.nr_profiles++;
-    return 0;
+    return ErrorType::ESuccess;
+  } else if (err == ErrorType::EUnknown) {
+    err = ErrorType::EProfSnapshotError;
   }
 
   send_asset_error(req.requestid(), type, stor, err);
@@ -1284,21 +1276,16 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
   return err;
 }
 
-int GrpcAgent::do_start_cpu_prof(const grpcagent::ProfileArgs& args,
-                                 ProfileOptions& opts) {
+ErrorType GrpcAgent::do_start_cpu_prof(const grpcagent::ProfileArgs& args,
+                                       ProfileOptions& opts) {
   Debug("do_start_cpu_prof\n");
   CPUProfileOptions& options = std::get<CPUProfileOptions>(opts);
-  int err = profile_collector_->StartCPUProfile(options);
-  if (err < 0) {
-    // Send error message back
-    return err;
-  }
-
-  return 0;
+  int ret = profile_collector_->StartCPUProfile(options);
+  return translate_error(ret);
 }
 
-int GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
-                                  ProfileOptions& opts) {
+ErrorType GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
+                                        ProfileOptions& opts) {
   Debug("do_start_heap_prof\n");
   HeapProfileOptions& options = std::get<HeapProfileOptions>(opts);
   const auto& heap_profile = args.heap_profile();
@@ -1309,17 +1296,13 @@ int GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
       options.redacted = *it;
     }
   }
-  int err = profile_collector_->StartHeapProfile(options);
-  if (err < 0) {
-    // Send error message back
-    return err;
-  }
 
-  return 0;
+  int ret = profile_collector_->StartHeapProfile(options);
+  return translate_error(ret);
 }
 
-int GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
-                                   ProfileOptions& opts) {
+ErrorType GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
+                                         ProfileOptions& opts) {
   Debug("do_start_heap_sampl\n");
   HeapSamplingOptions& options = std::get<HeapSamplingOptions>(opts);
   const auto& heap_sampling = args.heap_sampling();
@@ -1334,16 +1317,11 @@ int GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
   }
 
   options.flags = static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());
-  int err = profile_collector_->StartHeapSampling(options);
-  if (err < 0) {
-    // Send error message back
-    return err;
-  }
-
-  return 0;
+  int ret = profile_collector_->StartHeapSampling(options);
+  return translate_error(ret);
 }
 
-int GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
+ErrorType GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
                                       ProfileOptions& opts) {
   Debug("do_start_heap_snapshot\n");
 
@@ -1354,8 +1332,7 @@ int GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
   }
 
   if (disable_snapshots == true) {
-    // Send error message back
-    return UV_EINVAL;
+    return ErrorType::ESnapshotDisabled;
   }
 
   HeapSnapshotOptions& options = std::get<HeapSnapshotOptions>(opts);
@@ -1366,13 +1343,8 @@ int GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
     }
   }
 
-  int err = profile_collector_->StartHeapSnapshot(options);
-  if (err < 0) {
-    // Send error message back
-    return err;
-  }
-
-  return 0;
+  int ret = profile_collector_->StartHeapSnapshot(options);
+  return translate_error(ret);
 }
 
 void GrpcAgent::update_tracer(uint32_t flags) {

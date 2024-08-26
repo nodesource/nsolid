@@ -10,6 +10,7 @@
 #include "opentelemetry/version.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "../../src/profile_collector.h"
+#include "grpc_errors.h"
 
 // Class pre-declaration
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -88,8 +89,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     ProfileOptions options;
   };
 
-  using StartProfiling = int (GrpcAgent::*)(const grpcagent::ProfileArgs& args,
-                                            ProfileOptions& opts);
+  using StartProfiling = ErrorType (GrpcAgent::*)(const grpcagent::ProfileArgs& args,
+                                                  ProfileOptions& opts);
 
   using ProfileStorMap = std::map<uint64_t, ProfileStor>;
 
@@ -147,20 +148,20 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void do_stop();
 
-  int do_start_prof(const grpcagent::CommandRequest& req,
-                    const ProfileType& type);
+  ErrorType do_start_prof(const grpcagent::CommandRequest& req,
+                          const ProfileType& type);
 
-  int do_start_cpu_prof(const grpcagent::ProfileArgs& args,
-                        ProfileOptions& opts);
+  ErrorType do_start_cpu_prof(const grpcagent::ProfileArgs& args,
+                              ProfileOptions& opts);
 
-  int do_start_heap_prof(const grpcagent::ProfileArgs& args,
-                         ProfileOptions& opts);
+  ErrorType do_start_heap_prof(const grpcagent::ProfileArgs& args,
+                               ProfileOptions& opts);
 
-  int do_start_heap_sampl(const grpcagent::ProfileArgs& args,
-                          ProfileOptions& opts);
+  ErrorType do_start_heap_sampl(const grpcagent::ProfileArgs& args,
+                                ProfileOptions& opts);
 
-  int do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
-                             ProfileOptions& opts);
+  ErrorType do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
+                                   ProfileOptions& opts);
 
   void got_blocked_loop_msgs();
 
@@ -179,7 +180,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void send_asset_error(const std::string& req_id,
                         const ProfileType& type,
                         const ProfileStor& stor,
-                        int error);
+                        const ErrorType& error);
 
   void send_blocked_loop_event(BlockedLoopStor&& stor);
 
