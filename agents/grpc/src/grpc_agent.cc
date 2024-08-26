@@ -88,6 +88,8 @@ ErrorType translate_error(int err) {
       return ErrorType::EThreadGoneError;
     case UV_EEXIST:
       return ErrorType::EInProgressError;
+    case UV_ENOENT:
+      return ErrorType::ENotAvailable;
     case UV_ENOMEM:
       return ErrorType::ENoMemory;
     default:
@@ -956,6 +958,12 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
   // get start_ts and metadata from pending_profiles_map
   if (stor.status < 0) {
     // Send error message back
+    auto error = translate_error(stor.status);
+    if (error == ErrorType::EUnknown) {
+      error = ErrorType::EProfSnapshotError;
+    }
+
+    send_asset_error(prof_stor.req_id, stor.type, prof_stor, error);
     return;
   }
 
