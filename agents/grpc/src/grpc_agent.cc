@@ -1,5 +1,6 @@
 #include "grpc_agent.h"
 #include "grpc_client.h"
+#include "grpc_errors.h"
 
 #include "asserts-cpp/asserts.h"
 #include "debug_utils-inl.h"
@@ -39,6 +40,13 @@ namespace grpc {
 constexpr uint64_t span_timer_interval = 1000;
 constexpr size_t span_msg_q_min_size = 1000;
 
+static const char* kErrorProfileInProgress[kNumberOfProfileTypes] = {
+  "'cpu_profile' already in progress",
+  "'heap_profile' already in progress",
+  "'heap_sampling' already in progress",
+  "'heap_snapshot' already in progress"
+};
+
 template <typename... Args>
 inline void Debug(Args&&... args) {
   per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
@@ -67,6 +75,13 @@ std::pair<int64_t, int64_t> create_recorded(const time_point<system_clock>& ts) 
            duration_cast<nanoseconds>(dur % seconds(1)).count() };
 }
 
+ErrorStor fill_error_stor(const ErrorType& type) {
+#define X(type, code, str, runtime_code) \
+  return {code, str"(##runtime_code)"};
+GRPC_ERRORS(X)
+#undef X
+}
+
 void PopulateCommon(grpcagent::CommonResponse* common,
                     const std::string& command,
                     const char* req_id) {
@@ -78,6 +93,14 @@ void PopulateCommon(grpcagent::CommonResponse* common,
   if (req_id) {
     common->set_requestid(req_id);
   }
+}
+
+void PopulateError(grpcagent::CommonResponse* common,
+                   const ErrorType& type) {
+  auto error_info = common->mutable_error();
+  auto error = fill_error_stor(type);
+  error_info->set_code(error.code);
+  error_info->set_message(error.message);
 }
 
 void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
@@ -113,14 +136,8 @@ void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
 }
 
 void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
+                       const nlohmann::json& info,
                        const char* req_id) {
-  nlohmann::json info = json::parse(GetProcessInfo(), nullptr, false);
-  if (info.is_discarded()) {
-    Debug("Error parsing process info\n");
-    return;
-  }
-  // ASSERT(!info.is_discarded());
-  
   DebugJSON("Process Info: \n%s\n", info);
 
   // Fill in the fields of the InfoResponse.
@@ -870,20 +887,6 @@ void GrpcAgent::got_blocked_loop_msgs() {
   }
 }
 
-// void GrpcAgent::got_cpu_profile(const ProfileQStor& stor) {
-//   Debug("CPU Profile: %ld\n", stor.profile.size());
-//   auto it = cpu_profiles_.try_emplace(stor.req_id, nsolid_service_stub_.get(), shared_from_this(), stor.req_id);
-//   if (stor.profile.size() > 0) {
-//     grpcagent::Asset asset;
-//     PopulateCommon(asset.mutable_common(), "cpu_profile", stor.req_id.c_str());
-//     asset.set_data(stor.profile);
-//     it.first->second.Write(std::move(asset));
-//   } else {
-//     it.first->second.StartWritesDone();
-//     it.first->second.RemoveHold();
-//   }
-// }
-
 void GrpcAgent::got_logs() {
   std::vector<std::unique_ptr<LogsRecordable>> recordables;
   LogInfoStor stor;
@@ -1027,6 +1030,47 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   send_reconfigure_event(request.requestid().c_str());
 }
 
+void GrpcAgent::send_asset_error(const std::string& req_id,
+                                 const ProfileType& type,
+                                 const ProfileStor& stor,
+                                 int error) {
+  grpcagent::Asset asset;
+  google::protobuf::Struct metadata;
+  uint64_t thread_id;
+  std::visit([&metadata,&thread_id](auto& opt) {
+    thread_id = opt.thread_id;
+    metadata = std::move(opt.metadata_pb);
+  }, stor.options);
+  PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], req_id.c_str());
+
+  ErrorType error_type;
+  // Calculate exact error type.
+  switch (error) {
+    case UV_EEXIST:
+      switch (type) {
+        case ProfileType::kCpu:
+          error_type = ErrorType::ECPUProfInProgressError;
+        break;
+        case ProfileType::kHeapProf:
+          error_type = ErrorType::EHeapProfInProgressError;
+        break;
+        case ProfileType::kHeapSampl:
+          error_type = ErrorType::EHeapSamplInProgressError;
+        break;
+        case ProfileType::kHeapSnapshot:
+          error_type = ErrorType::EHeapSnapProgressError;
+        break;
+      }
+    break;
+  }
+
+
+  PopulateError(asset.mutable_common(), error_type);
+  asset.mutable_metadata()->CopyFrom(metadata);
+  stor.stream->Write(std::move(asset));
+  stor.stream->WritesDone();
+}
+
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
   google::protobuf::ArenaOptions arena_options;
   // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
@@ -1061,8 +1105,17 @@ void GrpcAgent::send_info_event(const char* req_id) {
   arena_options.max_block_size = 65536;
   std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
 
-  grpcagent::InfoEvent* info_event = google::protobuf::Arena::Create<grpcagent::InfoEvent>(arena.get());
-  PopulateInfoEvent(info_event, req_id);
+  grpcagent::InfoEvent* info_event =
+      google::protobuf::Arena::Create<grpcagent::InfoEvent>(arena.get());
+
+  nlohmann::json info = json::parse(GetProcessInfo(), nullptr, false);
+  if (info.is_discarded()) {
+    Debug("Error parsing process info\n");
+    PopulateCommon(info_event->mutable_common(), "info", req_id);
+    PopulateError(info_event->mutable_common(), ErrorType::EInfoParsingError);
+  } else {
+    PopulateInfoEvent(info_event, info, req_id);
+  }
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
@@ -1173,17 +1226,16 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 
 int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
                              const ProfileType& type) {
+  int err = 0;
   const grpcagent::ProfileArgs& args = req.args().profile();
   uint64_t thread_id = args.thread_id();
   uint64_t duration = args.duration();
   ProfileState& profile_state = profile_state_[type];
   if (profile_state.pending_profiles_map.find(thread_id) !=
       profile_state.pending_profiles_map.end()) {
-    // Send error message back
-    return UV_EEXIST;
+    err = UV_EEXIST;
   }
 
-  int err;
   ProfileOptions options;
   StartProfiling start_profiling = nullptr;
   // metadata ?
@@ -1217,19 +1269,19 @@ int GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
 
   err = (this->*start_profiling)(args, options);
 
-  if (err < 0) {
-    // Send error message back
-    return err;
-  }
-
   AssetStream* stream = new AssetStream(nsolid_service_stub_.get(), agent_id_, saas_);
   ProfileStor stor{ req.requestid(), uv_now(&loop_), stream, std::move(options) };
-  auto iter = profile_state.pending_profiles_map.emplace(thread_id,
-                                                         std::move(stor));
-  ASSERT_NE(iter.second, false);
-  profile_state.nr_profiles++;
+  if (err >= 0) {
+    auto iter = profile_state.pending_profiles_map.emplace(thread_id,
+                                                           std::move(stor));
+    ASSERT_NE(iter.second, false);
+    profile_state.nr_profiles++;
+    return 0;
+  }
 
-  return 0;
+  send_asset_error(req.requestid(), type, stor, err);
+
+  return err;
 }
 
 int GrpcAgent::do_start_cpu_prof(const grpcagent::ProfileArgs& args,

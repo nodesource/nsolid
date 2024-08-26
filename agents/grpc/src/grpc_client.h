@@ -123,16 +123,6 @@ class GrpcClient {
                          const grpcagent::BlockedLoopEvent&,
                          grpcagent::EventResponse*)>&& result_callback) noexcept;
 
-  int DelegateAsyncExport(
-      grpcagent::NSolidService::StubInterface* stub,
-      std::unique_ptr<::grpc::ClientContext>&& context,
-      std::unique_ptr<google::protobuf::Arena>&& arena,
-      grpcagent::CommandError&& event,
-      std::function<bool(::grpc::Status,
-                         std::unique_ptr<google::protobuf::Arena> &&,
-                         const grpcagent::CommandError&,
-                         grpcagent::EventResponse*)>&& result_callback) noexcept;
-
 
   int DelegateAsyncExport(
       grpcagent::NSolidService::StubInterface* stub,

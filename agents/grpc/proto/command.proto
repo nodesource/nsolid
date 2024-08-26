@@ -30,9 +30,3 @@ message CommandResponse {
   uint32 code = 1;
   string message = 2;
 }
-
-message CommandError {
-  CommonResponse common = 1;
-  uint32 code = 2;
-  string message = 3;
-}

@@ -7,8 +7,14 @@ message Time {
   uint64 nanoseconds = 2;
 }
 
+message ErrorInfo {
+  uint32 code = 1;
+  string message = 2;
+}
+
 message CommonResponse {
   string requestId = 1;
   string command = 2;
   Time recorded = 3;
+  ErrorInfo error = 4;
 }
