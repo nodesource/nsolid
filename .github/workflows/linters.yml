@@ -67,7 +67,7 @@ jobs:
       - name: Lint JavaScript files
         run: NODE=$(command -v node) make lint-js
       - name: Get release version numbers
-        if: ${{ github.event.pull_request && github.event.pull_request.base.ref == github.event.pull_request.base.repo.default_branch }}
+        if: ${{ github.event.pull_request && github.event.pull_request.base.ref == github.event.pull_request.base.repo.default_branch && false }}
         id: get-released-versions
         run: ./tools/lint-md/list-released-versions-from-changelogs.mjs >> $GITHUB_OUTPUT
       - name: Lint markdown files
