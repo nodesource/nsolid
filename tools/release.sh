@@ -15,6 +15,10 @@ promotecmd=dist-promote
 signcmd=dist-sign
 customsshkey="" # let ssh and scp use default key
 signversion=""
+# NSolid doesn't upload to CloudFlare
+cloudflare_bucket=""
+cloudflare_endpoint=
+cloudflare_profile=""
 
 while getopts ":i:s:" option; do
     case "${option}" in
