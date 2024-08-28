@@ -39,6 +39,10 @@ namespace grpc {
 constexpr uint64_t span_timer_interval = 1000;
 constexpr size_t span_msg_q_min_size = 1000;
 
+static const char* const root_certs[] = {
+#include "node_root_certs.h"  // NOLINT(build/include_order)
+};
+
 static const char* kErrorProfileInProgress[kNumberOfProfileTypes] = {
   "'cpu_profile' already in progress",
   "'heap_profile' already in progress",
@@ -361,6 +365,11 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
   // gpr_set_log_function([](gpr_log_func_args* args) {
   //   Debug("gRPC: %s\n", args->message);
   // });
+
+  for (size_t i = 0; i < sizeof(root_certs) / sizeof(root_certs[0]); i++) {
+    cacert_ += root_certs[i];
+    cacert_ += "\n";
+  }
 }
 
 GrpcAgent::~GrpcAgent() {
@@ -743,6 +752,8 @@ int GrpcAgent::config(const json& config) {
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas_}};
+        options.use_ssl_credentials = true;
+        options.ssl_credentials_cacert_as_string = cacert_;
         trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options);
       }
       {
@@ -750,6 +761,8 @@ int GrpcAgent::config(const json& config) {
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas_}};
+        options.use_ssl_credentials = true;
+        options.ssl_credentials_cacert_as_string = cacert_;
         metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(options);
       }
       {
@@ -757,6 +770,8 @@ int GrpcAgent::config(const json& config) {
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas_}};
+        options.use_ssl_credentials = true;
+        options.ssl_credentials_cacert_as_string = cacert_;
         log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(options);
       }
       {
@@ -764,6 +779,8 @@ int GrpcAgent::config(const json& config) {
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas_}};
+        options.use_ssl_credentials = true;
+        options.ssl_credentials_cacert_as_string = cacert_;
         nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(options);
       }
       reset_command_stream();

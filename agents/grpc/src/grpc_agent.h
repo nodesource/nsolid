@@ -257,6 +257,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   std::shared_ptr<GrpcClient> client_;
   std::unique_ptr<grpcagent::NSolidService::StubInterface> nsolid_service_stub_;
   std::unique_ptr<CommandStream> command_stream_;
+  std::string cacert_;
 
   // For the gRPC server
   nsuv::ns_async command_msg_;
