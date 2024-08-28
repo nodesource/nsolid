@@ -161,6 +161,13 @@ std::shared_ptr<::grpc::Channel>
   ssl_opts.pem_root_certs = options.ssl_credentials_cacert_as_string;
   auto channel_creds = ::grpc::SslCredentials(ssl_opts);
   ::grpc::ChannelArguments grpc_arguments;
+  // Sample way of setting keepalive arguments on the client channel. Here we
+  // are configuring a keepalive time period of 20 seconds, with a timeout of 10
+  // seconds. Additionally, pings will be sent even if there are no calls in
+  // flight on an active connection.
+  grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, 20 * 1000 /*20 sec*/);
+  grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 10 * 1000 /*10 sec*/);
+  grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
   channel = ::grpc::CreateCustomChannel(options.endpoint, channel_creds, grpc_arguments);
   return channel;
 }
