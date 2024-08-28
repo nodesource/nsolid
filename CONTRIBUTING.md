@@ -134,6 +134,17 @@ releases addressing crucial issues in N|Solid. N|Solid strives to align its
 feature releases as closely as possible with the Node.js release schedule,
 promoting harmony and predictability in the release cycles.
 
+### Landing approved Pull Requests
+
+Currently, N|Solid don't use the `commit-queue` label for landing PRs
+on _default_ branch. Once the PR is mergeable a maintainer can land it using
+`node-core-utils` to include the expected metadata.
+
+```console
+$ ncu-config set branch node-v20.x-nsolid-v5.x
+$ git node land https://github.com/nodesource/nsolid/pull/X
+```
+
 ## Technical Priorities
 
 The N|Solid project aims to extend Node.js functionality to provide a unified
