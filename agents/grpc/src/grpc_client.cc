@@ -157,10 +157,16 @@ GrpcClient::~GrpcClient() {
 std::shared_ptr<::grpc::Channel>
     GrpcClient::MakeChannel(const OtlpGrpcClientOptions& options) {
   std::shared_ptr<::grpc::Channel> channel;
+  ::grpc::ChannelArguments grpc_arguments;
+  if (options.ssl_credentials_cacert_as_string.empty()) {
+    channel = ::grpc::CreateCustomChannel(options.endpoint, ::grpc::InsecureChannelCredentials(), grpc_arguments);
+    return channel;
+  }
+
+
   ::grpc::SslCredentialsOptions ssl_opts;
   ssl_opts.pem_root_certs = options.ssl_credentials_cacert_as_string;
   auto channel_creds = ::grpc::SslCredentials(ssl_opts);
-  ::grpc::ChannelArguments grpc_arguments;
   // Sample way of setting keepalive arguments on the client channel. Here we
   // are configuring a keepalive time period of 20 seconds, with a timeout of 10
   // seconds. Additionally, pings will be sent even if there are no calls in
