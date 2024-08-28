@@ -112,8 +112,13 @@ void AssetStream::OnDone(const ::grpc::Status& s) {
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
   Debug("[%ld] AssetStream::OnWriteDone: %d\n", pthread_self(), ok);
   nsuv::ns_mutex::scoped_lock lock(lock_);
-  write_state_.write_done = ok;
-  NextWrite();
+  write_state_.write_done = true;
+  if (!ok) {
+    StartWritesDone();
+    RemoveHold();
+  } else {
+    NextWrite();
+  }
 }
 
 void AssetStream::NextWrite() {
@@ -152,8 +157,11 @@ GrpcClient::~GrpcClient() {
 std::shared_ptr<::grpc::Channel>
     GrpcClient::MakeChannel(const OtlpGrpcClientOptions& options) {
   std::shared_ptr<::grpc::Channel> channel;
+  ::grpc::SslCredentialsOptions ssl_opts;
+  ssl_opts.pem_root_certs = options.ssl_credentials_cacert_as_string;
+  auto channel_creds = ::grpc::SslCredentials(ssl_opts);
   ::grpc::ChannelArguments grpc_arguments;
-  channel = ::grpc::CreateCustomChannel(options.endpoint, ::grpc::InsecureChannelCredentials(), grpc_arguments);
+  channel = ::grpc::CreateCustomChannel(options.endpoint, channel_creds, grpc_arguments);
   return channel;
 }
 
