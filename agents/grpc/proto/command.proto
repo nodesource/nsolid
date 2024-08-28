@@ -5,7 +5,6 @@
 
 syntax = "proto3";
 
-import "common.proto";
 import "profile.proto";
 import "reconfigure.proto";
 
