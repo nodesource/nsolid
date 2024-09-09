@@ -802,9 +802,9 @@ void CpuProfileJSONSerializer::SerializePositionTicks(
 
 void CpuProfileJSONSerializer::SerializeCallFrame(
     const v8::CpuProfileNode* node) {
-  writer_->AddString("\"functionName\":\"");
-  writer_->AddString(node->GetFunctionNameStr());
-  writer_->AddString("\",\"lineNumber\":");
+  writer_->AddString("\"functionName\":");
+  writer_->EscapeAndAddString(node->GetFunctionNameStr());
+  writer_->AddString(",\"lineNumber\":");
   writer_->AddNumber(node->GetLineNumber() - 1);
   writer_->AddString(",\"columnNumber\":");
   writer_->AddNumber(node->GetColumnNumber() - 1);
