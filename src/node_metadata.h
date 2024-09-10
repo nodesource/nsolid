@@ -59,6 +59,7 @@ namespace node {
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
   V(zmq)                                                                       \
+  V(grpc)                                                                       \
   V(base64)
 
 #if HAVE_OPENSSL

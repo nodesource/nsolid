@@ -12,6 +12,7 @@
 #include "nlohmann/json.h"
 #include "node.h"
 #include "opentelemetry/version.h"
+#include "grpc_version.h"
 #include "simdutf.h"
 #include "undici_version.h"
 #include "util.h"
@@ -150,6 +151,7 @@ Metadata::Versions::Versions() {
     NODE_STRINGIFY(ZMQ_VERSION_MINOR)
     "."
     NODE_STRINGIFY(ZMQ_VERSION_PATCH);
+  gprc = GRPC_CPP_VERSION_STRING;
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {

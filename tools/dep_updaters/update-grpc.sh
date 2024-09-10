@@ -36,6 +36,16 @@ CURRENT_VERSION=$(grep GRPC_CPP_VERSION_STRING ./deps/grpc/include/grpcpp/versio
 # This function exit with 0 if new version and current version are the same
 compare_dependency_version "grpc" "$NEW_VERSION" "$CURRENT_VERSION"
 
+# update version information in src/grpc_version.h
+cat > "$ROOT/src/grpc_version.h" <<EOF
+// This is an auto generated file, please do not edit.
+// Refer to tools/dep_updaters/update-grpc.sh
+#ifndef SRC_GRPC_VERSION_H_
+#define SRC_GRPC_VERSION_H_
+#define GRPC_VERSION "$NEW_VERSION"
+#endif  // SRC_GRPC_VERSION_H_
+EOF
+
 echo "Making temporary workspace"
 
 WORKSPACE=$(mktemp -d 2> /dev/null || mktemp -d -t 'tmp')
