@@ -22,7 +22,8 @@ enum class InstrumentType
   kObservableCounter,
   kObservableGauge,
   kObservableUpDownCounter,
-  kGauge
+  kGauge,
+  kSummary
 };
 
 enum class InstrumentClass
@@ -45,6 +46,7 @@ enum class AggregationType
   kHistogram,
   kLastValue,
   kSum,
+  kSummary,
   kDefault
 };
 
