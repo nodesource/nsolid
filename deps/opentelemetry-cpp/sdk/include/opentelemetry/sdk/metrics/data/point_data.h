@@ -74,6 +74,20 @@ public:
   DropPointData &operator=(DropPointData &&) = default;
 };
 
+class SummaryPointData
+{
+public:
+// TODO: remove ctors and initializers when GCC<5 stops shipping on Ubuntu
+  SummaryPointData(SummaryPointData &&)            = default;
+  SummaryPointData(const SummaryPointData &)       = default;
+  SummaryPointData &operator=(SummaryPointData &&) = default;
+  SummaryPointData()                               = default;
+
+  uint64_t count_                 = {};
+  ValueType sum_                  = {};
+  std::unordered_map<double, ValueType> quantile_values_ = {};
+};
+
 }  // namespace metrics
 }  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE
