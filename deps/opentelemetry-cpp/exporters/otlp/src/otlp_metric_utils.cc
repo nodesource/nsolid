@@ -46,6 +46,11 @@ metric_sdk::AggregationType OtlpMetricUtils::GetAggregationType(
   {
     return metric_sdk::AggregationType::kLastValue;
   }
+  else if (nostd::holds_alternative<sdk::metrics::SummaryPointData>(
+               point_data_with_attributes.point_data))
+  {
+    return metric_sdk::AggregationType::kSummary;
+  }
   return metric_sdk::AggregationType::kDrop;
 }
 
@@ -185,6 +190,56 @@ void OtlpMetricUtils::ConvertGaugeMetric(const opentelemetry::sdk::metrics::Metr
   }
 }
 
+void OtlpMetricUtils::ConvertSummaryMetric(const metric_sdk::MetricData &metric_data,
+                                           proto::metrics::v1::Summary *const summary) noexcept
+{
+  auto start_ts = metric_data.start_ts.time_since_epoch().count();
+  auto ts       = metric_data.end_ts.time_since_epoch().count();
+  for (auto &point_data_with_attributes : metric_data.point_data_attr_)
+  {
+    proto::metrics::v1::SummaryDataPoint *proto_summary_point_data = summary->add_data_points();
+    proto_summary_point_data->set_start_time_unix_nano(start_ts);
+    proto_summary_point_data->set_time_unix_nano(ts);
+    auto summary_data = nostd::get<sdk::metrics::SummaryPointData>(point_data_with_attributes.point_data);
+
+    // sum
+    if ((nostd::holds_alternative<int64_t>(summary_data.sum_)))
+    {
+      // Use static_cast to avoid C4244 in MSVC
+      proto_summary_point_data->set_sum(
+          static_cast<double>(nostd::get<int64_t>(summary_data.sum_)));
+    }
+    else
+    {
+      proto_summary_point_data->set_sum(nostd::get<double>(summary_data.sum_));
+    }
+    // count
+    proto_summary_point_data->set_count(summary_data.count_);
+    // quantile values
+    for (auto &kv : summary_data.quantile_values_)
+    {
+      proto::metrics::v1::SummaryDataPoint::ValueAtQuantile *quantile =
+          proto_summary_point_data->add_quantile_values();
+      quantile->set_quantile(kv.first);
+      if ((nostd::holds_alternative<int64_t>(kv.second)))
+      {
+        // Use static_cast to avoid C4244 in MSVC
+        quantile->set_value(static_cast<double>(nostd::get<int64_t>(kv.second)));
+      }
+      else
+      {
+        quantile->set_value(nostd::get<double>(kv.second));
+      }
+    }
+    // set attributes
+    for (auto &kv_attr : point_data_with_attributes.attributes)
+    {
+      OtlpPopulateAttributeUtils::PopulateAttribute(proto_summary_point_data->add_attributes(),
+                                                    kv_attr.first, kv_attr.second);
+    }
+  }
+}
+
 void OtlpMetricUtils::PopulateInstrumentInfoMetrics(
     const opentelemetry::sdk::metrics::MetricData &metric_data,
     proto::metrics::v1::Metric *metric) noexcept
@@ -205,6 +260,10 @@ void OtlpMetricUtils::PopulateInstrumentInfoMetrics(
     }
     case metric_sdk::AggregationType::kLastValue: {
       ConvertGaugeMetric(metric_data, metric->mutable_gauge());
+      break;
+    }
+    case metric_sdk::AggregationType::kSummary: {
+      ConvertSummaryMetric(metric_data, metric->mutable_summary());
       break;
     }
     default:
@@ -278,6 +337,8 @@ sdk::metrics::AggregationTemporality OtlpMetricUtils::DeltaTemporalitySelector(
     case sdk::metrics::InstrumentType::kUpDownCounter:
     case sdk::metrics::InstrumentType::kObservableUpDownCounter:
       return sdk::metrics::AggregationTemporality::kCumulative;
+    case sdk::metrics::InstrumentType::kSummary:
+      return sdk::metrics::AggregationTemporality::kUnspecified;
   }
   return sdk::metrics::AggregationTemporality::kUnspecified;
 }
@@ -301,6 +362,8 @@ sdk::metrics::AggregationTemporality OtlpMetricUtils::LowMemoryTemporalitySelect
     case sdk::metrics::InstrumentType::kUpDownCounter:
     case sdk::metrics::InstrumentType::kObservableUpDownCounter:
       return sdk::metrics::AggregationTemporality::kCumulative;
+    case sdk::metrics::InstrumentType::kSummary:
+      return sdk::metrics::AggregationTemporality::kUnspecified;
   }
   return sdk::metrics::AggregationTemporality::kUnspecified;
 }
