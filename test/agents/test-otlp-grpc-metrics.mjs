@@ -117,6 +117,10 @@ if (process.argv[2] === 'child') {
     ['loop_avg_tasks', undefined, 'asDouble', 'gauge'],
     ['loop_estimated_lag', 'ms', 'asDouble', 'gauge'],
     ['loop_idle_percent', undefined, 'asDouble', 'gauge'],
+    ['gc_dur', 'us', 'asDouble', 'summary'],
+    ['dns', 'ms', 'asDouble', 'summary'],
+    ['http_client', 'ms', 'asDouble', 'summary'],
+    ['http_server', 'ms', 'asDouble', 'summary'],
   ];
 
   // The format of the metrics is as follows:
@@ -490,10 +494,23 @@ if (process.argv[2] === 'child') {
       const time = BigInt(dataPoint.timeUnixNano);
       assert.ok(time);
       assert.ok(time > startTime);
-      if (type === 'asInt') {
-        validateNumber(parseInt(dataPoint[type], 10), `${name}.${type}`);
-      } else {  // asDouble
-        validateNumber(dataPoint[type], `${name}.${type}`);
+      if (aggregation !== 'summary') {
+        if (type === 'asInt') {
+          validateNumber(parseInt(dataPoint[type], 10), `${name}.${type}`);
+        } else {  // asDouble
+          validateNumber(dataPoint[type], `${name}.${type}`);
+        }
+      } else {
+        validateArray(dataPoint.quantileValues, `${name}.quantileValues`);
+        assert.strictEqual(dataPoint.quantileValues.length, 2);
+        assert.strictEqual(dataPoint.quantileValues[0].quantile, 0.99);
+        assert.strictEqual(dataPoint.quantileValues[1].quantile, 0.5);
+        if (dataPoint.quantileValues[0].value) {
+          validateNumber(dataPoint.quantileValues[0].value, `${name}.quantileValues[0].value`);
+        }
+        if (dataPoint.quantileValues[1].value) {
+          validateNumber(dataPoint.quantileValues[1].value, `${name}.quantileValues[1].value`);
+        }
       }
 
       expected.splice(expectedIndex, 1);
