@@ -1,6 +1,7 @@
 #include "otlp_common.h"
 // NOLINTNEXTLINE(build/c++11)
 #include <chrono>
+#include <unordered_map>
 #include "asserts-cpp/asserts.h"
 #include "env-inl.h"
 #include "nlohmann/json.hpp"
@@ -102,6 +103,28 @@ static void add_gauge(std::vector<MetricData>& metrics,
     SystemTimestamp{ start },
     SystemTimestamp{ end },
     std::vector<PointDataAttributes>{{ attrs, lv_point_data }}
+  };
+  metrics.push_back(metric_data);
+}
+
+// NOLINTNEXTLINE(runtime/references)
+static void add_summary(std::vector<MetricData>& metrics,
+                        const time_point& start,
+                        const time_point& end,
+                        const char* name,
+                        const char* unit,
+                        InstrumentValueType type,
+                        std::unordered_map<double, ValueType>&& values,
+                        PointAttributes attrs = {}) {
+  opentelemetry::sdk::metrics::SummaryPointData summary_point_data{};
+  summary_point_data.quantile_values_ = std::move(values);
+  MetricData metric_data{
+    InstrumentDescriptor{
+      name, "", unit, InstrumentType::kSummary, type },
+    AggregationTemporality::kUnspecified,
+    SystemTimestamp{ start },
+    SystemTimestamp{ end },
+    std::vector<PointDataAttributes>{{ attrs, summary_point_data }}
   };
   metrics.push_back(metric_data);
 }
@@ -257,6 +280,43 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
 }
 NSOLID_ENV_METRICS_NUMBERS(V)
 #undef V
+
+  // Add the summary metrics separately.
+  add_summary(metrics,
+              process_start,
+              end,
+              "gc_dur",
+              kNSUSecs,
+              InstrumentValueType::kDouble,
+              {{ 0.5, stor.gc_dur_us_median },
+               { 0.99, stor.gc_dur_us99_ptile }},
+              attrs);
+  add_summary(metrics,
+              process_start,
+              end,
+              "dns",
+              kNSMSecs,
+              InstrumentValueType::kDouble,
+              {{ 0.5, stor.dns_median }, { 0.99, stor.dns99_ptile }},
+              attrs);
+  add_summary(metrics,
+              process_start,
+              end,
+              "http_client",
+              kNSMSecs,
+              InstrumentValueType::kDouble,
+              {{ 0.5, stor.http_client99_ptile },
+               { 0.99, stor.http_client_median }},
+              attrs);
+  add_summary(metrics,
+              process_start,
+              end,
+              "http_server",
+              kNSMSecs,
+              InstrumentValueType::kDouble,
+              {{ 0.5, stor.http_server_median },
+               { 0.99, stor.http_server99_ptile }},
+              attrs);
 }
 
 void fill_log_recordable(LogsRecordable* recordable,
