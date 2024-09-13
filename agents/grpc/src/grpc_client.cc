@@ -37,6 +37,7 @@ class GrpcAsyncCallData {
 
 CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
                              std::shared_ptr<GrpcAgent> agent): agent_(agent) {
+  ASSERT_EQ(0, lock_.init(true));
   context_.AddMetadata("nsolid-agent-id", agent->agent_id());
   const std::string& saas = agent_->saas();
   if (!saas.empty()) {
@@ -45,6 +46,7 @@ CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
   context_.set_wait_for_ready(true);
   stub->async()->Command(&context_, this);
   StartRead(&server_request_);
+  AddHold();
   StartCall();
  }
 
@@ -53,6 +55,7 @@ CommandStream::~CommandStream() {
 
 void CommandStream::OnDone(const ::grpc::Status& s) {
   Debug("CommandStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+  RemoveHold();
   if (agent_) {
     agent_->reset_command_stream();
   }
@@ -69,13 +72,20 @@ void CommandStream::OnReadDone(bool ok) {
 }
 
 void CommandStream::OnWriteDone(bool ok/*ok*/) {
-  // fprintf(stderr, "OnWriteDone: %d\n", ok);
+  Debug("[%ld] CommandStream::OnWriteDone: %d\n", pthread_self(), ok);
+  nsuv::ns_mutex::scoped_lock lock(lock_);
   write_state_.write_done = true;
-  NextWrite();
+  if (!ok) {
+    StartWritesDone();
+    RemoveHold();
+  } else {
+    NextWrite();
+  }
 }
 
 void CommandStream::NextWrite() {
   if (write_state_.write_done && response_q_.dequeue(write_state_.resp)) {
+    Debug("[%ld] CommandStream::StartWrite\n", pthread_self());
     StartWrite(&write_state_.resp);
     write_state_.write_done = false;
   }
@@ -83,6 +93,7 @@ void CommandStream::NextWrite() {
 
 void CommandStream::Write(grpcagent::CommandResponse&& resp) {
   response_q_.enqueue(std::move(resp));
+  nsuv::ns_mutex::scoped_lock lock(lock_);
   NextWrite(); 
 }
 

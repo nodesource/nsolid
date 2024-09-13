@@ -53,6 +53,7 @@ class CommandStream:
   grpcagent::CommandRequest server_request_;
   WriteState write_state_;
   TSQueue<grpcagent::CommandResponse> response_q_;
+  nsuv::ns_mutex lock_;
 };
 
 class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
