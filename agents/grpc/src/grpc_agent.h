@@ -106,6 +106,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static void run_(nsuv::ns_thread*, WeakGrpcAgent);
 
+  static void at_exit_cb_(bool on_signal, bool profile_stopped, WeakGrpcAgent);
+
   static void blocked_loop_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
   static void command_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
@@ -183,6 +185,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
                         const ErrorType& error);
 
   void send_blocked_loop_event(BlockedLoopStor&& stor);
+
+  void send_exit();
 
   void send_info_event(const char* req_id = nullptr);
 

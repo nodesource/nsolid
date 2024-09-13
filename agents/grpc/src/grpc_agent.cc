@@ -433,6 +433,17 @@ int GrpcAgent::stop() {
   } while (uv_loop_alive(&agent->loop_));
 }
 
+/*static*/ void GrpcAgent::at_exit_cb_(bool on_signal,
+                                       bool profile_stopped,
+                                       WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  agent->stop();
+}
+
 /*static*/ void GrpcAgent::blocked_loop_msg_cb_(nsuv::ns_async*,
                                                 WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
@@ -903,6 +914,7 @@ void GrpcAgent::do_start() {
   ready_ = true;
 
   if (hooks_init_ == false) {
+    ASSERT_EQ(0, AtExitHook(at_exit_cb_, weak_from_this()));
     ASSERT_EQ(0, OnConfigurationHook(config_agent_cb_, weak_from_this()));
     ASSERT_EQ(0, OnLogWriteHook(log_cb_, weak_from_this()));
     ASSERT_EQ(0, ThreadAddedHook(env_creation_cb_, weak_from_this()));
@@ -915,12 +927,16 @@ void GrpcAgent::do_start() {
 }
 
 void GrpcAgent::do_stop() {
+  Debug("GrpcAgent::do_stop\n");
+  send_exit();
   ready_ = false;
+  span_collector_.reset();
   profile_collector_.reset();
+  command_msg_.close();
+  log_msg_.close();
+  config_msg_.close();
   metrics_timer_.close();
   metrics_msg_.close();
-  command_msg_.close();
-  config_msg_.close();
   blocked_loop_msg_.close();
   env_msg_.close();
   shutdown_.close();
@@ -1132,6 +1148,31 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
     [](::grpc::Status,
         std::unique_ptr<google::protobuf::Arena> &&,
         const grpcagent::BlockedLoopEvent& event,
+        grpcagent::EventResponse*) {
+      return true;
+    });
+}
+
+void GrpcAgent::send_exit() {
+  google::protobuf::ArenaOptions arena_options;
+  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  arena_options.initial_block_size = 1024;
+  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
+  // block to reduce memory fragments.
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+
+  grpcagent::ExitEvent* exit_event = google::protobuf::Arena::Create<grpcagent::ExitEvent>(arena.get());
+  PopulateCommon(exit_event->mutable_common(), "exit", nullptr);
+
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
+
+  client_->DelegateAsyncExport(
+    nsolid_service_stub_.get(), std::move(context), std::move(arena),
+    std::move(*exit_event),
+    [](::grpc::Status,
+        std::unique_ptr<google::protobuf::Arena> &&,
+        const grpcagent::ExitEvent& event,
         grpcagent::EventResponse*) {
       return true;
     });
