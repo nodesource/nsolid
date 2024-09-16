@@ -21,6 +21,20 @@ namespace _pb = ::PROTOBUF_NAMESPACE_ID;
 namespace _pbi = _pb::internal;
 
 namespace grpcagent {
+PROTOBUF_CONSTEXPR Error::Error(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.message_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.stack_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct ErrorDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR ErrorDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~ErrorDefaultTypeInternal() {}
+  union {
+    Error _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ErrorDefaultTypeInternal _Error_default_instance_;
 PROTOBUF_CONSTEXPR ExitBody::ExitBody(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.profile_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
@@ -51,11 +65,19 @@ struct ExitEventDefaultTypeInternal {
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ExitEventDefaultTypeInternal _ExitEvent_default_instance_;
 }  // namespace grpcagent
-static ::_pb::Metadata file_level_metadata_exit_2eproto[2];
+static ::_pb::Metadata file_level_metadata_exit_2eproto[3];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_exit_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_exit_2eproto = nullptr;
 
 const uint32_t TableStruct_exit_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::Error, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::Error, _impl_.message_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::Error, _impl_.stack_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::ExitBody, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -75,31 +97,34 @@ const uint32_t TableStruct_exit_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
   PROTOBUF_FIELD_OFFSET(::grpcagent::ExitEvent, _impl_.body_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, -1, sizeof(::grpcagent::ExitBody)},
-  { 9, -1, -1, sizeof(::grpcagent::ExitEvent)},
+  { 0, -1, -1, sizeof(::grpcagent::Error)},
+  { 8, -1, -1, sizeof(::grpcagent::ExitBody)},
+  { 17, -1, -1, sizeof(::grpcagent::ExitEvent)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
+  &::grpcagent::_Error_default_instance_._instance,
   &::grpcagent::_ExitBody_default_instance_._instance,
   &::grpcagent::_ExitEvent_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_exit_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\nexit.proto\022\tgrpcagent\032\014common.proto\"N\n"
-  "\010ExitBody\022\014\n\004code\030\001 \001(\005\022#\n\005error\030\002 \001(\0132\024"
-  ".grpcagent.ErrorInfo\022\017\n\007profile\030\003 \001(\t\"Y\n"
-  "\tExitEvent\022)\n\006common\030\001 \001(\0132\031.grpcagent.C"
-  "ommonResponse\022!\n\004body\030\002 \001(\0132\023.grpcagent."
-  "ExitBodyb\006proto3"
+  "\n\nexit.proto\022\tgrpcagent\032\014common.proto\"\'\n"
+  "\005Error\022\017\n\007message\030\001 \001(\t\022\r\n\005stack\030\002 \001(\t\"J"
+  "\n\010ExitBody\022\014\n\004code\030\001 \001(\005\022\037\n\005error\030\002 \001(\0132"
+  "\020.grpcagent.Error\022\017\n\007profile\030\003 \001(\t\"Y\n\tEx"
+  "itEvent\022)\n\006common\030\001 \001(\0132\031.grpcagent.Comm"
+  "onResponse\022!\n\004body\030\002 \001(\0132\023.grpcagent.Exi"
+  "tBodyb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_exit_2eproto_deps[1] = {
   &::descriptor_table_common_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_exit_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_exit_2eproto = {
-    false, false, 216, descriptor_table_protodef_exit_2eproto,
+    false, false, 253, descriptor_table_protodef_exit_2eproto,
     "exit.proto",
-    &descriptor_table_exit_2eproto_once, descriptor_table_exit_2eproto_deps, 1, 2,
+    &descriptor_table_exit_2eproto_once, descriptor_table_exit_2eproto_deps, 1, 3,
     schemas, file_default_instances, TableStruct_exit_2eproto::offsets,
     file_level_metadata_exit_2eproto, file_level_enum_descriptors_exit_2eproto,
     file_level_service_descriptors_exit_2eproto,
@@ -114,20 +139,267 @@ namespace grpcagent {
 
 // ===================================================================
 
-class ExitBody::_Internal {
+class Error::_Internal {
  public:
-  static const ::grpcagent::ErrorInfo& error(const ExitBody* msg);
 };
 
-const ::grpcagent::ErrorInfo&
+Error::Error(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:grpcagent.Error)
+}
+Error::Error(const Error& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  Error* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.message_){}
+    , decltype(_impl_.stack_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _impl_.message_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.message_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_message().empty()) {
+    _this->_impl_.message_.Set(from._internal_message(), 
+      _this->GetArenaForAllocation());
+  }
+  _impl_.stack_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.stack_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_stack().empty()) {
+    _this->_impl_.stack_.Set(from._internal_stack(), 
+      _this->GetArenaForAllocation());
+  }
+  // @@protoc_insertion_point(copy_constructor:grpcagent.Error)
+}
+
+inline void Error::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.message_){}
+    , decltype(_impl_.stack_){}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.message_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.message_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.stack_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.stack_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+Error::~Error() {
+  // @@protoc_insertion_point(destructor:grpcagent.Error)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void Error::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.message_.Destroy();
+  _impl_.stack_.Destroy();
+}
+
+void Error::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void Error::Clear() {
+// @@protoc_insertion_point(message_clear_start:grpcagent.Error)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.message_.ClearToEmpty();
+  _impl_.stack_.ClearToEmpty();
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* Error::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // string message = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          auto str = _internal_mutable_message();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "grpcagent.Error.message"));
+        } else
+          goto handle_unusual;
+        continue;
+      // string stack = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+          auto str = _internal_mutable_stack();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "grpcagent.Error.stack"));
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* Error::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:grpcagent.Error)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string message = 1;
+  if (!this->_internal_message().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_message().data(), static_cast<int>(this->_internal_message().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "grpcagent.Error.message");
+    target = stream->WriteStringMaybeAliased(
+        1, this->_internal_message(), target);
+  }
+
+  // string stack = 2;
+  if (!this->_internal_stack().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_stack().data(), static_cast<int>(this->_internal_stack().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "grpcagent.Error.stack");
+    target = stream->WriteStringMaybeAliased(
+        2, this->_internal_stack(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:grpcagent.Error)
+  return target;
+}
+
+size_t Error::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grpcagent.Error)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string message = 1;
+  if (!this->_internal_message().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_message());
+  }
+
+  // string stack = 2;
+  if (!this->_internal_stack().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_stack());
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData Error::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    Error::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*Error::GetClassData() const { return &_class_data_; }
+
+
+void Error::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<Error*>(&to_msg);
+  auto& from = static_cast<const Error&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grpcagent.Error)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_message().empty()) {
+    _this->_internal_set_message(from._internal_message());
+  }
+  if (!from._internal_stack().empty()) {
+    _this->_internal_set_stack(from._internal_stack());
+  }
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void Error::CopyFrom(const Error& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grpcagent.Error)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool Error::IsInitialized() const {
+  return true;
+}
+
+void Error::InternalSwap(Error* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.message_, lhs_arena,
+      &other->_impl_.message_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.stack_, lhs_arena,
+      &other->_impl_.stack_, rhs_arena
+  );
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata Error::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_exit_2eproto_getter, &descriptor_table_exit_2eproto_once,
+      file_level_metadata_exit_2eproto[0]);
+}
+
+// ===================================================================
+
+class ExitBody::_Internal {
+ public:
+  static const ::grpcagent::Error& error(const ExitBody* msg);
+};
+
+const ::grpcagent::Error&
 ExitBody::_Internal::error(const ExitBody* msg) {
   return *msg->_impl_.error_;
-}
-void ExitBody::clear_error() {
-  if (GetArenaForAllocation() == nullptr && _impl_.error_ != nullptr) {
-    delete _impl_.error_;
-  }
-  _impl_.error_ = nullptr;
 }
 ExitBody::ExitBody(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -154,7 +426,7 @@ ExitBody::ExitBody(const ExitBody& from)
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_error()) {
-    _this->_impl_.error_ = new ::grpcagent::ErrorInfo(*from._impl_.error_);
+    _this->_impl_.error_ = new ::grpcagent::Error(*from._impl_.error_);
   }
   _this->_impl_.code_ = from._impl_.code_;
   // @@protoc_insertion_point(copy_constructor:grpcagent.ExitBody)
@@ -224,7 +496,7 @@ const char* ExitBody::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
         } else
           goto handle_unusual;
         continue;
-      // .grpcagent.ErrorInfo error = 2;
+      // .grpcagent.Error error = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_error(), ptr);
@@ -277,7 +549,7 @@ uint8_t* ExitBody::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_code(), target);
   }
 
-  // .grpcagent.ErrorInfo error = 2;
+  // .grpcagent.Error error = 2;
   if (this->_internal_has_error()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(2, _Internal::error(this),
@@ -317,7 +589,7 @@ size_t ExitBody::ByteSizeLong() const {
         this->_internal_profile());
   }
 
-  // .grpcagent.ErrorInfo error = 2;
+  // .grpcagent.Error error = 2;
   if (this->_internal_has_error()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
@@ -351,7 +623,7 @@ void ExitBody::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTO
     _this->_internal_set_profile(from._internal_profile());
   }
   if (from._internal_has_error()) {
-    _this->_internal_mutable_error()->::grpcagent::ErrorInfo::MergeFrom(
+    _this->_internal_mutable_error()->::grpcagent::Error::MergeFrom(
         from._internal_error());
   }
   if (from._internal_code() != 0) {
@@ -391,7 +663,7 @@ void ExitBody::InternalSwap(ExitBody* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata ExitBody::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_exit_2eproto_getter, &descriptor_table_exit_2eproto_once,
-      file_level_metadata_exit_2eproto[0]);
+      file_level_metadata_exit_2eproto[1]);
 }
 
 // ===================================================================
@@ -636,12 +908,16 @@ void ExitEvent::InternalSwap(ExitEvent* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata ExitEvent::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_exit_2eproto_getter, &descriptor_table_exit_2eproto_once,
-      file_level_metadata_exit_2eproto[1]);
+      file_level_metadata_exit_2eproto[2]);
 }
 
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace grpcagent
 PROTOBUF_NAMESPACE_OPEN
+template<> PROTOBUF_NOINLINE ::grpcagent::Error*
+Arena::CreateMaybeMessage< ::grpcagent::Error >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grpcagent::Error >(arena);
+}
 template<> PROTOBUF_NOINLINE ::grpcagent::ExitBody*
 Arena::CreateMaybeMessage< ::grpcagent::ExitBody >(Arena* arena) {
   return Arena::CreateMessageInternal< ::grpcagent::ExitBody >(arena);
