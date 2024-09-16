@@ -1164,6 +1164,8 @@ void GrpcAgent::send_exit() {
 
   grpcagent::ExitEvent* exit_event = google::protobuf::Arena::Create<grpcagent::ExitEvent>(arena.get());
   PopulateCommon(exit_event->mutable_common(), "exit", nullptr);
+  grpcagent::ExitBody* exit_body = exit_event->mutable_body();
+  exit_body->set_code(GetExitCode());
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
