@@ -1177,6 +1177,9 @@ void GrpcAgent::send_exit() {
     error_info->set_stack(jstack.dump());
   }
 
+  ProfileState& cpu_profile_state = profile_state_[kCpu];
+  exit_body->set_profile(cpu_profile_state.last_main_profile);
+
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
   client_->DelegateAsyncExport(
