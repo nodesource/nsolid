@@ -33,6 +33,7 @@
 #include "asset.pb.h"
 #include "blocked_loop.pb.h"
 #include "command.pb.h"
+#include "exit.pb.h"
 #include "info.pb.h"
 #include "packages.pb.h"
 #include "reconfigure.pb.h"
