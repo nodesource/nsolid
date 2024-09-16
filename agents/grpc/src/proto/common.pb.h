@@ -345,6 +345,7 @@ class ErrorInfo final :
 
   enum : int {
     kMessageFieldNumber = 2,
+    kStackFieldNumber = 3,
     kCodeFieldNumber = 1,
   };
   // string message = 2;
@@ -359,6 +360,20 @@ class ErrorInfo final :
   const std::string& _internal_message() const;
   inline PROTOBUF_ALWAYS_INLINE void _internal_set_message(const std::string& value);
   std::string* _internal_mutable_message();
+  public:
+
+  // string stack = 3;
+  void clear_stack();
+  const std::string& stack() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_stack(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_stack();
+  PROTOBUF_NODISCARD std::string* release_stack();
+  void set_allocated_stack(std::string* stack);
+  private:
+  const std::string& _internal_stack() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_stack(const std::string& value);
+  std::string* _internal_mutable_stack();
   public:
 
   // uint32 code = 1;
@@ -379,6 +394,7 @@ class ErrorInfo final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr message_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr stack_;
     uint32_t code_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -717,6 +733,56 @@ inline void ErrorInfo::set_allocated_message(std::string* message) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:grpcagent.ErrorInfo.message)
+}
+
+// string stack = 3;
+inline void ErrorInfo::clear_stack() {
+  _impl_.stack_.ClearToEmpty();
+}
+inline const std::string& ErrorInfo::stack() const {
+  // @@protoc_insertion_point(field_get:grpcagent.ErrorInfo.stack)
+  return _internal_stack();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ErrorInfo::set_stack(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.stack_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:grpcagent.ErrorInfo.stack)
+}
+inline std::string* ErrorInfo::mutable_stack() {
+  std::string* _s = _internal_mutable_stack();
+  // @@protoc_insertion_point(field_mutable:grpcagent.ErrorInfo.stack)
+  return _s;
+}
+inline const std::string& ErrorInfo::_internal_stack() const {
+  return _impl_.stack_.Get();
+}
+inline void ErrorInfo::_internal_set_stack(const std::string& value) {
+  
+  _impl_.stack_.Set(value, GetArenaForAllocation());
+}
+inline std::string* ErrorInfo::_internal_mutable_stack() {
+  
+  return _impl_.stack_.Mutable(GetArenaForAllocation());
+}
+inline std::string* ErrorInfo::release_stack() {
+  // @@protoc_insertion_point(field_release:grpcagent.ErrorInfo.stack)
+  return _impl_.stack_.Release();
+}
+inline void ErrorInfo::set_allocated_stack(std::string* stack) {
+  if (stack != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.stack_.SetAllocated(stack, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.stack_.IsDefault()) {
+    _impl_.stack_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.ErrorInfo.stack)
 }
 
 // -------------------------------------------------------------------

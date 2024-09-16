@@ -10,6 +10,7 @@ message Time {
 message ErrorInfo {
   uint32 code = 1;
   string message = 2;
+  string stack = 3;
 }
 
 message CommonResponse {
