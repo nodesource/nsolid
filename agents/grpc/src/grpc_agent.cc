@@ -1166,6 +1166,16 @@ void GrpcAgent::send_exit() {
   PopulateCommon(exit_event->mutable_common(), "exit", nullptr);
   grpcagent::ExitBody* exit_body = exit_event->mutable_body();
   exit_body->set_code(GetExitCode());
+  auto* error = GetExitError();
+  if (error) {
+    grpcagent::ErrorInfo* error_info = exit_body->mutable_error();
+    // Use nlohmann::json to properly escape the error message and stack.
+    nlohmann::json jmsg(std::get<0>(*error));
+    nlohmann::json jstack(std::get<1>(*error));
+    error_info->set_code(500);
+    error_info->set_message(jmsg.dump());
+    error_info->set_stack(jstack.dump());
+  }
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
