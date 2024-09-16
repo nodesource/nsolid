@@ -7,7 +7,7 @@ package grpcagent;
 message ExitBody {
   int32 code = 1;
   ErrorInfo error = 2;
-  bool profile = 3;
+  string profile = 3;
 }
 
 message ExitEvent {

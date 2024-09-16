@@ -23,9 +23,9 @@ namespace _pbi = _pb::internal;
 namespace grpcagent {
 PROTOBUF_CONSTEXPR ExitBody::ExitBody(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.error_)*/nullptr
+    /*decltype(_impl_.profile_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.error_)*/nullptr
   , /*decltype(_impl_.code_)*/0
-  , /*decltype(_impl_.profile_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct ExitBodyDefaultTypeInternal {
   PROTOBUF_CONSTEXPR ExitBodyDefaultTypeInternal()
@@ -87,7 +87,7 @@ static const ::_pb::Message* const file_default_instances[] = {
 const char descriptor_table_protodef_exit_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\nexit.proto\022\tgrpcagent\032\014common.proto\"N\n"
   "\010ExitBody\022\014\n\004code\030\001 \001(\005\022#\n\005error\030\002 \001(\0132\024"
-  ".grpcagent.ErrorInfo\022\017\n\007profile\030\003 \001(\010\"Y\n"
+  ".grpcagent.ErrorInfo\022\017\n\007profile\030\003 \001(\t\"Y\n"
   "\tExitEvent\022)\n\006common\030\001 \001(\0132\031.grpcagent.C"
   "ommonResponse\022!\n\004body\030\002 \001(\0132\023.grpcagent."
   "ExitBodyb\006proto3"
@@ -139,18 +139,24 @@ ExitBody::ExitBody(const ExitBody& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   ExitBody* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.error_){nullptr}
+      decltype(_impl_.profile_){}
+    , decltype(_impl_.error_){nullptr}
     , decltype(_impl_.code_){}
-    , decltype(_impl_.profile_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _impl_.profile_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.profile_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_profile().empty()) {
+    _this->_impl_.profile_.Set(from._internal_profile(), 
+      _this->GetArenaForAllocation());
+  }
   if (from._internal_has_error()) {
     _this->_impl_.error_ = new ::grpcagent::ErrorInfo(*from._impl_.error_);
   }
-  ::memcpy(&_impl_.code_, &from._impl_.code_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.profile_) -
-    reinterpret_cast<char*>(&_impl_.code_)) + sizeof(_impl_.profile_));
+  _this->_impl_.code_ = from._impl_.code_;
   // @@protoc_insertion_point(copy_constructor:grpcagent.ExitBody)
 }
 
@@ -159,11 +165,15 @@ inline void ExitBody::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.error_){nullptr}
+      decltype(_impl_.profile_){}
+    , decltype(_impl_.error_){nullptr}
     , decltype(_impl_.code_){0}
-    , decltype(_impl_.profile_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
+  _impl_.profile_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.profile_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 ExitBody::~ExitBody() {
@@ -177,6 +187,7 @@ ExitBody::~ExitBody() {
 
 inline void ExitBody::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.profile_.Destroy();
   if (this != internal_default_instance()) delete _impl_.error_;
 }
 
@@ -190,13 +201,12 @@ void ExitBody::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
+  _impl_.profile_.ClearToEmpty();
   if (GetArenaForAllocation() == nullptr && _impl_.error_ != nullptr) {
     delete _impl_.error_;
   }
   _impl_.error_ = nullptr;
-  ::memset(&_impl_.code_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.profile_) -
-      reinterpret_cast<char*>(&_impl_.code_)) + sizeof(_impl_.profile_));
+  _impl_.code_ = 0;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -222,11 +232,13 @@ const char* ExitBody::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
         } else
           goto handle_unusual;
         continue;
-      // bool profile = 3;
+      // string profile = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
-          _impl_.profile_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+          auto str = _internal_mutable_profile();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "grpcagent.ExitBody.profile"));
         } else
           goto handle_unusual;
         continue;
@@ -272,10 +284,14 @@ uint8_t* ExitBody::_InternalSerialize(
         _Internal::error(this).GetCachedSize(), target, stream);
   }
 
-  // bool profile = 3;
-  if (this->_internal_profile() != 0) {
-    target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteBoolToArray(3, this->_internal_profile(), target);
+  // string profile = 3;
+  if (!this->_internal_profile().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_profile().data(), static_cast<int>(this->_internal_profile().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "grpcagent.ExitBody.profile");
+    target = stream->WriteStringMaybeAliased(
+        3, this->_internal_profile(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -294,6 +310,13 @@ size_t ExitBody::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
+  // string profile = 3;
+  if (!this->_internal_profile().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_profile());
+  }
+
   // .grpcagent.ErrorInfo error = 2;
   if (this->_internal_has_error()) {
     total_size += 1 +
@@ -304,11 +327,6 @@ size_t ExitBody::ByteSizeLong() const {
   // int32 code = 1;
   if (this->_internal_code() != 0) {
     total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_code());
-  }
-
-  // bool profile = 3;
-  if (this->_internal_profile() != 0) {
-    total_size += 1 + 1;
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
@@ -329,15 +347,15 @@ void ExitBody::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTO
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
+  if (!from._internal_profile().empty()) {
+    _this->_internal_set_profile(from._internal_profile());
+  }
   if (from._internal_has_error()) {
     _this->_internal_mutable_error()->::grpcagent::ErrorInfo::MergeFrom(
         from._internal_error());
   }
   if (from._internal_code() != 0) {
     _this->_internal_set_code(from._internal_code());
-  }
-  if (from._internal_profile() != 0) {
-    _this->_internal_set_profile(from._internal_profile());
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -355,10 +373,16 @@ bool ExitBody::IsInitialized() const {
 
 void ExitBody::InternalSwap(ExitBody* other) {
   using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.profile_, lhs_arena,
+      &other->_impl_.profile_, rhs_arena
+  );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.profile_)
-      + sizeof(ExitBody::_impl_.profile_)
+      PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.code_)
+      + sizeof(ExitBody::_impl_.code_)
       - PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.error_)>(
           reinterpret_cast<char*>(&_impl_.error_),
           reinterpret_cast<char*>(&other->_impl_.error_));

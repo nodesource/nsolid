@@ -182,10 +182,24 @@ class ExitBody final :
   // accessors -------------------------------------------------------
 
   enum : int {
+    kProfileFieldNumber = 3,
     kErrorFieldNumber = 2,
     kCodeFieldNumber = 1,
-    kProfileFieldNumber = 3,
   };
+  // string profile = 3;
+  void clear_profile();
+  const std::string& profile() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_profile(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_profile();
+  PROTOBUF_NODISCARD std::string* release_profile();
+  void set_allocated_profile(std::string* profile);
+  private:
+  const std::string& _internal_profile() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_profile(const std::string& value);
+  std::string* _internal_mutable_profile();
+  public:
+
   // .grpcagent.ErrorInfo error = 2;
   bool has_error() const;
   private:
@@ -213,15 +227,6 @@ class ExitBody final :
   void _internal_set_code(int32_t value);
   public:
 
-  // bool profile = 3;
-  void clear_profile();
-  bool profile() const;
-  void set_profile(bool value);
-  private:
-  bool _internal_profile() const;
-  void _internal_set_profile(bool value);
-  public:
-
   // @@protoc_insertion_point(class_scope:grpcagent.ExitBody)
  private:
   class _Internal;
@@ -230,9 +235,9 @@ class ExitBody final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr profile_;
     ::grpcagent::ErrorInfo* error_;
     int32_t code_;
-    bool profile_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -531,24 +536,54 @@ inline void ExitBody::set_allocated_error(::grpcagent::ErrorInfo* error) {
   // @@protoc_insertion_point(field_set_allocated:grpcagent.ExitBody.error)
 }
 
-// bool profile = 3;
+// string profile = 3;
 inline void ExitBody::clear_profile() {
-  _impl_.profile_ = false;
+  _impl_.profile_.ClearToEmpty();
 }
-inline bool ExitBody::_internal_profile() const {
-  return _impl_.profile_;
-}
-inline bool ExitBody::profile() const {
+inline const std::string& ExitBody::profile() const {
   // @@protoc_insertion_point(field_get:grpcagent.ExitBody.profile)
   return _internal_profile();
 }
-inline void ExitBody::_internal_set_profile(bool value) {
-  
-  _impl_.profile_ = value;
-}
-inline void ExitBody::set_profile(bool value) {
-  _internal_set_profile(value);
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ExitBody::set_profile(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.profile_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:grpcagent.ExitBody.profile)
+}
+inline std::string* ExitBody::mutable_profile() {
+  std::string* _s = _internal_mutable_profile();
+  // @@protoc_insertion_point(field_mutable:grpcagent.ExitBody.profile)
+  return _s;
+}
+inline const std::string& ExitBody::_internal_profile() const {
+  return _impl_.profile_.Get();
+}
+inline void ExitBody::_internal_set_profile(const std::string& value) {
+  
+  _impl_.profile_.Set(value, GetArenaForAllocation());
+}
+inline std::string* ExitBody::_internal_mutable_profile() {
+  
+  return _impl_.profile_.Mutable(GetArenaForAllocation());
+}
+inline std::string* ExitBody::release_profile() {
+  // @@protoc_insertion_point(field_release:grpcagent.ExitBody.profile)
+  return _impl_.profile_.Release();
+}
+inline void ExitBody::set_allocated_profile(std::string* profile) {
+  if (profile != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.profile_.SetAllocated(profile, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.profile_.IsDefault()) {
+    _impl_.profile_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.ExitBody.profile)
 }
 
 // -------------------------------------------------------------------
