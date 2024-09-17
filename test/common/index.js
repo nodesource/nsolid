@@ -52,6 +52,16 @@ const {
 if (isMainThread)
   process.umask(0o022);
 
+if (isMainThread && process.env.NSOLID_CHECK_TEST_METRICS) {
+  process.on('exit', () => {
+    const m = require('nsolid').metrics();
+    for (const i in m) {
+      if (typeof m[i] === 'number' && !Number.isFinite(m[i]))
+        throw new TypeError(`metric ${i} is not finite: ${m[i]}`);
+    }
+  });
+}
+
 const noop = () => {};
 
 const hasCrypto = Boolean(process.versions.openssl) &&

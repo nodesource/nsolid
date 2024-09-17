@@ -971,19 +971,32 @@ void uv__metrics_update_idle_time(uv_loop_t* loop) {
 
   loop_metrics = uv__get_loop_metrics(loop);
 
-  /* The thread running uv__metrics_update_idle_time() is always the same
-   * thread that sets provider_entry_time. So it's unnecessary to lock before
-   * retrieving this value.
+  /* The provider_exit_time should have already been updated in this case so
+   * there is nothing else that needs to be done. There's no need to place a
+   * lock when retrieving this value since it's only read/written from the same
+   * thread.
    */
-  if (loop_metrics->provider_entry_time == 0)
+  if (!loop_metrics->loop_starting)
     return;
 
+  loop_metrics->loop_starting = 0;
   exit_time = uv_hrtime();
 
   uv_mutex_lock(&loop_metrics->lock);
-  entry_time = loop_metrics->provider_entry_time;
-  loop_metrics->provider_entry_time = 0;
-  loop_metrics->provider_idle_time += exit_time - entry_time;
+  /* Since loop_starting wasn't set that means the provider_exit_time hasn't
+   * been updated. So update it regardless of whether provider_idle_time needs
+   * to be incremented.
+   */
+  loop_metrics->provider_exit_time = exit_time;
+  /* The provider_entry_time is only set if timeout > 0. The provider_idle_time
+   * only needs to be updated if timeout > 0. So if provider_entry_time == 0
+   * then there's no need to update provider_idle_time.
+   */
+  if (loop_metrics->provider_entry_time) {
+    entry_time = loop_metrics->provider_entry_time;
+    loop_metrics->provider_entry_time = 0;
+    loop_metrics->provider_idle_time += exit_time - entry_time;
+  }
   uv_mutex_unlock(&loop_metrics->lock);
 }
 
@@ -995,10 +1008,21 @@ void uv__metrics_set_provider_entry_time(uv_loop_t* loop) {
   if (!(uv__get_internal_fields(loop)->flags & UV_METRICS_IDLE_TIME))
     return;
 
-  now = uv_hrtime();
   loop_metrics = uv__get_loop_metrics(loop);
+
+  /* If the provider_entry_time has already been set then don't set it again.
+   * This check is necessary to account for the fact that
+   * GetQueuedCompletionStatus can return early, which requires entering the
+   * provider again.
+   */
+  if (loop_metrics->provider_entry_time)
+    return;
+
+  now = uv_hrtime();
+
   uv_mutex_lock(&loop_metrics->lock);
   loop_metrics->provider_entry_time = now;
+  loop_metrics->provider_exit_time = 0;
   uv_mutex_unlock(&loop_metrics->lock);
 }
 
@@ -1026,4 +1050,16 @@ uint64_t uv_metrics_idle_time(uv_loop_t* loop) {
   if (entry_time > 0)
     idle_time += uv_hrtime() - entry_time;
   return idle_time;
+}
+
+void uv_metrics_provider_times(uv_loop_t* loop,
+                               uint64_t* entry,
+                               uint64_t* exit) {
+  uv__loop_metrics_t* loop_metrics;
+
+  loop_metrics = uv__get_loop_metrics(loop);
+  uv_mutex_lock(&loop_metrics->lock);
+  *entry = loop_metrics->provider_entry_time;
+  *exit = loop_metrics->provider_exit_time;
+  uv_mutex_unlock(&loop_metrics->lock);
 }

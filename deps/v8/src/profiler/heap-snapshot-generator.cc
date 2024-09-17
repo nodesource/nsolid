@@ -3072,7 +3072,7 @@ bool HeapSnapshotGenerator::FillReferences() {
 // type, name, id, self_size, edge_count, trace_node_id, detachedness.
 const int HeapSnapshotJSONSerializer::kNodeFieldsCount = 7;
 
-void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
+void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream, bool redact) {
   v8::base::ElapsedTimer timer;
   timer.Start();
   if (AllocationTracker* allocation_tracker =
@@ -3081,7 +3081,7 @@ void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
   }
   DCHECK_NULL(writer_);
   writer_ = new OutputStreamWriter(stream);
-  SerializeImpl();
+  SerializeImpl(redact);
   delete writer_;
   writer_ = nullptr;
 
@@ -3092,7 +3092,7 @@ void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
   timer.Stop();
 }
 
-void HeapSnapshotJSONSerializer::SerializeImpl() {
+void HeapSnapshotJSONSerializer::SerializeImpl(bool redact) {
   DCHECK_EQ(0, snapshot_->root()->index());
   writer_->AddCharacter('{');
   writer_->AddString("\"snapshot\":{");
@@ -3100,7 +3100,9 @@ void HeapSnapshotJSONSerializer::SerializeImpl() {
   if (writer_->aborted()) return;
   writer_->AddString("},\n");
   writer_->AddString("\"nodes\":[");
-  SerializeNodes();
+  // This is where strings are copied into the strings_ cache so redaction must
+  // be performed here
+  SerializeNodes(redact);
   if (writer_->aborted()) return;
   writer_->AddString("],\n");
   writer_->AddString("\"edges\":[");
@@ -3226,7 +3228,8 @@ void HeapSnapshotJSONSerializer::SerializeEdges() {
   }
 }
 
-void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
+void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry,
+                                               bool redact) {
   // The buffer needs space for 5 unsigned ints, 1 size_t, 1 uint8_t, 7 commas,
   // \n and \0
   static const int kBufferSize =
@@ -3240,7 +3243,11 @@ void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
   }
   buffer_pos = utoa(entry->type(), buffer, buffer_pos);
   buffer[buffer_pos++] = ',';
-  buffer_pos = utoa(GetStringId(entry->name()), buffer, buffer_pos);
+  if (redact && entry->type() == HeapEntry::kString) {
+    buffer_pos = utoa(GetStringId("(redacted)"), buffer, buffer_pos);
+  } else {
+    buffer_pos = utoa(GetStringId(entry->name()), buffer, buffer_pos);
+  }
   buffer[buffer_pos++] = ',';
   buffer_pos = utoa(entry->id(), buffer, buffer_pos);
   buffer[buffer_pos++] = ',';
@@ -3256,10 +3263,10 @@ void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
   writer_->AddString(buffer.begin());
 }
 
-void HeapSnapshotJSONSerializer::SerializeNodes() {
+void HeapSnapshotJSONSerializer::SerializeNodes(bool redact) {
   const std::deque<HeapEntry>& entries = snapshot_->entries();
   for (const HeapEntry& entry : entries) {
-    SerializeNode(&entry);
+    SerializeNode(&entry, redact);
     if (writer_->aborted()) return;
   }
 }

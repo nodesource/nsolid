@@ -60,14 +60,7 @@ const forAllClients = (cb) => common.mustCall(cb, CLIENT_VARIANTS);
       }
     }, 1));
   }))
-  .on('close', function() {
-    setTimeout(() => {
-      for (const pair of handleMap) {
-        console.error(`[Pipe]Clean up handle with fd ${pair[1].fd}`);
-        pair[1].close();  // clean up handles
-      }
-    }, 10);
-  })
+  .on('close', common.mustCall())
   .on('error', function(err) {
     console.error(err);
     assert.fail(`[Pipe server]${err}`);

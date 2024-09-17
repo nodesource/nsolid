@@ -49,6 +49,7 @@
 #include "util.h"
 #include "uv.h"
 #include "v8.h"
+#include "nsolid.h"
 
 #if HAVE_OPENSSL
 #include <openssl/evp.h>
@@ -1072,6 +1073,8 @@ class Environment final : public MemoryRetainer {
     kHasExitCode,
     kExitInfoFieldCount
   };
+
+  nsolid::SharedEnvInst envinst_;
 
 #if HAVE_OPENSSL
 #if OPENSSL_VERSION_MAJOR >= 3

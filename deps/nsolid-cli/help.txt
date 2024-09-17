@@ -1,0 +1,53 @@
+Usage: nsolid-cli [options] command
+
+Options:
+  --help or -h          print this help text
+  --version or -v       print the version of this program
+  --remote=ADDRESS      address of the NSolid Console API
+                        [http://localhost:6753/api/]
+  --timeout=TTL         time (seconds) to wait for a response
+  --id=ID               instance to filter the command on
+  --threadId=THREADID   worker thread to filter the command, numeric and the
+                        default is the main thread (0)
+  --delete              DELETE the specified object from the console database
+  --body=BODY           send BODY to a PUT or POST command
+  --attach=FILE         same as body but it reads a file from a filesystem
+  --stdin or -s         write STDIN to a PUT or POST command. overrides --body
+
+Configuration:
+  All options can be provided via ~/.nsolid-clirc as an INI file.
+
+Built-In Commands:
+  * ls
+  * info
+  * metrics
+  * packages
+  * profile
+  * snapshot
+  * startup-times
+  * asset
+  * assets
+  * vulnerabilities
+  * custom
+  * export-settings
+  * import-settings
+
+For `snapshot`, `profile` and `export-settings` it is suggested you redirect the
+output to a file, e.g.:
+  nsolid-cli snapshot --id abc123abc123abc123 > abc.heapsnapshot
+  nsolid-cli export-settings --item notifications
+
+A list of assets can be retrieved from the server given specific parameters. For
+example retrieving all assets for a given application name:
+  nsolid-cli --app="<app-name>" assets
+
+A specific asset can be retrieved or deleted using the id of the asset:
+  nsolid-cli --id="<asset-id>" asset
+  nsolid-cli --delete --id="<asset-id>" asset
+
+For `import-settings` you need to use the `--attach` flag to define the config
+file to be imported, e.g.:
+  nsolid-cli import-settings --item notifications --attach backup.nsconfig
+
+For More Information See:
+  https://docs.nodesource.com/docs/using-the-cli

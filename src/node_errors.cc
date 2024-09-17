@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <sstream>
 
+#include "nsolid/nsolid_api.h"
+
 #include "debug_utils-inl.h"
 #include "node_errors.h"
 #include "node_external_reference.h"
@@ -677,6 +679,10 @@ TryCatchScope::~TryCatchScope() {
         EnhanceFatalException::kEnhance : EnhanceFatalException::kDontEnhance;
     if (message.IsEmpty())
       message = Exception::CreateMessage(env_->isolate(), exception);
+    // EnvList::SetExitCode() is called from Exit(), only from the main thread.
+    if (env_->is_main_thread())
+      nsolid::EnvList::Inst()->SetExitError(
+          env_->isolate(), exception, message);
     ReportFatalException(env_, exception, message, enhance);
     env_->Exit(ExitCode::kExceptionInFatalExceptionHandler);
   }
@@ -1217,6 +1223,9 @@ void TriggerUncaughtException(Isolate* isolate,
   // during bootstrap, or if the user has patched it incorrectly, exit
   // the current Node.js instance.
   if (!fatal_exception_function->IsFunction()) {
+    // EnvList::SetExitCode() is called from Exit(), only from the main thread.
+    if (env->is_main_thread())
+      nsolid::EnvList::Inst()->SetExitError(env->isolate(), error, message);
     ReportFatalException(
         env, error, message, EnhanceFatalException::kDontEnhance);
     env->Exit(ExitCode::kInvalidFatalExceptionMonkeyPatching);
@@ -1259,6 +1268,10 @@ void TriggerUncaughtException(Isolate* isolate,
   if (!handled->IsFalse()) {
     return;
   }
+
+  // EnvList::SetExitCode() is called from Exit(), only from the main thread.
+  if (env->is_main_thread())
+    nsolid::EnvList::Inst()->SetExitError(env->isolate(), error, message);
 
   // Now we are certain that the exception is fatal.
   ReportFatalException(env, error, message, EnhanceFatalException::kEnhance);

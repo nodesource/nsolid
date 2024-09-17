@@ -28,8 +28,15 @@
 
 #define NODE_VERSION_IS_LTS 0
 #define NODE_VERSION_LTS_CODENAME ""
+#define NODE_VERSION_LTS_CODENAME_LC ""
 
 #define NODE_VERSION_IS_RELEASE 1
+
+#define NSOLID_MAJOR_VERSION 5
+#define NSOLID_MINOR_VERSION 3
+#define NSOLID_PATCH_VERSION 3
+
+#define NSOLID_VERSION_IS_RELEASE 1
 
 #ifndef NODE_STRINGIFY
 #define NODE_STRINGIFY(n) NODE_STRINGIFY_HELPER(n)
@@ -58,18 +65,48 @@
                               NODE_STRINGIFY(NODE_MINOR_VERSION) "." \
                               NODE_STRINGIFY(NODE_PATCH_VERSION)     \
                               NODE_TAG
+
+#ifndef NSOLID_TAG
+# if NSOLID_VERSION_IS_RELEASE
+#  define NSOLID_TAG ""
+# else
+#  define NSOLID_TAG "-pre"
+# endif
+#else
+# define NSOLID_EXE_VERSION NSOLID_STRINGIFY(NSOLID_MAJOR_VERSION) "." \
+                            NSOLID_STRINGIFY(NSOLID_MINOR_VERSION) "." \
+                            NSOLID_STRINGIFY(NSOLID_PATCH_VERSION)     \
+                            NSOLID_STRINGIFY(NSOLID_TAG)
+#endif
+
+# define NSOLID_VERSION_STRING  NODE_STRINGIFY(NSOLID_MAJOR_VERSION) "." \
+                                NODE_STRINGIFY(NSOLID_MINOR_VERSION) "." \
+                                NODE_STRINGIFY(NSOLID_PATCH_VERSION)     \
+                                NSOLID_TAG
+
 #ifndef NODE_EXE_VERSION
 # define NODE_EXE_VERSION NODE_VERSION_STRING
 #endif
 
+#ifndef NSOLID_EXE_VERSION
+# define NSOLID_EXE_VERSION NSOLID_VERSION_STRING
+#endif
+
 #define NODE_VERSION "v" NODE_VERSION_STRING
 
+#define NSOLID_VERSION "v" NSOLID_VERSION_STRING
 
 #define NODE_VERSION_AT_LEAST(major, minor, patch) \
   (( (major) < NODE_MAJOR_VERSION) \
   || ((major) == NODE_MAJOR_VERSION && (minor) < NODE_MINOR_VERSION) \
   || ((major) == NODE_MAJOR_VERSION && \
       (minor) == NODE_MINOR_VERSION && (patch) <= NODE_PATCH_VERSION))
+
+#define NSOLID_VERSION_AT_LEAST(major, minor, patch) \
+  (( (major) < NSOLID_MAJOR_VERSION) \
+  || ((major) == NSOLID_MAJOR_VERSION && (minor) < NSOLID_MINOR_VERSION) \
+  || ((major) == NSOLID_MAJOR_VERSION && \
+      (minor) == NSOLID_MINOR_VERSION && (patch) <= NSOLID_PATCH_VERSION))
 
 /**
  * Node.js will refuse to load modules that weren't compiled against its own

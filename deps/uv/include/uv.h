@@ -1348,6 +1348,9 @@ struct uv_metrics_s {
 
 UV_EXTERN int uv_metrics_info(uv_loop_t* loop, uv_metrics_t* metrics);
 UV_EXTERN uint64_t uv_metrics_idle_time(uv_loop_t* loop);
+UV_EXTERN void uv_metrics_provider_times(uv_loop_t* loop,
+                                         uint64_t* entry,
+                                         uint64_t* exit);
 
 typedef enum {
   UV_FS_UNKNOWN = -1,

@@ -95,6 +95,7 @@ void Metadata::Versions::InitializeIntlVersions() {
 
 Metadata::Versions::Versions() {
   node = NODE_VERSION_STRING;
+  nsolid = NSOLID_VERSION_STRING;
   v8 = v8::V8::GetVersion();
   uv = uv_version_string();
 #ifdef NODE_BUNDLED_ZLIB
@@ -161,8 +162,10 @@ Metadata::Release::Release() : name(NODE_RELEASE) {
 #endif  // NODE_VERSION_IS_LTS
 
 #ifdef NODE_HAS_RELEASE_URLS
-#define NODE_RELEASE_URLPFX NODE_RELEASE_URLBASE "v" NODE_VERSION_STRING "/"
-#define NODE_RELEASE_URLFPFX NODE_RELEASE_URLPFX "node-v" NODE_VERSION_STRING
+#  define NODE_RELEASE_URLPFX NODE_RELEASE_URLBASE "v" \
+  NSOLID_VERSION_STRING "/"
+#  define NODE_RELEASE_URLFPFX NODE_RELEASE_URLPFX "nsolid-v" \
+  NSOLID_VERSION_STRING
 
   source_url = NODE_RELEASE_URLFPFX ".tar.gz";
   headers_url = NODE_RELEASE_URLFPFX "-headers.tar.gz";

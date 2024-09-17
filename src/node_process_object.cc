@@ -163,7 +163,7 @@ MaybeLocal<Object> CreateProcessObject(Realm* realm) {
 
 #ifdef NODE_HAS_RELEASE_URLS
   READONLY_STRING_PROPERTY(
-      release, "sourceUrl", per_process::metadata.release.source_url);
+      release, "sourceUrl", std::string());
   READONLY_STRING_PROPERTY(
       release, "headersUrl", per_process::metadata.release.headers_url);
 #ifdef _WIN32

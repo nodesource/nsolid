@@ -24,6 +24,8 @@
 #include "v8-cppgc.h"
 #include "v8-profiler.h"
 
+#include "nsolid/nsolid_api.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cinttypes>
@@ -995,9 +997,13 @@ void Environment::InitializeMainContext(Local<Context> context,
     performance_state_->Mark(performance::NODE_PERFORMANCE_MILESTONE_V8_START,
                             performance::performance_v8_start);
   }
+
+  nsolid::EnvList::Inst()->AddEnv(this);
 }
 
 Environment::~Environment() {
+  nsolid::EnvList::Inst()->RemoveEnv(this);
+
   HandleScope handle_scope(isolate());
   Local<Context> ctx = context();
 
@@ -1256,8 +1262,9 @@ void Environment::PrintSyncTrace() const {
 
   HandleScope handle_scope(isolate());
 
-  fprintf(
-      stderr, "(node:%d) WARNING: Detected use of sync API\n", uv_os_getpid());
+  fprintf(stderr,
+          "(nsolid:%d) WARNING: Detected use of sync API\n",
+          uv_os_getpid());
   PrintStackTrace(isolate(),
                   StackTrace::CurrentStackTrace(
                       isolate(), stack_trace_limit(), StackTrace::kDetailed));
@@ -1852,9 +1859,9 @@ void Environment::Exit(ExitCode exit_code) {
         isolate(), Isolate::DisallowJavascriptExecutionScope::CRASH_ON_FAILURE);
 
     if (is_main_thread()) {
-      fprintf(stderr, "(node:%d) ", uv_os_getpid());
+      fprintf(stderr, "(nsolid:%d) ", uv_os_getpid());
     } else {
-      fprintf(stderr, "(node:%d, thread:%" PRIu64 ") ",
+      fprintf(stderr, "(nsolid:%d, thread:%" PRIu64 ") ",
               uv_os_getpid(), thread_id());
     }
 

@@ -16,6 +16,7 @@ namespace node {
   V(v8_binding_data, v8_utils::BindingData)                                    \
   V(blob_binding_data, BlobBindingData)                                        \
   V(process_binding_data, process::BindingData)                                \
+  V(nsolid_binding_data, nsolid::BindingData)                                  \
   V(timers_binding_data, timers::BindingData)                                  \
   V(url_binding_data, url::BindingData)                                        \
   V(modules_binding_data, modules::BindingData)

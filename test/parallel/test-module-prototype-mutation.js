@@ -1,5 +1,12 @@
 'use strict';
+
 const common = require('../common');
+
+// Make sure nsolid has already parsed the package.json so the access
+// to the `name` property is not polluted.
+const nsolid = require('nsolid');
+nsolid.start();
+
 const fixtures = require('../common/fixtures');
 const { Channel } = require('diagnostics_channel');
 const assert = require('assert');

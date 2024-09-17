@@ -2,6 +2,10 @@
 'use strict';
 
 const common = require('../common');
+
+// Need to disable package scanning to not break the readdir test.
+require('nsolid').start({ disablePackageScan: true });
+
 const assert = require('assert');
 const fs = require('fs');
 

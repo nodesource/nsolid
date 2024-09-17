@@ -51,44 +51,6 @@ jobs:
         run: npx envinfo
       - name: Lint C/C++ files
         run: make lint-cpp
-  format-cpp:
-    if: ${{ github.event.pull_request && github.event.pull_request.draft == false && github.base_ref == github.event.repository.default_branch }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b  # v4.0.3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Environment Information
-        run: npx envinfo
-      - name: Format C/C++ files
-        run: |
-          make format-cpp-build
-          # The `make format-cpp` error code is intentionally ignored here
-          # because it is irrelevant. We already check if the formatter produced
-          # a diff in the next line.
-          # Refs: https://github.com/nodejs/node/pull/42764
-          CLANG_FORMAT_START="$(git merge-base HEAD refs/remotes/origin/$GITHUB_BASE_REF)" \
-            make format-cpp || true
-          git --no-pager diff --exit-code && EXIT_CODE="$?" || EXIT_CODE="$?"
-          if [ "$EXIT_CODE" != "0" ]
-          then
-            echo
-            echo 'ERROR: Please run:'
-            echo
-            echo "  CLANG_FORMAT_START="$\(git merge-base HEAD ${GITHUB_BASE_REF}\)" make format-cpp"
-            echo
-            echo 'to format the commits in your branch.'
-            exit "$EXIT_CODE"
-          fi
   lint-js-and-md:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
@@ -131,23 +93,6 @@ jobs:
         run: |
           make lint-py-build
           make lint-py
-  lint-yaml:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
-        with:
-          persist-credentials: false
-      - name: Use Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Environment Information
-        run: npx envinfo
-      - name: Lint YAML
-        run: |
-          make lint-yaml-build || true
-          make lint-yaml
 
   lint-sh:
     if: github.event.pull_request.draft == false
@@ -159,16 +104,6 @@ jobs:
       - run: shellcheck -V
       - name: Lint Shell scripts
         run: tools/lint-sh.mjs .
-  lint-codeowners:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
-        with:
-          persist-credentials: false
-      - uses: mszostok/codeowners-validator@7f3f5e28c6d7b8dfae5731e54ce2272ca384592f
-        with:
-          checks: files,duppatterns
   lint-pr-url:
     if: ${{ github.event.pull_request }}
     runs-on: ubuntu-latest

@@ -8,6 +8,7 @@
 #include "node_internals.h"
 #include "node_process-inl.h"
 #include "util-inl.h"
+#include "nsolid/nsolid_api.h"
 
 #include <cinttypes>
 
@@ -125,6 +126,10 @@ void PerformanceState::Mark(PerformanceMilestone milestone, uint64_t ts) {
       TRACING_CATEGORY_NODE1(bootstrap),
       GetPerformanceMilestoneName(milestone),
       TRACE_EVENT_SCOPE_THREAD, ts / 1000);
+  auto envinst_sp = nsolid::EnvInst::GetCurrent(Isolate::GetCurrent());
+  if (envinst_sp) {
+    envinst_sp->SetNodeStartupTime(GetPerformanceMilestoneName(milestone), ts);
+  }
 }
 
 void SetupPerformanceObservers(const FunctionCallbackInfo<Value>& args) {

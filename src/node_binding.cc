@@ -70,6 +70,9 @@
   V(process_wrap)                                                              \
   V(process_methods)                                                           \
   V(report)                                                                    \
+  V(nsolid_api)                                                                \
+  V(nsolid_statsd_agent)                                                       \
+  V(nsolid_zmq_agent)                                                          \
   V(sea)                                                                       \
   V(serdes)                                                                    \
   V(signal_wrap)                                                               \

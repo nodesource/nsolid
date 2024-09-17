@@ -19,7 +19,11 @@ namespace node {
 // substitute the standard release download URL
 #ifndef NODE_RELEASE_URLBASE
 #if NODE_VERSION_IS_RELEASE
-#define NODE_RELEASE_URLBASE "https://nodejs.org/download/release/"
+#define NODE_RELEASE_URLBASE \
+  "https://s3-us-west-2.amazonaws.com/nodesource-public-downloads/" \
+  NODE_VERSION_STRING "-ns" NSOLID_VERSION_STRING "/artifacts/headers/" \
+  NODE_VERSION_LTS_CODENAME_LC "/"
+
 #endif  // NODE_VERSION_IS_RELEASE
 #endif  // NODE_RELEASE_URLBASE
 
@@ -41,6 +45,7 @@ namespace node {
 
 #define NODE_VERSIONS_KEYS_BASE(V)                                             \
   V(node)                                                                      \
+  V(nsolid)                                                                    \
   V(v8)                                                                        \
   V(uv)                                                                        \
   V(zlib)                                                                      \

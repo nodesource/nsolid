@@ -10,6 +10,8 @@ if (!common.hasOpenSSL3)
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 
+delete process.env.NSOLID_LICENSE_TOKEN;
+
 if (common.isMainThread) {
   // TODO(richardlau): Decide if `crypto.setFips` should error if the
   // provider named "fips" is not available.

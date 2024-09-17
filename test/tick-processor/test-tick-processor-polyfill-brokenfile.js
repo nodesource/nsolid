@@ -20,7 +20,7 @@ const { writeFileSync } = require('fs');
 const LOG_FILE = tmpdir.resolve('tick-processor.log');
 const RETRY_TIMEOUT = 150;
 const BROKEN_PART = 'tick,';
-const WARN_REG_EXP = /\(node:\d+\) \[BROKEN_PROFILE_FILE] Warning: Profile file .* is broken/;
+const WARN_REG_EXP = /\(nsolid:\d+\) \[BROKEN_PROFILE_FILE] Warning: Profile file .* is broken/;
 const WARN_DETAIL_REG_EXP = /".*tick," at the file end is broken/;
 
 const code = `function f() {

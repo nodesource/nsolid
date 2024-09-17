@@ -724,7 +724,7 @@ class HeapSnapshotJSONSerializer {
   HeapSnapshotJSONSerializer(const HeapSnapshotJSONSerializer&) = delete;
   HeapSnapshotJSONSerializer& operator=(const HeapSnapshotJSONSerializer&) =
       delete;
-  void Serialize(v8::OutputStream* stream);
+  void Serialize(v8::OutputStream* stream, bool redact = false);
 
  private:
   V8_INLINE static bool StringsMatch(void* key1, void* key2) {
@@ -739,9 +739,9 @@ class HeapSnapshotJSONSerializer {
   V8_INLINE int to_node_index(int entry_index);
   void SerializeEdge(HeapGraphEdge* edge, bool first_edge);
   void SerializeEdges();
-  void SerializeImpl();
-  void SerializeNode(const HeapEntry* entry);
-  void SerializeNodes();
+  void SerializeImpl(bool redact = false);
+  void SerializeNode(const HeapEntry* entry, bool redact = false);
+  void SerializeNodes(bool redact = false);
   void SerializeSnapshot();
   void SerializeTraceTree();
   void SerializeTraceNode(AllocationTraceNode* node);
