@@ -7,6 +7,7 @@
 #include "brotli/encode.h"
 #include "cjs_module_lexer_version.h"
 #include "curl/curlver.h"
+#include "grpcpp/version_info.h"
 #include "llhttp.h"
 #include "nghttp2/nghttp2ver.h"
 #include "nlohmann/json.h"
@@ -137,6 +138,7 @@ Metadata::Versions::Versions() {
   simdutf = SIMDUTF_VERSION;
   ada = ADA_VERSION;
   curl = LIBCURL_VERSION;
+  grpc = GRPC_CPP_VERSION_STRING;
   nlohmann =
     NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MAJOR)
     "."
