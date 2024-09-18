@@ -26,6 +26,7 @@ const expected_keys = [
   'cjs_module_lexer',
   'nbytes',
   'curl',
+  'grpc',
   'nlohmann',
   'opentelemetry',
   'zmq',

@@ -65,6 +65,7 @@ namespace node {
   NODE_VERSIONS_KEY_AMARO(V)                                                   \
   NODE_VERSIONS_KEY_UNDICI(V)                                                  \
   V(curl)                                                                      \
+  V(grpc)                                                                      \
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
   V(zmq)                                                                       \
