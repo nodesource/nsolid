@@ -40,6 +40,7 @@ constexpr uint64_t span_timer_interval = 1000;
 constexpr size_t span_msg_q_min_size = 1000;
 
 const char* const kNSOLID_GRPC_INSECURE = "NSOLID_GRPC_INSECURE";
+const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 
 static const char* const root_certs[] = {
 #include "node_root_certs.h"  // NOLINT(build/include_order)
@@ -368,9 +369,21 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
   //   Debug("gRPC: %s\n", args->message);
   // });
 
-  for (size_t i = 0; i < sizeof(root_certs) / sizeof(root_certs[0]); i++) {
-    cacert_ += root_certs[i];
-    cacert_ += "\n";
+  std::string cert_path;
+  if (per_process::system_environment->Get(kNSOLID_GRPC_CERTS).To(&cert_path)) {
+    Debug("Using certs from: %s\n", cert_path.c_str());
+    int r = ReadFileSync(&custom_certs_, cert_path.c_str());
+    if (r != 0) {
+      Debug("Error reading certs from: %s. Error: %d.\n", cert_path.c_str(), r);
+    }
+  }
+
+  if (custom_certs_.empty()) {
+    Debug("Using default certs\n");
+    for (size_t i = 0; i < sizeof(root_certs) / sizeof(root_certs[0]); i++) {
+      cacert_ += root_certs[i];
+      cacert_ += "\n";
+    }
   }
 }
 
@@ -777,7 +790,11 @@ int GrpcAgent::config(const json& config) {
                             {"nsolid-saas", saas_}};
         if (!insecure) {
           options.use_ssl_credentials = true;
-          options.ssl_credentials_cacert_as_string = cacert_;
+          if (!custom_certs_.empty()) {
+            options.ssl_credentials_cacert_as_string = custom_certs_;
+          } else {
+            options.ssl_credentials_cacert_as_string = cacert_;
+          }
         }
 
         trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options);
@@ -789,7 +806,11 @@ int GrpcAgent::config(const json& config) {
                             {"nsolid-saas", saas_}};
         if (!insecure) {
           options.use_ssl_credentials = true;
-          options.ssl_credentials_cacert_as_string = cacert_;
+          if (!custom_certs_.empty()) {
+            options.ssl_credentials_cacert_as_string = custom_certs_;
+          } else {
+            options.ssl_credentials_cacert_as_string = cacert_;
+          }
         }
 
         metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(options);
@@ -801,7 +822,11 @@ int GrpcAgent::config(const json& config) {
                             {"nsolid-saas", saas_}};
         if (!insecure) {
           options.use_ssl_credentials = true;
-          options.ssl_credentials_cacert_as_string = cacert_;
+          if (!custom_certs_.empty()) {
+            options.ssl_credentials_cacert_as_string = custom_certs_;
+          } else {
+            options.ssl_credentials_cacert_as_string = cacert_;
+          }
         }
 
         log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(options);
@@ -813,7 +838,11 @@ int GrpcAgent::config(const json& config) {
                             {"nsolid-saas", saas_}};
         if (!insecure) {
           options.use_ssl_credentials = true;
-          options.ssl_credentials_cacert_as_string = cacert_;
+          if (!custom_certs_.empty()) {
+            options.ssl_credentials_cacert_as_string = custom_certs_;
+          } else {
+            options.ssl_credentials_cacert_as_string = cacert_;
+          }
         }
 
         nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(options);

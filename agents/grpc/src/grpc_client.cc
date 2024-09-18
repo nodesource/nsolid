@@ -169,7 +169,7 @@ std::shared_ptr<::grpc::Channel>
     GrpcClient::MakeChannel(const OtlpGrpcClientOptions& options) {
   std::shared_ptr<::grpc::Channel> channel;
   ::grpc::ChannelArguments grpc_arguments;
-  if (options.ssl_credentials_cacert_as_string.empty()) {
+  if (!options.use_ssl_credentials) {
     channel = ::grpc::CreateCustomChannel(options.endpoint, ::grpc::InsecureChannelCredentials(), grpc_arguments);
     return channel;
   }
