@@ -176,6 +176,16 @@ class GrpcClient {
                          std::unique_ptr<google::protobuf::Arena> &&,
                          const grpcagent::ReconfigureEvent&,
                          grpcagent::EventResponse*)>&& result_callback) noexcept;
+
+  int DelegateAsyncExport(
+      grpcagent::NSolidService::StubInterface* stub,
+      std::unique_ptr<::grpc::ClientContext>&& context,
+      std::unique_ptr<google::protobuf::Arena>&& arena,
+      grpcagent::StartupTimesEvent&& event,
+      std::function<bool(::grpc::Status,
+                         std::unique_ptr<google::protobuf::Arena> &&,
+                         const grpcagent::StartupTimesEvent&,
+                         grpcagent::EventResponse*)>&& result_callback) noexcept;
 };
 
 }  // namespace grpc

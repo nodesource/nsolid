@@ -331,6 +331,21 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   }
 }
 
+void PopulateStartupTimesEvent(grpcagent::StartupTimesEvent* st_events,
+                               const char* req_id) {
+  PopulateCommon(st_events->mutable_common(), "startup_times", req_id);
+  auto envinst = GetMainEnvInst();
+  if (envinst == nullptr) {
+    // We should be sending back an error here.
+    return;
+  }
+  std::map<std::string, uint64_t> times = envinst->GetStartupTimes();
+  grpcagent::StartupTimesBody* body = st_events->mutable_body();
+  for (const auto& [key, value] : times) {
+    (*body->mutable_times())[key] = value;
+  }
+}
+
 void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* blocked_loop_event,
                                 const GrpcAgent::BlockedLoopStor& stor) {
   // Fill in the fields of the BlockedLoopEvent.
@@ -1022,7 +1037,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
   Debug("got_profile: %ld\n", stor.profile.length());
   google::protobuf::Struct metadata;
   uint64_t thread_id;
-  std::visit([&metadata,&thread_id](auto& opt) {
+  std::visit([&metadata, &thread_id](auto& opt) {
     thread_id = opt.thread_id;
     metadata = opt.metadata_pb;
   }, stor.options);
@@ -1089,6 +1104,8 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
     do_start_prof(request, ProfileType::kHeapSampl);
   } else if (cmd == "snapshot") {
     do_start_prof(request, ProfileType::kHeapSnapshot);
+  } else if (cmd == "startup_times") {
+    send_startup_times_event(request.requestid().c_str());
   }
 }
 
@@ -1300,6 +1317,31 @@ void GrpcAgent::send_reconfigure_event(const char* req_id) {
     [](::grpc::Status,
         std::unique_ptr<google::protobuf::Arena>&&,
         const grpcagent::ReconfigureEvent& info_event,
+        grpcagent::EventResponse*) {
+      return true;
+    });
+}
+
+void GrpcAgent::send_startup_times_event(const char* req_id) {
+  google::protobuf::ArenaOptions arena_options;
+  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  arena_options.initial_block_size = 1024;
+  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
+  // block to reduce memory fragments.
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+
+  auto st_event = google::protobuf::Arena::Create<grpcagent::StartupTimesEvent>(arena.get());
+  PopulateStartupTimesEvent(st_event, req_id);
+
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
+
+  client_->DelegateAsyncExport(
+    nsolid_service_stub_.get(), std::move(context), std::move(arena),
+    std::move(*st_event),
+    [](::grpc::Status,
+        std::unique_ptr<google::protobuf::Arena>&&,
+        const grpcagent::StartupTimesEvent& info_event,
         grpcagent::EventResponse*) {
       return true;
     });

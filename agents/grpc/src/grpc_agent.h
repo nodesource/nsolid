@@ -194,6 +194,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void send_reconfigure_event(const char* req_id);
 
+  void send_startup_times_event(const char* req_id);
+
   void send_unblocked_loop_event(BlockedLoopStor&& stor);
 
   void setup_blocked_loop_hooks();
