@@ -62,12 +62,16 @@ void CommandStream::OnDone(const ::grpc::Status& s) {
 }
 
 void CommandStream::OnReadDone(bool ok) {
+  Debug("[%ld] CommandStream::OnReadDone: %d\n", pthread_self(), ok);
   if (ok) {
     // fprintf(stderr, "OnReadDone\n");
     // fprintf(stderr, "Command: %s\n", server_request_.command().c_str());
     agent_->got_command_request(std::move(server_request_));
     // Write(grpcagent::CommandResponse());
     StartRead(&server_request_);
+  } else {
+    StartWritesDone();
+    RemoveHold();
   }
 }
 
