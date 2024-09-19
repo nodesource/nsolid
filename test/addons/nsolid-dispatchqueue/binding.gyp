@@ -10,6 +10,13 @@
         '../../../src/',
       ],
       'cflags_cc': [ '-std=c++20' ],
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'CLANG_CXX_LANGUAGE_STANDARD': 'c++20',
+          }
+        }],
+      ],
     }
   ]
 }
