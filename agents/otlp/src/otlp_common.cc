@@ -72,7 +72,8 @@ static void add_counter(std::vector<MetricData>& metrics,
                         InstrumentValueType type,
                         ValueType value,
                         PointAttributes attrs = {}) {
-  SumPointData sum_point_data{ value };
+  SumPointData sum_point_data;
+  sum_point_data.value_ = value;
   MetricData metric_data{
     InstrumentDescriptor{ name, "", unit, InstrumentType::kCounter, type},
     AggregationTemporality::kCumulative,
@@ -92,7 +93,8 @@ static void add_gauge(std::vector<MetricData>& metrics,
                       InstrumentValueType type,
                       ValueType value,
                       PointAttributes attrs = {}) {
-  opentelemetry::sdk::metrics::LastValuePointData lv_point_data{ value };
+  opentelemetry::sdk::metrics::LastValuePointData lv_point_data;
+  lv_point_data.value_ = value;
   MetricData metric_data{
     InstrumentDescriptor{
       name, "", unit, InstrumentType::kObservableGauge, type },
