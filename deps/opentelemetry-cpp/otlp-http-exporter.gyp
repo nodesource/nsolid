@@ -88,7 +88,9 @@
         '-fexceptions',
         '-fvisibility=hidden',
         '-pedantic',
-        '--std=c++17'
+        '--std=c++17',
+        '-Wno-error',
+        '-Wno-c++98-compat-extra-semi'
       ],
       'msvs_settings': {
       },
