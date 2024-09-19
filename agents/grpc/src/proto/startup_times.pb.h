@@ -49,42 +49,38 @@ struct TableStruct_startup_5ftimes_2eproto {
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_startup_5ftimes_2eproto;
 namespace grpcagent {
-class StartupTimesBody;
-struct StartupTimesBodyDefaultTypeInternal;
-extern StartupTimesBodyDefaultTypeInternal _StartupTimesBody_default_instance_;
-class StartupTimesBody_TimesEntry_DoNotUse;
-struct StartupTimesBody_TimesEntry_DoNotUseDefaultTypeInternal;
-extern StartupTimesBody_TimesEntry_DoNotUseDefaultTypeInternal _StartupTimesBody_TimesEntry_DoNotUse_default_instance_;
 class StartupTimesEvent;
 struct StartupTimesEventDefaultTypeInternal;
 extern StartupTimesEventDefaultTypeInternal _StartupTimesEvent_default_instance_;
+class StartupTimesEvent_BodyEntry_DoNotUse;
+struct StartupTimesEvent_BodyEntry_DoNotUseDefaultTypeInternal;
+extern StartupTimesEvent_BodyEntry_DoNotUseDefaultTypeInternal _StartupTimesEvent_BodyEntry_DoNotUse_default_instance_;
 }  // namespace grpcagent
 PROTOBUF_NAMESPACE_OPEN
-template<> ::grpcagent::StartupTimesBody* Arena::CreateMaybeMessage<::grpcagent::StartupTimesBody>(Arena*);
-template<> ::grpcagent::StartupTimesBody_TimesEntry_DoNotUse* Arena::CreateMaybeMessage<::grpcagent::StartupTimesBody_TimesEntry_DoNotUse>(Arena*);
 template<> ::grpcagent::StartupTimesEvent* Arena::CreateMaybeMessage<::grpcagent::StartupTimesEvent>(Arena*);
+template<> ::grpcagent::StartupTimesEvent_BodyEntry_DoNotUse* Arena::CreateMaybeMessage<::grpcagent::StartupTimesEvent_BodyEntry_DoNotUse>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace grpcagent {
 
 // ===================================================================
 
-class StartupTimesBody_TimesEntry_DoNotUse : public ::PROTOBUF_NAMESPACE_ID::internal::MapEntry<StartupTimesBody_TimesEntry_DoNotUse, 
+class StartupTimesEvent_BodyEntry_DoNotUse : public ::PROTOBUF_NAMESPACE_ID::internal::MapEntry<StartupTimesEvent_BodyEntry_DoNotUse, 
     std::string, uint64_t,
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_UINT64> {
 public:
-  typedef ::PROTOBUF_NAMESPACE_ID::internal::MapEntry<StartupTimesBody_TimesEntry_DoNotUse, 
+  typedef ::PROTOBUF_NAMESPACE_ID::internal::MapEntry<StartupTimesEvent_BodyEntry_DoNotUse, 
     std::string, uint64_t,
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_UINT64> SuperType;
-  StartupTimesBody_TimesEntry_DoNotUse();
-  explicit PROTOBUF_CONSTEXPR StartupTimesBody_TimesEntry_DoNotUse(
+  StartupTimesEvent_BodyEntry_DoNotUse();
+  explicit PROTOBUF_CONSTEXPR StartupTimesEvent_BodyEntry_DoNotUse(
       ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
-  explicit StartupTimesBody_TimesEntry_DoNotUse(::PROTOBUF_NAMESPACE_ID::Arena* arena);
-  void MergeFrom(const StartupTimesBody_TimesEntry_DoNotUse& other);
-  static const StartupTimesBody_TimesEntry_DoNotUse* internal_default_instance() { return reinterpret_cast<const StartupTimesBody_TimesEntry_DoNotUse*>(&_StartupTimesBody_TimesEntry_DoNotUse_default_instance_); }
+  explicit StartupTimesEvent_BodyEntry_DoNotUse(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  void MergeFrom(const StartupTimesEvent_BodyEntry_DoNotUse& other);
+  static const StartupTimesEvent_BodyEntry_DoNotUse* internal_default_instance() { return reinterpret_cast<const StartupTimesEvent_BodyEntry_DoNotUse*>(&_StartupTimesEvent_BodyEntry_DoNotUse_default_instance_); }
   static bool ValidateKey(std::string* s) {
-    return ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(s->data(), static_cast<int>(s->size()), ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE, "grpcagent.StartupTimesBody.TimesEntry.key");
+    return ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(s->data(), static_cast<int>(s->size()), ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE, "grpcagent.StartupTimesEvent.BodyEntry.key");
  }
   static bool ValidateValue(void*) { return true; }
   using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
@@ -92,169 +88,6 @@ public:
   friend struct ::TableStruct_startup_5ftimes_2eproto;
 };
 
-// -------------------------------------------------------------------
-
-class StartupTimesBody final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:grpcagent.StartupTimesBody) */ {
- public:
-  inline StartupTimesBody() : StartupTimesBody(nullptr) {}
-  ~StartupTimesBody() override;
-  explicit PROTOBUF_CONSTEXPR StartupTimesBody(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
-
-  StartupTimesBody(const StartupTimesBody& from);
-  StartupTimesBody(StartupTimesBody&& from) noexcept
-    : StartupTimesBody() {
-    *this = ::std::move(from);
-  }
-
-  inline StartupTimesBody& operator=(const StartupTimesBody& from) {
-    CopyFrom(from);
-    return *this;
-  }
-  inline StartupTimesBody& operator=(StartupTimesBody&& from) noexcept {
-    if (this == &from) return *this;
-    if (GetOwningArena() == from.GetOwningArena()
-  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
-        && GetOwningArena() != nullptr
-  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
-    ) {
-      InternalSwap(&from);
-    } else {
-      CopyFrom(from);
-    }
-    return *this;
-  }
-
-  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
-    return GetDescriptor();
-  }
-  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
-    return default_instance().GetMetadata().descriptor;
-  }
-  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
-    return default_instance().GetMetadata().reflection;
-  }
-  static const StartupTimesBody& default_instance() {
-    return *internal_default_instance();
-  }
-  static inline const StartupTimesBody* internal_default_instance() {
-    return reinterpret_cast<const StartupTimesBody*>(
-               &_StartupTimesBody_default_instance_);
-  }
-  static constexpr int kIndexInFileMessages =
-    1;
-
-  friend void swap(StartupTimesBody& a, StartupTimesBody& b) {
-    a.Swap(&b);
-  }
-  inline void Swap(StartupTimesBody* other) {
-    if (other == this) return;
-  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
-    if (GetOwningArena() != nullptr &&
-        GetOwningArena() == other->GetOwningArena()) {
-   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
-    if (GetOwningArena() == other->GetOwningArena()) {
-  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
-      InternalSwap(other);
-    } else {
-      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
-    }
-  }
-  void UnsafeArenaSwap(StartupTimesBody* other) {
-    if (other == this) return;
-    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
-    InternalSwap(other);
-  }
-
-  // implements Message ----------------------------------------------
-
-  StartupTimesBody* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
-    return CreateMaybeMessage<StartupTimesBody>(arena);
-  }
-  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
-  void CopyFrom(const StartupTimesBody& from);
-  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
-  void MergeFrom( const StartupTimesBody& from) {
-    StartupTimesBody::MergeImpl(*this, from);
-  }
-  private:
-  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
-  public:
-  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
-  bool IsInitialized() const final;
-
-  size_t ByteSizeLong() const final;
-  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
-  uint8_t* _InternalSerialize(
-      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
-  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
-
-  private:
-  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
-  void SharedDtor();
-  void SetCachedSize(int size) const final;
-  void InternalSwap(StartupTimesBody* other);
-
-  private:
-  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
-  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "grpcagent.StartupTimesBody";
-  }
-  protected:
-  explicit StartupTimesBody(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                       bool is_message_owned = false);
-  private:
-  static void ArenaDtor(void* object);
-  public:
-
-  static const ClassData _class_data_;
-  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
-
-  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
-
-  // nested types ----------------------------------------------------
-
-
-  // accessors -------------------------------------------------------
-
-  enum : int {
-    kTimesFieldNumber = 1,
-  };
-  // map<string, uint64> times = 1;
-  int times_size() const;
-  private:
-  int _internal_times_size() const;
-  public:
-  void clear_times();
-  private:
-  const ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >&
-      _internal_times() const;
-  ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >*
-      _internal_mutable_times();
-  public:
-  const ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >&
-      times() const;
-  ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >*
-      mutable_times();
-
-  // @@protoc_insertion_point(class_scope:grpcagent.StartupTimesBody)
- private:
-  class _Internal;
-
-  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
-  typedef void InternalArenaConstructable_;
-  typedef void DestructorSkippable_;
-  struct Impl_ {
-    ::PROTOBUF_NAMESPACE_ID::internal::MapField<
-        StartupTimesBody_TimesEntry_DoNotUse,
-        std::string, uint64_t,
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_UINT64> times_;
-    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
-  };
-  union { Impl_ _impl_; };
-  friend struct ::TableStruct_startup_5ftimes_2eproto;
-};
 // -------------------------------------------------------------------
 
 class StartupTimesEvent final :
@@ -305,7 +138,7 @@ class StartupTimesEvent final :
                &_StartupTimesEvent_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    1;
 
   friend void swap(StartupTimesEvent& a, StartupTimesEvent& b) {
     a.Swap(&b);
@@ -366,6 +199,8 @@ class StartupTimesEvent final :
   protected:
   explicit StartupTimesEvent(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                        bool is_message_owned = false);
+  private:
+  static void ArenaDtor(void* object);
   public:
 
   static const ClassData _class_data_;
@@ -375,12 +210,30 @@ class StartupTimesEvent final :
 
   // nested types ----------------------------------------------------
 
+
   // accessors -------------------------------------------------------
 
   enum : int {
-    kCommonFieldNumber = 1,
     kBodyFieldNumber = 2,
+    kCommonFieldNumber = 1,
   };
+  // map<string, uint64> body = 2;
+  int body_size() const;
+  private:
+  int _internal_body_size() const;
+  public:
+  void clear_body();
+  private:
+  const ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >&
+      _internal_body() const;
+  ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >*
+      _internal_mutable_body();
+  public:
+  const ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >&
+      body() const;
+  ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >*
+      mutable_body();
+
   // .grpcagent.CommonResponse common = 1;
   bool has_common() const;
   private:
@@ -399,24 +252,6 @@ class StartupTimesEvent final :
       ::grpcagent::CommonResponse* common);
   ::grpcagent::CommonResponse* unsafe_arena_release_common();
 
-  // .grpcagent.StartupTimesBody body = 2;
-  bool has_body() const;
-  private:
-  bool _internal_has_body() const;
-  public:
-  void clear_body();
-  const ::grpcagent::StartupTimesBody& body() const;
-  PROTOBUF_NODISCARD ::grpcagent::StartupTimesBody* release_body();
-  ::grpcagent::StartupTimesBody* mutable_body();
-  void set_allocated_body(::grpcagent::StartupTimesBody* body);
-  private:
-  const ::grpcagent::StartupTimesBody& _internal_body() const;
-  ::grpcagent::StartupTimesBody* _internal_mutable_body();
-  public:
-  void unsafe_arena_set_allocated_body(
-      ::grpcagent::StartupTimesBody* body);
-  ::grpcagent::StartupTimesBody* unsafe_arena_release_body();
-
   // @@protoc_insertion_point(class_scope:grpcagent.StartupTimesEvent)
  private:
   class _Internal;
@@ -425,8 +260,12 @@ class StartupTimesEvent final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::MapField<
+        StartupTimesEvent_BodyEntry_DoNotUse,
+        std::string, uint64_t,
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_UINT64> body_;
     ::grpcagent::CommonResponse* common_;
-    ::grpcagent::StartupTimesBody* body_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -441,39 +280,6 @@ class StartupTimesEvent final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
-// -------------------------------------------------------------------
-
-// StartupTimesBody
-
-// map<string, uint64> times = 1;
-inline int StartupTimesBody::_internal_times_size() const {
-  return _impl_.times_.size();
-}
-inline int StartupTimesBody::times_size() const {
-  return _internal_times_size();
-}
-inline void StartupTimesBody::clear_times() {
-  _impl_.times_.Clear();
-}
-inline const ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >&
-StartupTimesBody::_internal_times() const {
-  return _impl_.times_.GetMap();
-}
-inline const ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >&
-StartupTimesBody::times() const {
-  // @@protoc_insertion_point(field_map:grpcagent.StartupTimesBody.times)
-  return _internal_times();
-}
-inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >*
-StartupTimesBody::_internal_mutable_times() {
-  return _impl_.times_.MutableMap();
-}
-inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >*
-StartupTimesBody::mutable_times() {
-  // @@protoc_insertion_point(field_mutable_map:grpcagent.StartupTimesBody.times)
-  return _internal_mutable_times();
-}
-
 // -------------------------------------------------------------------
 
 // StartupTimesEvent
@@ -563,101 +369,38 @@ inline void StartupTimesEvent::set_allocated_common(::grpcagent::CommonResponse*
   // @@protoc_insertion_point(field_set_allocated:grpcagent.StartupTimesEvent.common)
 }
 
-// .grpcagent.StartupTimesBody body = 2;
-inline bool StartupTimesEvent::_internal_has_body() const {
-  return this != internal_default_instance() && _impl_.body_ != nullptr;
+// map<string, uint64> body = 2;
+inline int StartupTimesEvent::_internal_body_size() const {
+  return _impl_.body_.size();
 }
-inline bool StartupTimesEvent::has_body() const {
-  return _internal_has_body();
+inline int StartupTimesEvent::body_size() const {
+  return _internal_body_size();
 }
 inline void StartupTimesEvent::clear_body() {
-  if (GetArenaForAllocation() == nullptr && _impl_.body_ != nullptr) {
-    delete _impl_.body_;
-  }
-  _impl_.body_ = nullptr;
+  _impl_.body_.Clear();
 }
-inline const ::grpcagent::StartupTimesBody& StartupTimesEvent::_internal_body() const {
-  const ::grpcagent::StartupTimesBody* p = _impl_.body_;
-  return p != nullptr ? *p : reinterpret_cast<const ::grpcagent::StartupTimesBody&>(
-      ::grpcagent::_StartupTimesBody_default_instance_);
+inline const ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >&
+StartupTimesEvent::_internal_body() const {
+  return _impl_.body_.GetMap();
 }
-inline const ::grpcagent::StartupTimesBody& StartupTimesEvent::body() const {
-  // @@protoc_insertion_point(field_get:grpcagent.StartupTimesEvent.body)
+inline const ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >&
+StartupTimesEvent::body() const {
+  // @@protoc_insertion_point(field_map:grpcagent.StartupTimesEvent.body)
   return _internal_body();
 }
-inline void StartupTimesEvent::unsafe_arena_set_allocated_body(
-    ::grpcagent::StartupTimesBody* body) {
-  if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.body_);
-  }
-  _impl_.body_ = body;
-  if (body) {
-    
-  } else {
-    
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.StartupTimesEvent.body)
+inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >*
+StartupTimesEvent::_internal_mutable_body() {
+  return _impl_.body_.MutableMap();
 }
-inline ::grpcagent::StartupTimesBody* StartupTimesEvent::release_body() {
-  
-  ::grpcagent::StartupTimesBody* temp = _impl_.body_;
-  _impl_.body_ = nullptr;
-#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
-  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
-  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-  if (GetArenaForAllocation() == nullptr) { delete old; }
-#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
-  if (GetArenaForAllocation() != nullptr) {
-    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-  }
-#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
-  return temp;
-}
-inline ::grpcagent::StartupTimesBody* StartupTimesEvent::unsafe_arena_release_body() {
-  // @@protoc_insertion_point(field_release:grpcagent.StartupTimesEvent.body)
-  
-  ::grpcagent::StartupTimesBody* temp = _impl_.body_;
-  _impl_.body_ = nullptr;
-  return temp;
-}
-inline ::grpcagent::StartupTimesBody* StartupTimesEvent::_internal_mutable_body() {
-  
-  if (_impl_.body_ == nullptr) {
-    auto* p = CreateMaybeMessage<::grpcagent::StartupTimesBody>(GetArenaForAllocation());
-    _impl_.body_ = p;
-  }
-  return _impl_.body_;
-}
-inline ::grpcagent::StartupTimesBody* StartupTimesEvent::mutable_body() {
-  ::grpcagent::StartupTimesBody* _msg = _internal_mutable_body();
-  // @@protoc_insertion_point(field_mutable:grpcagent.StartupTimesEvent.body)
-  return _msg;
-}
-inline void StartupTimesEvent::set_allocated_body(::grpcagent::StartupTimesBody* body) {
-  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  if (message_arena == nullptr) {
-    delete _impl_.body_;
-  }
-  if (body) {
-    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(body);
-    if (message_arena != submessage_arena) {
-      body = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, body, submessage_arena);
-    }
-    
-  } else {
-    
-  }
-  _impl_.body_ = body;
-  // @@protoc_insertion_point(field_set_allocated:grpcagent.StartupTimesEvent.body)
+inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, uint64_t >*
+StartupTimesEvent::mutable_body() {
+  // @@protoc_insertion_point(field_mutable_map:grpcagent.StartupTimesEvent.body)
+  return _internal_mutable_body();
 }
 
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
-// -------------------------------------------------------------------
-
 // -------------------------------------------------------------------
 
 

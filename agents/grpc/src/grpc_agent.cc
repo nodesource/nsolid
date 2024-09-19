@@ -340,9 +340,8 @@ void PopulateStartupTimesEvent(grpcagent::StartupTimesEvent* st_events,
     return;
   }
   std::map<std::string, uint64_t> times = envinst->GetStartupTimes();
-  grpcagent::StartupTimesBody* body = st_events->mutable_body();
   for (const auto& [key, value] : times) {
-    (*body->mutable_times())[key] = value;
+    (*st_events->mutable_body())[key] = value;
   }
 }
 
@@ -1339,10 +1338,11 @@ void GrpcAgent::send_startup_times_event(const char* req_id) {
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*st_event),
-    [](::grpc::Status,
+    [](::grpc::Status status,
         std::unique_ptr<google::protobuf::Arena>&&,
         const grpcagent::StartupTimesEvent& info_event,
         grpcagent::EventResponse*) {
+      Debug("StartupTimesEvent: %s\n", status.error_message().c_str());
       return true;
     });
 }
