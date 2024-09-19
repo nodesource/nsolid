@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message StartupTimesBody {
+  map<string, uint64> times = 1;
+}
+
+message StartupTimesEvent {
+  CommonResponse common = 1;
+  StartupTimesBody body = 2;
+}

@@ -30,6 +30,7 @@ static const char* NSolidService_method_names[] = {
   "/grpcagent.NSolidService/ExportBlockedLoop",
   "/grpcagent.NSolidService/ExportUnblockedLoop",
   "/grpcagent.NSolidService/ExportReconfigure",
+  "/grpcagent.NSolidService/ExportStartupTimes",
 };
 
 std::unique_ptr< NSolidService::Stub> NSolidService::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -47,6 +48,7 @@ NSolidService::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& chan
   , rpcmethod_ExportBlockedLoop_(NSolidService_method_names[5], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportUnblockedLoop_(NSolidService_method_names[6], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportReconfigure_(NSolidService_method_names[7], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportStartupTimes_(NSolidService_method_names[8], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::ClientReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* NSolidService::Stub::CommandRaw(::grpc::ClientContext* context) {
@@ -219,6 +221,29 @@ void NSolidService::Stub::async::ExportReconfigure(::grpc::ClientContext* contex
   return result;
 }
 
+::grpc::Status NSolidService::Stub::ExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpcagent::EventResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::grpcagent::StartupTimesEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_ExportStartupTimes_, context, request, response);
+}
+
+void NSolidService::Stub::async::ExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::grpcagent::StartupTimesEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportStartupTimes_, context, request, response, std::move(f));
+}
+
+void NSolidService::Stub::async::ExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportStartupTimes_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::PrepareAsyncExportStartupTimesRaw(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::grpcagent::EventResponse, ::grpcagent::StartupTimesEvent, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_ExportStartupTimes_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::AsyncExportStartupTimesRaw(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncExportStartupTimesRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
 NSolidService::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NSolidService_method_names[0],
@@ -300,6 +325,16 @@ NSolidService::Service::Service() {
              ::grpcagent::EventResponse* resp) {
                return service->ExportReconfigure(ctx, req, resp);
              }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      NSolidService_method_names[8],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::StartupTimesEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](NSolidService::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::grpcagent::StartupTimesEvent* req,
+             ::grpcagent::EventResponse* resp) {
+               return service->ExportStartupTimes(ctx, req, resp);
+             }, this)));
 }
 
 NSolidService::Service::~Service() {
@@ -354,6 +389,13 @@ NSolidService::Service::~Service() {
 }
 
 ::grpc::Status NSolidService::Service::ExportReconfigure(::grpc::ServerContext* context, const ::grpcagent::ReconfigureEvent* request, ::grpcagent::EventResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status NSolidService::Service::ExportStartupTimes(::grpc::ServerContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response) {
   (void) context;
   (void) request;
   (void) response;

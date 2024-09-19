@@ -37,6 +37,7 @@
 #include "info.pb.h"
 #include "packages.pb.h"
 #include "reconfigure.pb.h"
+#include "startup_times.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_nsolid_5fservice_2eproto

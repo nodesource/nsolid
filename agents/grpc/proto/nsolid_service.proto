@@ -7,6 +7,7 @@ import "exit.proto";
 import "info.proto";
 import "packages.proto";
 import "reconfigure.proto";
+import "startup_times.proto";
 
 package grpcagent;
 
@@ -19,6 +20,7 @@ service NSolidService {
   rpc ExportBlockedLoop (BlockedLoopEvent) returns (EventResponse) {}
   rpc ExportUnblockedLoop (UnblockedLoopEvent) returns (EventResponse) {}
   rpc ExportReconfigure (ReconfigureEvent) returns (EventResponse) {}
+  rpc ExportStartupTimes (StartupTimesEvent) returns (EventResponse) {}
 }
 
 message EventResponse {
