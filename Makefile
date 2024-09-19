@@ -1635,7 +1635,7 @@ test-with-console:
 
 .PHONY: test-agents-prereqs
 test-agents-prereqs:
-	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 base85 --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 base85 --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock --ignore-scripts
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install nan@latest --no-save --no-package-lock --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm run build:libzmq --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install @opentelemetry/otlp-proto-exporter-base @grpc/grpc-js @grpc/proto-loader --prefix test/common/nsolid-otlp-agent --no-save --no-package-lock
