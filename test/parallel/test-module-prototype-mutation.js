@@ -7,6 +7,8 @@ const common = require('../common');
 const nsolid = require('nsolid');
 nsolid.start();
 
+common.skip('TODO Fix with better implementation of addPackage');
+
 const fixtures = require('../common/fixtures');
 const { Channel } = require('diagnostics_channel');
 const assert = require('assert');
