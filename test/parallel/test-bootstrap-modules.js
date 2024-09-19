@@ -103,6 +103,7 @@ expected.beforePreExec = new Set([
   'NativeModule internal/modules/cjs/loader',
   'NativeModule diagnostics_channel',
   'Internal Binding nsolid_api',
+  'Internal Binding worker',
   'NativeModule internal/nsolid_module',
   'Internal Binding wasm_web_api',
   'NativeModule internal/events/abort_listener',
