@@ -9,6 +9,7 @@
         '../../../deps/nsuv/include',
         '../../../src/',
       ],
+      'cflags_cc': [ '-std=c++20' ],
     }
   ]
 }

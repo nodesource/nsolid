@@ -9,13 +9,14 @@
       '../../../deps/nsuv/include/',
       '../../../agents/statsd/src/',
     ],
-    'target_defaults': {
-      'default_configuration': 'Release',
-      'configurations': {
-        'Debug': {
-          'defines': [ 'DEBUG', '_DEBUG' ],
-          'cflags': [ '-g', '-O0', '-fstandalone-debug' ],
-        }
+    'cflags_cc': [ '-std=c++20' ],
+    'configurations': {
+      'Debug': {
+        'defines': [ 'DEBUG', '_DEBUG' ],
+        'cflags_cc': [ '-std=c++20', '-g', '-O0', '-fstandalone-debug' ],
+      },
+      'Release': {
+        'cflags_cc': [ '-std=c++20' ],
       },
     },
   }],
