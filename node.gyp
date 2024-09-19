@@ -537,7 +537,7 @@
     # Putting these explicitly here so not to depend on `common.gypi`.
     # `common.gypi` need to be more general because it is used to build userland native addons.
     # Refs: https://github.com/nodejs/node-gyp/issues/1118
-    'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', ],
+    'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-c++98-compat-extra-semi', ],
     'xcode_settings': {
       'WARNING_CFLAGS': [
         '-Wall',
@@ -545,7 +545,6 @@
         '-W',
         '-Wno-unused-parameter',
         '-Werror=undefined-inline',
-        '-Werror=extra-semi',
         '-Wno-c++98-compat-extra-semi',
       ],
     },
@@ -561,7 +560,7 @@
 
     'conditions': [
       ['clang==0 and OS!="win"', {
-        'cflags': [ '-Wno-restrict', ],
+        'cflags': [ '-Wno-restrict', '-Wno-c++98-compat-extra-semi', ],
       }],
       # Pointer authentication for ARM64.
       ['target_arch=="arm64"', {
@@ -584,6 +583,7 @@
         ],
       }],
       ['OS=="linux" and clang==1', {
+        'cflags': [ '-Wno-c++98-compat-extra-semi', ],
         'libraries': ['-latomic'],
       }],
     ],
@@ -654,7 +654,7 @@
 
       'conditions': [
         [ 'error_on_warn=="true"', {
-          'cflags': ['-Werror'],
+          'cflags': ['-Werror', '-Wno-c++98-compat-extra-semi'],
           'xcode_settings': {
             'WARNING_CFLAGS': [ '-Werror' ],
           },

@@ -112,7 +112,8 @@
         '-fexceptions',
         '-fvisibility=hidden',
         '-pedantic',
-        '--std=c++17'
+        '--std=c++17',
+        '-Wno-error'
       ],
       'msvs_settings': {
       },
