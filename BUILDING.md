@@ -844,3 +844,5 @@ incompatible with the official N|Solid builds (e.g. using a ABI incompatible
 version of a dependency), please reserve and use a custom `NODE_MODULE_VERSION`
 by opening a pull request against the registry available at
 <https://github.com/nodesource/nsolid/blob/HEAD/doc/abi_version_registry.json>.
+
+[Python versions]: https://devguide.python.org/versions/
