@@ -151,7 +151,8 @@ function checkPackagesData(packages, requestId, agentId) {
     assert.strictEqual(pkg.required, false);
   }
 
-  assert.ok(packages.body.packages.length <= expectedPackageNames.length);
+  assert.ok(packages.body.packages.every(
+    e => expectedPackageNames.includes(e.name)));
   if (packages.body.packages.length < expectedPackageNames.length) {
     return false;
   }

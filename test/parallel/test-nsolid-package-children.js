@@ -13,7 +13,7 @@ common.skipIfEslintMissing();
 assert.ok(nsolid.packages().filter((e) => e.name[0] === '@').length > 0);
 
 // Require some modules located in core for package testing.
-require('../../tools/node_modules/eslint');
+require('../../tools/eslint/node_modules/eslint');
 
 const packages = nsolid.packages();
 
