@@ -64,11 +64,11 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
   // This is to check that the request `error` event is actually emitted when
   // tracing is enabled.
   process.on('uncaughtException', common.mustCall((err) => {
-    const reason = 'Content-Length can\'t be present with Transfer-Encoding';
+    const reason = "Transfer-Encoding can't be present with Content-Length";
     assert.strictEqual(err.message, `Parse Error: ${reason}`);
     assert(err.bytesParsed < response.length);
     assert(err.bytesParsed >= response.indexOf('Transfer-Encoding'));
-    assert.strictEqual(err.code, 'HPE_UNEXPECTED_CONTENT_LENGTH');
+    assert.strictEqual(err.code, 'HPE_INVALID_TRANSFER_ENCODING');
     assert.strictEqual(err.reason, reason);
     assert.deepStrictEqual(err.rawPacket, response);
 
