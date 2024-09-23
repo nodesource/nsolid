@@ -19,6 +19,7 @@
 #include "uv.h"
 #include "uvwasi.h"
 #include "v8.h"
+#include "sodium/version.h"
 
 #ifdef NODE_BUNDLED_ZLIB
 #include "zlib_version.h"
@@ -152,6 +153,7 @@ Metadata::Versions::Versions() {
     NODE_STRINGIFY(ZMQ_VERSION_MINOR)
     "."
     NODE_STRINGIFY(ZMQ_VERSION_PATCH);
+  sodium = SODIUM_VERSION_STRING;
 }
 
 Metadata::Release::Release() : name(NODE_RELEASE) {

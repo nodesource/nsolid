@@ -57,6 +57,7 @@ namespace node {
   V(cjs_module_lexer)                                                          \
   V(curl)                                                                      \
   V(grpc)                                                                      \
+  V(sodium)                                                                    \
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
   V(zmq)                                                                       \
