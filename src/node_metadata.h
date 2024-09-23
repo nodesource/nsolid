@@ -58,6 +58,7 @@ namespace node {
   V(curl)                                                                      \
   V(grpc)                                                                      \
   V(sodium)                                                                    \
+  V(protobuf)                                                                  \
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
   V(zmq)                                                                       \
