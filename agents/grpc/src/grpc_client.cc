@@ -51,11 +51,11 @@ CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
  }
 
 CommandStream::~CommandStream() {
+  Debug("[%ld] CommandStream::~CommandStream\n", pthread_self());
 }
 
 void CommandStream::OnDone(const ::grpc::Status& s) {
-  Debug("CommandStream::OnDone: %d. %s:%s\n", s.error_code(), s.error_message().c_str(), s.error_details().c_str());
-  RemoveHold();
+  Debug("[%ld] CommandStream::OnDone: %d. %s:%s\n", pthread_self(), s.error_code(), s.error_message().c_str(), s.error_details().c_str());
   if (agent_) {
     agent_->reset_command_stream();
   }
