@@ -31,6 +31,7 @@ const expected_keys = [
   'opentelemetry',
   'zmq',
   'sodium',
+  'protobuf',
 ];
 
 const hasUndici = process.config.variables.node_builtin_shareable_builtins.includes('deps/undici/undici.js');
