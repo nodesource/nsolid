@@ -66,6 +66,7 @@ namespace node {
   NODE_VERSIONS_KEY_UNDICI(V)                                                  \
   V(curl)                                                                      \
   V(grpc)                                                                      \
+  V(sodium)                                                                    \
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
   V(zmq)                                                                       \
