@@ -36,11 +36,6 @@ as follows:
 | v20.x.x         | v5.x.x                      |
 | v22.x.x         | v5.x.x                      |
 
-[^*]: Significant breaking changes or the introduction of substantial features
-    will drive the MAJOR version increments in N|Solid. Pre v5.0.0 versions of
-    N|Solid are proprietary, and there will be no further enhancements to these
-    closed versions.
-
 When there is a Node.js release, there will always be an associated N|Solid
 release. This typically is made within 24 hours of the upstream Node.js release.
 See the next section for more details on how the versions work and the
@@ -139,6 +134,18 @@ releases addressing crucial issues in N|Solid. N|Solid strives to align its
 feature releases as closely as possible with the Node.js release schedule,
 promoting harmony and predictability in the release cycles.
 
+### Landing approved Pull Requests
+
+Currently, N|Solid don't use the `commit-queue` label for landing PRs
+on _default_ branch. Once the PR is mergeable a maintainer can land it using
+`node-core-utils` to include the expected metadata.
+
+```console
+$ ncu-config set readme $(PWD)/CONTRIBUTING.md
+$ ncu-config set branch node-v20.x-nsolid-v5.x
+$ git node land https://github.com/nodesource/nsolid/pull/X
+```
+
 ## Technical Priorities
 
 The N|Solid project aims to extend Node.js functionality to provide a unified
@@ -219,6 +226,39 @@ versions of Node.js with safe Buffer allocation.
 This type of change has a lot of potential, but also faces the biggest uphill
 battle towards becoming a part of the project.
 
+<a id="current-project-team-members"></a>
+
+## Current project team members
+
+<!-- #### TSC voting members -->
+
+<!-- #### TSC regular members -->
+
+<!-- #### TSC emeriti members -->
+
+<!--lint disable prohibited-strings-->
+
+### Collaborators
+
+<!-- node-core-utils and find-inactive-tsc.mjs depend on the format of the TSC
+     list. If the format changes, those utilities need to be tested and
+     updated. -->
+
+* [edsadr](https://github.com/edsadr) -
+  **Adrian Estrada** <<edsadr@gmail.com>> (he/him)
+* [juanarbol](https://github.com/juanarbol) -
+  **Juan José Arboleda** <<soyjuanarbol@gmail.com>> (he/him)
+* [RafaelGSS](https://github.com/RafaelGSS) -
+  **Rafael Gonzaga** <<rafael.nunu@hotmail.com>> (he/him)
+* [santigimeno](https://github.com/santigimeno) -
+  **Santiago Gimeno** <<santiago.gimeno@gmail.com>> (he/him)
+* [trevnorris](https://github.com/trevnorris) -
+  **Trevor Norris** <<trev.norris@gmail.com>>> - (he/him)
+* [UlisesGascon](https://github.com/UlisesGascon) -
+  **Ulises Gascón** <<ulisesgascongonzalez@gmail.com>> (he/him)
+
+<!-- #### Collaborator emeriti -->
+
 <a id="developers-certificate-of-origin"></a>
 
 ## Developer's Certificate of Origin 1.1
@@ -248,3 +288,8 @@ By making a contribution to this project, I certify that:
      maintained indefinitely and may be redistributed consistent with
      this project or the open source license(s) involved.
 </pre>
+
+[^*]: Significant breaking changes or the introduction of substantial features
+    will drive the MAJOR version increments in N|Solid. Pre v5.0.0 versions of
+    N|Solid are proprietary, and there will be no further enhancements to these
+    closed versions.
