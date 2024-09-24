@@ -177,6 +177,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void handle_command_request(grpcagent::CommandRequest&& request);
 
+  void parse_saas_token(const std::string& token);
+
   void reconfigure(const grpcagent::CommandRequest& config);
 
   void send_asset_error(const std::string& req_id,
@@ -246,6 +248,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   nlohmann::json config_;
   std::string agent_id_;
   std::string saas_;
+  std::string console_id_;
 
   // For the Logging API
   nsuv::ns_async log_msg_;

@@ -775,9 +775,10 @@ int GrpcAgent::config(const json& config) {
   if (utils::find_any_fields_in_diff(diff, { "/saas" })) {
     auto it = config_.find("saas");
     if (it != config_.end()) {
-      saas_ = *it;
+      parse_saas_token(*it);
     } else {
       saas_.clear();
+      console_id_.clear();
     }
   }
 
@@ -788,14 +789,15 @@ int GrpcAgent::config(const json& config) {
 
       bool insecure = false;
       std::string insecure_str;
-      if (per_process::system_environment->Get(kNSOLID_GRPC_INSECURE).To(&insecure_str)) {
+      // Only parse the insecure flag in non SaaS mode.
+      if (saas_.empty() &&
+          per_process::system_environment->Get(kNSOLID_GRPC_INSECURE).To(&insecure_str)) {
         // insecure = std::stoull(insecure_str);
         insecure = std::stoi(insecure_str);
       }
 
-      Debug("Insecure: %d\n", static_cast<unsigned>(insecure));
-
-      const std::string endpoint = *it;
+      const std::string endpoint = console_id_.empty() ? it->get<std::string>() : console_id_ + ".grpc.nodesource.io:443";
+      Debug("GrpcAgent configured. Endpoint: %s. Insecure: %d\n", endpoint.c_str(), static_cast<unsigned>(insecure));
       client_ = std::make_shared<GrpcClient>();
       {
         OtlpGrpcExporterOptions options;
@@ -1106,6 +1108,25 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
   } else if (cmd == "startup_times") {
     send_startup_times_event(request.requestid().c_str());
   }
+}
+
+void GrpcAgent::parse_saas_token(const std::string& token) {
+  std::string pubKey = token.substr(0, 40);
+  std::replace(pubKey.begin(), pubKey.end(), ',', '!');
+  std::string saasUrl = token.substr(40, token.length());
+  std::string baseUrl;
+  std::string basePort;
+  std::istringstream saasStream(saasUrl);
+  std::getline(saasStream, baseUrl, ':');
+  std::getline(saasStream, basePort, ':');
+
+  if (baseUrl.empty() || basePort.empty() || pubKey.length() != 40) {
+    Debug("Invalid SaaS token: %s\n", token.c_str());
+    return;
+  }
+
+  saas_ = token;
+  console_id_ = baseUrl.substr(0, baseUrl.find('.'));
 }
 
 void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
