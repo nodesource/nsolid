@@ -141,6 +141,7 @@ on _default_ branch. Once the PR is mergeable a maintainer can land it using
 `node-core-utils` to include the expected metadata.
 
 ```console
+$ ncu-config set readme $(PWD)/CONTRIBUTING.md
 $ ncu-config set branch node-v20.x-nsolid-v5.x
 $ git node land https://github.com/nodesource/nsolid/pull/X
 ```
@@ -225,6 +226,39 @@ versions of Node.js with safe Buffer allocation.
 This type of change has a lot of potential, but also faces the biggest uphill
 battle towards becoming a part of the project.
 
+<a id="current-project-team-members"></a>
+
+## Current project team members
+
+<!-- #### TSC voting members -->
+
+<!-- #### TSC regular members -->
+
+<!-- #### TSC emeriti members -->
+
+<!--lint disable prohibited-strings-->
+
+### Collaborators
+
+<!-- node-core-utils and find-inactive-tsc.mjs depend on the format of the TSC
+     list. If the format changes, those utilities need to be tested and
+     updated. -->
+
+* [edsadr](https://github.com/edsadr) -
+  **Adrian Estrada** <<edsadr@gmail.com>> (he/him)
+* [juanarbol](https://github.com/juanarbol) -
+  **Juan José Arboleda** <<soyjuanarbol@gmail.com>> (he/him)
+* [RafaelGSS](https://github.com/RafaelGSS) -
+  **Rafael Gonzaga** <<rafael.nunu@hotmail.com>> (he/him)
+* [santigimeno](https://github.com/santigimeno) -
+  **Santiago Gimeno** <<santiago.gimeno@gmail.com>> (he/him)
+* [trevnorris](https://github.com/trevnorris) -
+  **Trevor Norris** <<trev.norris@gmail.com>>> - (he/him)
+* [UlisesGascon](https://github.com/UlisesGascon) -
+  **Ulises Gascón** <<ulisesgascongonzalez@gmail.com>> (he/him)
+
+<!-- #### Collaborator emeriti -->
+
 <a id="developers-certificate-of-origin"></a>
 
 ## Developer's Certificate of Origin 1.1
@@ -259,36 +293,3 @@ By making a contribution to this project, I certify that:
     will drive the MAJOR version increments in N|Solid. Pre v5.0.0 versions of
     N|Solid are proprietary, and there will be no further enhancements to these
     closed versions.
-
-## Current project team members
-
-<!-- #### TSC voting members -->
-
-<!-- #### TSC regular members -->
-
-<!-- #### TSC emeriti members -->
-
-<!--lint disable prohibited-strings-->
-
-### Collaborators
-
-<!-- node-core-utils and find-inactive-tsc.mjs depend on the format of the TSC
-     list. If the format changes, those utilities need to be tested and
-     updated. -->
-
-<!--lint disable prohibited-strings-->
-
-* [edsadr](https://github.com/edsadr) -
-  **Adrian Estrada** <<edsadr@gmail.com>> (he/him)
-* [juanarbol](https://github.com/juanarbol) -
-  **Juan José Arboleda** <<soyjuanarbol@gmail.com>> (he/him)
-* [RafaelGSS](https://github.com/RafaelGSS) -
-  **Rafael Gonzaga** <<rafael.nunu@hotmail.com>> (he/him)
-* [santigimeno](https://github.com/santigimeno) -
-  **Santiago Gimeno** <<santiago.gimeno@gmail.com>> (he/him)
-* [trevnorris](https://github.com/trevnorris) -
-  **Trevor Norris** <<trev.norris@gmail.com>>> - (he/him)
-* [UlisesGascon](https://github.com/UlisesGascon) -
-  **Ulises Gascón** <<ulisesgascongonzalez@gmail.com>> (he/him)
-
-<!-- #### Collaborator emeriti -->
