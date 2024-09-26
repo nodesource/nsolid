@@ -57,7 +57,7 @@ CommandStream::~CommandStream() {
 void CommandStream::OnDone(const ::grpc::Status& s) {
   Debug("[%ld] CommandStream::OnDone: %d. %s:%s\n", pthread_self(), s.error_code(), s.error_message().c_str(), s.error_details().c_str());
   if (agent_) {
-    agent_->reset_command_stream();
+    agent_->command_stream_closed(s);
   }
 }
 

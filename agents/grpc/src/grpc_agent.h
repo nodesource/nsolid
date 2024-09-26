@@ -67,6 +67,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static SharedGrpcAgent Inst();
 
+  void command_stream_closed(const ::grpc::Status& s);
+
   void got_command_request(grpcagent::CommandRequest&& request);
 
   void remove_cpu_profile(uint64_t thread_id);
@@ -249,6 +251,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   std::string agent_id_;
   std::string saas_;
   std::string console_id_;
+
+  nsuv::ns_timer auth_timer_;
+  int auth_retries_;
 
   // For the Logging API
   nsuv::ns_async log_msg_;

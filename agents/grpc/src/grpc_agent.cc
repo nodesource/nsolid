@@ -42,6 +42,9 @@ constexpr size_t span_msg_q_min_size = 1000;
 const char* const kNSOLID_GRPC_INSECURE = "NSOLID_GRPC_INSECURE";
 const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 
+const int MAX_AUTH_RETRIES = 20;
+const uint64_t auth_timer_interval = 500;
+
 static const char* const root_certs[] = {
 #include "node_root_certs.h"  // NOLINT(build/include_order)
 };
@@ -373,7 +376,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         proc_metrics_(),
                         proc_prev_stor_(),
                         config_(json::object()),
-                        agent_id_(GetAgentId()) {
+                        agent_id_(GetAgentId()),
+                        auth_retries_(0) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
@@ -417,6 +421,37 @@ void GrpcAgent::remove_cpu_profile(uint64_t thread_id) {
 void GrpcAgent::reset_command_stream() {
   command_stream_ =
         std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
+}
+
+void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
+  const ::grpc::StatusCode code = status.error_code();
+  if (code == ::grpc::StatusCode::UNAUTHENTICATED) {
+    Debug("Error Authenticating. Retrying in %ld ms\n", auth_timer_interval);
+    auth_retries_++;
+    if (auth_retries_ == MAX_AUTH_RETRIES) {
+      fprintf(stderr,
+              "N|Solid warning: %s Unable to authenticate, "
+              "please verify your token and network connection!\n",
+              agent_id_.c_str());
+      command_stream_.reset();
+      stop();
+      return;
+    }
+  } else if (code == ::grpc::StatusCode::UNAVAILABLE) {
+    Debug("Service unavailable. Retrying in %ld ms\n", auth_timer_interval);
+  } else {
+    reset_command_stream();
+    return;
+  }
+
+  ASSERT_EQ(0, auth_timer_.start(+[](nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
+    SharedGrpcAgent agent = agent_wp.lock();
+    if (agent == nullptr) {
+      return;
+    }
+
+    agent->reset_command_stream();
+  }, auth_timer_interval, 0, weak_from_this()));
 }
 
 int GrpcAgent::start() {
@@ -937,6 +972,8 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, command_msg_.init(&loop_, command_msg_cb_, weak_from_this()));
 
+  ASSERT_EQ(0, auth_timer_.init(&loop_));
+
   ASSERT_EQ(0, log_msg_.init(&loop_, log_msg_cb_, weak_from_this()));
 
   ASSERT_EQ(0, metrics_msg_.init(&loop_, metrics_msg_cb_, weak_from_this()));
@@ -979,6 +1016,7 @@ void GrpcAgent::do_stop() {
   profile_collector_.reset();
   command_msg_.close();
   log_msg_.close();
+  auth_timer_.close();
   config_msg_.close();
   metrics_timer_.close();
   metrics_msg_.close();
