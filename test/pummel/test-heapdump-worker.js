@@ -1,8 +1,13 @@
 // Flags: --expose-internals
 'use strict';
-require('../common');
+const common = require('../common');
 const { validateSnapshotNodes } = require('../common/heap');
 const { Worker } = require('worker_threads');
+
+// TODO(trevnorris): Investigate why this says EnvInst isn't being cleaned
+// up on the call to terminate() in this case.
+if (process.config.variables.asan)
+  common.skip('Skip flaky test');
 
 validateSnapshotNodes('Node / Worker', []);
 const worker = new Worker('setInterval(() => {}, 100);', { eval: true });

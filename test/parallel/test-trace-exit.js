@@ -52,7 +52,7 @@ switch (true) {
     assert.strictEqual(actualWarnings.length, warnings);
 
     if (variant.startsWith('worker')) {
-      const workerIds = stderr.match(/\(node:\d+, thread:\d+\)/g);
+      const workerIds = stderr.match(/\(nsolid:\d+, thread:\d+\)/g);
       assert.strictEqual(workerIds.length, warnings);
     }
   }

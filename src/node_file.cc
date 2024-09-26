@@ -344,6 +344,8 @@ inline void FileHandle::Close() {
     return;
   }
 
+  env()->envinst_->inc_fs_handles_closed();
+
   // If the close was successful, we still want to emit a process warning
   // to notify that the file descriptor was gc'd. We want to be noisy about
   // this because not explicitly closing the FileHandle is a bug.
@@ -464,6 +466,7 @@ MaybeLocal<Promise> FileHandle::ClosePromise() {
       close->Reject(
           UVException(isolate, static_cast<int>(req->result), "close"));
     } else {
+      close->env()->envinst_->inc_fs_handles_closed();
       close->Resolve();
     }
   }};
@@ -988,6 +991,7 @@ void Close(const FunctionCallbackInfo<Value>& args) {
     FS_SYNC_TRACE_BEGIN(close);
     SyncCallAndThrowOnError(env, &req_wrap_sync, uv_fs_close, fd);
     FS_SYNC_TRACE_END(close);
+    env->envinst_->inc_fs_handles_closed();
   }
 }
 
@@ -2067,6 +2071,7 @@ static void Open(const FunctionCallbackInfo<Value>& args) {
     FS_SYNC_TRACE_END(open);
     if (is_uv_error(result)) return;
     env->AddUnmanagedFd(result);
+    env->envinst_->inc_fs_handles_opened();
     args.GetReturnValue().Set(result);
   }
 }
@@ -2109,6 +2114,7 @@ static void OpenFileHandle(const FunctionCallbackInfo<Value>& args) {
     }
     FileHandle* fd = FileHandle::New(binding_data, result);
     if (fd == nullptr) return;
+    env->envinst_->inc_fs_handles_opened();
     args.GetReturnValue().Set(fd->object());
   }
 }

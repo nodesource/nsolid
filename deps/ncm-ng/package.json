@@ -1,0 +1,44 @@
+{
+  "name": "@ns-private/ncm-ng",
+  "version": "2.9.7",
+  "main": "index.js",
+  "publishConfig": {
+    "registry": "http://packages-internal.nodesource.io"
+  },
+  "description": "ncm-ng used by nsolid",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nodesource/ncm-ng.git"
+  },
+  "bin": {
+    "ncm-agent": "./parallel/agent.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "bole": "^4.0.0",
+    "byte-size": "^6.2.0",
+    "chalk": "^3.0.0",
+    "detective": "^5.2.0",
+    "eslint-plugin-no-async-without-await": "^1.2.0",
+    "eslint-plugin-no-unsafe-regex": "^1.0.0",
+    "fast-glob": "^3.2.5",
+    "git-fetch-pack": "^0.1.1",
+    "git-transport-protocol": "^0.1.0",
+    "joi": "^17.7.0",
+    "map-async": "^0.1.1",
+    "mkdirp": "^0.5.1",
+    "open": "^7.3.1",
+    "p-defer": "^3.0.0",
+    "path-type": "^4.0.0",
+    "resolve": "^1.20.0",
+    "semver": "^7.3.5",
+    "sha": "^3.0.0",
+    "spdx-correct": "^3.1.0",
+    "spdx-satisfies": "^5.0.1",
+    "ssri": "^8.0.1",
+    "stats-lite": "^2.2.0",
+    "tar": "^6.0.1",
+    "tmp": "^0.2.1",
+    "uuid": "^8.3.0"
+  }
+}

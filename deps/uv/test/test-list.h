@@ -573,6 +573,7 @@ TEST_DECLARE  (metrics_pool_events)
 TEST_DECLARE  (metrics_idle_time)
 TEST_DECLARE  (metrics_idle_time_thread)
 TEST_DECLARE  (metrics_idle_time_zero)
+TEST_DECLARE  (metrics_provider_times)
 
 TASK_LIST_START
   TEST_ENTRY_CUSTOM (platform_output, 0, 1, 5000)
@@ -1225,6 +1226,7 @@ TASK_LIST_START
   TEST_ENTRY  (metrics_idle_time)
   TEST_ENTRY  (metrics_idle_time_thread)
   TEST_ENTRY  (metrics_idle_time_zero)
+  TEST_ENTRY  (metrics_provider_times)
 
 #if 0
   /* These are for testing the test runner. */

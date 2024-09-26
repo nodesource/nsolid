@@ -12,6 +12,7 @@ on:
       - tools/gyp/**
       - tools/test.py
       - .github/workflows/coverage-windows.yml
+      - agents/**
       - codecov.yml
   push:
     branches:
@@ -25,6 +26,7 @@ on:
       - tools/gyp/**
       - tools/test.py
       - .github/workflows/coverage-windows.yml
+      - agents/**
       - codecov.yml
 
 concurrency:

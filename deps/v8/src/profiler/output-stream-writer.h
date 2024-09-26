@@ -36,6 +36,48 @@ struct MaxDecimalDigitsIn<8> {
   static const int kUnsigned = 20;
 };
 
+namespace {
+  void EscapeAndAppendString(const char* value, std::string* result) {
+  *result += '"';
+  while (*value) {
+    unsigned char c = *value++;
+    switch (c) {
+      case '\b':
+        *result += "\\b";
+        break;
+      case '\f':
+        *result += "\\f";
+        break;
+      case '\n':
+        *result += "\\n";
+        break;
+      case '\r':
+        *result += "\\r";
+        break;
+      case '\t':
+        *result += "\\t";
+        break;
+      case '\"':
+        *result += "\\\"";
+        break;
+      case '\\':
+        *result += "\\\\";
+        break;
+      default:
+        if (c < '\x20' || c == '\x7F') {
+          char number_buffer[8];
+          base::OS::SNPrintF(number_buffer, arraysize(number_buffer), "\\u%04X",
+                             static_cast<unsigned>(c));
+          *result += number_buffer;
+        } else {
+          *result += c;
+        }
+    }
+  }
+  *result += '"';
+}
+}  // namespace
+
 class OutputStreamWriter {
  public:
   explicit OutputStreamWriter(v8::OutputStream* stream)
@@ -73,6 +115,11 @@ class OutputStreamWriter {
     }
   }
   void AddNumber(unsigned n) { AddNumberImpl<unsigned>(n, "%u"); }
+  void EscapeAndAddString(const char* s) {
+    std::string escaped;
+    EscapeAndAppendString(s, &escaped);
+    AddString(escaped.c_str());
+  }
   void Finalize() {
     if (aborted_) return;
     DCHECK(chunk_pos_ < chunk_size_);

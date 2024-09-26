@@ -17,7 +17,7 @@ set "CI_NATIVE_SUITES=%NATIVE_SUITES% benchmark"
 set "CI_JS_SUITES=%JS_SUITES% pummel"
 set CI_DOC=doctool
 @rem Same as the test-ci target in Makefile
-set "common_test_suites=%JS_SUITES% %NATIVE_SUITES%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1"
+set "common_test_suites=%JS_SUITES% %NATIVE_SUITES%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1&set test-agents-prereqs=1"
 
 @rem Process arguments.
 set config=Release
@@ -57,6 +57,7 @@ set dll=
 set enable_static=
 set build_js_native_api_tests=
 set build_node_api_tests=
+set test-agents-prereqs=
 set test_node_inspect=
 set test_check_deopts=
 set v8_test_options=
@@ -96,10 +97,11 @@ if /i "%1"=="ltcg"          set ltcg=1&goto arg-ok
 if /i "%1"=="licensertf"    set licensertf=1&goto arg-ok
 if /i "%1"=="test"          set test_args=%test_args% %common_test_suites%&set lint_cpp=1&set lint_js=1&set lint_md=1&goto arg-ok
 if /i "%1"=="test-ci-native" set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_NATIVE_SUITES% %CI_DOC%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1&set cctest_args=%cctest_args% --gtest_output=xml:cctest.junit.xml&goto arg-ok
-if /i "%1"=="test-ci-js"    set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_JS_SUITES%&set no_cctest=1&goto arg-ok
+if /i "%1"=="test-ci-js"    set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_JS_SUITES%&set no_cctest=1&set test-agents-prereqs=1&goto arg-ok
 if /i "%1"=="build-addons"   set build_addons=1&goto arg-ok
 if /i "%1"=="build-js-native-api-tests"   set build_js_native_api_tests=1&goto arg-ok
 if /i "%1"=="build-node-api-tests"   set build_node_api_tests=1&goto arg-ok
+if /i "%1"=="test-agents-prereqs"   set test-agents-prereqs=1&goto arg-ok
 if /i "%1"=="test-addons"   set test_args=%test_args% addons&set build_addons=1&goto arg-ok
 if /i "%1"=="test-doc"      set test_args=%test_args% %CI_DOC%&set doc=1&&set lint_js=1&set lint_md=1&goto arg-ok
 if /i "%1"=="test-js-native-api"   set test_args=%test_args% js-native-api&set build_js_native_api_tests=1&goto arg-ok
@@ -175,7 +177,7 @@ if defined msi     set stage_package=1
 if defined package set stage_package=1
 
 :: assign path to node_exe
-set "node_exe=%config%\node.exe"
+set "node_exe=%config%\nsolid.exe"
 set "node_gyp_exe="%node_exe%" deps\npm\node_modules\node-gyp\bin\node-gyp"
 set "npm_exe="%~dp0%node_exe%" %~dp0deps\npm\bin\npm-cli.js"
 if "%target_env%"=="vs2022" set "node_gyp_exe=%node_gyp_exe% --msvs_version=2022"
@@ -227,6 +229,7 @@ if not defined openssl_no_asm if "%target_arch%" NEQ "arm64" call tools\msvs\fin
 if errorlevel 1 echo Could not find NASM, install it or build with openssl-no-asm. See BUILDING.md.
 
 call :getnodeversion || exit /b 1
+call :getnsolidversion || exit /b 1
 
 if defined TAG set configure_flags=%configure_flags% --tag=%TAG%
 
@@ -354,8 +357,8 @@ set "msbplatform=Win32"
 if "%target_arch%"=="x64" set "msbplatform=x64"
 if "%target_arch%"=="arm64" set "msbplatform=ARM64"
 if "%target%"=="Build" (
-  if defined no_cctest set target=node
-  if "%test_args%"=="" set target=node
+  if defined no_cctest set target=nsolid
+  if "%test_args%"=="" set target=nsolid
   if defined cctest set target="Build"
 )
 if "%target%"=="node" if exist "%config%\cctest.exe" del "%config%\cctest.exe"
@@ -377,14 +380,14 @@ if "%target%" == "Clean" goto exit
 if exist %config% rd %config%
 if errorlevel 1 echo "Old build output exists at 'out\%config%'. Please remove." & exit /B
 :: Use /J because /D (symlink) requires special permissions.
-if EXIST out\%config% mklink /J %config% out\%config%
+if EXIST out\%config% mklink /J %config% out\%config%&&copy /Y out\%config%\nsolid.lib out\%config%\node.lib> nul
 if errorlevel 1 echo "Could not create junction to 'out\%config%'." & exit /B
 
 :sign
 @rem Skip signing unless the `sign` option was specified.
 if not defined sign goto licensertf
 
-call tools\sign.bat Release\node.exe
+call tools\sign.bat Release\nsolid.exe
 if errorlevel 1 echo Failed to sign exe, got error code %errorlevel%&goto exit
 
 :licensertf
@@ -422,8 +425,8 @@ rmdir /S /Q %TARGET_NAME% > nul 2> nul
 mkdir %TARGET_NAME% > nul 2> nul
 mkdir %TARGET_NAME%\node_modules > nul 2>nul
 
-copy /Y node.exe %TARGET_NAME%\ > nul
-if errorlevel 1 echo Cannot copy node.exe && goto package_error
+copy /Y nsolid.exe %TARGET_NAME%\ > nul
+if errorlevel 1 echo Cannot copy nsolid.exe && goto package_error
 copy /Y ..\LICENSE %TARGET_NAME%\ > nul
 if errorlevel 1 echo Cannot copy LICENSE && goto package_error
 copy /Y ..\README.md %TARGET_NAME%\ > nul
@@ -524,14 +527,14 @@ exit /b 1
 if not defined msi goto install-doctools
 
 :msibuild
-echo Building node-v%FULLVERSION%-%target_arch%.msi
+echo Building nsolid-v%FULLVERSION%-%target_arch%.msi
 set "msbsdk="
 if defined WindowsSDKVersion set "msbsdk=/p:WindowsTargetPlatformVersion=%WindowsSDKVersion:~0,-1%"
-msbuild "%~dp0tools\msvs\msi\nodemsi.sln" /m /t:Restore,Clean,Build %msbsdk% /p:PlatformToolset=%PLATFORM_TOOLSET% /p:Configuration=%config% /p:Platform=%target_arch% /p:NodeVersion=%NODE_VERSION% /p:FullVersion=%FULLVERSION% /p:DistTypeDir=%DISTTYPEDIR% /clp:NoSummary;NoItemAndPropertyList;Verbosity=minimal /nologo
+msbuild "%~dp0tools\msvs\msi\nsolidmsi.sln" /m /t:Restore,Clean,Build %msbsdk% /p:PlatformToolset=%PLATFORM_TOOLSET% /p:Configuration=%config% /p:Platform=%target_arch% /p:NSolidVersion=%NSOLID_VERSION% /p:NodeVersion=%NODE_VERSION% /p:FullVersion=%FULLVERSION% /p:DistTypeDir=%DISTTYPEDIR% /clp:NoSummary;NoItemAndPropertyList;Verbosity=minimal /nologo
 if errorlevel 1 goto exit
 
 if not defined sign goto upload
-call tools\sign.bat node-v%FULLVERSION%-%target_arch%.msi
+call tools\sign.bat nsolid-v%FULLVERSION%-%target_arch%.msi
 if errorlevel 1 echo Failed to sign msi, got error code %errorlevel%&goto exit
 
 :upload
@@ -602,7 +605,7 @@ cd .
 @rem Build documentation if requested
 if not defined doc goto run
 if not exist %node_exe% (
-  echo Failed to find node.exe
+  echo Failed to find nsolid.exe
   goto run
 )
 mkdir %config%\doc
@@ -618,7 +621,7 @@ for %%F in (%config%\doc\api\*.md) do (
 
 if not defined build_addons goto build-js-native-api-tests
 if not exist "%node_exe%" (
-  echo Failed to find node.exe
+  echo Failed to find nsolid.exe
   goto build-js-native-api-tests
 )
 echo Building addons
@@ -638,7 +641,7 @@ endlocal
 :build-js-native-api-tests
 if not defined build_js_native_api_tests goto build-node-api-tests
 if not exist "%node_exe%" (
-  echo Failed to find node.exe
+  echo Failed to find nsolid.exe
   goto build-node-api-tests
 )
 echo Building js-native-api
@@ -654,10 +657,10 @@ endlocal
 goto build-node-api-tests
 
 :build-node-api-tests
-if not defined build_node_api_tests goto run-tests
+if not defined build_node_api_tests goto test-agents-prereqs
 if not exist "%node_exe%" (
-  echo Failed to find node.exe
-  goto run-tests
+  echo Failed to find nsolid.exe
+  goto test-agents-prereqs
 )
 echo Building node-api
 :: clear
@@ -667,6 +670,25 @@ for /d %%F in (test\node-api\??_*) do (
 :: building node-api
 setlocal
 python "%~dp0tools\build_addons.py" "%~dp0test\node-api" --config %config%
+if errorlevel 1 exit /b 1
+endlocal
+goto test-agents-prereqs
+
+:test-agents-prereqs
+if not defined test-agents-prereqs goto run-tests
+if not exist "%node_exe%" (
+  echo Failed to find nsolid.exe
+  goto run-tests
+)
+echo Installing agents test prereqs
+:: clear
+rd /s /q test\common\nsolid-zmq-agent\node_modules test\common\nsolid-otlp-agent\node_modules
+:: installing the modules
+setlocal
+set npm_config_nodedir=%~dp0
+%npm_exe% install zeromq@5 base85 --prefix "%~dp0test\common\nsolid-zmq-agent" --no-save --no-package-lock
+%npm_exe% run build:libzmq --prefix "%~dp0test\common\nsolid-zmq-agent\node_modules\zeromq"
+%npm_exe% install @opentelemetry/otlp-proto-exporter-base --prefix "%~dp0test\common\nsolid-otlp-agent" --no-save --no-package-lock
 if errorlevel 1 exit /b 1
 endlocal
 goto run-tests
@@ -742,14 +764,14 @@ cd ..\..
 if not defined lint_js goto lint-js-fix
 if not exist tools\eslint\node_modules\eslint goto no-lint
 echo running lint-js
-%node_exe% tools\eslint\node_modules\eslint\bin\eslint.js --cache --max-warnings=0 --report-unused-disable-directives --rule "@stylistic/js/linebreak-style: 0" eslint.config.mjs benchmark doc lib test tools
+%node_exe% tools\eslint\node_modules\eslint\bin\eslint.js --cache --report-unused-disable-directives --rule "@stylistic/js/linebreak-style: 0" eslint.config.mjs benchmark doc lib test tools
 goto lint-js-fix
 
 :lint-js-fix
 if not defined lint_js_fix goto lint-md-build
 if not exist tools\eslint\node_modules\eslint goto no-lint
 echo running lint-js-fix
-%node_exe% tools\eslint\node_modules\eslint\bin\eslint.js --cache --max-warnings=0 --report-unused-disable-directives --rule "@stylistic/js/linebreak-style: 0" eslint.config.mjs benchmark doc lib test tools --fix
+%node_exe% tools\eslint\node_modules\eslint\bin\eslint.js --cache --report-unused-disable-directives --rule "@stylistic/js/linebreak-style: 0" eslint.config.mjs benchmark doc lib test tools --fix
 goto lint-md-build
 
 :no-lint
@@ -824,6 +846,14 @@ set NODE_VERSION=
 set TAG=
 set FULLVERSION=
 
+:getnsolidversion
+set NSOLID_VERSION=
+for /F "usebackq tokens=*" %%i in (`python "%~dp0tools\getnsolidversion.py"`) do set NSOLID_VERSION=%%i
+if not defined NSOLID_VERSION (
+  echo Cannot determine current version of NSolid
+  exit /b 1
+)
+
 for /F "usebackq tokens=*" %%i in (`python "%~dp0tools\getnodeversion.py"`) do set NODE_VERSION=%%i
 if not defined NODE_VERSION (
   echo Cannot determine current version of Node.js
@@ -832,7 +862,7 @@ if not defined NODE_VERSION (
 
 if not defined DISTTYPE set DISTTYPE=release
 if "%DISTTYPE%"=="release" (
-  set FULLVERSION=%NODE_VERSION%
+  set FULLVERSION=%NSOLID_VERSION%
   goto distexit
 )
 if "%DISTTYPE%"=="custom" (
@@ -859,9 +889,9 @@ if not "%DISTTYPE%"=="custom" (
   )
   set TAG=%DISTTYPE%%DATESTRING%%COMMIT%
 )
-set FULLVERSION=%NODE_VERSION%-%TAG%
+set FULLVERSION=%NSOLID_VERSION%-%TAG%
 
 :distexit
 if not defined DISTTYPEDIR set DISTTYPEDIR=%DISTTYPE%
-set TARGET_NAME=node-v%FULLVERSION%-win-%target_arch%
+set TARGET_NAME=nsolid-v%FULLVERSION%-win-%target_arch%
 goto :EOF

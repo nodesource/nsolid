@@ -36,6 +36,10 @@ static char test_buf[] = "test-buffer\n";
 static fs_reqs_t fs_reqs;
 static int pool_events_counter;
 
+static uint64_t p_entry;
+static uint64_t p_exit;
+static uint64_t last_p_exit;
+
 
 static void timer_spin_cb(uv_timer_t* handle) {
   uint64_t t;
@@ -384,6 +388,43 @@ TEST_IMPL(metrics_pool_events) {
 
   uv_fs_unlink(NULL, &unlink_req, "test_file", NULL);
   uv_fs_req_cleanup(&unlink_req);
+
+  MAKE_VALGRIND_HAPPY(uv_default_loop());
+  return 0;
+}
+
+
+static void provider_timer_cb(uv_timer_t* handle) {
+  uv_metrics_provider_times(handle->loop, &p_entry, &p_exit);
+  ASSERT_UINT64_GT(p_exit, last_p_exit);
+}
+
+
+static void provider_prepare_cb(uv_prepare_t* handle) {
+  uv_timer_t* timer = (uv_timer_t*) handle->data;
+
+  ASSERT_EQ(0, uv_prepare_stop(handle));
+
+  uv_metrics_provider_times(handle->loop, &p_entry, &p_exit);
+  last_p_exit = p_exit;
+
+  ASSERT_EQ(0, uv_timer_init(handle->loop, timer));
+  ASSERT_EQ(0, uv_timer_start(timer, provider_timer_cb, 100, 0));
+}
+
+
+TEST_IMPL(metrics_provider_times) {
+  uv_prepare_t prepare;
+  uv_timer_t timer;
+
+  ASSERT_EQ(0, uv_loop_configure(uv_default_loop(), UV_METRICS_IDLE_TIME));
+
+  ASSERT_EQ(0, uv_prepare_init(uv_default_loop(), &prepare));
+  ASSERT_EQ(0, uv_prepare_start(&prepare, provider_prepare_cb));
+
+  prepare.data = &timer;
+
+  ASSERT_EQ(0, uv_run(uv_default_loop(), UV_RUN_DEFAULT));
 
   MAKE_VALGRIND_HAPPY(uv_default_loop());
   return 0;

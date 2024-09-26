@@ -23,12 +23,18 @@
     'node_shared_sqlite%': 'false',
     'node_shared_uvwasi%': 'false',
     'node_shared_nghttp2%': 'false',
+    'node_shared_sodium%': 'false',
+    'node_shared_zmq%': 'false',
+    'node_shared_curl%': 'false',
+    'node_shared_grpc%': 'false',
+    'node_shared_protobuf%': 'false',
+    'node_shared_otlp_http_exporter': 'false',
     'node_use_openssl%': 'true',
     'node_shared_openssl%': 'false',
     'node_v8_options%': '',
     'node_enable_v8_vtunejit%': 'false',
-    'node_core_target_name%': 'node',
-    'node_lib_target_name%': 'libnode',
+    'node_core_target_name%': 'nsolid',
+    'node_lib_target_name%': 'libnsolid',
     'node_intermediate_lib_type%': 'static_library',
     'node_builtin_modules_path%': '',
     'linked_module_files': [
@@ -41,6 +47,12 @@
     'library_files': [
       '<@(node_library_files)',
       '<@(linked_module_files)',
+    ],
+    'agents_files': [
+      'agents/statsd/lib/nsolid.js',
+      'agents/statsd/lib/agent.js',
+      'agents/zmq/lib/nsolid.js',
+      'agents/zmq/lib/agent.js',
     ],
     'deps_files': [
       'deps/v8/tools/splaytree.mjs',
@@ -399,6 +411,53 @@
       'src/quic/transportparams.h',
       'src/quic/quic.cc',
     ],
+    'nsolid_sources': [
+      'agents/src/http_client.cc',
+      'agents/src/http_client.h',
+      'agents/src/span_collector.cc',
+      'agents/src/span_collector.h',
+      'agents/otlp/src/datadog_metrics.cc',
+      'agents/otlp/src/dynatrace_metrics.cc',
+      'agents/otlp/src/http_client.cc',
+      'agents/otlp/src/http_client.h',
+      'agents/otlp/src/newrelic_metrics.cc',
+      'agents/otlp/src/otlp_agent.cc',
+      'agents/otlp/src/otlp_common.cc',
+      'agents/otlp/src/otlp_metrics.cc',
+      'agents/otlp/src/datadog_metrics.h',
+      'agents/otlp/src/dynatrace_metrics.h',
+      'agents/otlp/src/metrics_exporter.h',
+      'agents/otlp/src/newrelic_metrics.h',
+      'agents/otlp/src/otlp_agent.h',
+      'agents/otlp/src/otlp_common.h',
+      'agents/otlp/src/otlp_metrics.h',
+      'agents/statsd/src/binding.cc',
+      'agents/statsd/src/statsd_agent.cc',
+      'agents/statsd/src/statsd_endpoint.cc',
+      'agents/statsd/src/statsd_agent.h',
+      'agents/statsd/src/statsd_endpoint.h',
+      'agents/statsd/src/statsd_utils.h',
+      'agents/zmq/src/binding.cc',
+      'agents/zmq/src/http_client.cc',
+      'agents/zmq/src/http_client.h',
+      'agents/zmq/src/zmq_agent.cc',
+      'agents/zmq/src/zmq_agent.h',
+      'agents/zmq/src/zmq_endpoint.h',
+      'agents/zmq/src/zmq_errors.h',
+      'src/nsolid.cc',
+      'src/nsolid/nsolid_api.cc',
+      'src/nsolid/nsolid_trace.cc',
+      'src/nsolid/nsolid_cpu_profiler.cc',
+      'src/nsolid/nsolid_heap_snapshot.cc',
+      'src/nsolid.h'
+      'src/nsolid/nsolid_api.h',
+      'src/nsolid/nsolid_output_stream.h',
+      'src/nsolid/nsolid_trace.h',
+      'src/nsolid/nsolid_cpu_profiler.h',
+      'src/nsolid/nsolid_heap_snapshot.h',
+      'deps/nsuv/include/nsuv.h',
+      'deps/nsuv/include/nsuv-inl.h',
+    ],
     'node_cctest_sources': [
       'src/node_snapshot_stub.cc',
       'test/cctest/node_test_fixture.cc',
@@ -421,6 +480,12 @@
       'test/cctest/test_traced_value.cc',
       'test/cctest/test_util.cc',
       'test/cctest/test_dataqueue.cc',
+      'test/cctest/http_server_fixture.cc',
+      'test/cctest/http_server_fixture.h',
+      'test/cctest/test_agents_zmq_http_client.cc',
+      'test/cctest/test_nsolid_lru_map.cc',
+      'test/cctest/test_nsolid_ring_buffer.cc',
+      'test/cctest/test_nsolid_thread_safe.cc',
     ],
     'node_cctest_openssl_sources': [
       'test/cctest/test_crypto_clienthello.cc',
@@ -472,7 +537,7 @@
     # Putting these explicitly here so not to depend on `common.gypi`.
     # `common.gypi` need to be more general because it is used to build userland native addons.
     # Refs: https://github.com/nodejs/node-gyp/issues/1118
-    'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', ],
+    'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-c++98-compat-extra-semi', ],
     'xcode_settings': {
       'WARNING_CFLAGS': [
         '-Wall',
@@ -480,7 +545,7 @@
         '-W',
         '-Wno-unused-parameter',
         '-Werror=undefined-inline',
-        '-Werror=extra-semi',
+        '-Wno-c++98-compat-extra-semi',
       ],
     },
 
@@ -495,7 +560,7 @@
 
     'conditions': [
       ['clang==0 and OS!="win"', {
-        'cflags': [ '-Wno-restrict', ],
+        'cflags': [ '-Wno-restrict', '-Wno-c++98-compat-extra-semi', ],
       }],
       # Pointer authentication for ARM64.
       ['target_arch=="arm64"', {
@@ -518,6 +583,7 @@
         ],
       }],
       ['OS=="linux" and clang==1', {
+        'cflags': [ '-Wno-c++98-compat-extra-semi', ],
         'libraries': ['-latomic'],
       }],
     ],
@@ -554,6 +620,7 @@
       'include_dirs': [
         'src',
         'deps/v8/include',
+        'deps/nsuv/include',
         'deps/postject'
       ],
 
@@ -587,7 +654,7 @@
 
       'conditions': [
         [ 'error_on_warn=="true"', {
-          'cflags': ['-Werror'],
+          'cflags': ['-Werror', '-Wno-c++98-compat-extra-semi'],
           'xcode_settings': {
             'WARNING_CFLAGS': [ '-Werror' ],
           },
@@ -851,6 +918,8 @@
 
       'include_dirs': [
         'src',
+        'deps/nsuv/include',
+        'agents',
         'deps/postject',
         '<(SHARED_INTERMEDIATE_DIR)' # for node_natives.h
       ],
@@ -867,11 +936,13 @@
 
       'sources': [
         '<@(node_sources)',
+        '<@(nsolid_sources)',
         # Dependency headers
         'deps/v8/include/v8.h',
         'deps/postject/postject-api.h',
         # javascript files to make for an even more pleasant IDE experience
         '<@(library_files)',
+        '<@(agents_files)',
         '<@(deps_files)',
         # node.gyp is added by default, common.gypi is added for change detection
         'common.gypi',
@@ -1024,6 +1095,7 @@
           'inputs': [
             '<(node_js2c_exec)',
             '<@(library_files)',
+            '<@(agents_files)',
             '<@(deps_files)',
             'config.gypi'
           ],
@@ -1035,6 +1107,7 @@
             '<@(_outputs)',
             'lib',
             'config.gypi',
+            '<@(agents_files)',
             '<@(deps_files)',
             '<@(linked_module_files)',
           ],
@@ -1207,6 +1280,8 @@
         'deps/uv/include',
         'deps/sqlite',
         'test/cctest',
+        'agents',
+        'deps/nsuv/include',
       ],
 
       'defines': [
@@ -1404,6 +1479,8 @@
         'deps/cares/include',
         'deps/uv/include',
         'deps/sqlite',
+        'deps/nsuv/include',
+        'deps/uvwasi/include',
       ],
 
       'defines': [ 'NODE_WANT_INTERNALS=1' ],
@@ -1469,6 +1546,7 @@
           ],
           'sources': [
             '<@(library_files)',
+            '<@(agents_files)',
             '<@(deps_files)',
             'common.gypi',
             'common_node.gypi',

@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import re
+import subprocess
 
 def abspath(*args):
   path = os.path.join(*args)
@@ -134,6 +135,56 @@ def corepack_files(options, action):
     else:
       assert 0 # unhandled action type
 
+def nsolid_cli_files(options, action):
+  target_path = 'lib/node_modules/nsolid-cli/'
+
+  # don't install cli if the target path is a symlink, it probably means
+  # that a dev version of nsolid-cli is installed there
+  if os.path.islink(abspath(options.install_path, target_path)): return
+
+  for dirname, subdirs, basenames in os.walk('deps/nsolid-cli', topdown=True):
+    subdirs[:] = filter('test'.__ne__, subdirs) # skip test suites
+    paths = [os.path.join(dirname, basename) for basename in basenames]
+    action(options, paths, target_path + dirname[15:] + '/')
+
+  # create/remove symlink
+  link_path = abspath(options.install_path, 'bin/nsolid-cli')
+  if action == uninstall:
+    action(options, [link_path], 'bin/nsolid-cli')
+  elif action == install:
+    try_symlink(options, '../lib/node_modules/nsolid-cli/cli-bin.js', link_path)
+  else:
+    assert(0) # unhandled action type
+
+def nsolid_strict_files(options, action):
+  target_path = 'lib/node_modules/ncm-ng/'
+
+  for dirname, subdirs, basenames in os.walk('deps/ncm-ng', topdown=True):
+    try:
+      subdirs[:] = filter('test'.__ne__, subdirs) # skip test suites
+      paths = [os.path.join(dirname, basename) for basename in basenames]
+      action(options, paths, target_path + dirname[11:] + '/')
+    except:
+      pass
+
+  # create/remove symlink
+  link_path = abspath(options.install_path, 'bin/ncm-agent')
+  if action == uninstall:
+    action(options, [link_path], 'bin/ncm-agent')
+  elif action == install:
+    subprocess.call([abspath(options.install_path, 'lib/node_modules/ncm-ng/install.sh')])
+    try_symlink(options, '../lib/node_modules/ncm-ng/parallel/agent.js', link_path)
+  else:
+    assert(0) # unhandled action type
+
+  link_path = abspath(options.install_path, 'bin/nsolid-strict')
+  if action == uninstall:
+    action(options, [link_path], 'bin/nsolid-strict')
+  elif action == install:
+    try_symlink(options, '../lib/node_modules/ncm-ng/parallel/nsolid-strict.sh', link_path)
+  else:
+    assert(0) # unhandled action type
+
 def subdir_files(options, path, dest, action):
   source_path, _ = mkpaths(options, path, dest)
   ret = {}
@@ -144,7 +195,7 @@ def subdir_files(options, path, dest, action):
     action(options, files_in_path, subdir + os.path.sep)
 
 def files(options, action):
-  node_bin = 'node'
+  node_bin = 'nsolid'
   if options.is_win:
     node_bin += '.exe'
   action(options, [os.path.join(options.build_dir, node_bin)], os.path.join('bin', node_bin))
@@ -179,19 +230,33 @@ def files(options, action):
       action(options, [os.path.join(options.build_dir, output_lib)],
              os.path.join(options.variables.get('libdir'), output_lib))
 
+  if not options.is_win:
+    # Install nsolid -> node compatibility symlink.
+    link_target = 'bin/node'
+    link_path = abspath(options.install_path, link_target)
+    if action == uninstall:
+      action(options, [link_path], link_target)
+    elif action == install:
+      try_symlink(options, 'nsolid', link_path)
+    else:
+      assert(0)  # Unhandled action type.
+
   action(options, [os.path.join(options.v8_dir, 'tools/gdbinit')], 'share/doc/node/')
   action(options, [os.path.join(options.v8_dir, 'tools/lldb_commands.py')], 'share/doc/node/')
 
   if 'openbsd' in sys.platform:
-    action(options, ['doc/node.1'], 'man/man1/')
+    action(options, ['doc/nsolid.1'], 'man/man1/')
   else:
-    action(options, ['doc/node.1'], 'share/man/man1/')
+    action(options, ['doc/nsolid.1'], 'share/man/man1/')
 
   if 'true' == options.variables.get('node_install_npm'):
     npm_files(options, action)
 
   if 'true' == options.variables.get('node_install_corepack'):
     corepack_files(options, action)
+
+  nsolid_cli_files(options, action)
+  nsolid_strict_files(options, action)
 
   headers(options, action)
 
@@ -328,7 +393,11 @@ def headers(options, action):
     'src/node_buffer.h',
     'src/node_object_wrap.h',
     'src/node_version.h',
+    'src/nsolid.h',
   ], 'include/node/')
+
+  subdir_files(options, 'deps/asserts-cpp', 'include/node/asserts-cpp', action)
+  subdir_files(options, 'src/nlohmann', 'include/node/nlohmann', action)
 
   # Add the expfile that is created on AIX
   if sys.platform.startswith('aix') or sys.platform == "os400":

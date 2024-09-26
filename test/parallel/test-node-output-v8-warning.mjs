@@ -15,7 +15,7 @@ describe('v8 output', { concurrency: !process.env.TEST_PARALLEL }, () => {
     .replaceAll('*test*', '*')
     .replaceAll(/.*?\*fixtures\*v8\*/g, '(node:*) V8: *') // Replace entire path before fixtures/v8
     .replaceAll('*fixtures*v8*', '*')
-    .replaceAll('node --', '* --');
+    .replaceAll('nsolid --', '* --');
   }
   const common = snapshot
     .transform(snapshot.replaceWindowsLineEndings, snapshot.replaceWindowsPaths, replaceNodeVersion);

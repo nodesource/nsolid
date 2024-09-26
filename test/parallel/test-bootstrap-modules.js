@@ -102,17 +102,27 @@ expected.beforePreExec = new Set([
   'Internal Binding module_wrap',
   'NativeModule internal/modules/cjs/loader',
   'NativeModule diagnostics_channel',
+  'Internal Binding nsolid_api',
+  'Internal Binding worker',
+  'NativeModule internal/nsolid_module',
   'Internal Binding wasm_web_api',
   'NativeModule internal/events/abort_listener',
 ]);
 
 expected.atRunTime = new Set([
-  'Internal Binding worker',
   'NativeModule internal/modules/run_main',
   'NativeModule internal/net',
   'NativeModule internal/dns/utils',
   'NativeModule internal/process/pre_execution',
   'NativeModule internal/modules/esm/utils',
+  'Internal Binding nsolid_statsd_agent',
+  'Internal Binding nsolid_zmq_agent',
+  'NativeModule internal/agents/statsd/lib/agent',
+  'NativeModule internal/agents/statsd/lib/nsolid',
+  'NativeModule internal/agents/zmq/lib/agent',
+  'NativeModule internal/agents/zmq/lib/nsolid',
+  'NativeModule internal/nsolid_loader',
+  'NativeModule internal/nsolid_promise_tracking',
 ]);
 
 if (common.isMainThread) {

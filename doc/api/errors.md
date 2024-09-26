@@ -3781,8 +3781,68 @@ added: v9.0.0
 removed: v10.0.0
 -->
 
-Used when an attempt is made to use a `zlib` object after it has already been
-closed.
+### NSolid Error Codes
+
+<a id="ERR_NSOLID_CPU_PROFILE_START"></a>
+
+### `ERR_NSOLID_CPU_PROFILE_START`
+
+Error when trying to start taking a CPU profile with the JS API.
+
+<a id="ERR_NSOLID_CPU_PROFILE_STOP"></a>
+
+### `ERR_NSOLID_CPU_PROFILE_STOP`
+
+Error when trying to stop a CPU profile being taken with the JS API.
+
+<a id="ERR_NSOLID_CUSTOM_COMMAND_ALREADY_RETURNED"></a>
+
+### `ERR_NSOLID_CUSTOM_COMMAND_ALREADY_RETURNED`
+
+Error when trying to respond to a custom command more than once.
+
+<a id="ERR_NSOLID_CUSTOM_COMMAND_OUT_OF_MEMORY"></a>
+
+### `ERR_NSOLID_CUSTOM_COMMAND_OUT_OF_MEMORY`
+
+Out of memory error when handling a custom command.
+
+<a id="ERR_NSOLID_HEAP_PROFILE_START"></a>
+
+### `ERR_NSOLID_HEAP_PROFILE_START`
+
+Error when trying to start taking a heap profile with the JS API.
+
+<a id="ERR_NSOLID_HEAP_PROFILE_STOP"></a>
+
+### `ERR_NSOLID_HEAP_PROFILE_STOP`
+
+Error when trying to stop a heap profile being taken with the JS API.
+
+<a id="ERR_NSOLID_HEAP_SAMPLING_START"></a>
+
+### `ERR_NSOLID_HEAP_SAMPLING_START`
+
+Error when trying to start taking a heap sampling with the JS API.
+
+<a id="ERR_NSOLID_HEAP_SAMPLING_STOP"></a>
+
+### `ERR_NSOLID_HEAP_SAMPLING_STOP`
+
+Error when trying to stop a heap sampling being taken with the JS API.
+
+<a id="ERR_NSOLID_HEAP_SNAPSHOT"></a>
+
+### `ERR_NSOLID_HEAP_SNAPSHOT`
+
+Error when taking a heap snapshot using the JS API.
+
+<a id="ERR_NSOLID_OTEL_API_ALREADY_REGISTERED"></a>
+
+### `ERR_NSOLID_OTEL_API_ALREADY_REGISTERED`
+
+Error generated when trying to register the OpenTelemetry API when it has
+already been registered.
 
 <a id="ERR_CPU_USAGE"></a>
 

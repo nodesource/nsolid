@@ -1,3 +1,7 @@
+> \[!IMPORTANT]
+> This document is from and refers to the upstream Node.js project.
+> See [CONTRIBUTING](../../CONTRIBUTING.md) for specific N|Solid content.
+
 # Static Analysis
 
 The project uses Coverity to scan Node.js source code and to report potential

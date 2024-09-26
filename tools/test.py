@@ -962,13 +962,13 @@ class Context(object):
     if self.vm is not None:
       return self.vm
     if arch == 'none':
-      name = 'out/Debug/node' if mode == 'debug' else 'out/Release/node'
+      name = 'out/Debug/nsolid' if mode == 'debug' else 'out/Release/nsolid'
     else:
-      name = 'out/%s.%s/node' % (arch, mode)
+      name = 'out/%s.%s/nsolid' % (arch, mode)
 
     # Currently GYP does not support output_dir for MSVS.
     # http://code.google.com/p/gyp/issues/detail?id=40
-    # It will put the builds into Release/node.exe or Debug/node.exe
+    # It will put the builds into Release/nsolid.exe or Debug/nsolid.exe
     if utils.IsWindows():
       if not exists(name + '.exe'):
         name = name.replace('out/', '')

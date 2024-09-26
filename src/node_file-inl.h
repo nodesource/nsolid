@@ -6,6 +6,8 @@
 #include "node_file.h"
 #include "req_wrap-inl.h"
 
+#include "nsolid/nsolid_api.h"
+
 namespace node {
 namespace fs {
 
@@ -321,6 +323,11 @@ FSReqBase* AsyncDestCall(Environment* env, FSReqBase* req_wrap,
     after(uv_req);  // after may delete req_wrap if there is an error
     req_wrap = nullptr;
   } else {
+    if (strncmp(syscall, "open", 4) == 0) {
+      env->envinst_->inc_fs_handles_opened();
+    } else if (strncmp(syscall, "close", 5) == 0) {
+      env->envinst_->inc_fs_handles_closed();
+    }
     req_wrap->SetReturnValue(args);
   }
 

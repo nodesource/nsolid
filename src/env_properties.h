@@ -474,6 +474,11 @@
   V(primordials_safe_weak_set_prototype_object, v8::Object)                    \
   V(promise_hook_handler, v8::Function)                                        \
   V(promise_reject_callback, v8::Function)                                     \
+  V(nsolid_loader_fn, v8::Function)                                            \
+  V(nsolid_on_command_fn, v8::Function)                                        \
+  V(nsolid_on_license_fn, v8::Function)                                        \
+  V(nsolid_toggle_tracing_fn, v8::Function)                                    \
+  V(nsolid_track_promises_fn, v8::Function)                                    \
   V(snapshot_serialize_callback, v8::Function)                                 \
   V(snapshot_deserialize_callback, v8::Function)                               \
   V(snapshot_deserialize_main, v8::Function)                                   \

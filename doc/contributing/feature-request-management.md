@@ -1,3 +1,7 @@
+> \[!IMPORTANT]
+> This document is from and refers to the upstream Node.js project.
+> See [CONTRIBUTING](../../CONTRIBUTING.md) for specific N|Solid content.
+
 # Feature request management
 
 Feature requests are a valuable source of input to the project.

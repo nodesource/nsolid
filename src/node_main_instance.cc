@@ -22,6 +22,8 @@
 #include "inspector/worker_inspector.h"  // ParentInspectorHandle
 #endif
 
+#include "nsolid/nsolid_api.h"
+
 namespace node {
 
 using v8::Context;
@@ -109,6 +111,12 @@ void NodeMainInstance::Run(ExitCode* exit_code, Environment* env) {
 
     *exit_code =
         SpinEventLoopInternal(env).FromMaybe(ExitCode::kGenericUserError);
+    nsolid::EnvList* envlist = nsolid::EnvList::Inst();
+    {
+      nsuv::ns_mutex::scoped_lock lock(envlist->command_lock());
+      envlist->SetExitCode(static_cast<int>(*exit_code));
+      envlist->DoExit(false);
+    }
   }
 
 #if defined(LEAK_SANITIZER)

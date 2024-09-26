@@ -49,6 +49,13 @@ using CFunctionCallbackWithUint8ArrayUint32Int64Bool =
                 bool);
 using CFunctionWithUint32 = uint32_t (*)(v8::Local<v8::Value>,
                                          const uint32_t input);
+using CFunctionCallbackDouble =
+  void (*)(v8::Local<v8::Object> receiver, double);
+using CFunctionCallbackUint32Uint32Uint64 =
+  void (*)(v8::Local<v8::Object> receiver, uint32_t, uint32_t, uint64_t);
+using CFunctionCallbackUint32Uint32Double =
+  void (*)(v8::Local<v8::Object> receiver, uint32_t, uint32_t, double);
+
 using CFunctionWithDoubleReturnDouble = double (*)(v8::Local<v8::Value>,
                                                    const double);
 using CFunctionWithInt64Fallback = void (*)(v8::Local<v8::Value>,
@@ -91,6 +98,9 @@ class ExternalReferenceRegistry {
   V(CFunctionCallbackWithTwoUint8ArraysFallback)                               \
   V(CFunctionCallbackWithUint8ArrayUint32Int64Bool)                            \
   V(CFunctionWithUint32)                                                       \
+  V(CFunctionCallbackDouble)                                                   \
+  V(CFunctionCallbackUint32Uint32Uint64)                                       \
+  V(CFunctionCallbackUint32Uint32Double)                                       \
   V(CFunctionWithDoubleReturnDouble)                                           \
   V(CFunctionWithInt64Fallback)                                                \
   V(CFunctionWithBool)                                                         \
@@ -171,6 +181,9 @@ class ExternalReferenceRegistry {
   V(url)                                                                       \
   V(util)                                                                      \
   V(pipe_wrap)                                                                 \
+  V(nsolid_api)                                                                \
+  V(nsolid_statsd_agent)                                                       \
+  V(nsolid_zmq_agent)                                                          \
   V(sea)                                                                       \
   V(serdes)                                                                    \
   V(string_decoder)                                                            \
