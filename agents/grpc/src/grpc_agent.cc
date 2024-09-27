@@ -377,7 +377,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         proc_prev_stor_(),
                         config_(json::object()),
                         agent_id_(GetAgentId()),
-                        auth_retries_(0) {
+                        auth_retries_(0),
+                        unauthorized_(false) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
@@ -433,8 +434,16 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
               "N|Solid warning: %s Unable to authenticate, "
               "please verify your token and network connection!\n",
               agent_id_.c_str());
-      command_stream_.reset();
-      stop();
+      unauthorized_ = true;
+      QueueCallback([](WeakGrpcAgent agent_wp) {
+        SharedGrpcAgent agent = agent_wp.lock();
+        if (agent == nullptr) {
+          return;
+        }
+
+        agent->stop();
+        delete agent.get();
+      }, weak_from_this());
       return;
     }
   } else if (code == ::grpc::StatusCode::UNAVAILABLE) {
@@ -472,6 +481,7 @@ int GrpcAgent::start() {
 }
 
 int GrpcAgent::stop() {
+  Debug("Stopping gRPC Agent\n");
   if (utils::are_threads_equal(thread_.base(), uv_thread_self())) {
     do_stop();
   } else {
@@ -479,6 +489,7 @@ int GrpcAgent::stop() {
     ASSERT_EQ(0, thread_.join());
   }
 
+  Debug("Stopped gRPC Agent\n");
   return 0;
 }
 
@@ -513,12 +524,6 @@ int GrpcAgent::stop() {
     return;
   }
 
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
-
   agent->got_blocked_loop_msgs();
 }
 
@@ -551,12 +556,6 @@ int GrpcAgent::stop() {
   if (agent == nullptr) {
     return;
   }
-
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
 
   json cfg = json::parse(config, nullptr, false);
   // assert because the runtime should never send me an invalid JSON config
@@ -592,12 +591,6 @@ void GrpcAgent::env_creation_cb_(SharedEnvInst envinst,
     return;
   }
 
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
-
   if (agent->env_msg_q_.enqueue({ envinst, true }) == 1) {
     ASSERT_EQ(0, agent->env_msg_.send());
   }
@@ -609,12 +602,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   if (agent == nullptr) {
     return;
   }
-
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
 
   agent->env_msg_q_.enqueue({ envinst, false });
   if (!agent->env_msg_.is_closing()) {
@@ -628,12 +615,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   if (agent == nullptr) {
     return;
   }
-
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
 
   std::tuple<SharedEnvInst, bool> tup;
   while (agent->env_msg_q_.dequeue(tup)) {
@@ -663,12 +644,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
-
   if (agent->log_msg_q_.enqueue({ GetThreadId(envinst), std::move(info) }) == 1) {
     ASSERT_EQ(0, agent->log_msg_.send());
   }
@@ -681,12 +656,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
-
   agent->got_logs();
 }
 
@@ -697,12 +666,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   if (agent == nullptr) {
     return;
   }
-
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
 
   if (agent->blocked_loop_msg_q_.enqueue({ true, body, GetThreadId(envinst) }) == 1) {
     ASSERT_EQ(0, agent->blocked_loop_msg_.send());
@@ -717,12 +680,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
-
   if (agent->blocked_loop_msg_q_.enqueue({ false, body, GetThreadId(envinst) }) == 1) {
     ASSERT_EQ(0, agent->blocked_loop_msg_.send());
   }
@@ -733,12 +690,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   if (agent == nullptr) {
     return;
   }
-
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
 
   ResourceMetrics data;
   data.resource_ = otlp::GetResource();
@@ -762,12 +713,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
-
   agent->got_proc_metrics();
   for (auto& item : agent->env_metrics_map_) {
     // Retrieve metrics from the Metrics API. Ignore any return error since
@@ -782,12 +727,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   if (agent == nullptr) {
     return;
   }
-
-  // Check if the agent is closing
-  // nsuv::ns_rwlock::scoped_rdlock lock(agent->stop_lock_);
-  // if (agent->status_ == Unconfigured) {
-  //   return;
-  // }
 
   if (agent->thr_metrics_msg_q_.enqueue(metrics->Get()) == 1) {
     ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
@@ -1009,8 +948,13 @@ void GrpcAgent::do_start() {
 }
 
 void GrpcAgent::do_stop() {
-  Debug("GrpcAgent::do_stop\n");
-  send_exit();
+  if (!unauthorized_) {
+    send_exit();
+  }
+
+  log_exporter_.reset();
+  metrics_exporter_.reset();
+  trace_exporter_.reset();
   ready_ = false;
   span_collector_.reset();
   profile_collector_.reset();
@@ -1584,7 +1528,6 @@ ErrorType GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
 }
 
 void GrpcAgent::update_tracer(uint32_t flags) {
-  Debug("Tracer Flags: %d\n", flags);
   span_collector_.reset();
   if (trace_flags_) {
     span_collector_ = std::make_shared<SpanCollector>(&loop_,

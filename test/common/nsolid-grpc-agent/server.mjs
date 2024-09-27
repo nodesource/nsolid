@@ -1,0 +1,173 @@
+import assert from 'node:assert';
+import path from 'node:path';
+import grpc from '@grpc/grpc-js';
+import protoLoader from '@grpc/proto-loader';
+
+const metricsServiceProtoPath = 'opentelemetry/proto/collector/metrics/v1/metrics_service.proto';
+const traceServiceProtoPath = 'opentelemetry/proto/collector/trace/v1/trace_service.proto';
+const serviceProtoPath = 'nsolid_service.proto';
+const includeDirs = [path.resolve(import.meta.dirname,
+                                  '../../../deps/opentelemetry-cpp/third_party/opentelemetry-proto'),
+                     path.resolve(import.meta.dirname,
+                                  '../../../agents/grpc/proto')];
+
+const commandCallMap = new Map();
+
+// Create a local server to receive data from
+async function startServer(cb) {
+  const server = new grpc.Server();
+  const opts = {
+    keepCase: false,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+    includeDirs,
+  };
+
+  const packageDefinitionMetrics = await protoLoader.load(metricsServiceProtoPath, opts);
+  const packageObjectMetrics = grpc.loadPackageDefinition(packageDefinitionMetrics);
+  server.addService(packageObjectMetrics.opentelemetry.proto.collector.metrics.v1.MetricsService.service, {
+    Export: (data, callback) => {
+      // console.dir(data, { depth: null });
+      console.log('Metrics received');
+      callback(null, { message: 'Metrics received' });
+      cb(null, 'metrics', data.request);
+    },
+  });
+
+  const packageDefinitionTrace = await protoLoader.load(traceServiceProtoPath, opts);
+  const packageObjectTrace = grpc.loadPackageDefinition(packageDefinitionTrace);
+  server.addService(packageObjectTrace.opentelemetry.proto.collector.trace.v1.TraceService.service, {
+    Export: (data, callback) => {
+      callback(null, { message: 'Trace received' });
+      cb(null, 'spans', data.request);
+    },
+  });
+
+  const packageDefinition = await protoLoader.load(serviceProtoPath, opts);
+  const packageObject = grpc.loadPackageDefinition(packageDefinition);
+  server.addService(packageObject.grpcagent.NSolidService.service, {
+    Command: async (call) => {
+      // The 1st time this is called is because the Command rpc is up.
+      // get the agentId from the metadata and store the call object in a map
+      // so we can use it later to send commands to that specific agent
+      const agentId = call.metadata.get('nsolid-agent-id')[0];
+      commandCallMap.set(agentId, call);
+      call.on('end', () => {
+        console.log('end');
+        // The client has finished sending
+        // You can end the call here
+        call.end();
+        commandCallMap.delete(agentId);
+      });
+    },
+    ExportAsset: async (call) => {
+      console.log('ExportAsset');
+      console.dir(call.metadata, { depth: null });
+      call._my_data = '';
+      call.on('data', (data) => {
+        // console.dir(data, { depth: null });
+        console.log('data', data.data.length)
+        call._my_data += data.data;
+      });
+      call.on('end', (data) => {
+        console.log('end', data);
+        call.end();
+      });
+    },
+    ExportBlockedLoop: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+    },
+    ExportCommandError: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+    },
+    ExportInfo: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+      process.send({ type: 'info', data: { msg: call.request, metadata: call.metadata }});
+    },
+    ExportPackages: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+    },
+    ExportReconfigure: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+    },
+    ExportStartupTimes: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+    },
+    ExportUnblockedLoop: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+    },
+  });
+
+  const credentials = grpc.ServerCredentials.createInsecure();
+  return new Promise((resolve, reject) => {
+    server.bindAsync('localhost:0', credentials, (err, port) => {
+      server.start();
+      resolve({ server, port });
+    });
+  });
+}
+
+const { server, port } = await startServer((err, type, data) => {
+  assert.ifError(err);
+  process.send({ type, data });
+});
+
+process.send({ type: 'port', port });
+process.on('message', (message) => {
+  if (message.type === 'info') {
+    sendInfo(message.agentId, message.requestId);
+  } else if (message.type === 'close') {
+    server.forceShutdown();
+    process.exit(0);
+  }
+});
+
+async function sendCommand(command, agentId, requestId, args = {}) {
+  return new Promise((resolve, reject) => {
+    const call = commandCallMap.get(agentId);
+    if (!call) {
+      reject(new Error(`No call object found for agentId ${agentId}`));
+    }
+
+    const info = {
+      requestId,
+      id: agentId,
+      command,
+      args
+    };
+
+
+    call.write(info);
+    call.once('data', (runtimeResponse) => {
+      console.log(`${command} response`, runtimeResponse);
+      resolve();
+    });
+  });
+}
+
+async function sendInfo(agentId, requestId) {
+  return sendCommand('info', agentId, requestId);
+}
