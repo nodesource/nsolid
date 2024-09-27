@@ -81,6 +81,7 @@ async function startServer(cb) {
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
       callback(null, {});
+      process.send({ type: 'loop_blocked', data: { msg: call.request, metadata: call.metadata }});
     },
     ExportCommandError: (call, callback) => {
       // Extract data from the request object
@@ -100,6 +101,7 @@ async function startServer(cb) {
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
       callback(null, {});
+      process.send({ type: 'packages', data: { msg: call.request, metadata: call.metadata }});
     },
     ExportReconfigure: (call, callback) => {
       // Extract data from the request object
@@ -118,6 +120,7 @@ async function startServer(cb) {
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
       callback(null, {});
+      process.send({ type: 'loop_unblocked', data: { msg: call.request, metadata: call.metadata }});
     },
   });
 
@@ -139,6 +142,8 @@ process.send({ type: 'port', port });
 process.on('message', (message) => {
   if (message.type === 'info') {
     sendInfo(message.agentId, message.requestId);
+  } else if (message.type === 'packages') {
+    sendPackages(message.agentId, message.requestId);
   } else if (message.type === 'close') {
     server.forceShutdown();
     process.exit(0);
@@ -170,4 +175,8 @@ async function sendCommand(command, agentId, requestId, args = {}) {
 
 async function sendInfo(agentId, requestId) {
   return sendCommand('info', agentId, requestId);
+}
+
+async function sendPackages(agentId, requestId) {
+  return sendCommand('packages', agentId, requestId);
 }

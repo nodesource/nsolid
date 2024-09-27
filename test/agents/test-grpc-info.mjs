@@ -116,53 +116,10 @@ if (process.argv[2] === 'child') {
     assert.strictEqual(info.body.tags.length, nsolidConfig.tags ? nsolidConfig.tags.length : 0);
     assert.ok(info.body.totalMem);
     assert.deepStrictEqual(info.body.versions, process.versions);
+    assert.ok(metadata['user-agent']);
+    assert.ok(metadata['nsolid-agent-id']);
+    assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
   }
-
-const tests = [];
-
-// tests.push({
-//   name: 'should provide default values correctly',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       playground.bootstrap(mustSucceed((agentId) => {
-//         const requestId = playground.zmqAgentBus.agentInfoRequest(agentId, mustSucceed((info) => {
-//           checkInfoData(info, requestId, agentId);
-//           resolve();
-//         }));
-//       }));
-//     });
-//   }
-// });
-
-// tests.push({
-//   name: 'should also work with nsolid configuration',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       const bootstrapOpts = {
-//         opts: {
-//           env: {
-//             NSOLID_APPNAME: 'myapp',
-//             NSOLID_TAGS: 'tag1,tag2',
-//             NODE_ENV: 'dev'
-//           }
-//         }
-//       };
-
-//       playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
-//         const requestId = playground.zmqAgentBus.agentInfoRequest(agentId, mustSucceed((info) => {
-//           const nsolidConfig = {
-//             appName: 'myapp',
-//             tags: ['tag1', 'tag2'],
-//             nodeEnv: 'dev'
-//           };
-
-//           checkInfoData(info, requestId, agentId, nsolidConfig);
-//           resolve();
-//         }));
-//       }));
-//     });
-//   }
-// });
 
   async function runTest({ getEnv, nsolidConfig }) {
     return new Promise((resolve, reject) => {
