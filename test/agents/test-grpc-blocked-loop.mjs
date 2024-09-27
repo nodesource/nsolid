@@ -13,7 +13,6 @@ const {
   validateInteger,
   validateObject,
   validateString,
-  validateUint32,
 } = validators;
 
 // Data has this format:
@@ -149,14 +148,11 @@ tests.push({
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('loop_blocked', mustCall(async (data) => {
-          checkBlockedLoopData(data.msg, data.metadata, agentId, 0);
-          // await child.shutdown(0);
-          // grpcServer.close();
-          // resolve();
+          checkBlockedLoopData(data.msg, data.metadata, agentId, threadId);
         }));
 
         grpcServer.on('loop_unblocked', mustCall(async (data) => {
-          checkUnblockedLoopData(data.msg, data.metadata, agentId, 0);
+          checkUnblockedLoopData(data.msg, data.metadata, agentId, threadId);
           await child.shutdown(0);
           grpcServer.close();
           resolve();
@@ -181,44 +177,43 @@ tests.push({
   }
 });
 
-// tests.push({
-//   name: 'should work for workers',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       let wid;
-//       let events = 0;
-//       let bInfo = null;
-//       const opts = {
-//         args: [ '-w', 1 ],
-//         opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } }
-//       };
+tests.push({
+  name: 'should work for workers',
+  test: async () => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        grpcServer.on('loop_blocked', mustCall(async (data) => {
+          checkBlockedLoopData(data.msg, data.metadata, agentId, wid);
+        }));
 
-//       playground.bootstrap(opts, mustSucceed(async (agentId) => {
-//         const workers = await playground.client.workers();
-//         wid = workers[0];
-//         await playground.client.block(wid, 400);
-//       }), mustCall((eventType, agentId, data) => {
-//         console.log(`${eventType}, ${agentId}`);
-//         switch (++events) {
-//           case 1:
-//             assert.strictEqual(eventType, 'agent-loop_blocked');
-//             checkBlockedLoopData(data, agentId, wid);
-//             bInfo = {
-//               blocked_for: data.body.blocked_for,
-//               loop_id: data.body.loop_id,
-//               callback_cntr: data.body.callback_cntr
-//             };
-//             break;
-//           case 2:
-//             assert.strictEqual(eventType, 'agent-loop_unblocked');
-//             checkUnblockedLoopData(data, agentId, wid, bInfo);
-//             resolve();
-//             break;
-//         }
-//       }, 2));
-//     });
-//   }
-// });
+        grpcServer.on('loop_unblocked', mustCall(async (data) => {
+          checkUnblockedLoopData(data.msg, data.metadata, agentId, wid);
+          await child.shutdown(0);
+          grpcServer.close();
+          resolve();
+        }));
+
+        const env = {
+          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+          NSOLID_GRPC_INSECURE: 1,
+          NSOLID_GRPC: `localhost:${port}`,
+          NSOLID_BLOCKED_LOOP_THRESHOLD: 100
+        };
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([ '-w', 1 ], opts);
+        const agentId = await child.id();
+        const workers = await child.workers();
+        const wid = workers[0];
+        await child.block(wid, 400);
+      }));
+    });
+  }
+});
 
 for (const { name, test } of tests) {
   console.log(`blocked loop generation ${name}`);
