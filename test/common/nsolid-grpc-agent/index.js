@@ -23,6 +23,9 @@ class GRPCServer extends EventEmitter {
     this.#server = fork(path.join(__dirname, 'server.mjs') + '', args, opts);
     this.#server.on('message', (message) => {
       switch (message.type) {
+        case 'exit':
+          this.emit('exit', message.data);
+          break;
         case 'loop_blocked':
           this.emit('loop_blocked', message.data);
           break;

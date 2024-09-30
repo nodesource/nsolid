@@ -89,6 +89,13 @@ async function startServer(cb) {
       console.dir(call.metadata, { depth: null });
       callback(null, {});
     },
+    ExportExit: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+      process.send({ type: 'exit', data: { msg: call.request, metadata: call.metadata }});
+    },
     ExportInfo: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });

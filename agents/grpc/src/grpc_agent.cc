@@ -1217,11 +1217,8 @@ void GrpcAgent::send_exit() {
   auto* error = GetExitError();
   if (error) {
     grpcagent::Error* error_info = exit_body->mutable_error();
-    // Use nlohmann::json to properly escape the error message and stack.
-    nlohmann::json jmsg(std::get<0>(*error));
-    nlohmann::json jstack(std::get<1>(*error));
-    error_info->set_message(jmsg.dump());
-    error_info->set_stack(jstack.dump());
+    error_info->set_message(std::get<0>(*error));
+    error_info->set_stack(std::get<1>(*error));
   }
 
   ProfileState& cpu_profile_state = profile_state_[kCpu];
