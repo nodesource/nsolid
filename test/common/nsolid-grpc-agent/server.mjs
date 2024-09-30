@@ -114,6 +114,7 @@ async function startServer(cb) {
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
       callback(null, {});
+      process.send({ type: 'startup_times', data: { msg: call.request, metadata: call.metadata }});
     },
     ExportUnblockedLoop: (call, callback) => {
       // Extract data from the request object
@@ -144,6 +145,8 @@ process.on('message', (message) => {
     sendInfo(message.agentId, message.requestId);
   } else if (message.type === 'packages') {
     sendPackages(message.agentId, message.requestId);
+  } else if (message.type === 'startup_times') {
+    sendStartupTimes(message.agentId, message.requestId);
   } else if (message.type === 'close') {
     server.forceShutdown();
     process.exit(0);
@@ -179,4 +182,8 @@ async function sendInfo(agentId, requestId) {
 
 async function sendPackages(agentId, requestId) {
   return sendCommand('packages', agentId, requestId);
+}
+
+async function sendStartupTimes(agentId, requestId) {
+  return sendCommand('startup_times', agentId, requestId);
 }
