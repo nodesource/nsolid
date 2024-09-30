@@ -56,11 +56,13 @@ class GRPCServer extends EventEmitter {
       if (this.#server) {
         const requestId = randomUUID();
         this.#server.send({ type: 'heap_profile', agentId, requestId, options });
-        this.#server.once('message', (msg) => {
-          if (msg.type === 'heap_profile') {
+        const msgListener = (msg) => {
+          if (msg.type === 'heap_profile' && msg.data.msg.common.requestId === requestId) {
+            this.#server.off('message', msgListener);
             resolve({ requestId, data: msg.data });
           }
-        });
+        };
+        this.#server.on('message', msgListener);
       } else {
         resolve(null);
       }

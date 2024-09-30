@@ -39,9 +39,41 @@ function checkProfileData(profile, metadata, requestId, agentId, options, onExit
   assert.ok(recNanoSecs);
 
   assert.strictEqual(profile.threadId, `${options.threadId}`);
-  assert.deepStrictEqual(profile.metadata, options.metadata);
+  if (options.metadata) {
+    assert.deepStrictEqual(profile.metadata, options.metadata);
+  }
   validateString(profile.data, 'profile.data');
-  validateObject(JSON.parse(profile.data), 'JSON(profile.data)');
+  const heapProf = JSON.parse(profile.data);
+  validateObject(heapProf, 'heapProf');
+  if (options?.heapProfile?.trackAllocations === true) {
+    assert.ok(heapProf.snapshot.trace_function_count > 0);
+    assert.ok(heapProf.trace_function_infos.length > 0);
+    assert.ok(heapProf.trace_tree.length > 0);
+  } else {
+    assert.strictEqual(heapProf.snapshot.trace_function_count, 0);
+    assert.strictEqual(heapProf.trace_function_infos.length, 0);
+    assert.strictEqual(heapProf.trace_tree.length, 0);
+  }
+
+  validateArray(metadata['user-agent'], 'metadata.user-agent');
+  validateString(metadata['user-agent'][0], 'metadata.user-agent[0]');
+  assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
+}
+
+function checkProfileError(profile, metadata, requestId, agentId, code, msg) {
+  console.dir(profile, { depth: null });
+  assert.strictEqual(profile.common.requestId, requestId);
+  assert.strictEqual(profile.common.command, 'heap_profile');
+  // From here check at least that all the fields are present
+  validateObject(profile.common.recorded, 'recorded');
+  const recSeconds = BigInt(profile.common.recorded.seconds);
+  assert.ok(recSeconds);
+  const recNanoSecs = BigInt(profile.common.recorded.nanoseconds);
+  assert.ok(recNanoSecs);
+
+  validateObject(profile.common.error, 'error');
+  assert.strictEqual(profile.common.error.code, code);
+  assert.strictEqual(profile.common.error.message, msg);
 
   validateArray(metadata['user-agent'], 'metadata.user-agent');
   validateString(metadata['user-agent'][0], 'metadata.user-agent[0]');
@@ -51,49 +83,49 @@ function checkProfileData(profile, metadata, requestId, agentId, options, onExit
 const tests = [];
 const trackAllocations = [false, true];
 for (const track of trackAllocations) {
-  // tests.push({
-  //   name: `should work for the main thread with trackAllocations=${track}`,
-  //   test: async () => {
-  //     return new Promise((resolve) => {
-  //       const grpcServer = new GRPCServer();
-  //       grpcServer.start(mustSucceed(async (port) => {
-  //         const env = {
-  //           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-  //           NSOLID_GRPC_INSECURE: 1,
-  //           NSOLID_GRPC: `localhost:${port}`
-  //         };
+  tests.push({
+    name: `should work for the main thread with trackAllocations=${track}`,
+    test: async () => {
+      return new Promise((resolve) => {
+        const grpcServer = new GRPCServer();
+        grpcServer.start(mustSucceed(async (port) => {
+          const env = {
+            NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+            NSOLID_GRPC_INSECURE: 1,
+            NSOLID_GRPC: `localhost:${port}`
+          };
   
-  //         const opts = {
-  //           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-  //           env,
-  //         };
-  //         const child = new TestClient([], opts);
-  //         const agentId = await child.id();
-  //         const options = {
-  //           duration: 100,
-  //           threadId: 0,
-  //           metadata: {
-  //             fields: {
-  //               a: {
-  //                 stringValue: 'x',
-  //                 kind: 'stringValue'
-  //               }
-  //             }
-  //           },
-  //           heapProfile: {
-  //             trackAllocations: track
-  //           }
-  //         };
+          const opts = {
+            stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+            env,
+          };
+          const child = new TestClient([], opts);
+          const agentId = await child.id();
+          const options = {
+            duration: 100,
+            threadId: 0,
+            metadata: {
+              fields: {
+                a: {
+                  stringValue: 'x',
+                  kind: 'stringValue'
+                }
+              }
+            },
+            heapProfile: {
+              trackAllocations: track
+            }
+          };
 
-  //         const { data, requestId } = await grpcServer.heapProfile(agentId, options);
-  //         checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
-  //         await child.shutdown(0);
-  //         grpcServer.close();
-  //         resolve();
-  //       }));
-  //     });
-  //   },
-  // });
+          const { data, requestId } = await grpcServer.heapProfile(agentId, options);
+          checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
+          await child.shutdown(0);
+          grpcServer.close();
+          resolve();
+        }));
+      });
+    },
+  });
 
   tests.push({
     name: `should work for worker threads with trackAllocations=${track}`,
@@ -140,206 +172,119 @@ for (const track of trackAllocations) {
       });
     },
   });
-
-  // tests.push({
-  //   name: `should work for worker threads with trackAllocations=${track}`,
-  //   test: async (playground) => {
-  //     return new Promise((resolve) => {
-  //       let events = 0;
-  //       let profile = '';
-  //       let requestId;
-  //       const options = {
-  //         duration: 100,
-  //         trackAllocations: track,
-  //       };
-
-  //       const bootstrapOpts = {
-  //         args: [ '-w', 1 ],
-  //         // Just to be sure we don't receive the loop_blocked event
-  //         opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
-  //       };
-
-  //       playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
-  //         // Need to get the id's of the worker threads from the metrics first.
-  //         const workers = await playground.client.workers();
-  //         options.threadId = workers[0];
-  //         requestId = playground.zmqAgentBus.agentHeapProfileStart(agentId, options);
-  //       }), (eventType, agentId, data) => {
-  //         console.log(`[${eventType}] ${agentId}}`);
-  //         switch (++events) {
-  //           case 1:
-  //             assert.strictEqual(eventType, 'asset-data-packet');
-  //             if (data.packet.length > 0) {
-  //               checkProfileData(requestId, options, agentId, data.metadata, false);
-  //               profile += data.packet;
-  //               --events;
-  //             } else {
-  //               checkProfileData(requestId, options, agentId, data.metadata, true);
-  //             }
-  //             break;
-  //           case 2:
-  //           {
-  //             assert.strictEqual(eventType, 'asset-received');
-  //             checkProfileData(requestId, options, agentId, data, true);
-  //             const heapProf = JSON.parse(profile);
-  //             if (track === true) {
-  //               assert.ok(heapProf.snapshot.trace_function_count > 0);
-  //               assert.ok(heapProf.trace_function_infos.length > 0);
-  //               assert.ok(heapProf.trace_tree.length > 0);
-  //             } else {
-  //               assert.strictEqual(heapProf.snapshot.trace_function_count, 0);
-  //               assert.strictEqual(heapProf.trace_function_infos.length, 0);
-  //               assert.strictEqual(heapProf.trace_tree.length, 0);
-  //             }
-  //             resolve();
-  //           }
-  //         }
-  //       });
-  //     });
-  //   },
-  // });
 }
 
-// tests.push({
-//   name: 'should return 410 if sent to a non-existant thread',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       const options = {
-//         duration: 100,
-//         threadId: 10,
-//       };
+tests.push({
+  name: 'should return 410 if sent to a non-existant thread',
+  test: async () => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = {
+          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+          NSOLID_GRPC_INSECURE: 1,
+          NSOLID_GRPC: `localhost:${port}`
+        };
 
-//       playground.bootstrap(mustSucceed((agentId) => {
-//         playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
-//           assert.strictEqual(err.code, 410);
-//           assert.strictEqual(err.message, 'Thread already gone');
-//           resolve();
-//         }));
-//       }));
-//     });
-//   },
-// });
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        const options = {
+          duration: 100,
+          threadId: 10,
+        };
 
-// tests.push({
-//   name: 'should return 422 if invalid threadId field',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       const options = {
-//         duration: 100,
-//         threadId: 'wth',
-//       };
+        const { data, requestId } = await grpcServer.heapProfile(agentId, options);
+        checkProfileError(data.msg, data.metadata, requestId, agentId, 410, 'Thread already gone(1002)');
+        await child.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
 
-//       playground.bootstrap(mustSucceed((agentId) => {
-//         playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
-//           assert.strictEqual(err.code, 422);
-//           assert.strictEqual(err.message, 'Invalid arguments');
-//           resolve();
-//         }));
-//       }));
-//     });
-//   },
-// });
+tests.push({
+  name: 'should return 409 if profile in progress in main thread',
+  test: async () => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = {
+          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+          NSOLID_GRPC_INSECURE: 1,
+          NSOLID_GRPC: `localhost:${port}`
+        };
 
-// tests.push({
-//   name: 'should return 422 if invalid duration field',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       const options = {
-//         duration: 'wth',
-//       };
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        const options = {
+          duration: 100,
+          threadId: 0,
+        };
 
-//       playground.bootstrap(mustSucceed((agentId) => {
-//         playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
-//           assert.strictEqual(err.code, 422);
-//           assert.strictEqual(err.message, 'Invalid arguments');
-//           resolve();
-//         }));
-//       }));
-//     });
-//   },
-// });
+        grpcServer.heapProfile(agentId, options).then(async ({ data, requestId }) => {
+          checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
+          await child.shutdown(0);
+          grpcServer.close();
+          resolve();
+        });
+          
+        const { data, requestId } = await grpcServer.heapProfile(agentId, options);
+        checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
+      }));
+    });
+  },
+  // test: async (playground) => {
+  //   return new Promise((resolve) => {
+  //     let events = 0;
+  //     let profile = '';
+  //     let requestId;
+  //     const options = {
+  //       duration: 100,
+  //       threadId: 0,
+  //     };
 
-// tests.push({
-//   name: 'should return 422 if invalid trackAllocations field',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       const options = {
-//         trackAllocations: 'wth',
-//       };
+  //     const bootstrapOpts = {
+  //       // Just to be sure we don't receive the loop_blocked event
+  //       opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+  //     };
 
-//       playground.bootstrap(mustSucceed((agentId) => {
-//         playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
-//           assert.strictEqual(err.code, 422);
-//           assert.strictEqual(err.message, 'Invalid arguments');
-//           resolve();
-//         }));
-//       }));
-//     });
-//   },
-// });
-
-// tests.push({
-//   name: 'should return 422 no args field',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       const options = null;
-
-//       playground.bootstrap(mustSucceed((agentId) => {
-//         playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
-//           assert.strictEqual(err.code, 422);
-//           assert.strictEqual(err.message, 'Invalid arguments');
-//           resolve();
-//         }));
-//       }));
-//     });
-//   },
-// });
-
-// tests.push({
-//   name: 'should return 409 if profile in progress in main thread',
-//   test: async (playground) => {
-//     return new Promise((resolve) => {
-//       let events = 0;
-//       let profile = '';
-//       let requestId;
-//       const options = {
-//         duration: 100,
-//         threadId: 0,
-//       };
-
-//       const bootstrapOpts = {
-//         // Just to be sure we don't receive the loop_blocked event
-//         opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
-//       };
-
-//       playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
-//         requestId = playground.zmqAgentBus.agentHeapProfileStart(agentId, options);
-//         playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
-//           assert.strictEqual(err.code, 409);
-//           assert.strictEqual(err.message, 'Profile already in progress');
-//         }));
-//       }), (eventType, agentId, data) => {
-//         switch (++events) {
-//           case 1:
-//             assert.strictEqual(eventType, 'asset-data-packet');
-//             if (data.packet.length > 0) {
-//               checkProfileData(requestId, options, agentId, data.metadata, false);
-//               profile += data.packet;
-//               --events;
-//             } else {
-//               checkProfileData(requestId, options, agentId, data.metadata, true);
-//             }
-//             break;
-//           case 2:
-//             assert.strictEqual(eventType, 'asset-received');
-//             checkProfileData(requestId, options, agentId, data, true);
-//             JSON.parse(profile);
-//             resolve();
-//         }
-//       });
-//     });
-//   },
-// });
+  //     playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
+  //       requestId = playground.zmqAgentBus.agentHeapProfileStart(agentId, options);
+  //       playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
+  //         assert.strictEqual(err.code, 409);
+  //         assert.strictEqual(err.message, 'Profile already in progress');
+  //       }));
+  //     }), (eventType, agentId, data) => {
+  //       switch (++events) {
+  //         case 1:
+  //           assert.strictEqual(eventType, 'asset-data-packet');
+  //           if (data.packet.length > 0) {
+  //             checkProfileData(requestId, options, agentId, data.metadata, false);
+  //             profile += data.packet;
+  //             --events;
+  //           } else {
+  //             checkProfileData(requestId, options, agentId, data.metadata, true);
+  //           }
+  //           break;
+  //         case 2:
+  //           assert.strictEqual(eventType, 'asset-received');
+  //           checkProfileData(requestId, options, agentId, data, true);
+  //           JSON.parse(profile);
+  //           resolve();
+  //       }
+  //     });
+  //   });
+  // },
+});
 
 // tests.push({
 //   name: 'should return 409 if profile in progress in worker',

@@ -85,18 +85,21 @@ std::pair<int64_t, int64_t> create_recorded(const time_point<system_clock>& ts) 
 }
 
 ErrorStor fill_error_stor(const ErrorType& type) {
-#define X(type, code, str, runtime_code) \
-  return {code, str "(" #runtime_code ")"};
+#define X(t, code, str, runtime_code)                                \
+  if (type == ErrorType::t) {                                        \
+    return {code, str "(" #runtime_code ")"};                        \
+  }
 GRPC_ERRORS(X)
 #undef X
+  return {500, "Internal Runtime Error"};
 }
 
 ErrorType translate_error(int err) {
   switch (err) {
     case 0:
       return ErrorType::ESuccess;
-    case EBADF:
-    case ESRCH:
+    case UV_EBADF:
+    case UV_ESRCH:
       return ErrorType::EThreadGoneError;
     case UV_EEXIST:
       return ErrorType::EInProgressError;
@@ -1445,9 +1448,13 @@ ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
     ASSERT_NE(iter.second, false);
     profile_state.nr_profiles++;
     return ErrorType::ESuccess;
-  } else if (err == ErrorType::EUnknown) {
+  }
+
+  if (err == ErrorType::EUnknown) {
     err = ErrorType::EProfSnapshotError;
   }
+
+  Debug("Error starting profile: %d\n", static_cast<int>(err));
 
   send_asset_error(req.requestid(), type, stor, err);
 
@@ -1464,7 +1471,6 @@ ErrorType GrpcAgent::do_start_cpu_prof(const grpcagent::ProfileArgs& args,
 
 ErrorType GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
                                         ProfileOptions& opts) {
-  Debug("do_start_heap_prof\n");
   HeapProfileOptions& options = std::get<HeapProfileOptions>(opts);
   const auto& heap_profile = args.heap_profile();
   options.track_allocations = heap_profile.track_allocations();
@@ -1476,6 +1482,7 @@ ErrorType GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
   }
 
   int ret = profile_collector_->StartHeapProfile(options);
+  Debug("do_start_heap_prof. ret: %d\n", ret);
   return translate_error(ret);
 }
 
