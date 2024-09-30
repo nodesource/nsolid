@@ -26,6 +26,9 @@ class GRPCServer extends EventEmitter {
         case 'exit':
           this.emit('exit', message.data);
           break;
+        case 'heap_profile':
+          this.emit('exit', message.data);
+          break;
         case 'loop_blocked':
           this.emit('loop_blocked', message.data);
           break;
@@ -45,6 +48,22 @@ class GRPCServer extends EventEmitter {
     });
     this.#server.on('exit', (code, signal) => {
       this.#server = null;
+    });
+  }
+
+  async heapProfile(agentId, options) {
+    return new Promise((resolve) => {
+      if (this.#server) {
+        const requestId = randomUUID();
+        this.#server.send({ type: 'heap_profile', agentId, requestId, options });
+        this.#server.once('message', (msg) => {
+          if (msg.type === 'heap_profile') {
+            resolve({ requestId, data: msg.data });
+          }
+        });
+      } else {
+        resolve(null);
+      }
     });
   }
 

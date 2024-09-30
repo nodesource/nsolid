@@ -1060,6 +1060,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     // send profile chunks
     grpcagent::Asset asset;
     PopulateCommon(asset.mutable_common(), ProfileTypeStr[stor.type], prof_stor.req_id.c_str());
+    asset.set_thread_id(thread_id);
     asset.mutable_metadata()->CopyFrom(metadata);
     asset.set_data(stor.profile);
     prof_stor.stream->Write(std::move(asset));

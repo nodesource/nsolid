@@ -65,15 +65,22 @@ async function startServer(cb) {
     ExportAsset: async (call) => {
       console.log('ExportAsset');
       console.dir(call.metadata, { depth: null });
+      const asset = {
+        common: null,
+        threadId: null,
+        metadata: null,
+        data: '',
+      };
       call._my_data = '';
       call.on('data', (data) => {
-        // console.dir(data, { depth: null });
-        console.log('data', data.data.length)
-        call._my_data += data.data;
+        asset.common = data.common;
+        asset.threadId = data.threadId;
+        asset.metadata = data.metadata;
+        asset.data += data.data;
       });
       call.on('end', (data) => {
-        console.log('end', data);
         call.end();
+        process.send({ type: asset.common.command, data: { msg: asset, metadata: call.metadata }});
       });
     },
     ExportBlockedLoop: (call, callback) => {
@@ -148,7 +155,9 @@ const { server, port } = await startServer((err, type, data) => {
 
 process.send({ type: 'port', port });
 process.on('message', (message) => {
-  if (message.type === 'info') {
+  if (message.type === 'heap_profile') {
+    sendHeapProfile(message.agentId, message.requestId, message.options);
+  } else if (message.type === 'info') {
     sendInfo(message.agentId, message.requestId);
   } else if (message.type === 'packages') {
     sendPackages(message.agentId, message.requestId);
@@ -167,20 +176,28 @@ async function sendCommand(command, agentId, requestId, args = {}) {
       reject(new Error(`No call object found for agentId ${agentId}`));
     }
 
-    const info = {
+    const req = {
       requestId,
       id: agentId,
       command,
       args
     };
 
+    console.log("Sending command", req);
 
-    call.write(info);
+    call.write(req);
     call.once('data', (runtimeResponse) => {
       console.log(`${command} response`, runtimeResponse);
       resolve();
     });
   });
+}
+
+async function sendHeapProfile(agentId, requestId, options) {
+  const args = {
+    profile: options
+  }
+  return sendCommand('heap_profile', agentId, requestId, args);
 }
 
 async function sendInfo(agentId, requestId) {
