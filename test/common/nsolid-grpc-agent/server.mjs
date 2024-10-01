@@ -73,10 +73,14 @@ async function startServer(cb) {
       };
       call._my_data = '';
       call.on('data', (data) => {
+        console.log('[ExportAsset] data', data.data.length);
         asset.common = data.common;
         asset.threadId = data.threadId;
         asset.metadata = data.metadata;
         asset.data += data.data;
+      });
+      call.on('error', (err) => {
+        console.error('[ExportAsset] error', err);
       });
       call.on('end', (data) => {
         call.end();

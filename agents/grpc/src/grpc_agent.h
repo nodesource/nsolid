@@ -67,6 +67,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static SharedGrpcAgent Inst();
 
+  void check_exit_on_profile();
+
   void command_stream_closed(const ::grpc::Status& s);
 
   void got_command_request(grpcagent::CommandRequest&& request);
@@ -77,7 +79,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   int start();
 
-  int stop();
+  int stop(bool profile_stopped = false);
 
   const std::string& agent_id() const { return agent_id_; }
 
@@ -181,6 +183,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void parse_saas_token(const std::string& token);
 
+  bool pending_profiles() const;
+
   void reconfigure(const grpcagent::CommandRequest& config);
 
   void send_asset_error(const std::string& req_id,
@@ -218,7 +222,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   std::atomic<bool> ready_;
   uv_cond_t start_cond_;
   uv_mutex_t start_lock_;
-  nsuv::ns_rwlock stop_lock_;
+  uv_cond_t stop_cond_;
+  uv_mutex_t stop_lock_;
+  std::atomic<bool> exiting_;
 
   nsuv::ns_async env_msg_;
   TSQueue<std::tuple<SharedEnvInst, bool>> env_msg_q_;

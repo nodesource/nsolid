@@ -378,7 +378,7 @@ class ZmqAgent {
 
   int start();
 
-  int stop(bool profile_stopped);
+  int stop(bool profile_stopped = false);
 
   void command_handler(const std::string& cmd);
 

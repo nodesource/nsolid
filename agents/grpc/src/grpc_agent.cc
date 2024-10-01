@@ -45,6 +45,8 @@ const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
 
+const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024; // 4GB
+
 static const char* const root_certs[] = {
 #include "node_root_certs.h"  // NOLINT(build/include_order)
 };
@@ -375,6 +377,7 @@ void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* blocked_loop_even
 
 GrpcAgent::GrpcAgent(): hooks_init_(false),
                         ready_(false),
+                        exiting_(false),
                         trace_flags_(0),
                         proc_metrics_(),
                         proc_prev_stor_(),
@@ -385,7 +388,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
-  ASSERT_EQ(0, stop_lock_.init(true));
+  ASSERT_EQ(0, uv_cond_init(&stop_cond_));
+  ASSERT_EQ(0, uv_mutex_init(&stop_lock_));
   absl::InitializeLog();
   // gpr_set_log_function([](gpr_log_func_args* args) {
   //   Debug("gRPC: %s\n", args->message);
@@ -410,6 +414,11 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
 }
 
 GrpcAgent::~GrpcAgent() {
+  uv_mutex_destroy(&stop_lock_);
+  uv_cond_destroy(&stop_cond_);
+  uv_mutex_destroy(&start_lock_);
+  uv_cond_destroy(&start_cond_);
+  ASSERT_EQ(0, uv_loop_close(&loop_));
 }
 
 void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
@@ -483,11 +492,32 @@ int GrpcAgent::start() {
   return r;
 }
 
-int GrpcAgent::stop() {
-  Debug("Stopping gRPC Agent\n");
+int GrpcAgent::stop(bool profile_stopped) {
+  Debug("Stopping gRPC Agent: %d\n", profile_stopped);
+  bool expected = false;
+  if (exiting_.compare_exchange_strong(expected, true) == false) {
+    // Return as it's already exiting. This should never happen, but just in
+    // case.
+    return 0;
+  }
+
   if (utils::are_threads_equal(thread_.base(), uv_thread_self())) {
     do_stop();
   } else {
+    Debug("Stopping gRPC Agent(2): %d\n", profile_stopped);
+    if (profile_stopped) {
+      // Wait here until the are no remaining profiles to be completed
+      uv_mutex_lock(&stop_lock_);
+      do {
+        uv_cond_wait(&stop_cond_, &stop_lock_);
+      } while (pending_profiles());
+      // while (pending_profiles()) {
+      //   uv_cond_wait(&stop_cond_, &stop_lock_);
+      // }
+
+      uv_mutex_unlock(&stop_lock_);
+    }
+
     ASSERT_EQ(0, shutdown_.send());
     ASSERT_EQ(0, thread_.join());
   }
@@ -517,7 +547,7 @@ int GrpcAgent::stop() {
     return;
   }
 
-  agent->stop();
+  agent->stop(profile_stopped);
 }
 
 /*static*/ void GrpcAgent::blocked_loop_msg_cb_(nsuv::ns_async*,
@@ -739,6 +769,14 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
 static string_vector tracing_fields({ "/tracingEnabled",
                                       "/tracingModulesBlacklist" });
 
+
+void GrpcAgent::check_exit_on_profile() {
+  if (exiting_ && pending_profiles() == false) {
+    uv_mutex_lock(&stop_lock_);
+    uv_cond_signal(&stop_cond_);
+    uv_mutex_unlock(&stop_lock_);
+  }
+}
 
 int GrpcAgent::config(const json& config) {
   int ret = 0;
@@ -1020,7 +1058,7 @@ void GrpcAgent::got_proc_metrics() {
 }
 
 void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
-  Debug("got_profile: %ld\n", stor.profile.length());
+  Debug("got_profile. len: %ld, status: %d\n", stor.profile.length(), stor.status);
   google::protobuf::Struct metadata;
   uint64_t thread_id;
   std::visit([&metadata, &thread_id](auto& opt) {
@@ -1066,11 +1104,35 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     asset.set_thread_id(thread_id);
     asset.mutable_metadata()->CopyFrom(metadata);
     asset.set_data(stor.profile);
-    prof_stor.stream->Write(std::move(asset));
-  }
 
-  // Don't continue with the exit procedure until all profiles have finished.
-  // check_exit_on_profile();
+    size_t asset_size = asset.ByteSizeLong();
+    if (asset_size > GRPC_MAX_SIZE) {
+      // Split the data into chunks
+      Debug("Asset size larger than supported (%ld > %ld): splitting profile into chunks\n", asset_size, GRPC_MAX_SIZE);
+      size_t prof_size = stor.profile.size();
+      size_t rest = asset_size - prof_size;
+      size_t offset = 0;
+      size_t chunk_size = GRPC_MAX_SIZE - rest;
+
+      while (offset < prof_size) {
+        grpcagent::Asset chunk_asset;
+        PopulateCommon(chunk_asset.mutable_common(), ProfileTypeStr[stor.type], prof_stor.req_id.c_str());
+        chunk_asset.set_thread_id(thread_id);
+        chunk_asset.mutable_metadata()->CopyFrom(metadata);
+
+        if (offset + chunk_size > prof_size) {
+          chunk_size = prof_size - offset;
+        }
+
+        chunk_asset.set_data(stor.profile.substr(offset, chunk_size));
+        Debug("Sending chunk of size: %ld\n", chunk_asset.ByteSizeLong());
+        prof_stor.stream->Write(std::move(chunk_asset));
+        offset += chunk_size;
+      }
+    } else {
+      prof_stor.stream->Write(std::move(asset));
+    }
+  }
 }
 
 void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
@@ -1113,6 +1175,19 @@ void GrpcAgent::parse_saas_token(const std::string& token) {
 
   saas_ = token;
   console_id_ = baseUrl.substr(0, baseUrl.find('.'));
+}
+
+bool GrpcAgent::pending_profiles() const {
+  // Check if there are any pending profiles on every profile_state_ by checking
+  // the nr_profiles field of each
+  Debug("Pending profiles: %d\n", profile_state_[kHeapProf].nr_profiles.load());
+  for (const auto& p : profile_state_) {
+    if (p.nr_profiles > 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
@@ -1440,7 +1515,7 @@ ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
 
   err = (this->*start_profiling)(args, options);
 
-  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(), agent_id_, saas_);
+  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(), agent_id_, saas_, weak_from_this());
   ProfileStor stor{ req.requestid(), uv_now(&loop_), stream, std::move(options) };
   if (err == ErrorType::ESuccess) {
     auto iter = profile_state.pending_profiles_map.emplace(thread_id,

@@ -104,7 +104,8 @@ void CommandStream::Write(grpcagent::CommandResponse&& resp) {
 AssetStream::AssetStream(
     grpcagent::NSolidService::StubInterface* stub,
     const std::string& agent_id,
-    const std::string& saas) {
+    const std::string& saas,
+    std::weak_ptr<GrpcAgent> agent): agent_(agent) {
   ASSERT_EQ(0, lock_.init(true));
   context_.AddMetadata("nsolid-agent-id", agent_id);
   if (!saas.empty()) {
@@ -121,6 +122,11 @@ AssetStream::~AssetStream() {
 
 void AssetStream::OnDone(const ::grpc::Status& s) {
   Debug("AssetStream::OnDone: %d. %s:%s\n", static_cast<unsigned>(s.error_code()), s.error_message().c_str(), s.error_details().c_str());
+  SharedGrpcAgent agent = agent_.lock();
+  if (agent != nullptr) {
+    // Don't continue with the exit procedure until all asset streams have finished.
+    agent->check_exit_on_profile();
+  }
   delete this;
 }
 
