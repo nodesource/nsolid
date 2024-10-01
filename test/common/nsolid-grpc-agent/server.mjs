@@ -82,7 +82,7 @@ async function startServer(cb) {
       call.on('error', (err) => {
         console.error('[ExportAsset] error', err);
       });
-      call.on('end', (data) => {
+      call.on('end', () => {
         call.end();
         process.send({ type: asset.common.command, data: { msg: asset, metadata: call.metadata }});
       });
@@ -161,6 +161,8 @@ process.send({ type: 'port', port });
 process.on('message', (message) => {
   if (message.type === 'heap_profile') {
     sendHeapProfile(message.agentId, message.requestId, message.options);
+  } else if (message.type === 'heap_sampling') {
+    sendHeapSampling(message.agentId, message.requestId, message.options);
   } else if (message.type === 'info') {
     sendInfo(message.agentId, message.requestId);
   } else if (message.type === 'packages') {
@@ -202,6 +204,13 @@ async function sendHeapProfile(agentId, requestId, options) {
     profile: options
   }
   return sendCommand('heap_profile', agentId, requestId, args);
+}
+
+async function sendHeapSampling(agentId, requestId, options) {
+  const args = {
+    profile: options
+  }
+  return sendCommand('heap_sampling', agentId, requestId, args);
 }
 
 async function sendInfo(agentId, requestId) {
