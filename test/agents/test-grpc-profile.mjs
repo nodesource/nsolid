@@ -300,6 +300,59 @@ tests.push({
   },
 });
 
+tests.push({
+  name: 'should end an ongoing cpu profile and heap profile before exiting',
+  test: async () => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        let reqId;
+        grpcServer.on('exit', mustCall((data) => {
+          checkExitData(data.msg, data.metadata, agentId, { code: 0, error: null, profile: reqId });
+          grpcServer.close();
+          resolve();
+        }));
+
+        const env = {
+          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+          NSOLID_GRPC_INSECURE: 1,
+          NSOLID_GRPC: `localhost:${port}`
+        };
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        const options = {
+          duration: 5000,
+          threadId: 0,
+        };
+
+        grpcServer.cpuProfile(agentId, options).then(mustCall(async ({ data, requestId }) => {
+          reqId = requestId;
+          checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
+        }));
+
+        grpcServer.heapProfile(agentId, options).then(mustCall(async ({ data, requestId }) => {
+          // checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
+        }));
+
+        grpcServer.heapSampling(agentId, options).then(mustCall(async ({ data, requestId }) => {
+          // checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
+        }));
+          
+        await setTimeout(100);
+        const exit = await child.shutdown(0);
+        assert.ok(exit);
+        assert.strictEqual(exit.code, 0);
+        assert.strictEqual(exit.signal, null);
+      }));
+    });
+  },
+});
+
 for (const { name, test } of tests) {
   console.log(`[heap profile] ${name}`);
   await test();
