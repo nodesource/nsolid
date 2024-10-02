@@ -48,6 +48,24 @@ class GRPCServer extends EventEmitter {
     });
   }
 
+  async cpuProfile(agentId, options) {
+    return new Promise((resolve) => {
+      if (this.#server) {
+        const requestId = randomUUID();
+        this.#server.send({ type: 'cpu_profile', agentId, requestId, options });
+        const msgListener = (msg) => {
+          if (msg.type === 'cpu_profile' && msg.data.msg.common.requestId === requestId) {
+            this.#server.off('message', msgListener);
+            resolve({ requestId, data: msg.data });
+          }
+        };
+        this.#server.on('message', msgListener);
+      } else {
+        resolve(null);
+      }
+    });
+  }
+
   async heapProfile(agentId, options) {
     return new Promise((resolve) => {
       if (this.#server) {

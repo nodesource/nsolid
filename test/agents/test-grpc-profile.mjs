@@ -17,7 +17,7 @@ const {
 function checkProfileData(profile, metadata, requestId, agentId, options) {
   console.dir(profile, { depth: null });
   assert.strictEqual(profile.common.requestId, requestId);
-  assert.strictEqual(profile.common.command, 'heap_sampling');
+  assert.strictEqual(profile.common.command, 'cpu_profile');
   // From here check at least that all the fields are present
   validateObject(profile.common.recorded, 'recorded');
   const recSeconds = BigInt(profile.common.recorded.seconds);
@@ -41,7 +41,7 @@ function checkProfileData(profile, metadata, requestId, agentId, options) {
 function checkProfileError(profile, metadata, requestId, agentId, code, msg) {
   console.dir(profile, { depth: null });
   assert.strictEqual(profile.common.requestId, requestId);
-  assert.strictEqual(profile.common.command, 'heap_sampling');
+  assert.strictEqual(profile.common.command, 'cpu_profile');
   // From here check at least that all the fields are present
   validateObject(profile.common.recorded, 'recorded');
   const recSeconds = BigInt(profile.common.recorded.seconds);
@@ -59,6 +59,7 @@ function checkProfileError(profile, metadata, requestId, agentId, code, msg) {
 }
 
 const tests = [];
+
 tests.push({
   name: 'should work for the main thread',
   test: async () => {
@@ -88,12 +89,9 @@ tests.push({
               }
             }
           },
-          heapSampling: {
-            sampleInterval: 50
-          }
         };
 
-        const { data, requestId } = await grpcServer.heapSampling(agentId, options);
+        const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
         checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
         await child.shutdown(0);
         grpcServer.close();
@@ -134,12 +132,9 @@ tests.push({
               }
             }
           },
-          heapSampling: {
-            sampleInterval: 50
-          }
         };
 
-        const { data, requestId } = await grpcServer.heapSampling(agentId, options);
+        const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
         checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
         await child.shutdown(0);
         grpcServer.close();
@@ -172,7 +167,7 @@ tests.push({
           threadId: 10,
         };
 
-        const { data, requestId } = await grpcServer.heapSampling(agentId, options);
+        const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 410, 'Thread already gone(1002)');
         await child.shutdown(0);
         grpcServer.close();
@@ -205,14 +200,14 @@ tests.push({
           threadId: 0,
         };
 
-        grpcServer.heapSampling(agentId, options).then(async ({ data, requestId }) => {
+        grpcServer.cpuProfile(agentId, options).then(async ({ data, requestId }) => {
           checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
           await child.shutdown(0);
           grpcServer.close();
           resolve();
         });
           
-        const { data, requestId } = await grpcServer.heapSampling(agentId, options);
+        const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
       }));
     });
@@ -245,14 +240,14 @@ tests.push({
           threadId: wid,
         };
 
-        grpcServer.heapSampling(agentId, options).then(async ({ data, requestId }) => {
+        grpcServer.cpuProfile(agentId, options).then(async ({ data, requestId }) => {
           checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
           await child.shutdown(0);
           grpcServer.close();
           resolve();
         });
           
-        const { data, requestId } = await grpcServer.heapSampling(agentId, options);
+        const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
       }));
     });
@@ -282,7 +277,7 @@ tests.push({
           threadId: 0,
         };
 
-        grpcServer.heapSampling(agentId, options).then(async ({ data, requestId }) => {
+        grpcServer.cpuProfile(agentId, options).then(async ({ data, requestId }) => {
           checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
           grpcServer.close();
           resolve();
@@ -299,6 +294,6 @@ tests.push({
 });
 
 for (const { name, test } of tests) {
-  console.log(`[heap sampling] ${name}`);
+  console.log(`[heap profile] ${name}`);
   await test();
 }

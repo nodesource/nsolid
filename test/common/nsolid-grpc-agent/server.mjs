@@ -159,7 +159,9 @@ const { server, port } = await startServer((err, type, data) => {
 
 process.send({ type: 'port', port });
 process.on('message', (message) => {
-  if (message.type === 'heap_profile') {
+  if (message.type === 'cpu_profile') {
+    sendCpuProfile(message.agentId, message.requestId, message.options);
+  } else if (message.type === 'heap_profile') {
     sendHeapProfile(message.agentId, message.requestId, message.options);
   } else if (message.type === 'heap_sampling') {
     sendHeapSampling(message.agentId, message.requestId, message.options);
@@ -199,6 +201,13 @@ async function sendCommand(command, agentId, requestId, args = {}) {
       resolve();
     });
   });
+}
+
+async function sendCpuProfile(agentId, requestId, options) {
+  const args = {
+    profile: options
+  }
+  return sendCommand('cpu_profile', agentId, requestId, args);
 }
 
 async function sendHeapProfile(agentId, requestId, options) {
