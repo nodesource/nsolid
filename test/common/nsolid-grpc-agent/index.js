@@ -1,12 +1,45 @@
 'use strict';
 
 const common = require('../');
+const assert = require('node:assert');
 const { EventEmitter } = require('node:events');
 const { fork } = require('node:child_process');
 const { randomUUID } = require('node:crypto');
 const path = require('node:path');
 
+const {
+  validateArray,
+  validateObject,
+  validateString,
+} = require('internal/validators');
+
 const defaultSaasToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaalocalhost:9001';
+
+function checkExitData(data, metadata, agentId, expectedData) {
+  assert.strictEqual(data.common.requestId, '');
+  assert.strictEqual(data.common.command, 'exit');
+  // From here check at least that all the fields are present
+  validateObject(data.common.recorded, 'recorded');
+  const recSeconds = BigInt(data.common.recorded.seconds);
+  assert.ok(recSeconds);
+  const recNanoSecs = BigInt(data.common.recorded.nanoseconds);
+  assert.ok(recNanoSecs);
+  validateObject(data.body, 'body');
+  // also the body fields
+  assert.strictEqual(data.body.code, expectedData.code);
+  assert.strictEqual(data.body.profile, expectedData.profile);
+  if (expectedData.error === null) {
+    assert.strictEqual(data.body.error, null);
+  } else {
+    assert.ok(data.body.error);
+    assert.strictEqual(data.body.error.message, expectedData.error.message);
+    validateString(data.body.error.stack, 'error.stack');
+  }
+
+  validateArray(metadata['user-agent'], 'metadata.user-agent');
+  validateString(metadata['user-agent'][0], 'metadata.user-agent[0]');
+  assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
+}
 
 class GRPCServer extends EventEmitter {
   #server;
@@ -351,6 +384,7 @@ class TestClient {
 }
 
 module.exports = {
+  checkExitData,
   GRPCServer,
   TestClient
 };

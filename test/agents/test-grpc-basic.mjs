@@ -1,46 +1,15 @@
 // Flags: --expose-internals
 import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
-import validators from 'internal/validators';
 import {
+  checkExitData,
   GRPCServer,
   TestClient,
 } from '../common/nsolid-grpc-agent/index.js';
 
-const {
-  validateArray,
-  validateObject,
-  validateString,
-} = validators;
-
 const SIGTERM = 15;
 
 const tests = [];
-
-function checkExitData(data, metadata, agentId, expectedData) {
-  assert.strictEqual(data.common.requestId, '');
-  assert.strictEqual(data.common.command, 'exit');
-  // From here check at least that all the fields are present
-  validateObject(data.common.recorded, 'recorded');
-  const recSeconds = BigInt(data.common.recorded.seconds);
-  assert.ok(recSeconds);
-  const recNanoSecs = BigInt(data.common.recorded.nanoseconds);
-  assert.ok(recNanoSecs);
-  validateObject(data.body, 'body');
-  // also the body fields
-  assert.strictEqual(data.body.code, expectedData.code);
-  if (expectedData.error === null) {
-    assert.strictEqual(data.body.error, null);
-  } else {
-    assert.ok(data.body.error);
-    assert.strictEqual(data.body.error.message, expectedData.error.message);
-    validateString(data.body.error.stack, 'error.stack');
-  }
-
-  validateArray(metadata['user-agent'], 'metadata.user-agent');
-  validateString(metadata['user-agent'][0], 'metadata.user-agent[0]');
-  assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
-}
 
 tests.push({
   name: 'should work if agent is killed with signal',

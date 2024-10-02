@@ -1,9 +1,10 @@
 // Flags: --expose-internals
-import { mustSucceed } from '../common/index.mjs';
+import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { setTimeout } from 'node:timers/promises';
 import validators from 'internal/validators';
 import {
+  checkExitData,
   GRPCServer,
   TestClient,
 } from '../common/nsolid-grpc-agent/index.js';
@@ -265,6 +266,12 @@ tests.push({
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
+        grpcServer.on('exit', mustCall((data) => {
+          checkExitData(data.msg, data.metadata, agentId, { code: 0, error: null, profile: '' });
+          grpcServer.close();
+          resolve();
+        }));
+
         const env = {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
@@ -284,8 +291,6 @@ tests.push({
 
         grpcServer.heapSampling(agentId, options).then(async ({ data, requestId }) => {
           checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
-          grpcServer.close();
-          resolve();
         });
           
         await setTimeout(100);
