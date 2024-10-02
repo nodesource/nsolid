@@ -266,7 +266,7 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
     if (package.contains("version")) {
       proto_package->set_version(package["version"].get<std::string>());
     }
-    if (package.contains("main")) {
+    if (package.contains("main") && package["main"].is_string()) {
       proto_package->set_main(package["main"].get<std::string>());
     }
     
@@ -737,7 +737,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
   auto result = agent->metrics_exporter_->Export(data);
   Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
-
 }
 
 /*static*/void GrpcAgent::metrics_timer_cb_(nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
