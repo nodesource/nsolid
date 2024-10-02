@@ -103,13 +103,13 @@ void CommandStream::Write(grpcagent::CommandResponse&& resp) {
 
 AssetStream::AssetStream(
     grpcagent::NSolidService::StubInterface* stub,
-    const std::string& agent_id,
-    const std::string& saas,
     std::weak_ptr<GrpcAgent> agent): agent_(agent) {
   ASSERT_EQ(0, lock_.init(true));
-  context_.AddMetadata("nsolid-agent-id", agent_id);
-  if (!saas.empty()) {
-    context_.AddMetadata("nsolid-saas-token", saas);
+  SharedGrpcAgent agent_sp = agent_.lock();
+  ASSERT(agent_sp != nullptr);
+  context_.AddMetadata("nsolid-agent-id", agent_sp->agent_id());
+  if (!agent_sp->saas().empty()) {
+    context_.AddMetadata("nsolid-saas-token", agent_sp->saas());
   }
   stub->async()->ExportAsset(&context_, &event_response_, this);
   AddHold();

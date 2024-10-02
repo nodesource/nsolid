@@ -354,6 +354,6 @@ tests.push({
 });
 
 for (const { name, test } of tests) {
-  console.log(`[heap profile] ${name}`);
+  console.log(`[cpu profile] ${name}`);
   await test();
 }

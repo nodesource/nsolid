@@ -511,9 +511,6 @@ int GrpcAgent::stop(bool profile_stopped) {
       do {
         uv_cond_wait(&stop_cond_, &stop_lock_);
       } while (pending_profiles());
-      // while (pending_profiles()) {
-      //   uv_cond_wait(&stop_cond_, &stop_lock_);
-      // }
 
       uv_mutex_unlock(&stop_lock_);
     }
@@ -1483,7 +1480,7 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 }
 
 ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
-                             const ProfileType& type) {
+                                   const ProfileType& type) {
   ErrorType err = ErrorType::ESuccess;
   const grpcagent::ProfileArgs& args = req.args().profile();
   uint64_t thread_id = args.thread_id();
@@ -1496,7 +1493,6 @@ ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
 
   ProfileOptions options;
   StartProfiling start_profiling = nullptr;
-  // metadata ?
   switch (type) {
     case ProfileType::kCpu:
       options = CPUProfileOptions{/* initialize with appropriate values */};
@@ -1527,7 +1523,7 @@ ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
 
   err = (this->*start_profiling)(args, options);
 
-  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(), agent_id_, saas_, weak_from_this());
+  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(), weak_from_this());
   ProfileStor stor{ req.requestid(), uv_now(&loop_), stream, std::move(options) };
   if (err == ErrorType::ESuccess) {
     auto iter = profile_state.pending_profiles_map.emplace(thread_id,
