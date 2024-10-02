@@ -167,6 +167,8 @@ process.on('message', (message) => {
     sendInfo(message.agentId, message.requestId);
   } else if (message.type === 'packages') {
     sendPackages(message.agentId, message.requestId);
+  } else if (message.type === 'snapshot') {
+    sendHeapSnapshot(message.agentId, message.requestId, message.options);
   } else if (message.type === 'startup_times') {
     sendStartupTimes(message.agentId, message.requestId);
   } else if (message.type === 'close') {
@@ -211,6 +213,13 @@ async function sendHeapSampling(agentId, requestId, options) {
     profile: options
   }
   return sendCommand('heap_sampling', agentId, requestId, args);
+}
+
+async function sendHeapSnapshot(agentId, requestId, options) {
+  const args = {
+    profile: options
+  }
+  return sendCommand('snapshot', agentId, requestId, args);
 }
 
 async function sendInfo(agentId, requestId) {

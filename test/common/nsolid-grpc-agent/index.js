@@ -84,6 +84,24 @@ class GRPCServer extends EventEmitter {
     });
   }
 
+  async heapSnapshot(agentId, options) {
+    return new Promise((resolve) => {
+      if (this.#server) {
+        const requestId = randomUUID();
+        this.#server.send({ type: 'snapshot', agentId, requestId, options });
+        const msgListener = (msg) => {
+          if (msg.type === 'snapshot' && msg.data.msg.common.requestId === requestId) {
+            this.#server.off('message', msgListener);
+            resolve({ requestId, data: msg.data });
+          }
+        };
+        this.#server.on('message', msgListener);
+      } else {
+        resolve(null);
+      }
+    });
+  }
+
   async info(agentId) {
     return new Promise((resolve) => {
       if (this.#server) {
