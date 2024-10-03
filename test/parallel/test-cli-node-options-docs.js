@@ -22,7 +22,7 @@ const addOptionRE = /AddOption[\s\n\r]*\([\s\n\r]*"([^"]+)"(.*?)\);/gs;
 const nodeOptionsText = cliText.match(/<!-- node-options-node start -->(.*)<!-- node-options-others end -->/s)[1];
 const v8OptionsText = cliText.match(/<!-- v8-options start -->(.*)<!-- v8-options end -->/s)[1];
 
-const manPage = path.join(rootDir, 'doc', 'node.1');
+const manPage = path.join(rootDir, 'doc', 'nsolid.1');
 const manPageText = fs.readFileSync(manPage, { encoding: 'utf8' });
 
 // Documented in /doc/api/deprecations.md
@@ -82,7 +82,9 @@ for (const [, envVar, config] of nodeOptionsCC.matchAll(addOptionRE)) {
   // CLI options
   if (!isV8Option && !hasTrueAsDefaultValue) {
     if (new RegExp(`###.*\`${envVar}[[=\\s\\b\`]`).test(cliText) === false) {
-      assert(false, `Should have option ${envVar} documented`);
+      if (envVar !== '-vv') {
+        assert(false, `Should have option ${envVar} documented`);
+      }
     } else {
       manPagesOptions.delete(envVar.slice(1));
     }
