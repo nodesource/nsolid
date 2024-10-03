@@ -41,7 +41,7 @@ using v8::Value;
 
 void HandleWrap::Ref(const FunctionCallbackInfo<Value>& args) {
   HandleWrap* wrap;
-  ASSIGN_OR_RETURN_UNWRAP(&wrap, args.Holder());
+  ASSIGN_OR_RETURN_UNWRAP(&wrap, args.This());
 
   if (IsAlive(wrap))
     uv_ref(wrap->GetHandle());
@@ -50,7 +50,7 @@ void HandleWrap::Ref(const FunctionCallbackInfo<Value>& args) {
 
 void HandleWrap::Unref(const FunctionCallbackInfo<Value>& args) {
   HandleWrap* wrap;
-  ASSIGN_OR_RETURN_UNWRAP(&wrap, args.Holder());
+  ASSIGN_OR_RETURN_UNWRAP(&wrap, args.This());
 
   if (IsAlive(wrap))
     uv_unref(wrap->GetHandle());
@@ -59,14 +59,14 @@ void HandleWrap::Unref(const FunctionCallbackInfo<Value>& args) {
 
 void HandleWrap::HasRef(const FunctionCallbackInfo<Value>& args) {
   HandleWrap* wrap;
-  ASSIGN_OR_RETURN_UNWRAP(&wrap, args.Holder());
+  ASSIGN_OR_RETURN_UNWRAP(&wrap, args.This());
   args.GetReturnValue().Set(HasRef(wrap));
 }
 
 
 void HandleWrap::Close(const FunctionCallbackInfo<Value>& args) {
   HandleWrap* wrap;
-  ASSIGN_OR_RETURN_UNWRAP(&wrap, args.Holder());
+  ASSIGN_OR_RETURN_UNWRAP(&wrap, args.This());
 
   wrap->Close(args[0]);
 }

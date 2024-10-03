@@ -170,9 +170,6 @@ Interpret as either ES modules or CommonJS modules input via --eval or STDIN, wh
 .js or extensionless files with no sibling or parent package.json;
 .js or extensionless files whose nearest parent package.json lacks a "type" field, unless under node_modules.
 .
-.It Fl -experimental-global-webcrypto
-Expose the Web Crypto API on the global scope.
-.
 .It Fl -experimental-import-meta-resolve
 Enable experimental ES modules support for import.meta.resolve().
 .
@@ -195,6 +192,12 @@ Use this flag to enable ShadowRealm support.
 .
 .It Fl -experimental-test-coverage
 Enable code coverage in the test runner.
+.
+.It Fl -experimental-test-module-mocks
+Enable module mocking in the test runner.
+.
+.It Fl -experimental-eventsource
+Enable experimental support for the EventSource Web API.
 .
 .It Fl -experimental-websocket
 Enable experimental support for the WebSocket API.

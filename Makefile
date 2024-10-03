@@ -238,8 +238,10 @@ coverage-clean:
 	$(RM) -r node_modules
 	$(RM) -r gcovr
 	$(RM) -r coverage/tmp
-	$(FIND) out/$(BUILDTYPE)/obj.target \( -name "*.gcda" -o -name "*.gcno" \) \
-		-type f -exec $(RM) {} \;
+	@if [ -d "out/Release/obj.target" ]; then \
+		$(FIND) out/$(BUILDTYPE)/obj.target \( -name "*.gcda" -o -name "*.gcno" \) \
+			-type f -exec $(RM) {};\
+	fi
 
 .PHONY: coverage
 # Build and test with code coverage reporting. HTML coverage reports will be
@@ -263,7 +265,9 @@ coverage-build-js:
 
 .PHONY: coverage-test
 coverage-test: coverage-build
-	$(FIND) out/$(BUILDTYPE)/obj.target -name "*.gcda" -type f -exec $(RM) {} \;
+	@if [ -d "out/Release/obj.target" ]; then \
+		$(FIND) out/$(BUILDTYPE)/obj.target -name "*.gcda" -type f -exec $(RM) {}; \
+	fi
 	-NODE_V8_COVERAGE=coverage/tmp \
 		TEST_CI_ARGS="$(TEST_CI_ARGS) --type=coverage" $(MAKE) $(COVTESTS)
 	$(MAKE) coverage-report-js
@@ -1540,8 +1544,8 @@ cpplint: lint-cpp
 # Try with '--system' if it fails without; the system may have set '--user'
 lint-py-build:
 	$(info Pip installing ruff on $(shell $(PYTHON) --version)...)
-	$(PYTHON) -m pip install --upgrade --target tools/pip/site-packages ruff==0.4.5 || \
-		$(PYTHON) -m pip install --upgrade --system --target tools/pip/site-packages ruff==0.4.5
+	$(PYTHON) -m pip install --upgrade --target tools/pip/site-packages ruff==0.5.2 || \
+		$(PYTHON) -m pip install --upgrade --system --target tools/pip/site-packages ruff==0.5.2
 
 .PHONY: lint-py
 ifneq ("","$(wildcard tools/pip/site-packages/ruff)")

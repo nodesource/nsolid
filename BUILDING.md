@@ -19,7 +19,7 @@ file a new issue.
     * [OpenSSL asm support](#openssl-asm-support)
   * [Previous versions of this document](#previous-versions-of-this-document)
 * [Building N|Solid on supported platforms](#building-nsolid-on-supported-platforms)
-  * [Note about Python](#note-about-python)
+  * [Prerequisites](#prerequisites)
   * [Unix and macOS](#unix-and-macos)
     * [Unix prerequisites](#unix-prerequisites)
     * [macOS prerequisites](#macos-prerequisites)
@@ -33,7 +33,7 @@ file a new issue.
     * [Speeding up frequent rebuilds when developing](#speeding-up-frequent-rebuilds-when-developing)
     * [Troubleshooting Unix and macOS builds](#troubleshooting-unix-and-macos-builds)
   * [Windows](#windows)
-    * [Prerequisites](#prerequisites)
+    * [Windows Prerequisites](#windows-prerequisites)
       * [Option 1: Manual install](#option-1-manual-install)
       * [Option 2: Automated install with Boxstarter](#option-2-automated-install-with-boxstarter)
     * [Building N|Solid](#building-nsolid-2)
@@ -122,7 +122,7 @@ platforms. This is true regardless of entries in the table below.
 
 <!--lint disable final-definition-->
 
-[^1]: Older kernel versions may work. However official N|Solid release
+[^1]: Older kernel versions may work. However, official N|Solid release
     binaries are [built on RHEL 8 systems](#official-binary-platforms-and-toolchains)
     with kernel 4.18.
 
@@ -209,17 +209,17 @@ For use of AVX2,
 * llvm version 3.3 or higher
 * nasm version 2.10 or higher in Windows
 
-Please refer to
-<https://www.openssl.org/docs/man1.1.1/man3/OPENSSL_ia32cap.html> for details.
+Please refer to <https://docs.openssl.org/1.1.1/man3/OPENSSL_ia32cap/> for details.
 
 If compiling without one of the above, use `configure` with the
 `--openssl-no-asm` flag. Otherwise, `configure` will fail.
 
 ## Building N|Solid on supported platforms
 
-### Note about Python
+### Prerequisites
 
-The N|Solid project supports Python >= 3 for building and testing.
+* Python support: the N|Solid project supports Python >= 3.6 for building and testing.
+* Memory: at least 8GB of RAM is typically required when compiling with 4 parallel jobs (e.g: `make -j4`)
 
 ### Unix and macOS
 
@@ -563,6 +563,11 @@ rebuild may take a lot more time than previous builds. Additionally,
 ran `./configure` with non-default options (such as `--debug`), you will need
 to run it again before invoking `make -j4`.
 
+If you received the error `nodejs g++ fatal error compilation terminated cc1plus`
+during compilation, this is likely a memory issue and you should either provide
+more RAM or create swap space to accommodate toolchain requirements or reduce
+the number of parallel build tasks (`-j<n>`).
+
 ### Windows
 
 #### Prerequisites
@@ -589,7 +594,9 @@ Optional requirements to build the MSI installer package:
 
 Optional requirements for compiling for Windows 10 on ARM (ARM64):
 
-* Visual Studio 15.9.0 or newer
+* Visual Studio 17.6.0 or newer
+  > **Note:** There is [a bug](https://github.com/nodejs/build/issues/3739) in `17.10.x`
+  > preventing Node.js from compiling.
 * Visual Studio optional components
   * Visual C++ compilers and libraries for ARM64
   * Visual C++ ATL for ARM64
@@ -637,8 +644,8 @@ architecture supports \[arm, arm64/aarch64, x86, x86\_64].
 
 ## `Intl` (ECMA-402) support
 
-[Intl](https://github.com/nodesource/nsolid/blob/HEAD/doc/api/intl.md) support
-is enabled by default.
+[Intl](doc/api/intl.md) support is
+enabled by default.
 
 ### Build with full ICU support (all locales supported by ICU)
 
@@ -703,7 +710,7 @@ that works for both your host and target environments.
 ### Build with a specific ICU
 
 You can find other ICU releases at
-[the ICU homepage](http://site.icu-project.org/download).
+[the ICU homepage](https://icu.unicode.org/download).
 Download the file named something like `icu4c-**##.#**-src.tgz` (or
 `.zip`).
 
@@ -734,7 +741,7 @@ From a tarball URL:
 #### Windows
 
 First unpack latest ICU to `deps/icu`
-[icu4c-**##.#**-src.tgz](http://site.icu-project.org/download) (or `.zip`)
+[icu4c-**##.#**-src.tgz](https://icu.unicode.org/download) (or `.zip`)
 as `deps/icu` (You'll have: `deps/icu/source/...`)
 
 ```powershell
@@ -757,10 +764,10 @@ configure option:
 ## Building N|Solid with FIPS-compliant OpenSSL
 
 N|Solid supports FIPS when statically or dynamically linked with OpenSSL 3 via
-[OpenSSL's provider model](https://www.openssl.org/docs/man3.0/man7/crypto.html#OPENSSL-PROVIDERS).
+[OpenSSL's provider model](https://docs.openssl.org/3.0/man7/crypto/#OPENSSL-PROVIDERS).
 It is not necessary to rebuild N|Solid to enable support for FIPS.
 
-See [FIPS mode](./doc/api/crypto.md#fips-mode) for more information on how to
+See [FIPS mode](doc/api/crypto.md#fips-mode) for more information on how to
 enable FIPS support in N|Solid.
 
 ## Building N|Solid with external core modules
