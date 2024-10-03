@@ -198,7 +198,8 @@ namespace base {
 // base::is_trivially_copyable will differ for these cases.
 template <typename T>
 struct is_trivially_copyable {
-#if V8_CC_MSVC
+#if V8_CC_MSVC || (__GNUC__ == 12 && __GNUC_MINOR__ <= 2) || \
+  (defined(__clang__) && __clang_major__ <= 17)
   // Unfortunately, MSVC 2015 is broken in that std::is_trivially_copyable can
   // be false even though it should be true according to the standard.
   // (status at 2018-02-26, observed on the msvc waterfall bot).
@@ -206,6 +207,8 @@ struct is_trivially_copyable {
   // intended, so we reimplement this according to the standard.
   // See also https://developercommunity.visualstudio.com/content/problem/
   //          170883/msvc-type-traits-stdis-trivial-is-bugged.html.
+  //
+  // Also observed with an eclectic range of clang++ releases.
   static constexpr bool value =
       // Copy constructor is trivial or deleted.
       (std::is_trivially_copy_constructible<T>::value ||
