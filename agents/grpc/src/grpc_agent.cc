@@ -1,5 +1,4 @@
 #include "grpc_agent.h"
-#include "grpc_client.h"
 
 #include "asserts-cpp/asserts.h"
 #include "debug_utils-inl.h"
@@ -536,6 +535,16 @@ int GrpcAgent::stop(bool profile_stopped) {
   } while (uv_loop_alive(&agent->loop_));
 }
 
+/*static*/ void GrpcAgent::asset_done_msg_cb_(nsuv::ns_async*,
+                                              WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  agent->got_asset_done_msg();
+}
+
 /*static*/ void GrpcAgent::at_exit_cb_(bool on_signal,
                                        bool profile_stopped,
                                        WeakGrpcAgent agent_wp) {
@@ -766,6 +775,17 @@ static string_vector tracing_fields({ "/tracingEnabled",
                                       "/tracingModulesBlacklist" });
 
 
+void GrpcAgent::on_asset_stream_done(const AssetStream::AssetStor& stor,
+                                     std::weak_ptr<GrpcAgent> agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  agent->asset_done_q_.enqueue(stor);
+  ASSERT_EQ(0, agent->asset_done_msg_.send());
+}
+
 void GrpcAgent::check_exit_on_profile() {
   if (exiting_ && pending_profiles() == false) {
     uv_mutex_lock(&stop_lock_);
@@ -942,6 +962,8 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, env_msg_.init(&loop_, env_msg_cb_, weak_from_this()));
 
+  ASSERT_EQ(0, asset_done_msg_.init(&loop_, asset_done_msg_cb_, weak_from_this()));
+
   ASSERT_EQ(0, blocked_loop_msg_.init(&loop_, blocked_loop_msg_cb_, weak_from_this()));
 
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, weak_from_this()));
@@ -995,6 +1017,7 @@ void GrpcAgent::do_stop() {
   ready_ = false;
   span_collector_.reset();
   profile_collector_.reset();
+  asset_done_msg_.close();
   command_msg_.close();
   log_msg_.close();
   auth_timer_.close();
@@ -1011,6 +1034,22 @@ void GrpcAgent::got_spans(const UniqRecordables& recordables) {
   auto result =
       trace_exporter_->Export(const_cast<UniqRecordables&>(recordables));
   Debug("# Result: %d\n", static_cast<int>(result));
+}
+
+void GrpcAgent::got_asset_done_msg() {
+  AssetStream::AssetStor stor;
+  while (asset_done_q_.dequeue(stor)) {
+    if (!stor.error) {
+      ProfileState& profile_state = profile_state_[stor.type];
+      // get and remove associated data from pending_profiles_map
+      auto it = profile_state.pending_profiles_map.find(stor.thread_id);
+      ASSERT(it != profile_state.pending_profiles_map.end());
+      profile_state.pending_profiles_map.erase(it);
+      profile_state.nr_profiles--;
+    }
+  }
+
+  check_exit_on_profile();
 }
 
 
@@ -1067,11 +1106,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
   // get and remove associated data from pending_profiles_map
   auto it = profile_state.pending_profiles_map.find(thread_id);
   ASSERT(it != profile_state.pending_profiles_map.end());
-  ProfileStor prof_stor = it->second;
-  if (profileStreamComplete) {
-    profile_state.pending_profiles_map.erase(it);
-    profile_state.nr_profiles--;
-  }
+  ProfileStor& prof_stor = it->second;
 
   if (profile_on_exit_ && thread_id == 0) {
     // Store the req_id of the main thread profile
@@ -1248,7 +1283,7 @@ void GrpcAgent::send_asset_error(const std::string& req_id,
   PopulateError(asset.mutable_common(), error);
   asset.mutable_metadata()->CopyFrom(metadata);
   stor.stream->Write(std::move(asset));
-  stor.stream->WritesDone();
+  stor.stream->WritesDone(true);
 }
 
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
@@ -1523,7 +1558,9 @@ ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
 
   err = (this->*start_profiling)(args, options);
 
-  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(), weak_from_this());
+  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(),
+                                        weak_from_this(),
+                                        AssetStream::AssetStor{type, thread_id});
   ProfileStor stor{ req.requestid(), uv_now(&loop_), stream, std::move(options) };
   if (err == ErrorType::ESuccess) {
     auto iter = profile_state.pending_profiles_map.emplace(thread_id,

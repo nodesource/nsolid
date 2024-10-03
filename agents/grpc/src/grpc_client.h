@@ -5,6 +5,7 @@
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "nsolid/thread_safe.h"
 #include "opentelemetry/version.h"
+#include "../../src/profile_collector.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace exporter {
@@ -65,8 +66,16 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
   };
 
  public:
+
+  struct AssetStor {
+    ProfileType type;
+    uint64_t thread_id;
+    bool error = false;
+  };
+
   explicit AssetStream(grpcagent::NSolidService::StubInterface* stub,
-                       std::weak_ptr<GrpcAgent> agent);
+                       std::weak_ptr<GrpcAgent> agent,
+                       AssetStor&& stor);
 
   ~AssetStream();
 
@@ -76,7 +85,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
 
   void Write(grpcagent::Asset&& resp);
 
-  void WritesDone();
+  void WritesDone(bool erro = false);
 
  private:
 
@@ -84,6 +93,8 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
 
  private:
   std::weak_ptr<GrpcAgent> agent_;
+  AssetStor stor_;
+  bool error_;
   ::grpc::ClientContext context_;
   grpcagent::EventResponse event_response_;
   WriteState write_state_;

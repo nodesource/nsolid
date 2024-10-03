@@ -10,6 +10,7 @@
 #include "opentelemetry/version.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "../../src/profile_collector.h"
+#include "grpc_client.h"
 #include "grpc_errors.h"
 
 // Class pre-declaration
@@ -67,11 +68,12 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static SharedGrpcAgent Inst();
 
-  void check_exit_on_profile();
-
   void command_stream_closed(const ::grpc::Status& s);
 
   void got_command_request(grpcagent::CommandRequest&& request);
+
+  void on_asset_stream_done(const AssetStream::AssetStor& stor,
+                            std::weak_ptr<GrpcAgent> agent);
 
   void remove_cpu_profile(uint64_t thread_id);
 
@@ -109,6 +111,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   ~GrpcAgent();
 
   static void run_(nsuv::ns_thread*, WeakGrpcAgent);
+
+  static void asset_done_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
   static void at_exit_cb_(bool on_signal, bool profile_stopped, WeakGrpcAgent);
 
@@ -148,6 +152,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static void trace_hook_(Tracer*, const Tracer::SpanStor&, WeakGrpcAgent);
 
+  void check_exit_on_profile();
+
   int config(const nlohmann::json& config);
 
   void do_start();
@@ -168,6 +174,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   ErrorType do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
                                    ProfileOptions& opts);
+
+  void got_asset_done_msg();
 
   void got_blocked_loop_msgs();
 
@@ -273,7 +281,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   std::atomic<bool> profile_on_exit_;
   std::shared_ptr<ProfileCollector> profile_collector_;
 
-
   // For the grpc client
   std::shared_ptr<GrpcClient> client_;
   std::unique_ptr<grpcagent::NSolidService::StubInterface> nsolid_service_stub_;
@@ -285,7 +292,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   nsuv::ns_async command_msg_;
   TSQueue<grpcagent::CommandRequest> command_q_;
 
-
+  nsuv::ns_async asset_done_msg_;
+  TSQueue<AssetStream::AssetStor> asset_done_q_;
 };
 
 }  // namespace grpc

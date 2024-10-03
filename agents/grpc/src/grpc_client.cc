@@ -103,7 +103,9 @@ void CommandStream::Write(grpcagent::CommandResponse&& resp) {
 
 AssetStream::AssetStream(
     grpcagent::NSolidService::StubInterface* stub,
-    std::weak_ptr<GrpcAgent> agent): agent_(agent) {
+    std::weak_ptr<GrpcAgent> agent,
+    AssetStor&& stor): agent_(agent),
+                       stor_(std::move(stor)) {
   ASSERT_EQ(0, lock_.init(true));
   SharedGrpcAgent agent_sp = agent_.lock();
   ASSERT(agent_sp != nullptr);
@@ -125,7 +127,7 @@ void AssetStream::OnDone(const ::grpc::Status& s) {
   SharedGrpcAgent agent = agent_.lock();
   if (agent != nullptr) {
     // Don't continue with the exit procedure until all asset streams have finished.
-    agent->check_exit_on_profile();
+    agent->on_asset_stream_done(stor_, agent_);
   }
   delete this;
 }
@@ -162,8 +164,9 @@ void AssetStream::Write(grpcagent::Asset&& asset) {
   NextWrite(); 
 }
 
-void AssetStream::WritesDone() {
+void AssetStream::WritesDone(bool error) {
   write_state_.write_done_called = true;
+  stor_.error = error;
 }
 
 GrpcClient::GrpcClient() {

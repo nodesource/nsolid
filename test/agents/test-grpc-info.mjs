@@ -1,4 +1,5 @@
-import { mustCallAtLeast, mustSucceed } from '../common/index.mjs';
+// Flags: --expose-internals
+import { mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
