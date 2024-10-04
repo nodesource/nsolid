@@ -81,6 +81,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   int start();
 
+  int start_cpu_profile(const CPUProfileOptions& options);
+
   int stop(bool profile_stopped = false);
 
   const std::string& agent_id() const { return agent_id_; }
@@ -95,8 +97,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     ProfileOptions options;
   };
 
-  using StartProfiling = ErrorType (GrpcAgent::*)(const grpcagent::ProfileArgs& args,
-                                                  ProfileOptions& opts);
+  using StartProfiling = ErrorType (GrpcAgent::*)(const ProfileOptions& opts, const ProfileStor& stor);
 
   using ProfileStorMap = std::map<uint64_t, ProfileStor>;
 
@@ -163,17 +164,22 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   ErrorType do_start_prof(const grpcagent::CommandRequest& req,
                           const ProfileType& type);
 
-  ErrorType do_start_cpu_prof(const grpcagent::ProfileArgs& args,
-                              ProfileOptions& opts);
+  ErrorType do_start_prof_end(ProfileStor&& stor,
+                              const ProfileType& type,
+                              uint64_t thread_id,
+                              ErrorType err);
 
-  ErrorType do_start_heap_prof(const grpcagent::ProfileArgs& args,
-                               ProfileOptions& opts);
+  ErrorType do_start_cpu_prof(const ProfileOptions& opts,
+                              const ProfileStor& stor);
 
-  ErrorType do_start_heap_sampl(const grpcagent::ProfileArgs& args,
-                                ProfileOptions& opts);
+  ErrorType do_start_heap_prof(const ProfileOptions& opts,
+                               const ProfileStor& stor);
 
-  ErrorType do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
-                                   ProfileOptions& opts);
+  ErrorType do_start_heap_sampl(const ProfileOptions& opts,
+                                const ProfileStor& stor);
+
+  ErrorType do_start_heap_snapshot(const ProfileOptions& opts,
+                                   const ProfileStor& stor);
 
   void got_asset_done_msg();
 

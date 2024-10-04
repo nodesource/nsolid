@@ -395,6 +395,7 @@
       'agents/src/profile_collector.h',
       'agents/src/span_collector.cc',
       'agents/src/span_collector.h',
+      'agents/grpc/src/binding.cc',
       'agents/grpc/src/grpc_agent.cc',
       'agents/grpc/src/grpc_client.cc',
       'agents/grpc/src/grpc_agent.h',
