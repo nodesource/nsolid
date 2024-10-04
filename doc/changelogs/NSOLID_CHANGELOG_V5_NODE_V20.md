@@ -2,6 +2,31 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-10-04, Version 20.18.0-nsolid-v5.3.4 'Iron'
+
+### Commits
+
+* \[[`444ff7e543`](https://github.com/nodesource/nsolid/commit/444ff7e543)] - Merge branch 'node-v20.18.0-nsolid-v5.3.4-release' into node-v20.x-nsolid-v5.x (Trevor Norris) [nodesource/nsolid#189](https://github.com/nodesource/nsolid/pull/189)
+* \[[`70b12188c2`](https://github.com/nodesource/nsolid/commit/70b12188c2)] - **build:** enable commit-queue (RafaelGSS) [nodesource/nsolid#187](https://github.com/nodesource/nsolid/pull/187)
+* \[[`487077afb1`](https://github.com/nodesource/nsolid/commit/487077afb1)] - **doc:** add different readme to landing section (RafaelGSS) [nodesource/nsolid#188](https://github.com/nodesource/nsolid/pull/188)
+* \[[`ba378efe3e`](https://github.com/nodesource/nsolid/commit/ba378efe3e)] - **doc:** include landing PR section (RafaelGSS) [nodesource/nsolid#188](https://github.com/nodesource/nsolid/pull/188)
+* \[[`d1095b64f6`](https://github.com/nodesource/nsolid/commit/d1095b64f6)] - **doc:** add project members (RafaelGSS) [nodesource/nsolid#188](https://github.com/nodesource/nsolid/pull/188)
+* \[[`0db40b4b08`](https://github.com/nodesource/nsolid/commit/0db40b4b08)] - **src:** add protobuf to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`6d1e57e3cc`](https://github.com/nodesource/nsolid/commit/6d1e57e3cc)] - **src:** add libsodium to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`c8fe605aa6`](https://github.com/nodesource/nsolid/commit/c8fe605aa6)] - **src:** add grpc to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`8d031ae822`](https://github.com/nodesource/nsolid/commit/8d031ae822)] - **src:** add zmq to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`eb977511c0`](https://github.com/nodesource/nsolid/commit/eb977511c0)] - **src:** add opentelemetry to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`0fb77a69e4`](https://github.com/nodesource/nsolid/commit/0fb77a69e4)] - **src:** add nlohmann to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`b2fbaa937d`](https://github.com/nodesource/nsolid/commit/b2fbaa937d)] - **src:** add curl to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`cfd306f80c`](https://github.com/nodesource/nsolid/commit/cfd306f80c)] - **agents:** use OTLP Summary for percentile metrics (Santiago Gimeno) [nodesource/nsolid#180](https://github.com/nodesource/nsolid/pull/180)
+* \[[`a0b1795115`](https://github.com/nodesource/nsolid/commit/a0b1795115)] - **deps:** add support for exporting Summary via OTLP (Santiago Gimeno) [nodesource/nsolid#180](https://github.com/nodesource/nsolid/pull/180)
+* \[[`13e695f334`](https://github.com/nodesource/nsolid/commit/13e695f334)] - **lib:** check min value for sampleInterval and duration (RafaelGSS) [nodesource/nsolid#173](https://github.com/nodesource/nsolid/pull/173)
+* \[[`3117f05892`](https://github.com/nodesource/nsolid/commit/3117f05892)] - **build:** disable get-released-versions for nsolid (RafaelGSS) [nodesource/nsolid#174](https://github.com/nodesource/nsolid/pull/174)
+* \[[`5a48a4ef6a`](https://github.com/nodesource/nsolid/commit/5a48a4ef6a)] - **build:** fix lint-sh (RafaelGSS) [nodesource/nsolid#176](https://github.com/nodesource/nsolid/pull/176)
+* \[[`3913f0e27f`](https://github.com/nodesource/nsolid/commit/3913f0e27f)] - **agents:** refactor ZmqAgent to use ProfileCollector (Santiago Gimeno) [nodesource/nsolid#161](https://github.com/nodesource/nsolid/pull/161)
+* \[[`183b115e48`](https://github.com/nodesource/nsolid/commit/183b115e48)] - **agents:** implement ProfileCollector class (Santiago Gimeno) [nodesource/nsolid#161](https://github.com/nodesource/nsolid/pull/161)
+
+
 ## 2024-08-23, Version 20.17.0-nsolid-v5.3.3 'Iron'
 
 ### Commits
