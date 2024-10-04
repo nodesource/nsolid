@@ -27,7 +27,7 @@
 
   'conditions': [
     [ 'clang==1', {
-      'cflags': [ '-Werror=undefined-inline', '-Werror=extra-semi']
+      'cflags': [ '-Werror=undefined-inline', '-Wno-c++98-compat-extra-semi']
     }],
     [ '"<(_type)"=="executable"', {
       'msvs_settings': {
@@ -208,6 +208,10 @@
       ],
     }],
 
+    [ 'node_shared_uvwasi=="false"', {
+      'dependencies': [ 'deps/uvwasi/uvwasi.gyp:uvwasi' ],
+    }],
+
     [ 'node_shared_nghttp2=="false"', {
       'dependencies': [ 'deps/nghttp2/nghttp2.gyp:nghttp2' ],
     }],
@@ -334,6 +338,11 @@
 
     [ 'node_shared_otlp_http_exporter=="false"', {
       'dependencies': [ 'deps/opentelemetry-cpp/otlp-http-exporter.gyp:otlp-http-exporter' ],
+      'direct_dependent_settings': {
+        'cflags': [
+          '-Wno-c++98-compat-extra-semi',
+        ],
+      },
       'conditions': [
         [ 'force_load=="true"', {
           'xcode_settings': {

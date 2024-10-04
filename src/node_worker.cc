@@ -185,16 +185,15 @@ class WorkerThreadData {
       isolate->SetStackLimit(w->stack_base_);
 
       HandleScope handle_scope(isolate);
-      isolate_data_.reset(
-          CreateIsolateData(isolate,
-                            &loop_,
-                            w_->platform_,
-                            allocator.get(),
-                            w->snapshot_data()->AsEmbedderWrapper().get()));
+      isolate_data_.reset(IsolateData::CreateIsolateData(
+          isolate,
+          &loop_,
+          w_->platform_,
+          allocator.get(),
+          w->snapshot_data()->AsEmbedderWrapper().get(),
+          std::move(w_->per_isolate_opts_)));
       CHECK(isolate_data_);
       CHECK(!isolate_data_->is_building_snapshot());
-      if (w_->per_isolate_opts_)
-        isolate_data_->set_options(std::move(w_->per_isolate_opts_));
       isolate_data_->set_worker_context(w_);
       isolate_data_->max_young_gen_size =
           params.constraints.max_young_generation_size_in_bytes();
@@ -491,9 +490,8 @@ Worker::~Worker() {
 
 void Worker::New(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
-  auto is_internal = args[5];
-  CHECK(is_internal->IsBoolean());
-  if (is_internal->IsFalse()) {
+  bool is_internal = args[5]->IsTrue();
+  if (!is_internal) {
     THROW_IF_INSUFFICIENT_PERMISSIONS(
         env, permission::PermissionScope::kWorkerThreads, "");
   }
@@ -604,26 +602,29 @@ void Worker::New(const FunctionCallbackInfo<Value>& args) {
       }
     }
 #endif  // NODE_WITHOUT_NODE_OPTIONS
-  }
 
-  if (args[2]->IsArray()) {
-    Local<Array> array = args[2].As<Array>();
     // The first argument is reserved for program name, but we don't need it
     // in workers.
     std::vector<std::string> exec_argv = {""};
-    uint32_t length = array->Length();
-    for (uint32_t i = 0; i < length; i++) {
-      Local<Value> arg;
-      if (!array->Get(env->context(), i).ToLocal(&arg)) {
-        return;
+    if (args[2]->IsArray()) {
+      Local<Array> array = args[2].As<Array>();
+      uint32_t length = array->Length();
+      for (uint32_t i = 0; i < length; i++) {
+        Local<Value> arg;
+        if (!array->Get(env->context(), i).ToLocal(&arg)) {
+          return;
+        }
+        Local<String> arg_v8;
+        if (!arg->ToString(env->context()).ToLocal(&arg_v8)) {
+          return;
+        }
+        Utf8Value arg_utf8_value(args.GetIsolate(), arg_v8);
+        std::string arg_string(arg_utf8_value.out(), arg_utf8_value.length());
+        exec_argv.push_back(arg_string);
       }
-      Local<String> arg_v8;
-      if (!arg->ToString(env->context()).ToLocal(&arg_v8)) {
-        return;
-      }
-      Utf8Value arg_utf8_value(args.GetIsolate(), arg_v8);
-      std::string arg_string(arg_utf8_value.out(), arg_utf8_value.length());
-      exec_argv.push_back(arg_string);
+    } else {
+      exec_argv.insert(
+          exec_argv.end(), env->exec_argv().begin(), env->exec_argv().end());
     }
 
     std::vector<std::string> invalid_args{};
@@ -639,11 +640,12 @@ void Worker::New(const FunctionCallbackInfo<Value>& args) {
 
     // The first argument is program name.
     invalid_args.erase(invalid_args.begin());
-    if (errors.size() > 0 || invalid_args.size() > 0) {
+    // Only fail for explicitly provided execArgv, this protects from failures
+    // when execArgv from parent's execArgv is used (which is the default).
+    if (errors.size() > 0 || (invalid_args.size() > 0 && args[2]->IsArray())) {
       Local<Value> error;
-      if (!ToV8Value(env->context(),
-                     errors.size() > 0 ? errors : invalid_args)
-                         .ToLocal(&error)) {
+      if (!ToV8Value(env->context(), errors.size() > 0 ? errors : invalid_args)
+               .ToLocal(&error)) {
         return;
       }
       Local<String> key =
@@ -654,7 +656,19 @@ void Worker::New(const FunctionCallbackInfo<Value>& args) {
       return;
     }
   } else {
+    // Copy the parent's execArgv.
     exec_argv_out = env->exec_argv();
+    per_isolate_opts = env->isolate_data()->options()->Clone();
+  }
+
+  // Internal workers should not wait for inspector frontend to connect or
+  // break on the first line of internal scripts. Module loader threads are
+  // essential to load user codes and must not be blocked by the inspector
+  // for internal scripts.
+  // Still, `--inspect-node` can break on the first line of internal scripts.
+  if (is_internal) {
+    per_isolate_opts->per_env->get_debug_options()
+        ->DisableWaitOrBreakFirstLine();
   }
 
   const SnapshotData* snapshot_data = env->isolate_data()->snapshot_data();

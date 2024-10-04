@@ -57,6 +57,7 @@ using v8::ArrayBufferView;
 using v8::BackingStore;
 using v8::Context;
 using v8::EscapableHandleScope;
+using v8::FastApiTypedArray;
 using v8::FunctionCallbackInfo;
 using v8::Global;
 using v8::HandleScope;
@@ -80,7 +81,7 @@ using v8::Value;
 
 namespace {
 
-class CallbackInfo {
+class CallbackInfo : public Cleanable {
  public:
   static inline Local<ArrayBuffer> CreateTrackedArrayBuffer(
       Environment* env,
@@ -93,7 +94,7 @@ class CallbackInfo {
   CallbackInfo& operator=(const CallbackInfo&) = delete;
 
  private:
-  static void CleanupHook(void* data);
+  void Clean();
   inline void OnBackingStoreFree();
   inline void CallAndResetCallback();
   inline CallbackInfo(Environment* env,
@@ -107,7 +108,6 @@ class CallbackInfo {
   void* const hint_;
   Environment* const env_;
 };
-
 
 Local<ArrayBuffer> CallbackInfo::CreateTrackedArrayBuffer(
     Environment* env,
@@ -148,25 +148,23 @@ CallbackInfo::CallbackInfo(Environment* env,
       data_(data),
       hint_(hint),
       env_(env) {
-  env->AddCleanupHook(CleanupHook, this);
+  env->cleanable_queue()->PushFront(this);
   env->isolate()->AdjustAmountOfExternalAllocatedMemory(sizeof(*this));
 }
 
-void CallbackInfo::CleanupHook(void* data) {
-  CallbackInfo* self = static_cast<CallbackInfo*>(data);
-
+void CallbackInfo::Clean() {
   {
-    HandleScope handle_scope(self->env_->isolate());
-    Local<ArrayBuffer> ab = self->persistent_.Get(self->env_->isolate());
+    HandleScope handle_scope(env_->isolate());
+    Local<ArrayBuffer> ab = persistent_.Get(env_->isolate());
     if (!ab.IsEmpty() && ab->IsDetachable()) {
       ab->Detach(Local<Value>()).Check();
-      self->persistent_.Reset();
+      persistent_.Reset();
     }
   }
 
   // Call the callback in this case, but don't delete `this` yet because the
   // BackingStore deleter callback will do so later.
-  self->CallAndResetCallback();
+  CallAndResetCallback();
 }
 
 void CallbackInfo::CallAndResetCallback() {
@@ -178,7 +176,7 @@ void CallbackInfo::CallAndResetCallback() {
   }
   if (callback != nullptr) {
     // Clean up all Environment-related state and run the callback.
-    env_->RemoveCleanupHook(CleanupHook, this);
+    cleanable_queue_.Remove();
     int64_t change_in_bytes = -static_cast<int64_t>(sizeof(*this));
     env_->isolate()->AdjustAmountOfExternalAllocatedMemory(change_in_bytes);
 
@@ -527,17 +525,6 @@ MaybeLocal<Object> New(Environment* env,
 }
 
 namespace {
-
-void CreateFromString(const FunctionCallbackInfo<Value>& args) {
-  CHECK(args[0]->IsString());
-  CHECK(args[1]->IsInt32());
-
-  enum encoding enc = static_cast<enum encoding>(args[1].As<Int32>()->Value());
-  Local<Object> buf;
-  if (New(args.GetIsolate(), args[0].As<String>(), enc).ToLocal(&buf))
-    args.GetReturnValue().Set(buf);
-}
-
 
 template <encoding encoding>
 void StringSlice(const FunctionCallbackInfo<Value>& args) {
@@ -1071,37 +1058,57 @@ void IndexOfBuffer(const FunctionCallbackInfo<Value>& args) {
       result == haystack_length ? -1 : static_cast<int>(result));
 }
 
-void IndexOfNumber(const FunctionCallbackInfo<Value>& args) {
+int32_t IndexOfNumber(const uint8_t* buffer_data,
+                      size_t buffer_length,
+                      uint32_t needle,
+                      int64_t offset_i64,
+                      bool is_forward) {
+  int64_t opt_offset = IndexOfOffset(buffer_length, offset_i64, 1, is_forward);
+  if (opt_offset <= -1 || buffer_length == 0) {
+    return -1;
+  }
+  size_t offset = static_cast<size_t>(opt_offset);
+  CHECK_LT(offset, buffer_length);
+
+  const void* ptr;
+  if (is_forward) {
+    ptr = memchr(buffer_data + offset, needle, buffer_length - offset);
+  } else {
+    ptr = node::stringsearch::MemrchrFill(buffer_data, needle, offset + 1);
+  }
+  const uint8_t* ptr_uint8 = static_cast<const uint8_t*>(ptr);
+  return ptr != nullptr ? static_cast<int32_t>(ptr_uint8 - buffer_data) : -1;
+}
+
+void SlowIndexOfNumber(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[1]->IsUint32());
   CHECK(args[2]->IsNumber());
   CHECK(args[3]->IsBoolean());
 
   THROW_AND_RETURN_UNLESS_BUFFER(Environment::GetCurrent(args), args[0]);
-  ArrayBufferViewContents<char> buffer(args[0]);
+  ArrayBufferViewContents<uint8_t> buffer(args[0]);
 
   uint32_t needle = args[1].As<Uint32>()->Value();
   int64_t offset_i64 = args[2].As<Integer>()->Value();
   bool is_forward = args[3]->IsTrue();
 
-  int64_t opt_offset =
-      IndexOfOffset(buffer.length(), offset_i64, 1, is_forward);
-  if (opt_offset <= -1 || buffer.length() == 0) {
-    return args.GetReturnValue().Set(-1);
-  }
-  size_t offset = static_cast<size_t>(opt_offset);
-  CHECK_LT(offset, buffer.length());
-
-  const void* ptr;
-  if (is_forward) {
-    ptr = memchr(buffer.data() + offset, needle, buffer.length() - offset);
-  } else {
-    ptr = node::stringsearch::MemrchrFill(buffer.data(), needle, offset + 1);
-  }
-  const char* ptr_char = static_cast<const char*>(ptr);
-  args.GetReturnValue().Set(ptr ? static_cast<int>(ptr_char - buffer.data())
-                                : -1);
+  args.GetReturnValue().Set(IndexOfNumber(
+      buffer.data(), buffer.length(), needle, offset_i64, is_forward));
 }
 
+int32_t FastIndexOfNumber(v8::Local<v8::Value>,
+                          const FastApiTypedArray<uint8_t>& buffer,
+                          uint32_t needle,
+                          int64_t offset_i64,
+                          bool is_forward) {
+  uint8_t* buffer_data;
+  CHECK(buffer.getStorageIfAligned(&buffer_data));
+  return IndexOfNumber(
+      buffer_data, buffer.length(), needle, offset_i64, is_forward);
+}
+
+static v8::CFunction fast_index_of_number(
+    v8::CFunction::Make(FastIndexOfNumber));
 
 void Swap16(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
@@ -1401,7 +1408,6 @@ void Initialize(Local<Object> target,
   SetMethodNoSideEffect(context, target, "btoa", Btoa);
 
   SetMethod(context, target, "setBufferPrototype", SetBufferPrototype);
-  SetMethodNoSideEffect(context, target, "createFromString", CreateFromString);
 
   SetFastMethodNoSideEffect(context,
                             target,
@@ -1413,7 +1419,11 @@ void Initialize(Local<Object> target,
   SetMethodNoSideEffect(context, target, "compareOffset", CompareOffset);
   SetMethod(context, target, "fill", Fill);
   SetMethodNoSideEffect(context, target, "indexOfBuffer", IndexOfBuffer);
-  SetMethodNoSideEffect(context, target, "indexOfNumber", IndexOfNumber);
+  SetFastMethodNoSideEffect(context,
+                            target,
+                            "indexOfNumber",
+                            SlowIndexOfNumber,
+                            &fast_index_of_number);
   SetMethodNoSideEffect(context, target, "indexOfString", IndexOfString);
 
   SetMethod(context, target, "detachArrayBuffer", DetachArrayBuffer);
@@ -1462,7 +1472,6 @@ void Initialize(Local<Object> target,
 
 void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(SetBufferPrototype);
-  registry->Register(CreateFromString);
 
   registry->Register(SlowByteLengthUtf8);
   registry->Register(fast_byte_length_utf8.GetTypeInfo());
@@ -1472,7 +1481,9 @@ void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(CompareOffset);
   registry->Register(Fill);
   registry->Register(IndexOfBuffer);
-  registry->Register(IndexOfNumber);
+  registry->Register(SlowIndexOfNumber);
+  registry->Register(FastIndexOfNumber);
+  registry->Register(fast_index_of_number.GetTypeInfo());
   registry->Register(IndexOfString);
 
   registry->Register(Swap16);

@@ -64,11 +64,11 @@
     "path": "resources"
   },
   "streams": {
-    "commit": "9b03282a99ef2314c1c2d5050a105a74a2940019",
+    "commit": "2bd26e124cf17b2f0a25c150794d640b07b2a870",
     "path": "streams"
   },
   "url": {
-    "commit": "c2d7e70b52cbd9a5b938aa32f37078d7a71e0b21",
+    "commit": "6a39784534e118acc102cf5252c542378831401d",
     "path": "url"
   },
   "user-timing": {

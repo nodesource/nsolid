@@ -19,6 +19,7 @@
     'node_shared_http_parser%': 'false',
     'node_shared_cares%': 'false',
     'node_shared_libuv%': 'false',
+    'node_shared_uvwasi%': 'false',
     'node_shared_nghttp2%': 'false',
     'node_shared_sodium%': 'false',
     'node_shared_zmq%': 'false',
@@ -513,7 +514,7 @@
     # Putting these explicitly here so not to depend on `common.gypi`.
     # `common.gypi` need to be more general because it is used to build userland native addons.
     # Refs: https://github.com/nodejs/node-gyp/issues/1118
-    'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', ],
+    'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-c++98-compat-extra-semi', ],
     'xcode_settings': {
       'WARNING_CFLAGS': [
         '-Wall',
@@ -521,7 +522,6 @@
         '-W',
         '-Wno-unused-parameter',
         '-Werror=undefined-inline',
-        '-Werror=extra-semi',
         '-Wno-c++98-compat-extra-semi',
       ],
     },
@@ -536,6 +536,9 @@
     },
 
     'conditions': [
+      ['clang==0 and OS!="win"', {
+        'cflags': [ '-Wno-restrict', '-Wno-c++98-compat-extra-semi', ],
+      }],
       # Pointer authentication for ARM64.
       ['target_arch=="arm64"', {
           'target_conditions': [
@@ -556,7 +559,8 @@
           '-Wl,-bnoerrmsg',
         ],
       }],
-      ['OS == "linux" and llvm_version != "0.0"', {
+      ['OS=="linux" and clang==1', {
+        'cflags': [ '-Wno-c++98-compat-extra-semi', ],
         'libraries': ['-latomic'],
       }],
     ],
@@ -603,7 +607,6 @@
 
       'dependencies': [
         'deps/histogram/histogram.gyp:histogram',
-        'deps/uvwasi/uvwasi.gyp:uvwasi',
       ],
 
       'msvs_settings': {
@@ -628,7 +631,7 @@
 
       'conditions': [
         [ 'error_on_warn=="true"', {
-          'cflags': ['-Werror'],
+          'cflags': ['-Werror', '-Wno-c++98-compat-extra-semi'],
           'xcode_settings': {
             'WARNING_CFLAGS': [ '-Werror' ],
           },
@@ -1089,8 +1092,8 @@
       'dependencies': [
         '<(node_lib_target_name)',
         'deps/histogram/histogram.gyp:histogram',
-        'deps/uvwasi/uvwasi.gyp:uvwasi',
       ],
+
       'includes': [
         'node.gypi'
       ],
@@ -1100,9 +1103,9 @@
         'deps/v8/include',
         'deps/cares/include',
         'deps/uv/include',
-        'deps/uvwasi/include',
         'test/cctest',
       ],
+
       'defines': [
         'NODE_ARCH="<(target_arch)"',
         'NODE_PLATFORM="<(OS)"',
@@ -1239,7 +1242,6 @@
         'deps/v8/include',
         'deps/cares/include',
         'deps/uv/include',
-        'deps/uvwasi/include',
         'test/cctest',
         'agents',
         'deps/nsuv/include',
@@ -1303,7 +1305,6 @@
       'dependencies': [
         '<(node_lib_target_name)',
         'deps/histogram/histogram.gyp:histogram',
-        'deps/uvwasi/uvwasi.gyp:uvwasi',
         'deps/ada/ada.gyp:ada',
       ],
 
@@ -1318,7 +1319,6 @@
         'deps/v8/include',
         'deps/cares/include',
         'deps/uv/include',
-        'deps/uvwasi/include',
         'test/embedding',
       ],
 
@@ -1418,7 +1418,6 @@
       'dependencies': [
         '<(node_lib_target_name)',
         'deps/histogram/histogram.gyp:histogram',
-        'deps/uvwasi/uvwasi.gyp:uvwasi',
         'deps/ada/ada.gyp:ada',
       ],
 
@@ -1433,7 +1432,6 @@
         'deps/cares/include',
         'deps/uv/include',
         'deps/nsuv/include',
-        'deps/uvwasi/include',
       ],
 
       'defines': [ 'NODE_WANT_INTERNALS=1' ],
