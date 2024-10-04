@@ -2,6 +2,27 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-10-04, Version 5.3.4 'Hydrogen'
+
+### Commits
+
+* \[[`9fe792f913`](https://github.com/nodesource/nsolid/commit/9fe792f913)] - **build**: enable commit-queue (RafaelGSS) [nodesource/nsolid#187](https://github.com/nodesource/nsolid/pull/187)
+* \[[`3c395676f5`](https://github.com/nodesource/nsolid/commit/3c395676f5)] - **doc**: add project members (RafaelGSS) [nodesource/nsolid#188](https://github.com/nodesource/nsolid/pull/188)
+* \[[`82c282f25a`](https://github.com/nodesource/nsolid/commit/82c282f25a)] - **src**: add protobuf to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`eb3598a386`](https://github.com/nodesource/nsolid/commit/eb3598a386)] - **src**: add libsodium to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`5c53474fe6`](https://github.com/nodesource/nsolid/commit/5c53474fe6)] - **src**: add grpc to process.versions (Santiago Gimeno) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`dc9f508d6d`](https://github.com/nodesource/nsolid/commit/dc9f508d6d)] - **src**: add zmq to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`a5ba9bc34f`](https://github.com/nodesource/nsolid/commit/a5ba9bc34f)] - **src**: add opentelemetry to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`ef5c0e03c0`](https://github.com/nodesource/nsolid/commit/ef5c0e03c0)] - **src**: add nlohmann to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`3e1f93c0ef`](https://github.com/nodesource/nsolid/commit/3e1f93c0ef)] - **src**: add curl to process.versions (RafaelGSS) [nodesource/nsolid#166](https://github.com/nodesource/nsolid/pull/166)
+* \[[`8d586da799`](https://github.com/nodesource/nsolid/commit/8d586da799)] - **agents**: use OTLP Summary for percentile metrics (Santiago Gimeno) [nodesource/nsolid#180](https://github.com/nodesource/nsolid/pull/180)
+* \[[`908739690c`](https://github.com/nodesource/nsolid/commit/908739690c)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [nodesource/nsolid#180](https://github.com/nodesource/nsolid/pull/180)
+* \[[`bda87b6617`](https://github.com/nodesource/nsolid/commit/bda87b6617)] - **lib**: check min value for sampleInterval and duration (RafaelGSS) [nodesource/nsolid#173](https://github.com/nodesource/nsolid/pull/173)
+* \[[`115727d7a6`](https://github.com/nodesource/nsolid/commit/115727d7a6)] - **build**: disable get-released-versions for nsolid (RafaelGSS) [nodesource/nsolid#174](https://github.com/nodesource/nsolid/pull/174)
+* \[[`f223ed21ab`](https://github.com/nodesource/nsolid/commit/f223ed21ab)] - **build**: fix lint-sh (RafaelGSS) [nodesource/nsolid#176](https://github.com/nodesource/nsolid/pull/176)
+* \[[`a668341994`](https://github.com/nodesource/nsolid/commit/a668341994)] - **agents**: refactor ZmqAgent to use ProfileCollector (Santiago Gimeno) [nodesource/nsolid#161](https://github.com/nodesource/nsolid/pull/161)
+* \[[`e008c041a7`](https://github.com/nodesource/nsolid/commit/e008c041a7)] - **agents**: implement ProfileCollector class (Santiago Gimeno) [nodesource/nsolid#161](https://github.com/nodesource/nsolid/pull/161)
+
 ## 2024-08-23, Version 5.3.3 'Hydrogen'
 
 ### Commits
