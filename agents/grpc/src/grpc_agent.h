@@ -81,7 +81,13 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   int start();
 
-  int start_cpu_profile(const CPUProfileOptions& options);
+  int start_cpu_profile(const grpcagent::CommandRequest& req);
+
+  int start_heap_profile(const grpcagent::CommandRequest& req);
+
+  int start_heap_sampling(const grpcagent::CommandRequest& req);
+
+  int start_heap_snapshot(const grpcagent::CommandRequest& req);
 
   int stop(bool profile_stopped = false);
 

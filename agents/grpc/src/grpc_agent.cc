@@ -522,8 +522,24 @@ int GrpcAgent::stop(bool profile_stopped) {
   return 0;
 }
 
-int GrpcAgent::start_cpu_profile(const CPUProfileOptions& options) {
-  return 0;
+int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
+  ErrorType error = do_start_prof(req, ProfileType::kCpu);
+  return fill_error_stor(error).code;
+}
+
+int GrpcAgent::start_heap_profile(const grpcagent::CommandRequest& req) {
+  ErrorType error = do_start_prof(req, ProfileType::kHeapProf);
+  return fill_error_stor(error).code;
+}
+
+int GrpcAgent::start_heap_sampling(const grpcagent::CommandRequest& req) {
+  ErrorType error = do_start_prof(req, ProfileType::kHeapSampl);
+  return fill_error_stor(error).code;
+}
+
+int GrpcAgent::start_heap_snapshot(const grpcagent::CommandRequest& req) {
+  ErrorType error = do_start_prof(req, ProfileType::kHeapSnapshot);
+  return fill_error_stor(error).code;
 }
 
 /*static*/ void GrpcAgent::run_(nsuv::ns_thread*,

@@ -19,10 +19,8 @@ message CommandArgs {
 
 message CommandRequest {
   string requestId = 1;
-  uint32 version = 2;
-  string id = 3;
-  string command = 4;
-  CommandArgs args = 5;
+  string command = 2;
+  CommandArgs args = 3;
 }
 
 message CommandResponse {
