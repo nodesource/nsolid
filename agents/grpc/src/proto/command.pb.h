@@ -384,8 +384,9 @@ class CommandRequest final :
 
   enum : int {
     kRequestIdFieldNumber = 1,
-    kCommandFieldNumber = 2,
-    kArgsFieldNumber = 3,
+    kIdFieldNumber = 2,
+    kCommandFieldNumber = 3,
+    kArgsFieldNumber = 4,
   };
   // string requestId = 1;
   void clear_requestid();
@@ -401,7 +402,21 @@ class CommandRequest final :
   std::string* _internal_mutable_requestid();
   public:
 
-  // string command = 2;
+  // string id = 2;
+  void clear_id();
+  const std::string& id() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_id(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_id();
+  PROTOBUF_NODISCARD std::string* release_id();
+  void set_allocated_id(std::string* id);
+  private:
+  const std::string& _internal_id() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_id(const std::string& value);
+  std::string* _internal_mutable_id();
+  public:
+
+  // string command = 3;
   void clear_command();
   const std::string& command() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -415,7 +430,7 @@ class CommandRequest final :
   std::string* _internal_mutable_command();
   public:
 
-  // .grpcagent.CommandArgs args = 3;
+  // .grpcagent.CommandArgs args = 4;
   bool has_args() const;
   private:
   bool _internal_has_args() const;
@@ -442,6 +457,7 @@ class CommandRequest final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr requestid_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr id_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr command_;
     ::grpcagent::CommandArgs* args_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
@@ -819,7 +835,57 @@ inline void CommandRequest::set_allocated_requestid(std::string* requestid) {
   // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandRequest.requestId)
 }
 
-// string command = 2;
+// string id = 2;
+inline void CommandRequest::clear_id() {
+  _impl_.id_.ClearToEmpty();
+}
+inline const std::string& CommandRequest::id() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandRequest.id)
+  return _internal_id();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void CommandRequest::set_id(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.id_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:grpcagent.CommandRequest.id)
+}
+inline std::string* CommandRequest::mutable_id() {
+  std::string* _s = _internal_mutable_id();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandRequest.id)
+  return _s;
+}
+inline const std::string& CommandRequest::_internal_id() const {
+  return _impl_.id_.Get();
+}
+inline void CommandRequest::_internal_set_id(const std::string& value) {
+  
+  _impl_.id_.Set(value, GetArenaForAllocation());
+}
+inline std::string* CommandRequest::_internal_mutable_id() {
+  
+  return _impl_.id_.Mutable(GetArenaForAllocation());
+}
+inline std::string* CommandRequest::release_id() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandRequest.id)
+  return _impl_.id_.Release();
+}
+inline void CommandRequest::set_allocated_id(std::string* id) {
+  if (id != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.id_.SetAllocated(id, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.id_.IsDefault()) {
+    _impl_.id_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandRequest.id)
+}
+
+// string command = 3;
 inline void CommandRequest::clear_command() {
   _impl_.command_.ClearToEmpty();
 }
@@ -869,7 +935,7 @@ inline void CommandRequest::set_allocated_command(std::string* command) {
   // @@protoc_insertion_point(field_set_allocated:grpcagent.CommandRequest.command)
 }
 
-// .grpcagent.CommandArgs args = 3;
+// .grpcagent.CommandArgs args = 4;
 inline bool CommandRequest::_internal_has_args() const {
   return this != internal_default_instance() && _impl_.args_ != nullptr;
 }
