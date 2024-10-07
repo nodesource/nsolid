@@ -47,6 +47,8 @@
       '<@(linked_module_files)',
     ],
     'agents_files': [
+      'agents/grpc/lib/nsolid.js',
+      'agents/grpc/lib/agent.js',
       'agents/statsd/lib/nsolid.js',
       'agents/statsd/lib/agent.js',
       'agents/zmq/lib/nsolid.js',

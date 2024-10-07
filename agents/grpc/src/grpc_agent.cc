@@ -86,6 +86,9 @@ std::pair<int64_t, int64_t> create_recorded(const time_point<system_clock>& ts) 
 }
 
 ErrorStor fill_error_stor(const ErrorType& type) {
+  if (type == ErrorType::ESuccess) {
+    return {0, "Success"};
+  }
 #define X(t, code, str, runtime_code)                                \
   if (type == ErrorType::t) {                                        \
     return {code, str "(" #runtime_code ")"};                        \
@@ -424,10 +427,6 @@ void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
   if (command_q_.enqueue(std::move(request)) == 1) {
     ASSERT_EQ(0, command_msg_.send());
   }
-}
-
-void GrpcAgent::remove_cpu_profile(uint64_t thread_id) {
-  // cpu_profiles_.erase(req_id);
 }
 
 void GrpcAgent::reset_command_stream() {
@@ -1057,6 +1056,7 @@ void GrpcAgent::got_spans(const UniqRecordables& recordables) {
 }
 
 void GrpcAgent::got_asset_done_msg() {
+  Debug("got_asset_done_msg\n");
   AssetStream::AssetStor stor;
   while (asset_done_q_.dequeue(stor)) {
     if (!stor.error) {

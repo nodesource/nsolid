@@ -81,6 +81,8 @@ static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
   uint64_t timeout = args[0].As<Number>()->Value();
   bool track_allocations = args[1]->BooleanValue(isolate);
 
+  fprintf(stderr, "StartHeapProfile: %ld, %ld, %d\n", thread_id, timeout, track_allocations);
+
   grpcagent::CommandRequest req;
   req.set_command("heap_profile");
   auto* command_args = req.mutable_args();

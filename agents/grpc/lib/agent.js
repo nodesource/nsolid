@@ -168,6 +168,7 @@ module.exports = ({ heapProfile: _heapProfile,
     }
 
     const status = _heapProfile(timeout, trackAllocations);
+    console.log('status', status);
     let err;
     if (status !== 0) {
       err = new ERR_NSOLID_HEAP_PROFILE_START();

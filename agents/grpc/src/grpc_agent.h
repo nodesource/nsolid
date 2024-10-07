@@ -75,8 +75,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void on_asset_stream_done(const AssetStream::AssetStor& stor,
                             std::weak_ptr<GrpcAgent> agent);
 
-  void remove_cpu_profile(uint64_t thread_id);
-
   void reset_command_stream();
 
   int start();
