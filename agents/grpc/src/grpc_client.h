@@ -60,6 +60,7 @@ class CommandStream:
 class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
 
   struct WriteState {
+    bool done = false;
     bool write_done = true;
     bool write_done_called = false;
     grpcagent::Asset asset;
@@ -71,6 +72,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
     ProfileType type;
     uint64_t thread_id;
     bool error = false;
+    AssetStream* stream = nullptr;
   };
 
   explicit AssetStream(grpcagent::NSolidService::StubInterface* stub,

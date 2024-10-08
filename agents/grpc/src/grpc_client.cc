@@ -127,9 +127,11 @@ void AssetStream::OnDone(const ::grpc::Status& s) {
   SharedGrpcAgent agent = agent_.lock();
   if (agent != nullptr) {
     // Don't continue with the exit procedure until all asset streams have finished.
+    stor_.stream = this;
     agent->on_asset_stream_done(stor_, agent_);
+  } else {
+    delete this;
   }
-  delete this;
 }
 
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
@@ -137,6 +139,7 @@ void AssetStream::OnWriteDone(bool ok/*ok*/) {
   nsuv::ns_mutex::scoped_lock lock(lock_);
   write_state_.write_done = true;
   if (!ok) {
+    write_state_.done = true;
     StartWritesDone();
     RemoveHold();
   } else {
@@ -145,7 +148,7 @@ void AssetStream::OnWriteDone(bool ok/*ok*/) {
 }
 
 void AssetStream::NextWrite() {
-  if (write_state_.write_done) {
+  if (!write_state_.done && write_state_.write_done) {
     if (assets_q_.dequeue(write_state_.asset)) {
       Debug("[%ld] AssetStream::StartWrite\n", pthread_self());
       StartWrite(&write_state_.asset);

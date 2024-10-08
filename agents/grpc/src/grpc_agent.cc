@@ -1067,6 +1067,8 @@ void GrpcAgent::got_asset_done_msg() {
       profile_state.pending_profiles_map.erase(it);
       profile_state.nr_profiles--;
     }
+
+    delete stor.stream;
   }
 
   check_exit_on_profile();
@@ -1113,7 +1115,6 @@ void GrpcAgent::got_proc_metrics() {
 }
 
 void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
-  Debug("got_profile. len: %ld, status: %d\n", stor.profile.length(), stor.status);
   google::protobuf::Struct metadata;
   uint64_t thread_id;
   std::visit([&metadata, &thread_id](auto& opt) {
@@ -1121,6 +1122,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     metadata = opt.metadata_pb;
   }, stor.options);
 
+  Debug("got_profile. len: %ld, status: %d. thread_id: %ld\n", stor.profile.length(), stor.status, thread_id);
   bool profileStreamComplete = stor.profile.length() == 0;
   ProfileState& profile_state = profile_state_[stor.type];
   // get and remove associated data from pending_profiles_map
@@ -1133,7 +1135,6 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     profile_state.last_main_profile = prof_stor.req_id;
   }
 
-  // get start_ts and metadata from pending_profiles_map
   if (stor.status < 0) {
     // Send error message back
     auto error = translate_error(stor.status);
