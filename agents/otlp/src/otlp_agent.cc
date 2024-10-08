@@ -30,6 +30,7 @@ namespace trace = OPENTELEMETRY_NAMESPACE::trace;
 namespace resource = sdk::resource;
 namespace instrumentationscope = sdk::instrumentationscope;
 namespace detail = trace::propagation::detail;
+using resource::ResourceAttributes;
 using resource::SemanticConventions::kServiceName;
 using resource::SemanticConventions::kServiceInstanceId;
 using resource::SemanticConventions::kServiceVersion;
@@ -525,7 +526,7 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
     }
 
     metrics_exporter_.reset(
-      new OTLPMetrics(&loop_, *GetResource(), GetScope()));
+      new OTLPMetrics(&loop_, GetScope()));
     return;
   }
 
@@ -549,7 +550,7 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
   }
 
   metrics_exporter_.reset(
-    new OTLPMetrics(&loop_, url, "", is_http, *GetResource(), GetScope()));
+    new OTLPMetrics(&loop_, url, "", is_http, GetScope()));
 }
 
 
