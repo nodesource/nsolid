@@ -31,14 +31,12 @@ class OTLPMetrics final: public MetricsExporter {
  public:
   explicit OTLPMetrics(
     uv_loop_t* loop,
-    const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource&,
     OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*);
   explicit OTLPMetrics(
     uv_loop_t* loop,
     const std::string& url,
     const std::string& key,
     bool is_http,
-    const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource&,
     OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*);
 
   virtual ~OTLPMetrics();
@@ -52,7 +50,6 @@ class OTLPMetrics final: public MetricsExporter {
  private:
   std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::metrics::PushMetricExporter>
     otlp_metric_exporter_;
-  const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource& resource_;
   OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*
     scope_;
   std::string key_;
