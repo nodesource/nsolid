@@ -3,6 +3,7 @@
 
 #include "nsolid.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
+#include "opentelemetry/sdk/resource/resource.h"
 
 // Class pre-declaration
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -28,9 +29,6 @@ class InstrumentationScope;
 namespace logs {
 class Recordable;
 }
-namespace resource {
-class Resource;
-}
 namespace trace {
 class Recordable;
 }
@@ -45,6 +43,9 @@ OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*
     GetScope();
 
 OPENTELEMETRY_NAMESPACE::sdk::resource::Resource* GetResource();
+
+OPENTELEMETRY_NAMESPACE::sdk::resource::Resource* UpdateResource(
+    OPENTELEMETRY_NAMESPACE::sdk::resource::ResourceAttributes&&);
 
 void fill_proc_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
                        const ProcessMetrics::MetricsStor& stor);
