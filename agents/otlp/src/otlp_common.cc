@@ -9,7 +9,6 @@
 #include "nlohmann/json.hpp"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/logs/recordable.h"
-#include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/trace/propagation/detail/hex.h"
@@ -50,6 +49,7 @@ using opentelemetry::trace::TraceFlags;
 using opentelemetry::trace::TraceId;
 using opentelemetry::trace::propagation::detail::HexToBinary;
 using opentelemetry::v1::trace::SemanticConventions::kThreadId;
+using opentelemetry::v1::trace::SemanticConventions::kThreadName;
 
 namespace node {
 namespace nsolid {
@@ -73,6 +73,10 @@ static time_point process_start() {
 static std::vector<std::string> discarded_metrics = {
   "thread_id", "timestamp"
 };
+
+static std::unique_ptr<Resource> resource_g =
+  std::make_unique<Resource>(Resource::GetEmpty());
+static bool isResourceInitialized_g = false;
 
 // NOLINTNEXTLINE(runtime/references)
 static void add_counter(std::vector<MetricData>& metrics,
@@ -144,9 +148,7 @@ InstrumentationScope* GetScope() {
 }
 
 Resource* GetResource() {
-  static bool isResourceInitialized = false;
-  static auto resource = std::make_unique<Resource>(Resource::GetEmpty());
-  if (!isResourceInitialized) {
+  if (!isResourceInitialized_g) {
     json config = json::parse(nsolid::GetConfig(), nullptr, false);
     // assert because the runtime should never send me an invalid JSON config
     ASSERT(!config.is_discarded());
@@ -163,11 +165,26 @@ Resource* GetResource() {
     }
 
     // Directly construct a new Resource in the unique_ptr
-    resource = std::make_unique<Resource>(Resource::Create(attrs));
-    isResourceInitialized = true;
+    resource_g = std::make_unique<Resource>(Resource::Create(attrs));
+    isResourceInitialized_g = true;
   }
 
-  return resource.get();
+  return resource_g.get();
+}
+
+Resource* UpdateResource(ResourceAttributes&& attrs) {
+  // First, get current kServiceName to avoid overwriting it with the default
+  // value "unknown_service". (See Resource::Create() method in the SDK).
+  auto resource = GetResource();
+  auto attributes = resource->GetAttributes();
+  if (attributes.find(kServiceName) != attributes.end()) {
+    attrs.SetAttribute(kServiceName,
+                       std::get<std::string>(attributes[kServiceName]));
+  }
+
+  auto new_res = std::make_unique<Resource>(Resource::Create(attrs));
+  resource_g = std::make_unique<Resource>(resource->Merge(*new_res));
+  return resource_g.get();
 }
 
 // NOLINTNEXTLINE(runtime/references)
@@ -236,7 +253,8 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
   ValueType value;
 
   PointAttributes attrs = {
-    { kThreadId, static_cast<int64_t>(stor.thread_id) }
+    { kThreadId, static_cast<int64_t>(stor.thread_id) },
+    { kThreadName, stor.thread_name },
   };
 
 #define V(CType, CName, JSName, MType, Unit)                                   \

@@ -28,17 +28,22 @@ if (process.argv[2] === 'child') {
       tracingEnabled: false
     });
 
+    nsolid.setThreadName('main-thread');
+
     const worker = new Worker(__filename, { argv: ['child'] });
     process.send({ type: 'workerThreadId', id: worker.threadId });
     process.send({
       type: 'nsolid',
       id: nsolid.id,
       appName: nsolid.appName,
+      metrics: nsolid.metrics(),
     });
     process.on('message', (message) => {
       assert.strictEqual(message, 'exit');
       process.exit(0);
     });
+  } else {
+    nsolid.setThreadName('worker-thread');
   }
 } else {
   const expectedProcMetrics = [
@@ -436,18 +441,22 @@ if (process.argv[2] === 'child') {
 
   let nsolidId;
   let nsolidAppName;
+  let nsolidMetrics;
 
   function checkResource(resource) {
     validateArray(resource.attributes, 'attributes');
-    assert.strictEqual(resource.attributes.length, 5);
 
     const expectedAttributes = {
       'telemetry.sdk.version': '1.16.0',
       'telemetry.sdk.language': 'cpp',
       'telemetry.sdk.name': 'opentelemetry',
       'service.instance.id': nsolidId,
-      'service.name': nsolidAppName
+      'service.name': nsolidAppName,
+      'process.title': nsolidMetrics.title,
+      'process.owner': nsolidMetrics.user,
     };
+
+    assert.strictEqual(resource.attributes.length, Object.keys(expectedAttributes).length);
 
     resource.attributes.forEach((attribute) => {
       assert.strictEqual(attribute.value.stringValue, expectedAttributes[attribute.key]);
@@ -484,6 +493,13 @@ if (process.argv[2] === 'child') {
         const attrIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.id' && a.value.intValue === `${context.threadId}`);
         if (attrIndex > -1) {
           indicesToRemove.push(i);
+          const nameIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.name');
+          assert(nameIndex > -1);
+          if (context.threadId === 0) { // main-thread
+            assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'main-thread');
+          } else {  // worker-thread
+            assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'worker-thread');
+          }
         }
       } else {
         indicesToRemove.push(i);
@@ -583,6 +599,7 @@ if (process.argv[2] === 'child') {
           if (message.type === 'nsolid') {
             nsolidId = message.id;
             nsolidAppName = message.appName;
+            nsolidMetrics = message.metrics;
           } else if (message.type === 'workerThreadId') {
             context.threadList.push(message.id);
           }

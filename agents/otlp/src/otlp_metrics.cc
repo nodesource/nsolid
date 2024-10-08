@@ -39,11 +39,13 @@ using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::metrics::SumPointData;
 using opentelemetry::sdk::metrics::ValueType;
 using opentelemetry::sdk::resource::Resource;
+using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::v1::exporter::otlp::GetOtlpDefaultHttpMetricsProtocol;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpHttpMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpHttpMetricExporterOptions;
+using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
 using opentelemetry::v1::trace::SemanticConventions::kThreadId;
 
 namespace node {
@@ -61,9 +63,7 @@ static std::vector<std::string> discarded_metrics = {
 };
 
 OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
-                         const Resource& resource,
                          InstrumentationScope* scope):
-    resource_(resource),
     scope_(scope) {
   const std::string prot = GetOtlpDefaultHttpMetricsProtocol();
   if (prot == "grpc") {
@@ -80,9 +80,7 @@ OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
                          const std::string& url,
                          const std::string& key,
                          bool is_http,
-                         const Resource& resource,
                          InstrumentationScope* scope):
-    resource_(resource),
     scope_(scope),
     key_(key),
     url_(url) {
@@ -107,11 +105,23 @@ OTLPMetrics::~OTLPMetrics() {
 void OTLPMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                    const ProcessMetricsStor& prev_stor) {
   ResourceMetrics data;
-  data.resource_ = &resource_;
+  Resource* resource;
+  // Check if 'user' or 'title' are different from the previous metrics
+  if (prev_stor.user != stor.user || prev_stor.title != stor.title) {
+    ResourceAttributes attrs = {
+      { kProcessOwner, stor.user },
+      { "process.title", stor.title },
+    };
+
+    resource = UpdateResource(std::move(attrs));
+  } else {
+    resource = GetResource();
+  }
+
+  data.resource_ = resource;
   std::vector<MetricData> metrics;
   fill_proc_metrics(metrics, stor);
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{scope_, metrics}};
+  data.scope_metric_data_ = std::vector<ScopeMetrics>{{scope_, metrics}};
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
@@ -120,7 +130,7 @@ void OTLPMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
 void OTLPMetrics::got_thr_metrics(
     const std::vector<MetricsExporter::ThrMetricsStor>& thr_metrics) {
   ResourceMetrics data;
-  data.resource_ = &resource_;
+  data.resource_ = GetResource();
   std::vector<MetricData> metrics;
 
   for (const auto& tm : thr_metrics) {
