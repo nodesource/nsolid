@@ -386,7 +386,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         config_(json::object()),
                         agent_id_(GetAgentId()),
                         auth_retries_(0),
-                        unauthorized_(false) {
+                        unauthorized_(false),
+                        profile_on_exit_(false) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
@@ -504,6 +505,7 @@ int GrpcAgent::stop(bool profile_stopped) {
   } else {
     Debug("Stopping gRPC Agent(2): %d\n", profile_stopped);
     if (profile_stopped) {
+      profile_on_exit_ = profile_stopped;
       // Wait here until the are no remaining profiles to be completed
       uv_mutex_lock(&stop_lock_);
       do {
@@ -1056,19 +1058,26 @@ void GrpcAgent::got_spans(const UniqRecordables& recordables) {
 }
 
 void GrpcAgent::got_asset_done_msg() {
-  Debug("got_asset_done_msg\n");
   AssetStream::AssetStor stor;
   while (asset_done_q_.dequeue(stor)) {
-    if (!stor.error) {
-      ProfileState& profile_state = profile_state_[stor.type];
-      // get and remove associated data from pending_profiles_map
-      auto it = profile_state.pending_profiles_map.find(stor.thread_id);
-      ASSERT(it != profile_state.pending_profiles_map.end());
-      profile_state.pending_profiles_map.erase(it);
-      profile_state.nr_profiles--;
+    ProfileState& profile_state = profile_state_[stor.type];
+    // get and remove associated data from pending_profiles_map
+    auto it = profile_state.pending_profiles_map.find(stor.thread_id);
+    if (it != profile_state.pending_profiles_map.end()) {
+      ProfileStor& prof_stor = it->second;
+      if (stor.stream == prof_stor.stream) {
+        delete prof_stor.stream;
+        prof_stor.stream = nullptr;
+        if (prof_stor.done) {
+          profile_state.pending_profiles_map.erase(it);
+          profile_state.nr_profiles--;
+        }
+      } else {
+        delete stor.stream;
+      }
+    } else {
+      delete stor.stream;
     }
-
-    delete stor.stream;
   }
 
   check_exit_on_profile();
@@ -1122,7 +1131,6 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     metadata = opt.metadata_pb;
   }, stor.options);
 
-  Debug("got_profile. len: %ld, status: %d. thread_id: %ld\n", stor.profile.length(), stor.status, thread_id);
   bool profileStreamComplete = stor.profile.length() == 0;
   ProfileState& profile_state = profile_state_[stor.type];
   // get and remove associated data from pending_profiles_map
@@ -1130,7 +1138,9 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
   ASSERT(it != profile_state.pending_profiles_map.end());
   ProfileStor& prof_stor = it->second;
 
-  if (profile_on_exit_ && thread_id == 0) {
+  Debug("got_profile. len: %ld, status: %d. thread_id: %ld. req_id: %s\n", stor.profile.length(), stor.status, thread_id, prof_stor.req_id.c_str());
+
+  if (thread_id == 0) {
     // Store the req_id of the main thread profile
     profile_state.last_main_profile = prof_stor.req_id;
   }
@@ -1142,14 +1152,26 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       error = ErrorType::EProfSnapshotError;
     }
 
-    send_asset_error(prof_stor.req_id, stor.type, prof_stor, error);
+    prof_stor.done = true;
+    send_asset_error(stor.type, prof_stor, error);
     return;
   }
 
   // if the profile is complete signal that
   if (profileStreamComplete) {
+    prof_stor.done = true;
+    if (prof_stor.stream == nullptr) {
+      // The stream has been closed, so we can't send the profile
+      profile_state.pending_profiles_map.erase(it);
+      return;
+    }
     prof_stor.stream->WritesDone();
   } else {
+    if (prof_stor.stream == nullptr) {
+      // The stream has been closed, so we can't send the profile
+      return;
+    }
+
     // send profile chunks
     grpcagent::Asset asset;
     PopulateCommon(asset.mutable_common(), ProfileTypeStr[stor.type], prof_stor.req_id.c_str());
@@ -1164,7 +1186,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       size_t prof_size = stor.profile.size();
       size_t rest = asset_size - prof_size;
       size_t offset = 0;
-      size_t chunk_size = GRPC_MAX_SIZE - rest;
+      size_t chunk_size = GRPC_MAX_SIZE - rest - 100;
 
       while (offset < prof_size) {
         grpcagent::Asset chunk_asset;
@@ -1289,8 +1311,7 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   send_reconfigure_event(request.requestid().c_str());
 }
 
-void GrpcAgent::send_asset_error(const std::string& req_id,
-                                 const ProfileType& type,
+void GrpcAgent::send_asset_error(const ProfileType& type,
                                  const ProfileStor& stor,
                                  const ErrorType& error) {
   grpcagent::Asset asset;
@@ -1300,7 +1321,7 @@ void GrpcAgent::send_asset_error(const std::string& req_id,
     thread_id = opt.thread_id;
     metadata = std::move(opt.metadata_pb);
   }, stor.options);
-  PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], req_id.c_str());
+  PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], stor.req_id.c_str());
   PopulateError(asset.mutable_common(), error);
   asset.mutable_metadata()->CopyFrom(metadata);
   stor.stream->Write(std::move(asset));
@@ -1352,8 +1373,10 @@ void GrpcAgent::send_exit() {
     error_info->set_stack(std::get<1>(*error));
   }
 
-  ProfileState& cpu_profile_state = profile_state_[kCpu];
-  exit_body->set_profile(cpu_profile_state.last_main_profile);
+  if (profile_on_exit_) {
+    ProfileState& cpu_profile_state = profile_state_[kCpu];
+    exit_body->set_profile(cpu_profile_state.last_main_profile);
+  }
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
   uv_cond_t cond;
@@ -1541,11 +1564,6 @@ ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
   const grpcagent::ProfileArgs& args = req.args().profile();
   uint64_t thread_id = args.thread_id();
   uint64_t duration = args.duration();
-  ProfileState& profile_state = profile_state_[type];
-  if (profile_state.pending_profiles_map.find(thread_id) !=
-      profile_state.pending_profiles_map.end()) {
-    err = ErrorType::EInProgressError;
-  }
 
   ProfileOptions options;
   StartProfiling start_profiling = nullptr;
@@ -1623,10 +1641,17 @@ ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
     opt.metadata_pb = std::move(args.metadata());
   }, options);
 
+  const std::string& req_id = req.requestid().empty() ? utils::generate_unique_id() : req.requestid();
   AssetStream* stream = new AssetStream(nsolid_service_stub_.get(),
                                         weak_from_this(),
                                         AssetStream::AssetStor{type, thread_id});
-  ProfileStor stor{ req.requestid(), uv_now(&loop_), stream, std::move(options) };
+  ProfileStor stor{ req_id, uv_now(&loop_), stream, std::move(options), req.requestid().empty() };
+
+  ProfileState& profile_state = profile_state_[type];
+  if (profile_state.pending_profiles_map.find(thread_id) !=
+      profile_state.pending_profiles_map.end()) {
+    err = ErrorType::EInProgressError;
+  }
 
   if (err == ErrorType::ESuccess) {
     err = (this->*start_profiling)(stor.options, stor);
@@ -1648,13 +1673,14 @@ ErrorType GrpcAgent::do_start_prof_end(ProfileStor&& stor,
     return ErrorType::ESuccess;
   }
 
+  stor.done = true;
   if (err == ErrorType::EUnknown) {
     err = ErrorType::EProfSnapshotError;
   }
 
   Debug("Error starting profile: %d\n", static_cast<int>(err));
 
-  send_asset_error(stor.req_id, type, stor, err);
+  send_asset_error(type, stor, err);
 
   return err;
 }

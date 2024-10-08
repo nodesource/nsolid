@@ -167,9 +167,8 @@ void AssetStream::Write(grpcagent::Asset&& asset) {
   NextWrite(); 
 }
 
-void AssetStream::WritesDone(bool error) {
+void AssetStream::WritesDone(bool) {
   write_state_.write_done_called = true;
-  stor_.error = error;
 }
 
 GrpcClient::GrpcClient() {

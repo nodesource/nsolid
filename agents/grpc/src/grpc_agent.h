@@ -99,6 +99,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     uint64_t timestamp;
     AssetStream* stream;
     ProfileOptions options;
+    bool done = false;
   };
 
   using StartProfiling = ErrorType (GrpcAgent::*)(const ProfileOptions& opts, const ProfileStor& stor);
@@ -205,8 +206,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void reconfigure(const grpcagent::CommandRequest& config);
 
-  void send_asset_error(const std::string& req_id,
-                        const ProfileType& type,
+  void send_asset_error(const ProfileType& type,
                         const ProfileStor& stor,
                         const ErrorType& error);
 

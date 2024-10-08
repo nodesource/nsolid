@@ -16,6 +16,7 @@ const {
 const defaultSaasToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaalocalhost:9001';
 
 function checkExitData(data, metadata, agentId, expectedData) {
+  console.dir(data, { depth: null });
   assert.strictEqual(data.common.requestId, '');
   assert.strictEqual(data.common.command, 'exit');
   // From here check at least that all the fields are present

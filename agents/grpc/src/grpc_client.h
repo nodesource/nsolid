@@ -71,7 +71,6 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
   struct AssetStor {
     ProfileType type;
     uint64_t thread_id;
-    bool error = false;
     AssetStream* stream = nullptr;
   };
 
@@ -87,7 +86,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
 
   void Write(grpcagent::Asset&& resp);
 
-  void WritesDone(bool erro = false);
+  void WritesDone(bool error = false);
 
  private:
 
