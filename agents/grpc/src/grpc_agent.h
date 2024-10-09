@@ -70,12 +70,16 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void command_stream_closed(const ::grpc::Status& s);
 
-  void got_command_request(grpcagent::CommandRequest&& request);
+  void got_command_request(grpcagent::CommandRequest&& request,
+                           bool from_js_api = false);
 
   void on_asset_stream_done(const AssetStream::AssetStor& stor,
                             std::weak_ptr<GrpcAgent> agent);
 
   void reset_command_stream();
+
+  void set_asset_cb(SharedEnvInst envinst,
+                    const v8::Local<v8::Function>& cb);
 
   int start();
 
@@ -94,6 +98,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   const std::string& saas() const { return saas_; }
 
  private:
+  struct CommandRequestStor {
+    grpcagent::CommandRequest request;
+    bool from_js_api;
+  };
+  
   struct ProfileStor {
     std::string req_id;
     uint64_t timestamp;
@@ -198,7 +207,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void got_spans(const UniqRecordables& spans);
 
-  void handle_command_request(grpcagent::CommandRequest&& request);
+  void handle_command_request(CommandRequestStor&& req);
 
   void parse_saas_token(const std::string& token);
 
@@ -300,10 +309,13 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   // For the gRPC server
   nsuv::ns_async command_msg_;
-  TSQueue<grpcagent::CommandRequest> command_q_;
+  TSQueue<CommandRequestStor> command_q_;
 
   nsuv::ns_async asset_done_msg_;
   TSQueue<AssetStream::AssetStor> asset_done_q_;
+  
+  // For the Assets JS API
+  std::map<SharedEnvInst, v8::Global<v8::Function>> asset_cb_map_;
 };
 
 }  // namespace grpc

@@ -424,8 +424,9 @@ GrpcAgent::~GrpcAgent() {
   ASSERT_EQ(0, uv_loop_close(&loop_));
 }
 
-void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
-  if (command_q_.enqueue(std::move(request)) == 1) {
+void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request,
+                                    bool from_js_api) {
+  if (command_q_.enqueue(CommandRequestStor{std::move(request), from_js_api}) == 1) {
     ASSERT_EQ(0, command_msg_.send());
   }
 }
@@ -433,6 +434,13 @@ void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
 void GrpcAgent::reset_command_stream() {
   command_stream_ =
         std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
+}
+
+void GrpcAgent::set_asset_cb(SharedEnvInst envinst,
+                             const v8::Local<v8::Function>& cb) {
+  asset_cb_map_.emplace(std::piecewise_construct,
+                        std::forward_as_tuple(envinst), 
+                        std::forward_as_tuple(envinst->isolate(), cb));
 }
 
 void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
@@ -524,8 +532,10 @@ int GrpcAgent::stop(bool profile_stopped) {
 }
 
 int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
-  ErrorType error = do_start_prof(req, ProfileType::kCpu);
-  return fill_error_stor(error).code;
+  got_command_request(grpcagent::CommandRequest(req));
+  return 0;
+  // ErrorType error = do_start_prof(req, ProfileType::kCpu);
+  // return fill_error_stor(error).code;
 }
 
 int GrpcAgent::start_heap_profile(const grpcagent::CommandRequest& req) {
@@ -604,7 +614,7 @@ int GrpcAgent::start_heap_snapshot(const grpcagent::CommandRequest& req) {
     return;
   }
 
-  grpcagent::CommandRequest request;
+  CommandRequestStor request;
   while (agent->command_q_.dequeue(request)) {
     agent->handle_command_request(std::move(request));
   }
@@ -1209,8 +1219,9 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
   }
 }
 
-void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
-  Debug("Command: %s\n", request.DebugString().c_str());
+void GrpcAgent::handle_command_request(CommandRequestStor&& req) {
+  const grpcagent::CommandRequest& request = req.request;
+  Debug("Command Received: %s\n", request.DebugString().c_str());
   command_stream_->Write(grpcagent::CommandResponse());
   const std::string cmd = request.command();
   if (cmd == "info") {

@@ -6,6 +6,7 @@
 
 using nlohmann::json;
 using v8::Context;
+using v8::Function;
 using v8::FunctionCallbackInfo;
 using v8::Isolate;
 using v8::JSON;
@@ -20,6 +21,13 @@ using v8::Value;
 namespace node {
 namespace nsolid {
 namespace grpc {
+
+static void RegisterAssetCb(const FunctionCallbackInfo<Value>& args) {
+  ASSERT(args[0]->IsFunction());
+  Local<Function> cb = args[0].As<Function>();
+  ASSERT(!cb->IsConstructor());
+  GrpcAgent::Inst()->set_asset_cb(GetLocalEnvInst(args.GetIsolate()), cb);
+}
 
 static void Status(const FunctionCallbackInfo<Value>& args) {
   // args.GetReturnValue().Set(
@@ -45,15 +53,25 @@ static void Snapshot(const FunctionCallbackInfo<Value>& args) {
 }
 
 static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
-  ASSERT_EQ(1 , args.Length());
+  ASSERT_EQ(2 , args.Length());
   ASSERT(args[0]->IsNumber());
+  ASSERT(args[1]->IsString());
   Isolate* isolate = args.GetIsolate();
   Local<Context> context = isolate->GetCurrentContext();
   uint64_t thread_id = ThreadId(context);
   uint64_t timeout = args[0].As<Number>()->Value();
+  Local<String> req_id = args[1].As<String>();
+  ASSERT(req_id->IsOneByte());
 
+  char uuid[36];
   grpcagent::CommandRequest req;
   req.set_command("profile");
+  ASSERT_EQ(sizeof(uuid), req_id->WriteOneByte(isolate,
+                                               reinterpret_cast<uint8_t*>(uuid),
+                                               0,
+                                               sizeof(uuid),
+                                               String::NO_NULL_TERMINATION));
+  req.set_requestid(std::string(uuid, sizeof(uuid)));
   auto* command_args = req.mutable_args();
   auto* profile_args = command_args->mutable_profile(); 
   profile_args->set_thread_id(thread_id);
@@ -65,10 +83,8 @@ static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
 }
 
 static void EndCPUProfile(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
-  Local<Context> context = isolate->GetCurrentContext();
-  uint64_t thread_id = ThreadId(context);
-  args.GetReturnValue().Set(CpuProfiler::StopProfileSync(GetEnvInst(thread_id)));
+  args.GetReturnValue().Set(
+    CpuProfiler::StopProfileSync(GetLocalEnvInst(args.GetIsolate())));
 }
 
 static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
@@ -98,10 +114,8 @@ static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
 }
 
 static void EndHeapProfile(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
-  Local<Context> context = isolate->GetCurrentContext();
-  uint64_t thread_id = ThreadId(context);
-  args.GetReturnValue().Set(Snapshot::StopTrackingHeapObjectsSync(GetEnvInst(thread_id)));
+  args.GetReturnValue().Set(
+    Snapshot::StopTrackingHeapObjectsSync(GetLocalEnvInst(args.GetIsolate())));
 }
 
 static void StartHeapSampling(const FunctionCallbackInfo<Value>& args) {
@@ -135,13 +149,16 @@ static void StartHeapSampling(const FunctionCallbackInfo<Value>& args) {
 }
 
 static void EndHeapSampling(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
-  Local<Context> context = isolate->GetCurrentContext();
-  uint64_t thread_id = ThreadId(context);
-  args.GetReturnValue().Set(Snapshot::StopSamplingSync(GetEnvInst(thread_id)));
+  args.GetReturnValue().Set(
+    Snapshot::StopSamplingSync(GetLocalEnvInst(args.GetIsolate())));
+}
+
+static void Start(const FunctionCallbackInfo<Value>& args) {
+  args.GetReturnValue().Set(GrpcAgent::Inst()->start());
 }
 
 static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
+  registry->Register(RegisterAssetCb);
   registry->Register(Status);
   registry->Register(Snapshot);
   registry->Register(StartCPUProfile);
@@ -150,12 +167,14 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(EndHeapProfile);
   registry->Register(StartHeapSampling);
   registry->Register(EndHeapSampling);
+  registry->Register(Start);
 }
 
 void InitGrpcAgent(Local<Object> exports,
                   Local<Value> unused,
                   Local<Context> context,
                   void* priv) {
+  NODE_SET_METHOD(exports, "registerAssetCb", RegisterAssetCb);
   NODE_SET_METHOD(exports, "status", Status);
   NODE_SET_METHOD(exports, "snapshot", Snapshot);
   NODE_SET_METHOD(exports, "profile", StartCPUProfile);
@@ -164,6 +183,11 @@ void InitGrpcAgent(Local<Object> exports,
   NODE_SET_METHOD(exports, "heapProfileEnd", EndHeapProfile);
   NODE_SET_METHOD(exports, "heapSampling", StartHeapSampling);
   NODE_SET_METHOD(exports, "heapSamplingEnd", EndHeapSampling);
+  if (!node::nsolid::IsMainThread(node::nsolid::GetLocalEnvInst(context))) {
+    return;
+  }
+
+  NODE_SET_METHOD(exports, "start", Start);
 }
 
 }  // namespace zmq
