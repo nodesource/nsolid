@@ -20,8 +20,12 @@ enum ProfileType {
   kCpu = 0,
   kHeapProf,
   kHeapSampl,
+  kHeapSnapshot,
   kNumberOfProfileTypes
 };
+
+extern const char* ProfileTypeStr[kNumberOfProfileTypes];
+extern const char* ProfileTypeStopStr[kNumberOfProfileTypes];
 
 struct ProfileOptionsBase {
   uint64_t thread_id;
@@ -42,9 +46,14 @@ struct HeapSamplingOptions: public ProfileOptionsBase {
   v8::HeapProfiler::SamplingFlags flags = v8::HeapProfiler::kSamplingNoFlags;
 };
 
+struct HeapSnapshotOptions: public ProfileOptionsBase {
+  bool redacted = false;
+};
+
 using ProfileOptions = std::variant<CPUProfileOptions,
                                     HeapProfileOptions,
-                                    HeapSamplingOptions>;
+                                    HeapSamplingOptions,
+                                    HeapSnapshotOptions>;
 
 
 /*
@@ -76,6 +85,7 @@ class ProfileCollector: public std::enable_shared_from_this<ProfileCollector> {
   int StartCPUProfile(const CPUProfileOptions& options);
   int StartHeapProfile(const HeapProfileOptions& options);
   int StartHeapSampling(const HeapSamplingOptions& options);
+  int StartHeapSnapshot(const HeapSnapshotOptions& options);
 
  private:
   static void profile_cb(int status,
