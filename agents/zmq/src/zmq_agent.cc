@@ -208,16 +208,13 @@ const char PONG[] = "{\"pong\":true}";
   V(kExit, "exit")                                                             \
   V(kFlags, "flags")                                                           \
   V(kHeapProfile, "heap_profile")                                              \
-  V(kHeapProfileStop, "heap_profile_stop")                                     \
   V(kHeapSampling, "heap_sampling")                                            \
-  V(kHeapSamplingStop, "heap_sampling_stop")                                   \
   V(kInterval, "interval")                                                     \
   V(kMessage, "message")                                                       \
   V(kMetadata, "metadata")                                                     \
   V(kMetrics, "metrics")                                                       \
   V(kPackages, "packages")                                                     \
   V(kProfile, "profile")                                                       \
-  V(kProfileStop, "profile_stop")                                              \
   V(kReconfigure, "reconfigure")                                               \
   V(kRequestId, "requestId")                                                   \
   V(kSampleInterval, "sampleInterval")                                         \
@@ -716,9 +713,9 @@ void ZmqAgent::do_start() {
 
   ASSERT_EQ(0, update_state_msg_.init(&loop_, update_state_msg_cb, this));
 
-  ASSERT_EQ(0, metrics_timer_.init(&loop_));
+  ASSERT_EQ(0, start_profiling_msg_.init(&loop_, start_profiling_msg_cb, this));
 
-  ASSERT_EQ(0, heap_snapshot_msg_.init(&loop_, heap_snapshot_msg_cb, this));
+  ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
   ASSERT_EQ(0, blocked_loop_msg_.init(&loop_, blocked_loop_msg_cb, this));
 
@@ -786,13 +783,13 @@ void ZmqAgent::do_stop() {
   bulk_handle_.reset(nullptr);
   auth_timer_.close();
   invalid_key_timer_.close();
+  start_profiling_msg_.close();
   update_state_msg_.close();
   config_msg_.close();
   metrics_msg_.close();
   env_msg_.close();
   shutdown_.close();
   metrics_timer_.close();
-  heap_snapshot_msg_.close();
   blocked_loop_msg_.close();
   custom_command_msg_.close();
 
@@ -963,9 +960,18 @@ void ZmqAgent::config_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
   }
 }
 
-
 void ZmqAgent::update_state_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
   agent->update_state();
+}
+
+void ZmqAgent::start_profiling_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
+  StartProfStor stor;
+  while (agent->start_profiling_msg_q_.dequeue(stor)) {
+    agent->do_start_prof_end(stor.err,
+                             stor.req_id,
+                             stor.type,
+                             std::move(stor.options));
+  }
 }
 
 std::string ZmqAgent::status() const {
@@ -1214,165 +1220,6 @@ int ZmqAgent::handshake_failed() {
   }, invalid_key_timer_interval, 0, this);
 }
 
-void ZmqAgent::heap_snapshot_cb(
-    int status,
-    std::string snapshot,
-    std::tuple<ZmqAgent*, std::string, uint64_t>* tup) {
-  ZmqAgent* agent = std::get<ZmqAgent*>(*tup);
-  // Check if the agent is already closing
-  if (agent->heap_snapshot_msg_.is_closing()) {
-    return;
-  }
-
-  agent->heap_snapshot_msg_q_.enqueue({
-    status,
-    snapshot,
-    std::get<std::string>(*tup),
-    std::get<uint64_t>(*tup)
-  });
-  ASSERT_EQ(0, agent->heap_snapshot_msg_.send());
-  // delete tuple in case of error or end of stream.
-  if (status < 0 || snapshot.length() == 0) {
-    delete tup;
-  }
-}
-
-void ZmqAgent::heap_snapshot_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
-  std::tuple<int, std::string, std::string, uint64_t> tup;
-  while (agent->heap_snapshot_msg_q_.dequeue(tup)) {
-    agent->got_heap_snapshot(std::get<0>(tup),
-                             std::get<1>(tup),
-                             std::get<2>(tup),
-                             std::get<3>(tup));
-  }
-}
-
-void ZmqAgent::got_heap_snapshot(int status,
-                                 const std::string& snapshot,
-                                 const std::string& req_id,
-                                 const uint64_t thread_id) {
-  // get and remove associated data from pending_heap_snapshot_data_map_
-  auto it = pending_heap_snapshot_data_map_.find(req_id);
-  if (it == pending_heap_snapshot_data_map_.end()) {
-    // This may happen if an error sending the 'snapshot' data message to the
-    // console.
-    return;
-  }
-
-  auto tup = it->second;
-  // get start_ts and metadata from pending_heap_snapshot_data_map_
-  if (status < 0) {
-    pending_heap_snapshot_data_map_.erase(it);
-    // Send error message back
-    send_error_response(req_id, kSnapshot, status);
-
-    return;
-  }
-
-  bool complete = snapshot.length() == 0;
-  if (complete == true) {
-    pending_heap_snapshot_data_map_.erase(it);
-  }
-
-  // send profile thru the bulk channel
-  if (bulk_handle_) {
-    uv_update_time(&loop_);
-    auto met = std::get<nlohmann::json>(tup);
-    snprintf(msg_buf_,
-             msg_size_,
-             MSG_3,
-             agent_id_.c_str(),
-             req_id.c_str(),
-             kSnapshot,
-             uv_now(&loop_) - std::get<uint64_t>(tup),
-             met.dump().c_str(),
-             complete ? "true" : "false",
-             thread_id,
-             version_);
-    bulk_handle_->send(msg_buf_, snapshot);
-  }
-}
-
-int ZmqAgent::generate_snapshot(const json& message,
-                                const std::string& req_id) {
-  int ret = 0;
-  uint64_t thread_id = 0;
-  json metadata;
-
-  if (!data_handle_) {
-    return UV_ENOTCONN;
-  }
-
-  bool disable_snapshots = false;
-  auto conf_it = config_.find("disableSnapshots");
-  if (conf_it != config_.end()) {
-    disable_snapshots = *conf_it;
-  }
-
-  if (disable_snapshots == true) {
-    return send_error_response(req_id, kSnapshot, UV_EINVAL);
-  }
-
-  auto it = message.find("args");
-  if (it == message.end() || !it->is_object()) {
-    return send_error_response(req_id, kSnapshot, UV_EINVAL);
-  }
-
-  json args = *it;
-  it = args.find(kThreadId);
-  if (it == args.end() || !it->is_number_unsigned()) {
-    return send_error_response(req_id, kSnapshot, UV_EINVAL);
-  }
-
-  thread_id = *it;
-
-  it = args.find(kMetadata);
-  if (it != args.end()) {
-    metadata = *it;
-  }
-
-  auto tup =
-    new (std::nothrow)std::tuple<ZmqAgent*, std::string, uint64_t>(this,
-                                                                   req_id,
-                                                                   thread_id);
-  if (tup == nullptr) {
-    return send_error_response(req_id, kSnapshot, UV_ENOMEM);
-  }
-
-  bool redact = false;
-  conf_it = config_.find("redactSnapshots");
-  if (conf_it != config_.end()) {
-    if (conf_it->is_boolean()) {
-      redact = *conf_it;
-    } else {
-      return send_error_response(req_id, kSnapshot, UV_EINVAL);
-    }
-  }
-
-  ret = Snapshot::TakeSnapshot(GetEnvInst(thread_id),
-                               redact,
-                               heap_snapshot_cb,
-                               tup);
-
-  if (ret != 0) {
-    delete tup;
-    return send_error_response(req_id, kSnapshot, ret);
-  }
-
-  // send snapshot command reponse thru data channel
-  int r = send_command_message(kSnapshot, req_id.c_str(), nullptr);
-  if (r < 0) {
-    return r;
-  }
-
-  uv_update_time(&loop_);
-  auto iter = pending_heap_snapshot_data_map_.emplace(
-    req_id, std::make_tuple(metadata, uv_now(&loop_)));
-  ASSERT_NE(iter.second, false);
-
-  return 0;
-}
-
 int ZmqAgent::got_metrics(const std::string& metrics) {
   int r;
   cached_metrics_ = metrics;
@@ -1574,7 +1421,7 @@ int ZmqAgent::command_message(const json& message) {
   }
 
   if (type == kSnapshot) {
-    return generate_snapshot(message, req_id);
+    return start_heap_snapshot(message, req_id);
   }
 
   if (type == "startup_times") {
@@ -2128,9 +1975,7 @@ void ZmqAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       do_got_prof(stor.type,
                   opts.thread_id,
                   stor.status,
-                  stor.profile,
-                  kProfile,
-                  kProfileStop);
+                  stor.profile);
     }
     break;
     case kHeapProf:
@@ -2139,9 +1984,7 @@ void ZmqAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       do_got_prof(stor.type,
                   opts.thread_id,
                   stor.status,
-                  stor.profile,
-                  kHeapProfile,
-                  kHeapProfileStop);
+                  stor.profile);
     }
     break;
     case kHeapSampl:
@@ -2150,9 +1993,16 @@ void ZmqAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       do_got_prof(stor.type,
                   opts.thread_id,
                   stor.status,
-                  stor.profile,
-                  kHeapSampling,
-                  kHeapSamplingStop);
+                  stor.profile);
+    }
+    break;
+    case kHeapSnapshot:
+    {
+      HeapSnapshotOptions opts = std::get<HeapSnapshotOptions>(stor.options);
+      do_got_prof(stor.type,
+                  opts.thread_id,
+                  stor.status,
+                  stor.profile);
     }
     break;
     default:
@@ -2163,9 +2013,9 @@ void ZmqAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
 void ZmqAgent::do_got_prof(ProfileType type,
                            uint64_t thread_id,
                            int status,
-                           const std::string& profile,
-                           const char* cmd,
-                           const char* stop_cmd) {
+                           const std::string& profile) {
+  const char* cmd = ProfileTypeStr[type];
+  const char* stop_cmd = ProfileTypeStopStr[type];
   bool profileStreamComplete = profile.length() == 0;
   ProfileState& profile_state = profile_state_[type];
   // get and remove associated data from pending_profiles_map
@@ -2174,10 +2024,12 @@ void ZmqAgent::do_got_prof(ProfileType type,
   ProfileStor prof_stor = it->second;
   if (profileStreamComplete) {
     profile_state.pending_profiles_map.erase(it);
-    profile_state.nr_profiles--;
+    if (type != kHeapSnapshot) {
+      profile_state.nr_profiles--;
+    }
   }
 
-  if (profile_on_exit_ && thread_id == 0) {
+  if (type != kHeapSnapshot && profile_on_exit_ && thread_id == 0) {
     // Store the req_id of the main thread profile
     profile_state.last_main_profile = prof_stor.req_id;
   }
@@ -2191,7 +2043,7 @@ void ZmqAgent::do_got_prof(ProfileType type,
 
   // send profile_stop command reponse thru data channel
   // only if the profile is complete
-  if (profileStreamComplete) {
+  if (type != kHeapSnapshot && profileStreamComplete) {
     int r = send_command_message(stop_cmd,
                                  prof_stor.req_id.c_str(),
                                  nullptr);
@@ -2223,30 +2075,27 @@ void ZmqAgent::do_got_prof(ProfileType type,
   }
 
   // Don't continue with the exit procedure until all profiles have finished.
-  check_exit_on_profile();
+  if (type != kHeapSnapshot) {
+    check_exit_on_profile();
+  }
 }
 
-int ZmqAgent::do_start_prof(const nlohmann::json& message,
-                            const std::string& req_id,
-                            ProfileType type) {
-  const char* cmd = nullptr;
+int ZmqAgent::do_start_prof_init(const nlohmann::json& message,
+                                 ProfileType type,
+                                 ProfileOptions& options) {
   StartProfiling start_profiling = nullptr;
-  ProfileOptions options;
   switch (type) {
     case ProfileType::kCpu:
-      cmd = kProfile;
       start_profiling = &ZmqAgent::do_start_cpu_prof;
-      options = CPUProfileOptions{/* initialize with appropriate values */};
       break;
     case ProfileType::kHeapProf:
-      cmd = kHeapProfile;
       start_profiling = &ZmqAgent::do_start_heap_prof;
-      options = HeapProfileOptions{/* initialize with appropriate values */};
       break;
     case ProfileType::kHeapSampl:
-      cmd = kHeapSampling;
       start_profiling = &ZmqAgent::do_start_heap_sampl;
-      options = HeapSamplingOptions{/* initialize with appropriate values */};
+      break;
+    case ProfileType::kHeapSnapshot:
+      start_profiling = &ZmqAgent::do_start_heap_snapshot;
       break;
     default:
       ASSERT(false);
@@ -2254,40 +2103,37 @@ int ZmqAgent::do_start_prof(const nlohmann::json& message,
 
   if (!data_handle_) {
     // Don't send error message back as there's actually no connection
-    return send_error_response(req_id, cmd, UV_ENOTCONN);
+    return UV_ENOTCONN;
   }
 
   auto it = message.find("args");
   if (it == message.end() || !it->is_object()) {
-    return send_error_response(req_id, cmd, UV_EINVAL);
+    return UV_EINVAL;
   }
 
   json args = *it;
   it = args.find(kThreadId);
   if (it == args.end() || !it->is_number_unsigned()) {
-    return send_error_response(req_id, cmd, UV_EINVAL);
+    return UV_EINVAL;
   }
 
   uint64_t thread_id = *it;
 
-  it = args.find(kDuration);
-  if (it == args.end() || !it->is_number_unsigned()) {
-    return send_error_response(req_id, cmd, UV_EINVAL);
-  }
+  uint64_t duration = 0;
+  if (type != kHeapSnapshot) {
+    it = args.find(kDuration);
+    if (it == args.end() || !it->is_number_unsigned()) {
+      return UV_EINVAL;
+    }
 
-  uint64_t duration = *it;
+    duration = *it;
+  }
 
   it = args.find(kMetadata);
 
   json metadata;
   if (it != args.end()) {
     metadata = *it;
-  }
-
-  ProfileState& profile_state = profile_state_[type];
-  if (profile_state.pending_profiles_map.find(thread_id) !=
-      profile_state.pending_profiles_map.end()) {
-    return send_error_response(req_id, cmd, UV_EEXIST);
   }
 
   // Set common fields in options
@@ -2297,8 +2143,14 @@ int ZmqAgent::do_start_prof(const nlohmann::json& message,
     opt.metadata = std::move(metadata);
   }, options);
 
-  ProfileStor stor{ req_id, uv_now(&loop_), std::move(options) };
-  int err = (this->*start_profiling)(args, stor);
+  return (this->*start_profiling)(args, options);
+}
+
+int ZmqAgent::do_start_prof_end(int err,
+                                const std::string& req_id,
+                                ProfileType type,
+                                ProfileOptions&& options) {
+  const char* cmd = ProfileTypeStr[type];
   if (err != 0) {
     return send_error_response(req_id, cmd, err);
   }
@@ -2309,18 +2161,22 @@ int ZmqAgent::do_start_prof(const nlohmann::json& message,
     return err;
   }
 
-  uv_update_time(&loop_);
+  uint64_t thread_id =
+    std::visit([](auto&& opt) { return opt.thread_id; }, options);
+  ProfileState& profile_state = profile_state_[type];
+  ProfileStor stor{ req_id, uv_now(&loop_), std::move(options) };
   auto iter = profile_state.pending_profiles_map.emplace(thread_id,
                                                          std::move(stor));
   ASSERT_NE(iter.second, false);
-  profile_state.nr_profiles++;
+  if (type != kHeapSnapshot) {
+    profile_state.nr_profiles++;
+  }
 
   return 0;
 }
 
-int ZmqAgent::do_start_cpu_prof(const nlohmann::json&,
-                                ProfileStor& stor) {
-  CPUProfileOptions& options = std::get<CPUProfileOptions>(stor.options);
+int ZmqAgent::do_start_cpu_prof(const nlohmann::json&, ProfileOptions& opts) {
+  CPUProfileOptions& options = std::get<CPUProfileOptions>(opts);
   Debug("Starting CPU profile for thread %lu, duration: %lu\n",
         options.thread_id,
         options.duration);
@@ -2328,13 +2184,13 @@ int ZmqAgent::do_start_cpu_prof(const nlohmann::json&,
 }
 
 int ZmqAgent::do_start_heap_prof(const nlohmann::json& args,
-                                 ProfileStor& stor) {
+                                 ProfileOptions& opts) {
   auto it = args.find(kTrackAllocations);
   if (it == args.end() || !it->is_boolean()) {
     return UV_EINVAL;
   }
 
-  HeapProfileOptions& options = std::get<HeapProfileOptions>(stor.options);
+  HeapProfileOptions& options = std::get<HeapProfileOptions>(opts);
   options.track_allocations = *it;
   auto conf_it = config_.find("redactSnapshots");
   if (conf_it != config_.end()) {
@@ -2351,8 +2207,8 @@ int ZmqAgent::do_start_heap_prof(const nlohmann::json& args,
 }
 
 int ZmqAgent::do_start_heap_sampl(const nlohmann::json& args,
-                                  ProfileStor& stor) {
-  HeapSamplingOptions& options = std::get<HeapSamplingOptions>(stor.options);
+                                  ProfileOptions& opts) {
+  HeapSamplingOptions& options = std::get<HeapSamplingOptions>(opts);
   auto it = args.find(kSampleInterval);
   if (it != args.end()) {
     if (!it->is_number_unsigned()) {
@@ -2387,45 +2243,134 @@ int ZmqAgent::do_start_heap_sampl(const nlohmann::json& args,
   return profile_collector_->StartHeapSampling(options);
 }
 
+int ZmqAgent::do_start_heap_snapshot(const nlohmann::json& args,
+                                     ProfileOptions& opts) {
+  bool disable_snapshots = false;
+  auto conf_it = config_.find("disableSnapshots");
+  if (conf_it != config_.end()) {
+    disable_snapshots = *conf_it;
+  }
+
+  if (disable_snapshots == true) {
+    return UV_EINVAL;
+  }
+
+  HeapSnapshotOptions& options = std::get<HeapSnapshotOptions>(opts);
+  conf_it = config_.find("redactSnapshots");
+  if (conf_it != config_.end()) {
+    if (conf_it->is_boolean()) {
+      options.redacted = *conf_it;
+    }
+  }
+
+  Debug("Starting Heap Snapshot for thread %lu\n", options.thread_id);
+
+  return profile_collector_->StartHeapSnapshot(options);
+}
+
 int ZmqAgent::start_profiling(const json& message,
                               const std::string& req_id) {
-  return do_start_prof(message,
-                       req_id,
-                       ProfileType::kCpu);
+  ProfileOptions options = CPUProfileOptions();
+  int ret = do_start_prof_init(message, ProfileType::kCpu, options);
+  return do_start_prof_end(ret, req_id, ProfileType::kCpu, std::move(options));
+}
+
+int ZmqAgent::start_profiling_from_js(const nlohmann::json& message) {
+  if (status_ == Unconfigured) {
+    return UV_ENOTCONN;
+  }
+
+  ProfileOptions options = CPUProfileOptions();
+  int ret = do_start_prof_init(message, ProfileType::kCpu, options);
+  start_profiling_msg_q_.enqueue({
+    ret,
+    utils::generate_unique_id(),
+    ProfileType::kCpu,
+    std::move(options)
+  });
+  ASSERT_EQ(0, start_profiling_msg_.send());
+  return ret;
 }
 
 int ZmqAgent::start_heap_profiling(const json& message,
                                    const std::string& req_id) {
-  return do_start_prof(message,
-                       req_id,
-                       ProfileType::kHeapProf);
+  ProfileOptions options = HeapProfileOptions();
+  int ret = do_start_prof_init(message, ProfileType::kHeapProf, options);
+  return do_start_prof_end(ret,
+                           req_id,
+                           ProfileType::kHeapProf,
+                           std::move(options));
+}
+
+int ZmqAgent::start_heap_profiling_from_js(const nlohmann::json& message) {
+  if (status_ == Unconfigured) {
+    return UV_ENOTCONN;
+  }
+
+  ProfileOptions options = HeapProfileOptions();
+  int ret = do_start_prof_init(message, ProfileType::kHeapProf, options);
+  start_profiling_msg_q_.enqueue({
+    ret,
+    utils::generate_unique_id(),
+    ProfileType::kHeapProf,
+    std::move(options)
+  });
+  ASSERT_EQ(0, start_profiling_msg_.send());
+  return ret;
 }
 
 int ZmqAgent::start_heap_sampling(const json& message,
                                   const std::string& req_id) {
-  return do_start_prof(message,
-                       req_id,
-                       ProfileType::kHeapSampl);
+  ProfileOptions options = HeapSamplingOptions();
+  int ret = do_start_prof_init(message, ProfileType::kHeapSampl, options);
+  return do_start_prof_end(ret,
+                           req_id,
+                           ProfileType::kHeapSampl,
+                           std::move(options));
 }
 
-int ZmqAgent::stop_profiling(uint64_t thread_id) {
-  // This method is only called from the JS thread the profile it's stopping is
-  // running so the sync StopProfileSync method can be safely called.
-  return CpuProfiler::StopProfileSync(GetEnvInst(thread_id));
+int ZmqAgent::start_heap_sampling_from_js(const nlohmann::json& message) {
+  if (status_ == Unconfigured) {
+    return UV_ENOTCONN;
+  }
+
+  ProfileOptions options = HeapSamplingOptions();
+  int ret = do_start_prof_init(message, ProfileType::kHeapSampl, options);
+  start_profiling_msg_q_.enqueue({
+    ret,
+    utils::generate_unique_id(),
+    ProfileType::kHeapSampl,
+    std::move(options)
+  });
+  ASSERT_EQ(0, start_profiling_msg_.send());
+  return ret;
 }
 
-int ZmqAgent::stop_heap_profiling(uint64_t thread_id) {
-  // This method is only called from the JS thread the profile it's stopping is
-  // running so the sync StopTrackingHeapObjectsSync method can be safely
-  // called.
-  return Snapshot::StopTrackingHeapObjectsSync(GetEnvInst(thread_id));
+int ZmqAgent::start_heap_snapshot(const json& message,
+                                  const std::string& req_id) {
+  ProfileOptions options = HeapSnapshotOptions();
+  int ret = do_start_prof_init(message, ProfileType::kHeapSnapshot, options);
+  return do_start_prof_end(ret,
+                           req_id,
+                           ProfileType::kHeapSnapshot,
+                           std::move(options));
 }
 
-int ZmqAgent::stop_heap_sampling(uint64_t thread_id) {
-  // This method is only called from the JS thread the profile it's stopping is
-  // running so the sync StopSamplingSync method can be safely
-  // called.
-  return Snapshot::StopSamplingSync(GetEnvInst(thread_id));
+int ZmqAgent::start_heap_snapshot_from_js(const nlohmann::json& message) {
+  if (status_ == Unconfigured) {
+    return UV_ENOTCONN;
+  }
+
+  ProfileOptions options = HeapSnapshotOptions();
+  int ret = do_start_prof_init(message, ProfileType::kHeapSnapshot, options);
+  start_profiling_msg_q_.enqueue({
+    ret,
+    utils::generate_unique_id(),
+    ProfileType::kHeapSnapshot,
+    std::move(options)
+  });
+  ASSERT_EQ(0, start_profiling_msg_.send());
+  return ret;
 }
 
 void ZmqAgent::status_command_cb(SharedEnvInst, ZmqAgent* agent) {
