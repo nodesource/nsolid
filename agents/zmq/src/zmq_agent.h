@@ -425,36 +425,21 @@ class ZmqAgent {
 
   int handshake_failed();
 
-  int generate_snapshot(
-    const nlohmann::json& message,
-    const std::string& req_id = utils::generate_unique_id());
-
-
   const std::string& saas() const { return saas_; }
 
-  int start_heap_profiling(
-    const nlohmann::json& message,
-    const std::string& req_id = utils::generate_unique_id());
-
-  int stop_heap_profiling(uint64_t thread_id);
-
-  int start_heap_sampling(
-    const nlohmann::json& message,
-    const std::string& req_id = utils::generate_unique_id());
-
-  int stop_heap_sampling(uint64_t thread_id);
-
-  int start_profiling(
-    const nlohmann::json& message,
-    const std::string& req_id = utils::generate_unique_id());
-
   bool pending_profiles() const;
-
-  int stop_profiling(uint64_t thread_id);
 
   uv_loop_t* loop() { return &loop_; }
 
   nsuv::ns_async& update_state_msg() { return update_state_msg_; }
+
+  int start_profiling_from_js(const nlohmann::json& message);
+
+  int start_heap_profiling_from_js(const nlohmann::json& message);
+
+  int start_heap_sampling_from_js(const nlohmann::json& message);
+
+  int start_heap_snapshot_from_js(const nlohmann::json& message);
 
   std::string status() const;
 
@@ -472,7 +457,7 @@ class ZmqAgent {
   };
 
   using StartProfiling = int (ZmqAgent::*)(const nlohmann::json&,
-                                           ProfileStor&);
+                                           ProfileOptions&);
 
   using ProfileStorMap = std::map<uint64_t, ProfileStor>;
 
@@ -480,6 +465,13 @@ class ZmqAgent {
     ProfileStorMap pending_profiles_map;
     std::atomic<unsigned int> nr_profiles = 0;
     std::string last_main_profile;
+  };
+
+  struct StartProfStor {
+    int err;
+    std::string req_id;
+    ProfileType type;
+    ProfileOptions options;
   };
 
   ZmqAgent();
@@ -510,30 +502,11 @@ class ZmqAgent {
 
   static void update_state_msg_cb(nsuv::ns_async*, ZmqAgent*);
 
+  static void start_profiling_msg_cb(nsuv::ns_async*, ZmqAgent*);
+
   static void env_metrics_cb(SharedThreadMetrics, ZmqAgent*);
 
   static void status_command_cb(SharedEnvInst, ZmqAgent*);
-
-  static void cpu_profile_cb(int status,
-                             std::string profile,
-                             uint64_t thread_id,
-                             ZmqAgent* agent);
-
-  static void heap_profile_cb(int status,
-                              std::string profile,
-                              uint64_t thread_id,
-                              ZmqAgent* agent);
-
-  static void heap_sampling_cb(int status,
-                               std::string profile,
-                               uint64_t thread_id,
-                               ZmqAgent* agent);
-
-  static void heap_snapshot_cb(int,
-                               std::string,
-                               std::tuple<ZmqAgent*, std::string, uint64_t>*);
-
-  static void heap_snapshot_msg_cb(nsuv::ns_async*, ZmqAgent*);
 
   static void blocked_loop_msg_cb(nsuv::ns_async*, ZmqAgent*);
 
@@ -588,25 +561,32 @@ class ZmqAgent {
 
   int command_message(const nlohmann::json& message);
 
-  int do_start_prof(const nlohmann::json& message,
-                    const std::string& req_id,
-                    ProfileType type);
+  int do_start_prof_init(
+      const nlohmann::json& message,
+      ProfileType type,
+      ProfileOptions& options);  // NOLINT(runtime/references)
+
+  int do_start_prof_end(int err,
+                        const std::string& req_id,
+                        ProfileType type,
+                        ProfileOptions&& options);
 
   // NOLINTNEXTLINE(runtime/references)
-  int do_start_cpu_prof(const nlohmann::json&, ProfileStor& stor);
+  int do_start_cpu_prof(const nlohmann::json&, ProfileOptions& opts);
 
   // NOLINTNEXTLINE(runtime/references)
-  int do_start_heap_prof(const nlohmann::json&, ProfileStor& stor);
+  int do_start_heap_prof(const nlohmann::json&, ProfileOptions& opts);
 
   // NOLINTNEXTLINE(runtime/references)
-  int do_start_heap_sampl(const nlohmann::json&, ProfileStor& stor);
+  int do_start_heap_sampl(const nlohmann::json&, ProfileOptions& opts);
+
+  // NOLINTNEXTLINE(runtime/references)
+  int do_start_heap_snapshot(const nlohmann::json&, ProfileOptions& opts);
 
   void do_got_prof(ProfileType type,
                    uint64_t thread_id,
                    int status,
-                   const std::string& profile,
-                   const char* cmd,
-                   const char* stop_cmd);
+                   const std::string& profile);
 
   void got_custom_command_response(const std::string&,
                                    const std::string&,
@@ -615,11 +595,6 @@ class ZmqAgent {
                                    const std::pair<bool, std::string>&);
 
   void got_env_metrics(const ThreadMetrics::MetricsStor& stor);
-
-  void got_heap_snapshot(int status,
-                         const std::string& snaphost,
-                         const std::string& req_id,
-                         const uint64_t thread_id);
 
   // NOLINTNEXTLINE(runtime/references)
   void got_spans(const std::vector<Tracer::SpanStor>& spans);
@@ -637,6 +612,22 @@ class ZmqAgent {
   int reset_command_handle(bool handshake_failed = false);
 
   void resize_msg_buffer(int size);
+
+  int start_heap_profiling(
+    const nlohmann::json& message,
+    const std::string& req_id = utils::generate_unique_id());
+
+  int start_heap_sampling(
+    const nlohmann::json& message,
+    const std::string& req_id = utils::generate_unique_id());
+
+  int start_heap_snapshot(
+    const nlohmann::json& message,
+    const std::string& req_id = utils::generate_unique_id());
+
+  int start_profiling(
+    const nlohmann::json& message,
+    const std::string& req_id = utils::generate_unique_id());
 
   int send_command_message(const char* command,
                            const char* request_id,
@@ -737,13 +728,8 @@ class ZmqAgent {
   ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;
   std::shared_ptr<ProfileCollector> profile_collector_;
-
-  // Heap Snapshot
-  nsuv::ns_async heap_snapshot_msg_;
-  TSQueue<std::tuple<int, std::string, std::string, uint64_t>>
-    heap_snapshot_msg_q_;
-  std::map<std::string, std::tuple<nlohmann::json, uint64_t>>
-    pending_heap_snapshot_data_map_;
+  nsuv::ns_async start_profiling_msg_;
+  TSQueue<StartProfStor> start_profiling_msg_q_;
 
   // Blocked Loop
   nsuv::ns_async blocked_loop_msg_;
