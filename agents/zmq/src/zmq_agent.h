@@ -725,7 +725,7 @@ class ZmqAgent {
   nsuv::ns_async update_state_msg_;
 
   // Profiling
-  ProfileState profile_state_[ProfileType::kNumberOfProfileTypes - 1];
+  ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;
   std::shared_ptr<ProfileCollector> profile_collector_;
   nsuv::ns_async start_profiling_msg_;
