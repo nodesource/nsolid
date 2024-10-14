@@ -1219,7 +1219,7 @@ void GrpcAgent::handle_command_request(grpcagent::CommandRequest&& request) {
     send_packages_event(request.requestid().c_str());
   } else if (cmd == "reconfigure") {
     reconfigure(request);
-  } else if (cmd == "cpu_profile") {
+  } else if (cmd == "profile") {
     do_start_prof(request, ProfileType::kCpu);
   } else if (cmd == "heap_profile") {
     do_start_prof(request, ProfileType::kHeapProf);

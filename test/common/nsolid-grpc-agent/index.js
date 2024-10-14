@@ -86,9 +86,9 @@ class GRPCServer extends EventEmitter {
     return new Promise((resolve) => {
       if (this.#server) {
         const requestId = randomUUID();
-        this.#server.send({ type: 'cpu_profile', agentId, requestId, options });
+        this.#server.send({ type: 'profile', agentId, requestId, options });
         const msgListener = (msg) => {
-          if (msg.type === 'cpu_profile' && msg.data.msg.common.requestId === requestId) {
+          if (msg.type === 'profile' && msg.data.msg.common.requestId === requestId) {
             this.#server.off('message', msgListener);
             resolve({ requestId, data: msg.data });
           }
