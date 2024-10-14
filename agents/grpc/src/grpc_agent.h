@@ -121,6 +121,13 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     std::string last_main_profile;
   };
 
+  struct StartProfStor {
+    int err;
+    std::string req_id;
+    ProfileType type;
+    ProfileOptions options;
+  };
+
   GrpcAgent();
 
   ~GrpcAgent();
@@ -162,6 +169,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   static void shutdown_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
   static void span_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
+
+  static void start_profiling_msg_cb(nsuv::ns_async*, WeakGrpcAgent);
 
   static void thr_metrics_cb_(SharedThreadMetrics, WeakGrpcAgent);
 
@@ -303,6 +312,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;
   std::shared_ptr<ProfileCollector> profile_collector_;
+  nsuv::ns_async start_profiling_msg_;
+  TSQueue<StartProfStor> start_profiling_msg_q_;
 
   // For the grpc client
   std::shared_ptr<GrpcClient> client_;

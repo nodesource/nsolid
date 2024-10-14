@@ -534,7 +534,7 @@ int GrpcAgent::stop(bool profile_stopped) {
 int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
   ProfileOptions options = CPUProfileOptions();
   int ret = do_start_prof_init(req, ProfileType::kCpu, options);
-  return 0;
+  return do_start_prof_end(ret, req_id, ProfileType::kCpu, std::move(options));
   // ErrorType error = do_start_prof(req, ProfileType::kCpu);
   // return fill_error_stor(error).code;
 }
@@ -791,6 +791,18 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   }
 }
 
+
+
+/*static*/void GrpcAgent::start_profiling_msg_cb(nsuv::ns_async*,
+                                                 WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  
+}
+
 /*static*/void GrpcAgent::thr_metrics_cb_(SharedThreadMetrics metrics,
                                           WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
@@ -1010,6 +1022,8 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
+  ASSERT_EQ(0, start_profiling_msg_.init(&loop_, start_profiling_msg_cb, weak_from_this()));
+
   profile_collector_ = std::make_shared<ProfileCollector>(
     &loop_,
     +[](ProfileCollector::ProfileQStor&& stor, WeakGrpcAgent agent_wp) {
@@ -1059,6 +1073,7 @@ void GrpcAgent::do_stop() {
   blocked_loop_msg_.close();
   env_msg_.close();
   shutdown_.close();
+  start_profiling_msg_.close();
 }
 
 void GrpcAgent::got_spans(const UniqRecordables& recordables) {
@@ -1709,27 +1724,33 @@ ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
 }
 
 ErrorType GrpcAgent::do_start_prof_end(ErrorType err,
+                                       const std::string& req_id,
                                        const ProfileType& type,
                                        ProfileOptions&& opts) {
-  if (err == ErrorType::ESuccess) {
-    ProfileState& profile_state = profile_state_[type];
-    auto iter = profile_state.pending_profiles_map.emplace(thread_id,
-                                                           std::move(stor));
-    ASSERT_NE(iter.second, false);
-    profile_state.nr_profiles++;
-    return ErrorType::ESuccess;
+  if (err != ErrorType::ESuccess) {
+    send_asset_error(type, ProfileStor{req_id, 0, nullptr, std::move(opts), false}, err);
+    return err;
   }
 
-  stor.done = true;
-  if (err == ErrorType::EUnknown) {
-    err = ErrorType::EProfSnapshotError;
-  }
+  // if (err == ErrorType::ESuccess) {
+  //   ProfileState& profile_state = profile_state_[type];
+  //   auto iter = profile_state.pending_profiles_map.emplace(thread_id,
+  //                                                          std::move(stor));
+  //   ASSERT_NE(iter.second, false);
+  //   profile_state.nr_profiles++;
+  //   return ErrorType::ESuccess;
+  // }
 
-  Debug("Error starting profile: %d\n", static_cast<int>(err));
+  // stor.done = true;
+  // if (err == ErrorType::EUnknown) {
+  //   err = ErrorType::EProfSnapshotError;
+  // }
 
-  send_asset_error(type, stor, err);
+  // Debug("Error starting profile: %d\n", static_cast<int>(err));
 
-  return err;
+  // send_asset_error(type, stor, err);
+
+  // return err;
 }
 
 ErrorType GrpcAgent::do_start_cpu_prof(const grpcagent::ProfileArgs&,
