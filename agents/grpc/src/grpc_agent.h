@@ -229,7 +229,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   void reconfigure(const grpcagent::CommandRequest& config);
 
   void send_asset_error(const ProfileType& type,
-                        const ProfileStor& stor,
+                        const std::string& req_id,
+                        const ProfileOptions& options,
+                        AssetStream* stream,
                         const ErrorType& error);
 
   void send_blocked_loop_event(BlockedLoopStor&& stor);

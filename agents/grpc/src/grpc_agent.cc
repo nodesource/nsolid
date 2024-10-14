@@ -1340,7 +1340,9 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
 }
 
 void GrpcAgent::send_asset_error(const ProfileType& type,
-                                 const ProfileStor& stor,
+                                 const std::string& req_id,
+                                 ProfileOptions options,
+                                 AssetStream* stream,
                                  const ErrorType& error) {
   grpcagent::Asset asset;
   google::protobuf::Struct metadata;
@@ -1348,12 +1350,12 @@ void GrpcAgent::send_asset_error(const ProfileType& type,
   std::visit([&metadata,&thread_id](auto& opt) {
     thread_id = opt.thread_id;
     metadata = std::move(opt.metadata_pb);
-  }, stor.options);
-  PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], stor.req_id.c_str());
+  }, options);
+  PopulateCommon(asset.mutable_common(), ProfileTypeStr[type],req_id.c_str());
   PopulateError(asset.mutable_common(), error);
   asset.mutable_metadata()->CopyFrom(metadata);
-  stor.stream->Write(std::move(asset));
-  stor.stream->WritesDone(true);
+  stream->Write(std::move(asset));
+  stream->WritesDone(true);
 }
 
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
@@ -1618,7 +1620,7 @@ ErrorType GrpcAgent::do_start_prof_init(
     opt.metadata_pb = std::move(args.metadata());
   }, options);
 
-  (this->*start_profiling)(args, options);
+  return (this->*start_profiling)(args, options);
 }
 
 ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
@@ -1727,10 +1729,26 @@ ErrorType GrpcAgent::do_start_prof_end(ErrorType err,
                                        const std::string& req_id,
                                        const ProfileType& type,
                                        ProfileOptions&& opts) {
+  uint64_t thread_id =
+    std::visit([](auto&& opt) { return opt.thread_id; }, options);
+  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(),
+                                        weak_from_this(),
+                                        AssetStream::AssetStor{type, thread_id});
   if (err != ErrorType::ESuccess) {
-    send_asset_error(type, ProfileStor{req_id, 0, nullptr, std::move(opts), false}, err);
+    send_asset_error(type, req_id, opts, ProfileStor{req_id, 0, nullptr, std::move(opts), false}, err);
     return err;
   }
+
+  ProfileState& profile_state = profile_state_[type];
+  ProfileStor stor{ req_id, uv_now(&loop_), stream, std::move(options) };
+  auto iter = profile_state.pending_profiles_map.emplace(thread_id,
+                                                         std::move(stor));
+  ASSERT_NE(iter.second, false);
+  if (type != kHeapSnapshot) {
+    profile_state.nr_profiles++;
+  }
+
+  return 0;
 
   // if (err == ErrorType::ESuccess) {
   //   ProfileState& profile_state = profile_state_[type];
