@@ -175,6 +175,10 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void do_stop();
 
+  ErrorType do_start_prof_init(const grpcagent::CommandRequest& req,
+                               const ProfileType& type,
+                               ProfileOptions& options);  // NOLINT(runtime/references)
+
   ErrorType do_start_prof(const grpcagent::CommandRequest& req,
                           const ProfileType& type);
 
@@ -183,17 +187,17 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
                               uint64_t thread_id,
                               ErrorType err);
 
-  ErrorType do_start_cpu_prof(const ProfileOptions& opts,
-                              const ProfileStor& stor);
+  ErrorType do_start_cpu_prof(const grpcagent::ProfileArgs&,
+                              ProfileOptions& opts);
 
-  ErrorType do_start_heap_prof(const ProfileOptions& opts,
-                               const ProfileStor& stor);
+  ErrorType do_start_heap_prof(const grpcagent::ProfileArgs& args,
+                               ProfileOptions& opts);
 
-  ErrorType do_start_heap_sampl(const ProfileOptions& opts,
-                                const ProfileStor& stor);
+  ErrorType do_start_heap_sampl(const grpcagent::ProfileArgs& args,
+                                ProfileOptions& opts);
 
-  ErrorType do_start_heap_snapshot(const ProfileOptions& opts,
-                                   const ProfileStor& stor);
+  ErrorType do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
+                                   ProfileOptions& opts);
 
   void got_asset_done_msg();
 
