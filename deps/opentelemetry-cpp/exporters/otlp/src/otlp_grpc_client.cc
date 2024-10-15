@@ -215,6 +215,10 @@ static sdk::common::ExportResult InternalDelegateAsyncExport(
                  if (call_data->grpc_status.ok())
                  {
                    call_data->export_result = opentelemetry::sdk::common::ExportResult::kSuccess;
+                 } else {
+                    fprintf(stderr, "OtlpGrpcClient::InternalDelegateAsyncExport() failed. : %s %s\n",
+                            call_data->grpc_status.error_message().c_str(),
+                            call_data->grpc_status.error_details().c_str());
                  }
 
                  if (call_data->grpc_async_callback)
