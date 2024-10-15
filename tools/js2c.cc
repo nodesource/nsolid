@@ -344,7 +344,7 @@ std::string GetFileId(const std::string& filename) {
     // lib/internal/url.js -> internal/url
     start = libPrefix.size();
     prefix = "";
-  } else if (StartsWith(filename, agentsPrefix)) {
+  } else if (filename.starts_with(agentsPrefix)) {
     start = agentsPrefix.size();
     prefix = "internal/agents/";
   }

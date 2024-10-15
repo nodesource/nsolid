@@ -182,6 +182,8 @@ class EnvInst {
     EnvInst* const envinst_;
   };
 
+  void CloseInstHandles();
+
   // These calls must be static because there's a chance that GetInst() returns
   // an empty shared_ptr. So to perform the entire operation in a single fn
   // call, have the user pass in the thread_id.

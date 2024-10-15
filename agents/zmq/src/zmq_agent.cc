@@ -40,15 +40,15 @@ inline int PrintZmqError(zmq::ErrorType code, Args&&... args) {
 }
 
 inline void DebugJSON(const char* str, const json& msg) {
-  if (UNLIKELY(per_process::enabled_debug_list.enabled(
-        DebugCategory::NSOLID_ZMQ_AGENT))) {
+  if (per_process::enabled_debug_list.enabled(
+        DebugCategory::NSOLID_ZMQ_AGENT)) {
     Debug(str, msg.dump(4).c_str());
   }
 }
 
 inline void DebugEvent(uint16_t event, const ZmqHandle& handle) {
-  if (UNLIKELY(per_process::enabled_debug_list.enabled(
-        DebugCategory::NSOLID_ZMQ_AGENT))) {
+  if (per_process::enabled_debug_list.enabled(
+        DebugCategory::NSOLID_ZMQ_AGENT)) {
     switch (event) {
 #define X(type)                                                                \
       case type:                                                               \

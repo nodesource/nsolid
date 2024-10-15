@@ -124,17 +124,23 @@ EnvInst::EnvInst(Environment* env)
   eloop_cmds_msg_.unref();
   interrupt_msg_.unref();
   metrics_handle_.unref();
-  env->RegisterHandleCleanup(eloop_cmds_msg_.base_handle(),
-                             handle_cleanup_cb_,
-                             nullptr);
-  env->RegisterHandleCleanup(interrupt_msg_.base_handle(),
-                             handle_cleanup_cb_,
-                             nullptr);
-  env->RegisterHandleCleanup(metrics_handle_.base_handle(),
-                             handle_cleanup_cb_,
-                             nullptr);
   er = metrics_handle_.start(uv_metrics_cb_, this);
   CHECK_EQ(er, 0);
+}
+
+
+void EnvInst::CloseInstHandles() {
+  auto close_and_finish = [&](uv_handle_t* handle) {
+    env()->CloseHandle(handle, [](uv_handle_t* handle) {
+#ifdef DEBUG
+      memset(handle, 0xab, uv_handle_size(handle->type));
+#endif
+    });
+  };
+
+  close_and_finish(eloop_cmds_msg_.base_handle());
+  close_and_finish(interrupt_msg_.base_handle());
+  close_and_finish(metrics_handle_.base_handle());
 }
 
 
@@ -643,7 +649,7 @@ void EnvInst::uv_metrics_cb_(nsuv::ns_prepare* handle, EnvInst* envinst) {
   envinst->prev_events_processed_ = metrics->events;
   envinst->prev_events_waiting_ = metrics->events_waiting;
 
-  if (UNLIKELY(envinst->reported_blocked_)) {
+  if (envinst->reported_blocked_) {
     // Only generate the stack and call the unblocked hook callbacks if the
     // body was already generated for OnBlockedLoopHook.
     if (envinst->blocked_body_created_) {
