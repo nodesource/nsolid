@@ -23,20 +23,20 @@ async function startServer(cb) {
         data: 'Hello World!',
       }));
 
-      // If url ends in traces, decode spans
-      if (req.url.endsWith('/v1/traces')) {
+      // If url ends in traces, decode spans.
+      console.log(req.url);
+      assert.ok(req.url === '/v1/traces' || req.url === '/v1/metrics');
+      if (req.url === '/v1/traces') {
         const data = ExportSpansServiceRequestProto.decode(Buffer.concat(body));
         const spans = data?.toJSON();
         cb(null, 'spans', spans);
         return;
       }
 
-      // If url ends in metrics, decode metrics
-      if (req.url.endsWith('/v1/metrics')) {
-        const data = ExportMetricsServiceRequestProto.decode(Buffer.concat(body));
-        const metrics = data?.toJSON();
-        cb(null, 'metrics', metrics);
-      }
+      // Otherwise decode metrics.
+      const data = ExportMetricsServiceRequestProto.decode(Buffer.concat(body));
+      const metrics = data?.toJSON();
+      cb(null, 'metrics', metrics);
     });
   });
 

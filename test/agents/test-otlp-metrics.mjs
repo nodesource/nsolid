@@ -632,7 +632,7 @@ if (process.argv[2] === 'child') {
         NSOLID_INTERVAL: 1000,
         NSOLID_OTLP: 'otlp',
         OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf',
-        OTEL_EXPORTER_OTLP_ENDPOINT: `http://localhost:${port}/v1/metrics`,
+        OTEL_EXPORTER_OTLP_ENDPOINT: `http://localhost:${port}`,
       };
     },
     (port) => {

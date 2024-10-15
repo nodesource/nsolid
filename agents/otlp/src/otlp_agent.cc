@@ -538,14 +538,15 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
     is_http = *it == "http";
   }
 
-  const std::string url = config["url"].get<std::string>() + "/v1/traces";
+  const std::string url = config["url"].get<std::string>();
+  const std::string trace_url = url + "/v1/traces";
   if (is_http) {
     exporter::otlp::OtlpHttpExporterOptions opts;
-    opts.url = url;
+    opts.url = trace_url;
     setup_trace_otlp_exporter(opts);
   } else {
     exporter::otlp::OtlpGrpcExporterOptions opts;
-    opts.endpoint = url;
+    opts.endpoint = trace_url;
     setup_trace_grpc_otlp_exporter(opts);
   }
 
