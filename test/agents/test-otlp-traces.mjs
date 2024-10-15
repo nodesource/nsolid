@@ -280,7 +280,7 @@ if (process.argv[2] === 'child') {
         NSOLID_TRACING_ENABLED: 1,
         NSOLID_OTLP: 'otlp',
         OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf',
-        OTEL_EXPORTER_OTLP_ENDPOINT: `http://localhost:${port}/v1/traces`,
+        OTEL_EXPORTER_OTLP_ENDPOINT: `http://localhost:${port}`,
       };
     },
     (port) => {

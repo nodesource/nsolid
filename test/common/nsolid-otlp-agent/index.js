@@ -1,5 +1,6 @@
 'use strict';
 
+const assert = require('node:assert');
 const { EventEmitter } = require('node:events');
 const { fork } = require('node:child_process');
 const path = require('node:path');
@@ -31,7 +32,8 @@ class OTLPServer extends EventEmitter {
           break;
       }
     });
-    this.#server.on('exit', (code, signal) => {
+    this.#server.on('exit', (code) => {
+      assert.strictEqual(code, 0);
       this.#server = null;
     });
   }
