@@ -23,7 +23,7 @@ namespace grpc {
 class GrpcAgent;
 
 class CommandStream:
-  public::grpc::ClientBidiReactor<grpcagent::CommandResponse, grpcagent::CommandRequest> {
+  public ::grpc::ClientBidiReactor<grpcagent::CommandResponse, grpcagent::CommandRequest> {
 
   struct WriteState {
     bool write_done = true;

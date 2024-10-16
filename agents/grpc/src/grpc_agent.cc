@@ -432,6 +432,7 @@ void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request,
 }
 
 void GrpcAgent::reset_command_stream() {
+  Debug("Resetting command stream\n");
   command_stream_ =
         std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
 }
@@ -443,6 +444,7 @@ void GrpcAgent::set_asset_cb(SharedEnvInst envinst,
                         std::forward_as_tuple(envinst->isolate(), cb));
 }
 
+// FIXME(santigimeno): this should be executed in the agent thread!
 void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
   const ::grpc::StatusCode code = status.error_code();
   if (code == ::grpc::StatusCode::UNAUTHENTICATED) {
@@ -472,7 +474,9 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
     return;
   }
 
+  Debug("Retrying authentication\n");
   ASSERT_EQ(0, auth_timer_.start(+[](nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
+    Debug("Auth Timer cb\n");
     SharedGrpcAgent agent = agent_wp.lock();
     if (agent == nullptr) {
       return;

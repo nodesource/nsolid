@@ -43,7 +43,7 @@ CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
   if (!saas.empty()) {
     context_.AddMetadata("nsolid-saas-token", saas);
   }
-  context_.set_wait_for_ready(true);
+  // context_.set_wait_for_ready(true);
   stub->async()->Command(&context_, this);
   StartRead(&server_request_);
   AddHold();
