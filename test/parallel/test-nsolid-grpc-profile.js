@@ -44,19 +44,19 @@ const nsolid = require('nsolid');
 });
 
 // profile() should return error if not connected to a console
-// assert.throws(
-//   () => {
-//     nsolid.profile();
-//   },
-//   {
-//     message: 'CPU profile could not be started'
-//   }
-// );
+assert.throws(
+  () => {
+    nsolid.profile();
+  },
+  {
+    message: 'CPU profile could not be started'
+  }
+);
 
-// nsolid.profile(common.mustCall((err) => {
-//   assert.notStrictEqual(err.code, 0);
-//   assert.strictEqual(err.message, 'CPU profile could not be started');
-// }));
+nsolid.profile(common.mustCall((err) => {
+  assert.notStrictEqual(err.code, 0);
+  assert.strictEqual(err.message, 'CPU profile could not be started');
+}));
 
 // Configure the console so the `profile()` call may succeed
 nsolid.start({

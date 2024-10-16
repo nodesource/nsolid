@@ -27,14 +27,9 @@ module.exports = ({ heapProfile: _heapProfile,
                     profile: _profile,
                     profileEnd: _profileEnd,
                     snapshot: _snapshot,
-                    registerAssetCb,
                     start,
                     status,
                     stop }) => {
-  const assetCb_map = new Map();
-  function asset_cb(id, status) {
-
-  }
 
   const profile = (timeout, cb) => {
     if (typeof timeout === 'function') {
@@ -49,20 +44,17 @@ module.exports = ({ heapProfile: _heapProfile,
       validateFunction(cb, 'profileCallback');
     }
 
-    const uuid = randomUUID();
-    if (cb) {
-      assetCb_map.set(uuid, cb);
+    const status = _profile(timeout);
+    let err;
+    if (status !== 0) {
+      err = new ERR_NSOLID_CPU_PROFILE_START();
+      err.code = status;
     }
 
-    const status = _profile(timeout, uuid);
-    if (status !== 0) {
-      const err = new ERR_NSOLID_CPU_PROFILE_START();
-      err.code = status;
-      if (cb) {
-        process.nextTick(() => cb(err));
-      } else if (err) {
-        throw err;
-      }
+    if (cb) {
+      process.nextTick(() => cb(err));
+    } else if (err) {
+      throw err;
     }
   };
 

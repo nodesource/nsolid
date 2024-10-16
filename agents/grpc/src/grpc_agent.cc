@@ -424,9 +424,8 @@ GrpcAgent::~GrpcAgent() {
   ASSERT_EQ(0, uv_loop_close(&loop_));
 }
 
-void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request,
-                                    bool from_js_api) {
-  if (command_q_.enqueue(CommandRequestStor{std::move(request), from_js_api}) == 1) {
+void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
+  if (command_q_.enqueue(CommandRequestStor{std::move(request)}) == 1) {
     ASSERT_EQ(0, command_msg_.send());
   }
 }
@@ -474,9 +473,7 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
     return;
   }
 
-  Debug("Retrying authentication\n");
   ASSERT_EQ(0, auth_timer_.start(+[](nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
-    Debug("Auth Timer cb\n");
     SharedGrpcAgent agent = agent_wp.lock();
     if (agent == nullptr) {
       return;
@@ -694,6 +691,19 @@ int GrpcAgent::start_heap_snapshot_from_js(const grpcagent::CommandRequest& req)
   }
 }
 
+/*static*/ void GrpcAgent::command_stream_done_msg_cb_(nsuv::ns_async*,
+                                                       WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr) {
+    return;
+  }
+
+  ::grpc::Status status;
+  while (agent->command_stream_done_q_.dequeue(status)) {
+    agent->command_stream_closed(status);
+  }
+}
+
 /*static*/ void GrpcAgent::config_agent_cb_(std::string config,
                                             WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
@@ -898,15 +908,14 @@ static string_vector tracing_fields({ "/tracingEnabled",
                                       "/tracingModulesBlacklist" });
 
 
-void GrpcAgent::on_asset_stream_done(const AssetStream::AssetStor& stor,
-                                     std::weak_ptr<GrpcAgent> agent_wp) {
-  SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
-    return;
-  }
+void GrpcAgent::on_asset_stream_done(AssetStream::AssetStor&& stor) {
+  asset_done_q_.enqueue(std::move(stor));
+  ASSERT_EQ(0, asset_done_msg_.send());
+}
 
-  agent->asset_done_q_.enqueue(stor);
-  ASSERT_EQ(0, agent->asset_done_msg_.send());
+void GrpcAgent::on_command_stream_done(const ::grpc::Status& status) {
+  command_stream_done_q_.enqueue(status);
+  ASSERT_EQ(0, command_stream_done_msg_.send());
 }
 
 void GrpcAgent::check_exit_on_profile() {
@@ -1093,6 +1102,8 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, command_msg_.init(&loop_, command_msg_cb_, weak_from_this()));
 
+  ASSERT_EQ(0, command_stream_done_msg_.init(&loop_, command_stream_done_msg_cb_, weak_from_this()));
+
   ASSERT_EQ(0, auth_timer_.init(&loop_));
 
   ASSERT_EQ(0, log_msg_.init(&loop_, log_msg_cb_, weak_from_this()));
@@ -1144,6 +1155,7 @@ void GrpcAgent::do_stop() {
   profile_collector_.reset();
   asset_done_msg_.close();
   command_msg_.close();
+  command_stream_done_msg_.close();
   log_msg_.close();
   auth_timer_.close();
   config_msg_.close();
@@ -1700,108 +1712,6 @@ ErrorType GrpcAgent::do_start_prof_init(
 
   return (this->*start_profiling)(args, options);
 }
-
-// ErrorType GrpcAgent::do_start_prof(const grpcagent::CommandRequest& req,
-//                                    const ProfileType& type) {
-//   ErrorType err = ErrorType::ESuccess;
-//   const grpcagent::ProfileArgs& args = req.args().profile();
-//   uint64_t thread_id = args.thread_id();
-//   uint64_t duration = args.duration();
-
-//   ProfileOptions options;
-//   StartProfiling start_profiling = nullptr;
-//   switch (type) {
-//     case ProfileType::kCpu:
-//       options = CPUProfileOptions{};
-//       start_profiling = &GrpcAgent::do_start_cpu_prof;
-//       break;
-//     case ProfileType::kHeapProf:
-//     {
-//       HeapProfileOptions opts = HeapProfileOptions{};
-//       opts.track_allocations = args.heap_profile().track_allocations();
-//       auto it = config_.find("redactSnapshots");
-//       if (it != config_.end()) {
-//         if (it->is_boolean()) {
-//           opts.redacted = *it;
-//         }
-//       }
-
-//       options = opts;
-//       start_profiling = &GrpcAgent::do_start_heap_prof;
-//       break;
-//     }
-//     case ProfileType::kHeapSampl:
-//     {
-//       HeapSamplingOptions opts = HeapSamplingOptions{};
-//       const auto& heap_sampling = args.heap_sampling();
-//       opts.sample_interval = heap_sampling.sample_interval();
-//       if (opts.sample_interval == 0) {
-//         opts.sample_interval = 512 * 1024;
-//       }
-
-//       opts.stack_depth = heap_sampling.stack_depth();
-//       if (opts.stack_depth == 0) {
-//         opts.stack_depth = 16;
-//       }
-
-//       opts.flags = static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());
-//       options = opts;
-//       start_profiling = &GrpcAgent::do_start_heap_sampl;
-//       break;
-//     }
-//     case ProfileType::kHeapSnapshot:
-//     {
-//       HeapSnapshotOptions opts = HeapSnapshotOptions{};
-//       bool disable_snapshots = false;
-//       auto it = config_.find("disableSnapshots");
-//       if (it != config_.end()) {
-//         disable_snapshots = *it;
-//       }
-
-//       if (disable_snapshots == true) {
-//         return ErrorType::ESnapshotDisabled;
-//       }
-
-//       it = config_.find("redactSnapshots");
-//       if (it != config_.end()) {
-//         if (it->is_boolean()) {
-//           opts.redacted = *it;
-//         }
-//       }
-
-//       options = opts;
-//       start_profiling = &GrpcAgent::do_start_heap_snapshot;
-//       break;
-//     }
-//     default:
-//       ASSERT(false);
-//   }
-
-//   // Set common fields in options
-//   std::visit([&](auto& opt) {
-//     opt.thread_id = thread_id;
-//     opt.duration = duration;
-//     opt.metadata_pb = std::move(args.metadata());
-//   }, options);
-
-//   const std::string& req_id = req.requestid().empty() ? utils::generate_unique_id() : req.requestid();
-//   AssetStream* stream = new AssetStream(nsolid_service_stub_.get(),
-//                                         weak_from_this(),
-//                                         AssetStream::AssetStor{type, thread_id});
-//   ProfileStor stor{ req_id, uv_now(&loop_), stream, std::move(options), req.requestid().empty() };
-
-//   ProfileState& profile_state = profile_state_[type];
-//   if (profile_state.pending_profiles_map.find(thread_id) !=
-//       profile_state.pending_profiles_map.end()) {
-//     err = ErrorType::EInProgressError;
-//   }
-
-//   if (err == ErrorType::ESuccess) {
-//     err = (this->*start_profiling)(stor.options, stor);
-//   }
-
-//   return do_start_prof_end(std::move(stor), type, thread_id, err);
-// }
 
 ErrorType GrpcAgent::do_start_prof_end(ErrorType err,
                                        const std::string& req_id,

@@ -43,7 +43,7 @@ CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
   if (!saas.empty()) {
     context_.AddMetadata("nsolid-saas-token", saas);
   }
-  // context_.set_wait_for_ready(true);
+  context_.set_wait_for_ready(true);
   stub->async()->Command(&context_, this);
   StartRead(&server_request_);
   AddHold();
@@ -57,17 +57,14 @@ CommandStream::~CommandStream() {
 void CommandStream::OnDone(const ::grpc::Status& s) {
   Debug("[%ld] CommandStream::OnDone: %d. %s:%s\n", pthread_self(), s.error_code(), s.error_message().c_str(), s.error_details().c_str());
   if (agent_) {
-    agent_->command_stream_closed(s);
+    agent_->on_command_stream_done(s);
   }
 }
 
 void CommandStream::OnReadDone(bool ok) {
   Debug("[%ld] CommandStream::OnReadDone: %d\n", pthread_self(), ok);
   if (ok) {
-    // fprintf(stderr, "OnReadDone\n");
-    // fprintf(stderr, "Command: %s\n", server_request_.command().c_str());
     agent_->got_command_request(std::move(server_request_));
-    // Write(grpcagent::CommandResponse());
     StartRead(&server_request_);
   } else {
     StartWritesDone();
@@ -128,7 +125,7 @@ void AssetStream::OnDone(const ::grpc::Status& s) {
   if (agent != nullptr) {
     // Don't continue with the exit procedure until all asset streams have finished.
     stor_.stream = this;
-    agent->on_asset_stream_done(stor_, agent_);
+    agent->on_asset_stream_done(std::move(stor_));
   } else {
     delete this;
   }

@@ -68,13 +68,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static SharedGrpcAgent Inst();
 
-  void command_stream_closed(const ::grpc::Status& s);
+  void got_command_request(grpcagent::CommandRequest&& request);
 
-  void got_command_request(grpcagent::CommandRequest&& request,
-                           bool from_js_api = false);
+  void on_asset_stream_done(AssetStream::AssetStor&& stor);
 
-  void on_asset_stream_done(const AssetStream::AssetStor& stor,
-                            std::weak_ptr<GrpcAgent> agent);
+  void on_command_stream_done(const ::grpc::Status& s);
 
   void reset_command_stream();
 
@@ -151,6 +149,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   static void command_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
+  static void command_stream_done_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
+
   static void config_agent_cb_(std::string, WeakGrpcAgent);
 
   static void config_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
@@ -186,6 +186,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   static void trace_hook_(Tracer*, const Tracer::SpanStor&, WeakGrpcAgent);
 
   void check_exit_on_profile();
+
+  void command_stream_closed(const ::grpc::Status& s);
 
   int config(const nlohmann::json& config);
 
@@ -336,6 +338,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   // For the gRPC server
   nsuv::ns_async command_msg_;
   TSQueue<CommandRequestStor> command_q_;
+
+  nsuv::ns_async command_stream_done_msg_;
+  TSQueue<::grpc::Status> command_stream_done_q_;
 
   nsuv::ns_async asset_done_msg_;
   TSQueue<AssetStream::AssetStor> asset_done_q_;

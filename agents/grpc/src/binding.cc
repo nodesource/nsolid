@@ -22,13 +22,6 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
-static void RegisterAssetCb(const FunctionCallbackInfo<Value>& args) {
-  ASSERT(args[0]->IsFunction());
-  Local<Function> cb = args[0].As<Function>();
-  ASSERT(!cb->IsConstructor());
-  GrpcAgent::Inst()->set_asset_cb(GetLocalEnvInst(args.GetIsolate()), cb);
-}
-
 static void Status(const FunctionCallbackInfo<Value>& args) {
   // args.GetReturnValue().Set(
   //   String::NewFromUtf8(args.GetIsolate(),
@@ -53,25 +46,15 @@ static void Snapshot(const FunctionCallbackInfo<Value>& args) {
 }
 
 static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
-  ASSERT_EQ(2 , args.Length());
+  ASSERT_EQ(1, args.Length());
   ASSERT(args[0]->IsNumber());
-  ASSERT(args[1]->IsString());
   Isolate* isolate = args.GetIsolate();
   Local<Context> context = isolate->GetCurrentContext();
   uint64_t thread_id = ThreadId(context);
   uint64_t timeout = args[0].As<Number>()->Value();
-  Local<String> req_id = args[1].As<String>();
-  ASSERT(req_id->IsOneByte());
 
-  char uuid[36];
   grpcagent::CommandRequest req;
   req.set_command("profile");
-  ASSERT_EQ(sizeof(uuid), req_id->WriteOneByte(isolate,
-                                               reinterpret_cast<uint8_t*>(uuid),
-                                               0,
-                                               sizeof(uuid),
-                                               String::NO_NULL_TERMINATION));
-  req.set_requestid(std::string(uuid, sizeof(uuid)));
   auto* command_args = req.mutable_args();
   auto* profile_args = command_args->mutable_profile(); 
   profile_args->set_thread_id(thread_id);
@@ -158,7 +141,6 @@ static void Start(const FunctionCallbackInfo<Value>& args) {
 }
 
 static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
-  registry->Register(RegisterAssetCb);
   registry->Register(Status);
   registry->Register(Snapshot);
   registry->Register(StartCPUProfile);
@@ -174,7 +156,6 @@ void InitGrpcAgent(Local<Object> exports,
                   Local<Value> unused,
                   Local<Context> context,
                   void* priv) {
-  NODE_SET_METHOD(exports, "registerAssetCb", RegisterAssetCb);
   NODE_SET_METHOD(exports, "status", Status);
   NODE_SET_METHOD(exports, "snapshot", Snapshot);
   NODE_SET_METHOD(exports, "profile", StartCPUProfile);
