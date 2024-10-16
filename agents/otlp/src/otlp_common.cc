@@ -180,7 +180,8 @@ Resource* UpdateResource(ResourceAttributes&& attrs) {
 
 // NOLINTNEXTLINE(runtime/references)
 void fill_proc_metrics(std::vector<MetricData>& metrics,
-                       const ProcessMetrics::MetricsStor& stor) {
+                       const ProcessMetrics::MetricsStor& stor,
+                       bool use_snake_case) {
   time_point end{
         duration_cast<time_point::duration>(
           milliseconds(static_cast<uint64_t>(stor.timestamp)))};
@@ -217,7 +218,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
         add_counter(metrics,                                                   \
                     process_start,                                             \
                     end,                                                       \
-                    #JSName,                                                   \
+                    use_snake_case ? #CName : #JSName,                         \
                     Unit,                                                      \
                     type,                                                      \
                     value);                                                    \
@@ -225,7 +226,13 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
       break;                                                                   \
       case MetricsType::EGauge:                                                \
       {                                                                        \
-        add_gauge(metrics, process_start, end, #JSName, Unit, type, value);    \
+        add_gauge(metrics,                                                     \
+                  process_start,                                               \
+                  end,                                                         \
+                  use_snake_case ? #CName : #JSName,                           \
+                  Unit,                                                        \
+                  type,                                                        \
+                  value);                                                      \
       }                                                                        \
       break;                                                                   \
       default:                                                                 \
@@ -240,7 +247,8 @@ NSOLID_PROCESS_METRICS_DOUBLE(V)
 
 // NOLINTNEXTLINE(runtime/references)
 void fill_env_metrics(std::vector<MetricData>& metrics,
-                      const ThreadMetrics::MetricsStor& stor) {
+                      const ThreadMetrics::MetricsStor& stor,
+                      bool use_snake_case) {
   time_point end{
         duration_cast<time_point::duration>(
           milliseconds(static_cast<uint64_t>(stor.timestamp)))};
@@ -277,7 +285,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
         add_counter(metrics,                                                   \
                     process_start,                                             \
                     end,                                                       \
-                    #JSName,                                                    \
+                    use_snake_case ? #CName : #JSName,                         \
                     Unit,                                                      \
                     type,                                                      \
                     value,                                                     \
@@ -289,7 +297,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
         add_gauge(metrics,                                                     \
                   process_start,                                               \
                   end,                                                         \
-                  #JSName,                                                      \
+                  use_snake_case ? #CName : #JSName,                           \
                   Unit,                                                        \
                   type,                                                        \
                   value,                                                       \
@@ -307,7 +315,7 @@ NSOLID_ENV_METRICS_NUMBERS(V)
   add_summary(metrics,
               process_start,
               end,
-              "gcDurUs",
+              use_snake_case ? "gc_dur_us" : "gcDurUs",
               kNSUSecs,
               InstrumentValueType::kDouble,
               {{ 0.5, stor.gc_dur_us_median },
@@ -324,7 +332,7 @@ NSOLID_ENV_METRICS_NUMBERS(V)
   add_summary(metrics,
               process_start,
               end,
-              "httpClient",
+              use_snake_case ? "http_client" : "httpClient",
               kNSMSecs,
               InstrumentValueType::kDouble,
               {{ 0.5, stor.http_client99_ptile },
@@ -333,7 +341,7 @@ NSOLID_ENV_METRICS_NUMBERS(V)
   add_summary(metrics,
               process_start,
               end,
-              "httpServer",
+              use_snake_case ? "http_server" : "httpServer",
               kNSMSecs,
               InstrumentValueType::kDouble,
               {{ 0.5, stor.http_server_median },

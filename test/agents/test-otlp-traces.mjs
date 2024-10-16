@@ -145,7 +145,7 @@ if (process.argv[2] === 'child') {
     const endTimeUnixNano = BigInt(serverSpan.endTimeUnixNano);
     assert.ok(endTimeUnixNano);
     validateArray(serverSpan.attributes, 'serverSpan.attributes');
-    assert.strictEqual(serverSpan.attributes.length, 5);
+    assert.strictEqual(serverSpan.attributes.length, 6);
     assert.strictEqual(serverSpan.attributes[0].key, 'http.method');
     assert.strictEqual(serverSpan.attributes[0].value.stringValue, 'GET');
     assert.strictEqual(serverSpan.attributes[1].key, 'http.status_code');
@@ -157,6 +157,8 @@ if (process.argv[2] === 'child') {
                        `http://127.0.0.1:${port}/`);
     assert.strictEqual(serverSpan.attributes[4].key, 'thread.id');
     assert.strictEqual(serverSpan.attributes[4].value.intValue, `${threadId}`);
+    assert.strictEqual(serverSpan.attributes[5].key, 'nsolid.span_type');
+    assert.strictEqual(serverSpan.attributes[5].value.intValue, '8');
 
     const clientSpan = spans[1];
     validateString(clientSpan.traceId, 'clientSpan.traceId');
@@ -168,7 +170,7 @@ if (process.argv[2] === 'child') {
     const endTimeUnixNano2 = BigInt(clientSpan.endTimeUnixNano);
     assert.ok(endTimeUnixNano2);
     validateArray(clientSpan.attributes, 'clientSpan.attributes');
-    assert.strictEqual(clientSpan.attributes.length, 5);
+    assert.strictEqual(clientSpan.attributes.length, 6);
     assert.strictEqual(clientSpan.attributes[0].key, 'http.method');
     assert.strictEqual(clientSpan.attributes[0].value.stringValue, 'GET');
     assert.strictEqual(clientSpan.attributes[1].key, 'http.status_code');
@@ -180,6 +182,8 @@ if (process.argv[2] === 'child') {
                        `http://127.0.0.1:${port}/`);
     assert.strictEqual(clientSpan.attributes[4].key, 'thread.id');
     assert.strictEqual(clientSpan.attributes[4].value.intValue, `${threadId}`);
+    assert.strictEqual(clientSpan.attributes[5].key, 'nsolid.span_type');
+    assert.strictEqual(clientSpan.attributes[5].value.intValue, '4');
   }
 
   function mergeResourceSpans(data, result) {

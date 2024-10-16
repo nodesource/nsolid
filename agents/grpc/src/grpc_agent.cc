@@ -757,7 +757,7 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
 
   ThreadMetricsStor stor;
   while (agent->thr_metrics_msg_q_.dequeue(stor)) {
-    otlp::fill_env_metrics(metrics, stor);
+    otlp::fill_env_metrics(metrics, stor, false);
   }
 
   data.scope_metric_data_ =
@@ -1116,7 +1116,7 @@ void GrpcAgent::got_proc_metrics() {
   ResourceMetrics data;
   data.resource_ = otlp::GetResource();
   std::vector<MetricData> metrics;
-  otlp::fill_proc_metrics(metrics, stor);
+  otlp::fill_proc_metrics(metrics, stor, false);
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
   auto result = metrics_exporter_->Export(data);
