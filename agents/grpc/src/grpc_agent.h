@@ -85,11 +85,19 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   int start_cpu_profile(const grpcagent::CommandRequest& req);
 
+  int start_cpu_profile_from_js(const grpcagent::CommandRequest& req);
+
   int start_heap_profile(const grpcagent::CommandRequest& req);
+
+  int start_heap_profile_from_js(const grpcagent::CommandRequest& req);
 
   int start_heap_sampling(const grpcagent::CommandRequest& req);
 
+  int start_heap_sampling_from_js(const grpcagent::CommandRequest& req);
+
   int start_heap_snapshot(const grpcagent::CommandRequest& req);
+
+  int start_heap_snapshot_from_js(const grpcagent::CommandRequest& req);
 
   int stop(bool profile_stopped = false);
 
@@ -123,7 +131,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   };
 
   struct StartProfStor {
-    int err;
+    ErrorType err;
     std::string req_id;
     ProfileType type;
     ProfileOptions options;

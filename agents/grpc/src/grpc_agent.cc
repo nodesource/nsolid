@@ -538,11 +538,43 @@ int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
   return fill_error_stor(error).code;
 }
 
+int GrpcAgent::start_cpu_profile_from_js(const grpcagent::CommandRequest& req) {
+  ProfileOptions options = CPUProfileOptions();
+  ErrorType ret = do_start_prof_init(req, ProfileType::kCpu, options);
+  if (ret == ErrorType::ESuccess) {
+    start_profiling_msg_q_.enqueue({
+      ret,
+      utils::generate_unique_id(),
+      ProfileType::kCpu,
+      std::move(options)
+    });
+    ASSERT_EQ(0, start_profiling_msg_.send());
+  }
+
+  return fill_error_stor(ret).code;
+}
+
 int GrpcAgent::start_heap_profile(const grpcagent::CommandRequest& req) {
   ProfileOptions options = HeapProfileOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kHeapProf, options);
   ErrorType error = do_start_prof_end(ret, req.requestid(), ProfileType::kHeapProf, std::move(options));
   return fill_error_stor(error).code;
+}
+
+int GrpcAgent::start_heap_profile_from_js(const grpcagent::CommandRequest& req) {
+  ProfileOptions options = HeapProfileOptions();
+  ErrorType ret = do_start_prof_init(req, ProfileType::kHeapProf, options);
+  if (ret == ErrorType::ESuccess) {
+    start_profiling_msg_q_.enqueue({
+      ret,
+      utils::generate_unique_id(),
+      ProfileType::kHeapProf,
+      std::move(options)
+    });
+    ASSERT_EQ(0, start_profiling_msg_.send());
+  }
+
+  return fill_error_stor(ret).code;
 }
 
 int GrpcAgent::start_heap_sampling(const grpcagent::CommandRequest& req) {
@@ -552,11 +584,43 @@ int GrpcAgent::start_heap_sampling(const grpcagent::CommandRequest& req) {
   return fill_error_stor(error).code;
 }
 
+int GrpcAgent::start_heap_sampling_from_js(const grpcagent::CommandRequest& req) {
+  ProfileOptions options = HeapSamplingOptions();
+  ErrorType ret = do_start_prof_init(req, ProfileType::kHeapSampl, options);
+  if (ret == ErrorType::ESuccess) {
+    start_profiling_msg_q_.enqueue({
+      ret,
+      utils::generate_unique_id(),
+      ProfileType::kHeapSampl,
+      std::move(options)
+    });
+    ASSERT_EQ(0, start_profiling_msg_.send());
+  }
+
+  return fill_error_stor(ret).code;
+}
+
 int GrpcAgent::start_heap_snapshot(const grpcagent::CommandRequest& req) {
   ProfileOptions options = HeapSnapshotOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kHeapSnapshot, options);
   ErrorType error = do_start_prof_end(ret, req.requestid(), ProfileType::kHeapSnapshot, std::move(options));
   return fill_error_stor(error).code;
+}
+
+int GrpcAgent::start_heap_snapshot_from_js(const grpcagent::CommandRequest& req) {
+  ProfileOptions options = HeapSnapshotOptions();
+  ErrorType ret = do_start_prof_init(req, ProfileType::kHeapSnapshot, options);
+  if (ret == ErrorType::ESuccess) {
+    start_profiling_msg_q_.enqueue({
+      ret,
+      utils::generate_unique_id(),
+      ProfileType::kHeapSnapshot,
+      std::move(options)
+    });
+    ASSERT_EQ(0, start_profiling_msg_.send());
+  }
+
+  return fill_error_stor(ret).code;
 }
 
 /*static*/ void GrpcAgent::run_(nsuv::ns_thread*,
@@ -805,7 +869,13 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  
+  StartProfStor stor;
+  while (agent->start_profiling_msg_q_.dequeue(stor)) {
+    agent->do_start_prof_end(stor.err,
+                             stor.req_id,
+                             stor.type,
+                             std::move(stor.options));
+  }
 }
 
 /*static*/void GrpcAgent::thr_metrics_cb_(SharedThreadMetrics metrics,

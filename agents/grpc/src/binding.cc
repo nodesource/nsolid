@@ -49,7 +49,7 @@ static void Snapshot(const FunctionCallbackInfo<Value>& args) {
   auto* metadata = snapshot_args->mutable_metadata();
   auto* fields = metadata->mutable_fields();
   (*fields)["reason"].set_string_value("Agent API");
-  args.GetReturnValue().Set(GrpcAgent::Inst()->start_heap_snapshot(req));
+  args.GetReturnValue().Set(GrpcAgent::Inst()->start_heap_snapshot_from_js(req));
 }
 
 static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
@@ -79,7 +79,7 @@ static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
   auto* metadata = profile_args->mutable_metadata();
   auto* fields = metadata->mutable_fields();
   (*fields)["reason"].set_string_value("Agent API");
-  args.GetReturnValue().Set(GrpcAgent::Inst()->start_cpu_profile(req));
+  args.GetReturnValue().Set(GrpcAgent::Inst()->start_cpu_profile_from_js(req));
 }
 
 static void EndCPUProfile(const FunctionCallbackInfo<Value>& args) {
@@ -110,7 +110,7 @@ static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
   (*fields)["reason"].set_string_value("Agent API");
   auto* heap_profile = profile_args->mutable_heap_profile();
   heap_profile->set_track_allocations(track_allocations);
-  args.GetReturnValue().Set(GrpcAgent::Inst()->start_heap_profile(req));
+  args.GetReturnValue().Set(GrpcAgent::Inst()->start_heap_profile_from_js(req));
 }
 
 static void EndHeapProfile(const FunctionCallbackInfo<Value>& args) {
@@ -145,7 +145,7 @@ static void StartHeapSampling(const FunctionCallbackInfo<Value>& args) {
   heap_sampling->set_sample_interval(sample_interval);
   heap_sampling->set_stack_depth(stack_depth);
   heap_sampling->set_flags(flags);
-  args.GetReturnValue().Set(GrpcAgent::Inst()->start_heap_sampling(req));
+  args.GetReturnValue().Set(GrpcAgent::Inst()->start_heap_sampling_from_js(req));
 }
 
 static void EndHeapSampling(const FunctionCallbackInfo<Value>& args) {
