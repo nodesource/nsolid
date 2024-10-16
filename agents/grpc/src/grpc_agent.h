@@ -111,7 +111,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     bool done = false;
   };
 
-  using StartProfiling = ErrorType (GrpcAgent::*)(const ProfileOptions& opts, const ProfileStor& stor);
+  using StartProfiling = ErrorType (GrpcAgent::*)(const grpcagent::ProfileArgs&,
+                                                  ProfileOptions& opts);
 
   using ProfileStorMap = std::map<uint64_t, ProfileStor>;
 
@@ -188,13 +189,13 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
                                const ProfileType& type,
                                ProfileOptions& options);  // NOLINT(runtime/references)
 
-  ErrorType do_start_prof(const grpcagent::CommandRequest& req,
-                          const ProfileType& type);
+  // ErrorType do_start_prof(const grpcagent::CommandRequest& req,
+  //                         const ProfileType& type);
 
-  ErrorType do_start_prof_end(ProfileStor&& stor,
+  ErrorType do_start_prof_end(ErrorType err,
+                              const std::string& req_id,
                               const ProfileType& type,
-                              uint64_t thread_id,
-                              ErrorType err);
+                              ProfileOptions&& opts);
 
   ErrorType do_start_cpu_prof(const grpcagent::ProfileArgs&,
                               ProfileOptions& opts);
@@ -230,7 +231,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void send_asset_error(const ProfileType& type,
                         const std::string& req_id,
-                        const ProfileOptions& options,
+                        ProfileOptions&& options,
                         AssetStream* stream,
                         const ErrorType& error);
 
