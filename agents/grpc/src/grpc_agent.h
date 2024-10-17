@@ -106,7 +106,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
  private:
   struct CommandRequestStor {
     grpcagent::CommandRequest request;
-    bool from_js_api;
   };
   
   struct ProfileStor {
@@ -251,6 +250,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void send_info_event(const char* req_id = nullptr);
 
+  void send_metrics_event(const char* req_id);
+
   void send_packages_event(const char* req_id = nullptr);
 
   void send_reconfigure_event(const char* req_id);
@@ -302,6 +303,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter> metrics_exporter_;
+  std::map<uint64_t, ThreadMetrics::MetricsStor> thr_metrics_cache_;
 
   // For the Configuration API
   nsuv::ns_async config_msg_;

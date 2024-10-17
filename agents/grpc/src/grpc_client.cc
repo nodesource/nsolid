@@ -344,6 +344,25 @@ int GrpcClient::DelegateAsyncExport(
     grpcagent::NSolidService::StubInterface* stub,
     std::unique_ptr<::grpc::ClientContext>&& context,
     std::unique_ptr<google::protobuf::Arena>&& arena,
+    grpcagent::MetricsEvent&& event,
+    std::function<bool(::grpc::Status,
+                       std::unique_ptr<google::protobuf::Arena> &&,
+                       const grpcagent::MetricsEvent&,
+                       grpcagent::EventResponse*)>&& result_callback) noexcept {
+  return InternalDelegateAsyncExport<grpcagent::MetricsEvent>(
+      stub,
+      &grpcagent::NSolidService::StubInterface::async_interface::ExportMetrics,
+      std::move(context),
+      std::move(arena),
+      std::move(event),
+      std::move(result_callback));
+}
+
+
+int GrpcClient::DelegateAsyncExport(
+    grpcagent::NSolidService::StubInterface* stub,
+    std::unique_ptr<::grpc::ClientContext>&& context,
+    std::unique_ptr<google::protobuf::Arena>&& arena,
     grpcagent::PackagesEvent&& event,
     std::function<bool(::grpc::Status,
                        std::unique_ptr<google::protobuf::Arena> &&,

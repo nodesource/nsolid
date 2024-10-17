@@ -26,6 +26,7 @@ static const char* NSolidService_method_names[] = {
   "/grpcagent.NSolidService/ExportAsset",
   "/grpcagent.NSolidService/ExportExit",
   "/grpcagent.NSolidService/ExportInfo",
+  "/grpcagent.NSolidService/ExportMetrics",
   "/grpcagent.NSolidService/ExportPackages",
   "/grpcagent.NSolidService/ExportBlockedLoop",
   "/grpcagent.NSolidService/ExportUnblockedLoop",
@@ -44,11 +45,12 @@ NSolidService::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& chan
   , rpcmethod_ExportAsset_(NSolidService_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::CLIENT_STREAMING, channel)
   , rpcmethod_ExportExit_(NSolidService_method_names[2], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportInfo_(NSolidService_method_names[3], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_ExportPackages_(NSolidService_method_names[4], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_ExportBlockedLoop_(NSolidService_method_names[5], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_ExportUnblockedLoop_(NSolidService_method_names[6], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_ExportReconfigure_(NSolidService_method_names[7], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_ExportStartupTimes_(NSolidService_method_names[8], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportMetrics_(NSolidService_method_names[4], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportPackages_(NSolidService_method_names[5], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportBlockedLoop_(NSolidService_method_names[6], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportUnblockedLoop_(NSolidService_method_names[7], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportReconfigure_(NSolidService_method_names[8], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportStartupTimes_(NSolidService_method_names[9], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::ClientReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* NSolidService::Stub::CommandRaw(::grpc::ClientContext* context) {
@@ -125,6 +127,29 @@ void NSolidService::Stub::async::ExportInfo(::grpc::ClientContext* context, cons
 ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::AsyncExportInfoRaw(::grpc::ClientContext* context, const ::grpcagent::InfoEvent& request, ::grpc::CompletionQueue* cq) {
   auto* result =
     this->PrepareAsyncExportInfoRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status NSolidService::Stub::ExportMetrics(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent& request, ::grpcagent::EventResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::grpcagent::MetricsEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_ExportMetrics_, context, request, response);
+}
+
+void NSolidService::Stub::async::ExportMetrics(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::grpcagent::MetricsEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportMetrics_, context, request, response, std::move(f));
+}
+
+void NSolidService::Stub::async::ExportMetrics(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportMetrics_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::PrepareAsyncExportMetricsRaw(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::grpcagent::EventResponse, ::grpcagent::MetricsEvent, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_ExportMetrics_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::AsyncExportMetricsRaw(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncExportMetricsRaw(context, request, cq);
   result->StartCall();
   return result;
 }
@@ -288,6 +313,16 @@ NSolidService::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NSolidService_method_names[4],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::MetricsEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](NSolidService::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::grpcagent::MetricsEvent* req,
+             ::grpcagent::EventResponse* resp) {
+               return service->ExportMetrics(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      NSolidService_method_names[5],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::PackagesEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](NSolidService::Service* service,
              ::grpc::ServerContext* ctx,
@@ -296,7 +331,7 @@ NSolidService::Service::Service() {
                return service->ExportPackages(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      NSolidService_method_names[5],
+      NSolidService_method_names[6],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::BlockedLoopEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](NSolidService::Service* service,
@@ -306,7 +341,7 @@ NSolidService::Service::Service() {
                return service->ExportBlockedLoop(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      NSolidService_method_names[6],
+      NSolidService_method_names[7],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::UnblockedLoopEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](NSolidService::Service* service,
@@ -316,7 +351,7 @@ NSolidService::Service::Service() {
                return service->ExportUnblockedLoop(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      NSolidService_method_names[7],
+      NSolidService_method_names[8],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::ReconfigureEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](NSolidService::Service* service,
@@ -326,7 +361,7 @@ NSolidService::Service::Service() {
                return service->ExportReconfigure(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      NSolidService_method_names[8],
+      NSolidService_method_names[9],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::StartupTimesEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](NSolidService::Service* service,
@@ -361,6 +396,13 @@ NSolidService::Service::~Service() {
 }
 
 ::grpc::Status NSolidService::Service::ExportInfo(::grpc::ServerContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status NSolidService::Service::ExportMetrics(::grpc::ServerContext* context, const ::grpcagent::MetricsEvent* request, ::grpcagent::EventResponse* response) {
   (void) context;
   (void) request;
   (void) response;

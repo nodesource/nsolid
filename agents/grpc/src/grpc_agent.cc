@@ -12,6 +12,7 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
+#include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 
 using std::chrono::system_clock;
 using std::chrono::time_point;
@@ -30,6 +31,7 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
+using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
 
 namespace node {
 namespace nsolid {
@@ -232,6 +234,27 @@ void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
       }
     }
   }
+}
+
+void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
+                          const ProcessMetrics::MetricsStor& proc_metrics,
+                          const std::map<uint64_t, ThreadMetrics::MetricsStor>& env_metrics,
+                          const char* req_id) {
+  // Fill in the fields of the MetricsResponse.
+  PopulateCommon(metrics_event->mutable_common(), "metrics", req_id);
+  
+  ResourceMetrics data;
+  data.resource_ = otlp::GetResource();
+  std::vector<MetricData> metrics;
+
+  otlp::fill_proc_metrics(metrics, proc_metrics, false);
+  for (const auto& [env_id, env_metrics_stor] : env_metrics) {
+    otlp::fill_env_metrics(metrics, env_metrics_stor, false);
+  }
+  
+  data.scope_metric_data_ =
+    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
+  OtlpMetricUtils::PopulateResourceMetrics(data, metrics_event->mutable_body()->mutable_resource_metrics()->Add());
 }
 
 void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
@@ -852,6 +875,7 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   ThreadMetricsStor stor;
   while (agent->thr_metrics_msg_q_.dequeue(stor)) {
     otlp::fill_env_metrics(metrics, stor, false);
+    agent->thr_metrics_cache_.insert_or_assign(stor.thread_id, std::move(stor));
   }
 
   data.scope_metric_data_ =
@@ -1333,6 +1357,8 @@ void GrpcAgent::handle_command_request(CommandRequestStor&& req) {
   const std::string cmd = request.command();
   if (cmd == "info") {
     send_info_event(request.requestid().c_str());
+  } else if (cmd == "metrics") {
+    send_metrics_event(request.requestid().c_str());
   } else if (cmd == "packages") {
     send_packages_event(request.requestid().c_str());
   } else if (cmd == "reconfigure") {
@@ -1553,6 +1579,33 @@ void GrpcAgent::send_info_event(const char* req_id) {
     [](::grpc::Status,
         std::unique_ptr<google::protobuf::Arena>&&,
         const grpcagent::InfoEvent& info_event,
+        grpcagent::EventResponse*) {
+      return true;
+    });
+}
+
+void GrpcAgent::send_metrics_event(const char* req_id) {
+  google::protobuf::ArenaOptions arena_options;
+  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  arena_options.initial_block_size = 1024;
+  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
+  // block to reduce memory fragments.
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+
+  grpcagent::MetricsEvent* metrics_event =
+      google::protobuf::Arena::Create<grpcagent::MetricsEvent>(arena.get());
+
+  PopulateMetricsEvent(metrics_event, proc_prev_stor_, thr_metrics_cache_, req_id);
+
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
+
+  client_->DelegateAsyncExport(
+    nsolid_service_stub_.get(), std::move(context), std::move(arena),
+    std::move(*metrics_event),
+    [](::grpc::Status,
+        std::unique_ptr<google::protobuf::Arena>&&,
+        const grpcagent::MetricsEvent& metrics_event,
         grpcagent::EventResponse*) {
       return true;
     });

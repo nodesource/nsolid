@@ -35,6 +35,7 @@
 #include "command.pb.h"
 #include "exit.pb.h"
 #include "info.pb.h"
+#include "metrics.pb.h"
 #include "packages.pb.h"
 #include "reconfigure.pb.h"
 #include "startup_times.pb.h"
