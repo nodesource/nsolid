@@ -114,6 +114,13 @@ async function startServer(cb) {
       callback(null, {});
       process.send({ type: 'info', data: { msg: call.request, metadata: call.metadata }});
     },
+    ExportMetrics: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+      process.send({ type: 'metrics', data: { msg: call.request, metadata: call.metadata }});
+    },
     ExportPackages: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
@@ -167,6 +174,8 @@ process.on('message', (message) => {
     sendHeapSampling(message.agentId, message.requestId, message.options);
   } else if (message.type === 'info') {
     sendInfo(message.agentId, message.requestId);
+  } else if (message.type === 'metrics') {
+    sendMetrics(message.agentId, message.requestId);
   } else if (message.type === 'packages') {
     sendPackages(message.agentId, message.requestId);
   } else if (message.type === 'snapshot') {
@@ -233,6 +242,10 @@ async function sendHeapSnapshot(agentId, requestId, options) {
 
 async function sendInfo(agentId, requestId) {
   return sendCommand('info', agentId, requestId);
+}
+
+async function sendMetrics(agentId, requestId) {
+  return sendCommand('metrics', agentId, requestId);
 }
 
 async function sendPackages(agentId, requestId) {
