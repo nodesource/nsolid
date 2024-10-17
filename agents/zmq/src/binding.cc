@@ -53,7 +53,8 @@ static void Snapshot(const FunctionCallbackInfo<Value>& args) {
     }}
   };
 
-  args.GetReturnValue().Set(ZmqAgent::Inst()->generate_snapshot(message));
+  args.GetReturnValue().Set(
+    ZmqAgent::Inst()->start_heap_snapshot_from_js(message));
 }
 
 static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
@@ -73,14 +74,12 @@ static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
     }}
   };
 
-  args.GetReturnValue().Set(ZmqAgent::Inst()->start_profiling(message));
+  args.GetReturnValue().Set(ZmqAgent::Inst()->start_profiling_from_js(message));
 }
 
 static void EndCPUProfile(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
-  Local<Context> context = isolate->GetCurrentContext();
-  uint64_t thread_id = ThreadId(context);
-  args.GetReturnValue().Set(ZmqAgent::Inst()->stop_profiling(thread_id));
+  args.GetReturnValue().Set(
+    CpuProfiler::StopProfileSync(GetLocalEnvInst(args.GetIsolate())));
 }
 
 static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
@@ -103,14 +102,13 @@ static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
     }}
   };
 
-  args.GetReturnValue().Set(ZmqAgent::Inst()->start_heap_profiling(message));
+  args.GetReturnValue().Set(
+    ZmqAgent::Inst()->start_heap_profiling_from_js(message));
 }
 
 static void EndHeapProfile(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
-  Local<Context> context = isolate->GetCurrentContext();
-  uint64_t thread_id = ThreadId(context);
-  args.GetReturnValue().Set(ZmqAgent::Inst()->stop_heap_profiling(thread_id));
+  args.GetReturnValue().Set(
+    Snapshot::StopTrackingHeapObjectsSync(GetLocalEnvInst(args.GetIsolate())));
 }
 
 static void StartHeapSampling(const FunctionCallbackInfo<Value>& args) {
@@ -140,14 +138,13 @@ static void StartHeapSampling(const FunctionCallbackInfo<Value>& args) {
     }}
   };
 
-  args.GetReturnValue().Set(ZmqAgent::Inst()->start_heap_sampling(message));
+  args.GetReturnValue().Set(
+    ZmqAgent::Inst()->start_heap_sampling_from_js(message));
 }
 
 static void EndHeapSampling(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
-  Local<Context> context = isolate->GetCurrentContext();
-  uint64_t thread_id = ThreadId(context);
-  args.GetReturnValue().Set(ZmqAgent::Inst()->stop_heap_sampling(thread_id));
+  args.GetReturnValue().Set(
+    Snapshot::StopSamplingSync(GetLocalEnvInst(args.GetIsolate())));
 }
 
 static void Start(const FunctionCallbackInfo<Value>& args) {

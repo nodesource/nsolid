@@ -4,6 +4,20 @@
 namespace node {
 namespace nsolid {
 
+const char* ProfileTypeStr[kNumberOfProfileTypes] = {
+  "profile",
+  "heap_profile",
+  "heap_sampling",
+  "snapshot"
+};
+
+const char* ProfileTypeStopStr[kNumberOfProfileTypes] = {
+  "profile_stop",
+  "heap_profile_stop",
+  "heap_sampling_stop",
+  ""
+};
+
 ProfileCollector::~ProfileCollector() {
   profile_msg_->close_and_delete();
 }
@@ -38,6 +52,15 @@ int ProfileCollector::StartHeapSampling(const HeapSamplingOptions& options) {
                                  kHeapSampl,
                                  options,
                                  weak_from_this());
+}
+
+int ProfileCollector::StartHeapSnapshot(const HeapSnapshotOptions& options) {
+  return Snapshot::TakeSnapshot(GetEnvInst(options.thread_id),
+                                options.redacted,
+                                profile_cb,
+                                kHeapSnapshot,
+                                options,
+                                weak_from_this());
 }
 
 /*static*/
