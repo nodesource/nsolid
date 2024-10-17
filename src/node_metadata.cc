@@ -23,12 +23,6 @@
 #include "sodium/version.h"
 #include <google/protobuf/message.h>
 
-#ifdef NODE_BUNDLED_ZLIB
-#include "zlib_version.h"
-#else
-#include <zlib.h>
-#endif  // NODE_BUNDLED_ZLIB
-
 #if HAVE_OPENSSL
 #include <openssl/opensslv.h>
 #if NODE_OPENSSL_HAS_QUIC
