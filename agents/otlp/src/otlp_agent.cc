@@ -30,7 +30,6 @@ namespace trace = OPENTELEMETRY_NAMESPACE::trace;
 namespace resource = sdk::resource;
 namespace instrumentationscope = sdk::instrumentationscope;
 namespace detail = trace::propagation::detail;
-using resource::ResourceAttributes;
 using resource::SemanticConventions::kServiceName;
 using resource::SemanticConventions::kServiceInstanceId;
 using resource::SemanticConventions::kServiceVersion;
