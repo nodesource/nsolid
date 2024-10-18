@@ -107,6 +107,8 @@ if (isMainThread) {
       process.send({ type: 'config', config: nsolid.config });
     } else if (msg.type === 'id') {
       process.send({ type: 'id', id: nsolid.id });
+    } else if (msg.type === 'metrics') {
+      process.send({ type: 'metrics', metrics: nsolid.metrics() });
     } else if (msg.type === 'shutdown') {
       clearInterval(interval);
       if (!msg.error) {

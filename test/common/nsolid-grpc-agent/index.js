@@ -324,6 +324,22 @@ class TestClient {
     });
   }
 
+  async metrics() {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'metrics' });
+        this.#child.once('message', common.mustCall((msg) => {
+          if (msg.type === 'metrics') {
+            resolve(msg.metrics);
+          }
+        }));
+      } else {
+        resolve(null);
+      }
+    });
+  }
+
+
   async shutdown(code) {
     return new Promise((resolve) => {
       if (this.#child) {
