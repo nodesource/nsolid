@@ -13,6 +13,7 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
+#include "opentelemetry/trace/semantic_conventions.h"
 
 using std::chrono::system_clock;
 using std::chrono::time_point;
@@ -23,6 +24,8 @@ using LogsRecordable = opentelemetry::sdk::logs::Recordable;
 using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
+using opentelemetry::sdk::resource::Resource;
+using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::sdk::trace::Recordable;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcExporter;
@@ -32,6 +35,7 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
+using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
 
 namespace node {
 namespace nsolid {
@@ -1255,13 +1259,28 @@ void GrpcAgent::got_proc_metrics() {
   ASSERT_EQ(0, proc_metrics_.Update());
   ProcessMetrics::MetricsStor stor = proc_metrics_.Get();
   ResourceMetrics data;
-  data.resource_ = otlp::GetResource();
+  Resource* resource;
+  // Check if 'user' or 'title' are different from the previous metrics
+  if (proc_prev_stor_.user != stor.user || proc_prev_stor_.title != stor.title) {
+    ResourceAttributes attrs = {
+      { kProcessOwner, stor.user },
+      { "process.title", stor.title },
+    };
+
+    resource = otlp::UpdateResource(std::move(attrs));
+  } else {
+    resource = otlp::GetResource();
+  }
+
+  data.resource_ = resource;
   std::vector<MetricData> metrics;
   otlp::fill_proc_metrics(metrics, stor, false);
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
   auto result = metrics_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
+  
+  proc_prev_stor_ = stor;
 }
 
 void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
