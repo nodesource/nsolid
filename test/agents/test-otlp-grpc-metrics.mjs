@@ -122,7 +122,7 @@ if (process.argv[2] === 'child') {
     ['loop_avg_tasks', undefined, 'asDouble', 'gauge'],
     ['loop_estimated_lag', 'ms', 'asDouble', 'gauge'],
     ['loop_idle_percent', undefined, 'asDouble', 'gauge'],
-    ['gc_dur', 'us', 'asDouble', 'summary'],
+    ['gc_dur_us', 'us', 'asDouble', 'summary'],
     ['dns', 'ms', 'asDouble', 'summary'],
     ['http_client', 'ms', 'asDouble', 'summary'],
     ['http_server', 'ms', 'asDouble', 'summary'],
