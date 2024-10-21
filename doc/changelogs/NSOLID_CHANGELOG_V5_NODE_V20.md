@@ -26,7 +26,6 @@
 * \[[`3913f0e27f`](https://github.com/nodesource/nsolid/commit/3913f0e27f)] - **agents:** refactor ZmqAgent to use ProfileCollector (Santiago Gimeno) [nodesource/nsolid#161](https://github.com/nodesource/nsolid/pull/161)
 * \[[`183b115e48`](https://github.com/nodesource/nsolid/commit/183b115e48)] - **agents:** implement ProfileCollector class (Santiago Gimeno) [nodesource/nsolid#161](https://github.com/nodesource/nsolid/pull/161)
 
-
 ## 2024-08-23, Version 20.17.0-nsolid-v5.3.3 'Iron'
 
 ### Commits
