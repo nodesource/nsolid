@@ -412,6 +412,7 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
   }
 
   recordable->SetAttribute("thread.id", s.thread_id);
+  recordable->SetAttribute("nsolid.span_type", s.type);
 
   recordable->SetResource(*GetResource());
 }
