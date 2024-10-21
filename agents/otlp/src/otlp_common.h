@@ -48,7 +48,8 @@ OPENTELEMETRY_NAMESPACE::sdk::resource::Resource* UpdateResource(
     OPENTELEMETRY_NAMESPACE::sdk::resource::ResourceAttributes&&);
 
 void fill_proc_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
-                       const ProcessMetrics::MetricsStor& stor);
+                       const ProcessMetrics::MetricsStor& stor,
+                       const ProcessMetrics::MetricsStor& prev_stor);
 
 void fill_env_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
                       const ThreadMetrics::MetricsStor& stor);
