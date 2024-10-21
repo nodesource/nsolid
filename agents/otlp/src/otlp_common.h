@@ -49,10 +49,12 @@ OPENTELEMETRY_NAMESPACE::sdk::resource::Resource* UpdateResource(
 
 void fill_proc_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
                        const ProcessMetrics::MetricsStor& stor,
-                       const ProcessMetrics::MetricsStor& prev_stor);
+                       const ProcessMetrics::MetricsStor& prev_stor,
+                       bool use_snake_case = true);
 
 void fill_env_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
-                      const ThreadMetrics::MetricsStor& stor);
+                      const ThreadMetrics::MetricsStor& stor,
+                      bool use_snake_case = true);
 
 void fill_log_recordable(OPENTELEMETRY_NAMESPACE::sdk::logs::Recordable*,
                          const LogWriteInfo&);
