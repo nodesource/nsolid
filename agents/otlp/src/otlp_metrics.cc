@@ -39,14 +39,11 @@ using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::metrics::SumPointData;
 using opentelemetry::sdk::metrics::ValueType;
 using opentelemetry::sdk::resource::Resource;
-using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::v1::exporter::otlp::GetOtlpDefaultHttpMetricsProtocol;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpHttpMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpHttpMetricExporterOptions;
-using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
-using opentelemetry::v1::trace::SemanticConventions::kThreadId;
 
 namespace node {
 namespace nsolid {
@@ -104,23 +101,10 @@ OTLPMetrics::~OTLPMetrics() {
 /*virtual*/
 void OTLPMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                    const ProcessMetricsStor& prev_stor) {
-  ResourceMetrics data;
-  Resource* resource;
-  // Check if 'user' or 'title' are different from the previous metrics
-  if (prev_stor.user != stor.user || prev_stor.title != stor.title) {
-    ResourceAttributes attrs = {
-      { kProcessOwner, stor.user },
-      { "process.title", stor.title },
-    };
-
-    resource = UpdateResource(std::move(attrs));
-  } else {
-    resource = GetResource();
-  }
-
-  data.resource_ = resource;
   std::vector<MetricData> metrics;
-  fill_proc_metrics(metrics, stor);
+  fill_proc_metrics(metrics, stor, prev_stor);
+  ResourceMetrics data;
+  data.resource_ = GetResource();
   data.scope_metric_data_ = std::vector<ScopeMetrics>{{scope_, metrics}};
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
