@@ -46,6 +46,7 @@ using opentelemetry::trace::SpanKind;
 using opentelemetry::trace::TraceFlags;
 using opentelemetry::trace::TraceId;
 using opentelemetry::trace::propagation::detail::HexToBinary;
+using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
 using opentelemetry::v1::trace::SemanticConventions::kThreadId;
 using opentelemetry::v1::trace::SemanticConventions::kThreadName;
 
@@ -179,7 +180,8 @@ Resource* UpdateResource(ResourceAttributes&& attrs) {
 
 // NOLINTNEXTLINE(runtime/references)
 void fill_proc_metrics(std::vector<MetricData>& metrics,
-                       const ProcessMetrics::MetricsStor& stor) {
+                       const ProcessMetrics::MetricsStor& stor,
+                       const ProcessMetrics::MetricsStor& prev_stor) {
   time_point end{
         duration_cast<time_point::duration>(
           milliseconds(static_cast<uint64_t>(stor.timestamp)))};
@@ -230,6 +232,17 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
 NSOLID_PROCESS_METRICS_UINT64(V)
 NSOLID_PROCESS_METRICS_DOUBLE(V)
 #undef V
+
+  // Update Resource if needed:
+  // Check if 'user' or 'title' are different from the previous metrics.
+  if (prev_stor.user != stor.user || prev_stor.title != stor.title) {
+    ResourceAttributes attrs = {
+      { kProcessOwner, stor.user },
+      { "process.title", stor.title },
+    };
+
+    USE(UpdateResource(std::move(attrs)));
+  }
 }
 
 // NOLINTNEXTLINE(runtime/references)
