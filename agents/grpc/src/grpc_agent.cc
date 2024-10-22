@@ -41,6 +41,8 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
+using ThreadMetricsMap = std::map<uint64_t, ThreadMetrics::MetricsStor>;
+
 constexpr uint64_t span_timer_interval = 1000;
 constexpr size_t span_msg_q_min_size = 1000;
 
@@ -50,7 +52,7 @@ const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
 
-const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024; // 4GB
+const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4GB
 
 static const char* const root_certs[] = {
 #include "node_root_certs.h"  // NOLINT(build/include_order)
@@ -81,7 +83,8 @@ JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)) {
 }
 
-std::pair<int64_t, int64_t> create_recorded(const time_point<system_clock>& ts) {
+std::pair<int64_t, int64_t>
+create_recorded(const time_point<system_clock>& ts) {
   using std::chrono::duration_cast;
   using std::chrono::seconds;
   using std::chrono::nanoseconds;
@@ -242,11 +245,11 @@ void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
 
 void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
                           const ProcessMetrics::MetricsStor& proc_metrics,
-                          const std::map<uint64_t, ThreadMetrics::MetricsStor>& env_metrics,
+                          const ThreadMetricsMap& env_metrics,
                           const char* req_id) {
   // Fill in the fields of the MetricsResponse.
   PopulateCommon(metrics_event->mutable_common(), "metrics", req_id);
-  
+
   ResourceMetrics data;
   data.resource_ = otlp::GetResource();
   std::vector<MetricData> metrics;
@@ -256,10 +259,11 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
   for (const auto& [env_id, env_metrics_stor] : env_metrics) {
     otlp::fill_env_metrics(metrics, env_metrics_stor, false);
   }
-  
+
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
-  OtlpMetricUtils::PopulateResourceMetrics(data, metrics_event->mutable_body()->mutable_resource_metrics()->Add());
+  OtlpMetricUtils::PopulateResourceMetrics(
+    data, metrics_event->mutable_body()->mutable_resource_metrics()->Add());
 }
 
 void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
@@ -299,8 +303,9 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
     if (package.contains("main") && package["main"].is_string()) {
       proto_package->set_main(package["main"].get<std::string>());
     }
-    
-    if (package.contains("dependencies") && package["dependencies"].is_array()) {
+
+    if (package.contains("dependencies") &&
+        package["dependencies"].is_array()) {
       for (const auto& dep : package["dependencies"]) {
         proto_package->add_dependencies(dep.get<std::string>());
       }
@@ -383,15 +388,15 @@ void PopulateStartupTimesEvent(grpcagent::StartupTimesEvent* st_events,
   }
 }
 
-void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* blocked_loop_event,
+void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* bl_event,
                                 const GrpcAgent::BlockedLoopStor& stor) {
   // Fill in the fields of the BlockedLoopEvent.
   nlohmann::json body = json::parse(stor.body, nullptr, false);
   ASSERT(!body.is_discarded());
 
-  PopulateCommon(blocked_loop_event->mutable_common(), "loop_unblocked", nullptr);
+  PopulateCommon(bl_event->mutable_common(), "loop_unblocked", nullptr);
 
-  grpcagent::UnblockedLoopBody* blocked_body = blocked_loop_event->mutable_body();
+  grpcagent::UnblockedLoopBody* blocked_body = bl_event->mutable_body();
   blocked_body->set_thread_id(stor.thread_id);
   blocked_body->set_blocked_for(body["blocked_for"].get<int32_t>());
   blocked_body->set_loop_id(body["loop_id"].get<int32_t>());
@@ -461,14 +466,14 @@ void GrpcAgent::got_command_request(grpcagent::CommandRequest&& request) {
 
 void GrpcAgent::reset_command_stream() {
   Debug("Resetting command stream\n");
-  command_stream_ =
-        std::make_unique<CommandStream>(nsolid_service_stub_.get(), shared_from_this());
+  command_stream_ = std::make_unique<CommandStream>(nsolid_service_stub_.get(),
+                                                    shared_from_this());
 }
 
 void GrpcAgent::set_asset_cb(SharedEnvInst envinst,
                              const v8::Local<v8::Function>& cb) {
   asset_cb_map_.emplace(std::piecewise_construct,
-                        std::forward_as_tuple(envinst), 
+                        std::forward_as_tuple(envinst),
                         std::forward_as_tuple(envinst->isolate(), cb));
 }
 
@@ -1262,28 +1267,14 @@ void GrpcAgent::got_logs() {
 void GrpcAgent::got_proc_metrics() {
   ASSERT_EQ(0, proc_metrics_.Update());
   ProcessMetrics::MetricsStor stor = proc_metrics_.Get();
-  ResourceMetrics data;
-  Resource* resource;
-  // Check if 'user' or 'title' are different from the previous metrics
-  if (proc_prev_stor_.user != stor.user || proc_prev_stor_.title != stor.title) {
-    ResourceAttributes attrs = {
-      { kProcessOwner, stor.user },
-      { "process.title", stor.title },
-    };
-
-    resource = otlp::UpdateResource(std::move(attrs));
-  } else {
-    resource = otlp::GetResource();
-  }
-
-  data.resource_ = resource;
   std::vector<MetricData> metrics;
   otlp::fill_proc_metrics(metrics, stor, proc_prev_stor_, false);
+  ResourceMetrics data;
+  data.resource_ = otlp::GetResource();
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
   auto result = metrics_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
-  
   proc_prev_stor_ = stor;
 }
 
@@ -1487,11 +1478,11 @@ void GrpcAgent::send_asset_error(const ProfileType& type,
   grpcagent::Asset asset;
   google::protobuf::Struct metadata;
   uint64_t thread_id;
-  std::visit([&metadata,&thread_id](auto& opt) {
+  std::visit([&metadata, &thread_id](auto& opt) {
     thread_id = opt.thread_id;
     metadata = std::move(opt.metadata_pb);
   }, options);
-  PopulateCommon(asset.mutable_common(), ProfileTypeStr[type],req_id.c_str());
+  PopulateCommon(asset.mutable_common(), ProfileTypeStr[type], req_id.c_str());
   PopulateError(asset.mutable_common(), error);
   asset.mutable_metadata()->CopyFrom(metadata);
   stream->Write(std::move(asset));
@@ -1554,7 +1545,7 @@ void GrpcAgent::send_exit() {
   client_->DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*exit_event),
-    [&lock,&cond](::grpc::Status,
+    [&lock, &cond](::grpc::Status,
         std::unique_ptr<google::protobuf::Arena> &&,
         const grpcagent::ExitEvent& event,
         grpcagent::EventResponse*) {
@@ -1906,7 +1897,8 @@ void GrpcAgent::update_tracer(uint32_t flags) {
                                                       span_msg_q_min_size,
                                                       span_timer_interval);
     span_collector_->CollectAndTransform(
-      +[](const Tracer::SpanStor& span, WeakGrpcAgent agent_wp) -> UniqRecordable {
+      +[](const Tracer::SpanStor& span, WeakGrpcAgent agent_wp)
+          -> UniqRecordable {
         SharedGrpcAgent agent = agent_wp.lock();
         if (agent == nullptr) {
           return nullptr;
