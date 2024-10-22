@@ -1427,6 +1427,8 @@ LINT_CPP_EXCLUDE += src/nlohmann/json.h
 LINT_CPP_EXCLUDE += src/tracing/trace_event.h src/tracing/trace_event_common.h
 
 LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
+	agents/grpc/src/*.cc \
+	agents/grpc/src/*.h \
 	agents/otlp/src/*.cc \
 	agents/otlp/src/*.h \
 	agents/src/*.cc \

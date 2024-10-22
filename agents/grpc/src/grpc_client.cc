@@ -4,6 +4,16 @@
 #include "asserts-cpp/asserts.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client_options.h"
 
+using google::protobuf::Arena;
+using grpc::Channel;
+using grpc::ChannelArguments;
+using grpc::ClientContext;
+using grpc::CreateCustomChannel;
+using grpc::InsecureChannelCredentials;
+using grpc::SslCredentials;
+using grpc::SslCredentialsOptions;
+using grpc::Status;
+using grpcagent::NSolidService;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 
 namespace node {
@@ -19,12 +29,12 @@ inline void Debug(Args&&... args) {
 template <class EventType>
 class GrpcAsyncCallData {
  public:
-  std::unique_ptr<google::protobuf::Arena> arena;
-  ::grpc::Status grpc_status;
-  std::unique_ptr<::grpc::ClientContext> grpc_context;
+  std::unique_ptr<Arena> arena;
+  Status grpc_status;
+  std::unique_ptr<ClientContext> grpc_context;
 
-  std::function<bool(::grpc::Status,
-                     std::unique_ptr<google::protobuf::Arena>&&,
+  std::function<bool(Status,
+                     std::unique_ptr<Arena>&&,
                      const EventType&,
                      grpcagent::EventResponse*)> result_callback;
 
@@ -35,7 +45,7 @@ class GrpcAsyncCallData {
   ~GrpcAsyncCallData() {}
 };
 
-CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
+CommandStream::CommandStream(NSolidService::StubInterface* stub,
                              std::shared_ptr<GrpcAgent> agent): agent_(agent) {
   ASSERT_EQ(0, lock_.init(true));
   context_.AddMetadata("nsolid-agent-id", agent->agent_id());
@@ -48,14 +58,18 @@ CommandStream::CommandStream(grpcagent::NSolidService::StubInterface* stub,
   StartRead(&server_request_);
   AddHold();
   StartCall();
- }
+}
 
 CommandStream::~CommandStream() {
   Debug("[%ld] CommandStream::~CommandStream\n", pthread_self());
 }
 
-void CommandStream::OnDone(const ::grpc::Status& s) {
-  Debug("[%ld] CommandStream::OnDone: %d. %s:%s\n", pthread_self(), s.error_code(), s.error_message().c_str(), s.error_details().c_str());
+void CommandStream::OnDone(const Status& s) {
+  Debug("[%ld] CommandStream::OnDone: %d. %s:%s\n",
+        pthread_self(),
+        s.error_code(),
+        s.error_message().c_str(),
+        s.error_details().c_str());
   if (agent_) {
     agent_->on_command_stream_done(s);
   }
@@ -95,11 +109,11 @@ void CommandStream::NextWrite() {
 void CommandStream::Write(grpcagent::CommandResponse&& resp) {
   response_q_.enqueue(std::move(resp));
   nsuv::ns_mutex::scoped_lock lock(lock_);
-  NextWrite(); 
+  NextWrite();
 }
 
 AssetStream::AssetStream(
-    grpcagent::NSolidService::StubInterface* stub,
+    NSolidService::StubInterface* stub,
     std::weak_ptr<GrpcAgent> agent,
     AssetStor&& stor): agent_(agent),
                        stor_(std::move(stor)) {
@@ -113,17 +127,21 @@ AssetStream::AssetStream(
   stub->async()->ExportAsset(&context_, &event_response_, this);
   AddHold();
   StartCall();
- }
+}
 
 AssetStream::~AssetStream() {
   Debug("AssetStream::~AssetStream\n");
 }
 
-void AssetStream::OnDone(const ::grpc::Status& s) {
-  Debug("AssetStream::OnDone: %d. %s:%s\n", static_cast<unsigned>(s.error_code()), s.error_message().c_str(), s.error_details().c_str());
+void AssetStream::OnDone(const Status& s) {
+  Debug("AssetStream::OnDone: %d. %s:%s\n",
+        static_cast<unsigned>(s.error_code()),
+        s.error_message().c_str(),
+        s.error_details().c_str());
   SharedGrpcAgent agent = agent_.lock();
   if (agent != nullptr) {
-    // Don't continue with the exit procedure until all asset streams have finished.
+    // Don't continue with the exit procedure until all asset streams have
+    // finished.
     stor_.stream = this;
     agent->on_asset_stream_done(std::move(stor_));
   } else {
@@ -161,7 +179,7 @@ void AssetStream::NextWrite() {
 void AssetStream::Write(grpcagent::Asset&& asset) {
   assets_q_.enqueue(std::move(asset));
   nsuv::ns_mutex::scoped_lock lock(lock_);
-  NextWrite(); 
+  NextWrite();
 }
 
 void AssetStream::WritesDone(bool) {
@@ -177,19 +195,21 @@ GrpcClient::~GrpcClient() {
 /**
   * Create gRPC channel.
   */
-std::shared_ptr<::grpc::Channel>
+std::shared_ptr<Channel>
     GrpcClient::MakeChannel(const OtlpGrpcClientOptions& options) {
-  std::shared_ptr<::grpc::Channel> channel;
-  ::grpc::ChannelArguments grpc_arguments;
+  std::shared_ptr<Channel> channel;
+  ChannelArguments grpc_arguments;
   if (!options.use_ssl_credentials) {
-    channel = ::grpc::CreateCustomChannel(options.endpoint, ::grpc::InsecureChannelCredentials(), grpc_arguments);
+    channel = CreateCustomChannel(options.endpoint,
+                                  InsecureChannelCredentials(),
+                                  grpc_arguments);
     return channel;
   }
 
 
-  ::grpc::SslCredentialsOptions ssl_opts;
+  SslCredentialsOptions ssl_opts;
   ssl_opts.pem_root_certs = options.ssl_credentials_cacert_as_string;
-  auto channel_creds = ::grpc::SslCredentials(ssl_opts);
+  auto channel_creds = SslCredentials(ssl_opts);
   // Sample way of setting keepalive arguments on the client channel. Here we
   // are configuring a keepalive time period of 20 seconds, with a timeout of 10
   // seconds. Additionally, pings will be sent even if there are no calls in
@@ -197,16 +217,19 @@ std::shared_ptr<::grpc::Channel>
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, 20 * 1000 /*20 sec*/);
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 10 * 1000 /*10 sec*/);
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
-  channel = ::grpc::CreateCustomChannel(options.endpoint, channel_creds, grpc_arguments);
+  channel = CreateCustomChannel(options.endpoint,
+                                channel_creds,
+                                grpc_arguments);
   return channel;
 }
 
 /**
   * Create gRPC client context to call RPC.
   */
-std::unique_ptr<::grpc::ClientContext> GrpcClient::MakeClientContext(const std::string& agent_id,
-                                                                     const std::string& saas) {
-  std::unique_ptr<::grpc::ClientContext> context = std::make_unique<::grpc::ClientContext>();
+std::unique_ptr<ClientContext>
+GrpcClient::MakeClientContext(const std::string& agent_id,
+                              const std::string& saas) {
+  std::unique_ptr<ClientContext> context = std::make_unique<ClientContext>();
   context->AddMetadata("nsolid-agent-id", agent_id);
   if (!saas.empty()) {
     context->AddMetadata("nsolid-saas-token", saas);
@@ -218,64 +241,71 @@ std::unique_ptr<::grpc::ClientContext> GrpcClient::MakeClientContext(const std::
 /**
   * Create N|Solid service stub to communicate with the N|Solid Console.
   */
-std::unique_ptr<grpcagent::NSolidService::StubInterface>
+std::unique_ptr<NSolidService::StubInterface>
     GrpcClient::MakeNSolidServiceStub(const OtlpGrpcClientOptions& options) {
-  return grpcagent::NSolidService::NewStub(MakeChannel(options));
+  return NSolidService::NewStub(MakeChannel(options));
 }
 
 template <class EventType>
 static int InternalDelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    void (grpcagent::NSolidService::StubInterface::async_interface::*exportFunc)(
-        ::grpc::ClientContext*, const EventType*, ::grpcagent::EventResponse*, std::function<void(::grpc::Status)>), // Function pointer type
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    void(NSolidService::StubInterface::async_interface::*exportFunc)(
+        ClientContext*,
+        const EventType*,
+        ::grpcagent::EventResponse*,
+        std::function<void(Status)>),
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     EventType&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const EventType&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
-
   auto call_data = std::make_shared<GrpcAsyncCallData<EventType>>();
   call_data->arena.swap(arena);
   call_data->result_callback.swap(result_callback);
 
-  call_data->event =
-      google::protobuf::Arena::Create<EventType>(call_data->arena.get(), std::move(event));
-  call_data->event_response = google::protobuf::Arena::Create<grpcagent::EventResponse>(call_data->arena.get());
+  call_data->event = Arena::Create<EventType>(call_data->arena.get(),
+                                              std::move(event));
+  call_data->event_response =
+    Arena::Create<grpcagent::EventResponse>(call_data->arena.get());
   if (call_data->event == nullptr || call_data->event_response == nullptr) {
     assert(0);
   }
 
   call_data->grpc_context.swap(context);
 
-  (stub->async()
-      ->*exportFunc)(call_data->grpc_context.get(), call_data->event, call_data->event_response,
-    [call_data](::grpc::Status grpc_status) {
-      call_data->grpc_status = grpc_status;
-      if (call_data->grpc_status.ok())
-      {
-        // fprintf(stderr, "InternalDelegateAsyncExport() success\n");
-      }
-      
-      call_data->result_callback(call_data->grpc_status, std::move(call_data->arena), *call_data->event, call_data->event_response);
-    });
+  (stub->async()->*exportFunc)(call_data->grpc_context.get(),
+                               call_data->event,
+                               call_data->event_response,
+                               [call_data](Status grpc_status) {
+    call_data->grpc_status = grpc_status;
+    if (call_data->grpc_status.ok()) {
+      // fprintf(stderr, "InternalDelegateAsyncExport() success\n");
+    }
+
+    call_data->result_callback(call_data->grpc_status,
+                               std::move(call_data->arena),
+                               *call_data->event,
+                               call_data->event_response);
+  });
+
   return 0;
 }
 
 
 int GrpcClient::DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::BlockedLoopEvent&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const grpcagent::BlockedLoopEvent&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
   return InternalDelegateAsyncExport<grpcagent::BlockedLoopEvent>(
       stub,
-      &grpcagent::NSolidService::StubInterface::async_interface::ExportBlockedLoop,
+      &NSolidService::StubInterface::async_interface::ExportBlockedLoop,
       std::move(context),
       std::move(arena),
       std::move(event),
@@ -284,17 +314,17 @@ int GrpcClient::DelegateAsyncExport(
 
 
 int GrpcClient::DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::UnblockedLoopEvent&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const grpcagent::UnblockedLoopEvent&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
   return InternalDelegateAsyncExport<grpcagent::UnblockedLoopEvent>(
       stub,
-      &grpcagent::NSolidService::StubInterface::async_interface::ExportUnblockedLoop,
+      &NSolidService::StubInterface::async_interface::ExportUnblockedLoop,
       std::move(context),
       std::move(arena),
       std::move(event),
@@ -303,17 +333,17 @@ int GrpcClient::DelegateAsyncExport(
 
 
 int GrpcClient::DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::ExitEvent&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const grpcagent::ExitEvent&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
   return InternalDelegateAsyncExport<grpcagent::ExitEvent>(
       stub,
-      &grpcagent::NSolidService::StubInterface::async_interface::ExportExit,
+      &NSolidService::StubInterface::async_interface::ExportExit,
       std::move(context),
       std::move(arena),
       std::move(event),
@@ -322,17 +352,17 @@ int GrpcClient::DelegateAsyncExport(
 
 
 int GrpcClient::DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::InfoEvent&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const grpcagent::InfoEvent&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
   return InternalDelegateAsyncExport<grpcagent::InfoEvent>(
       stub,
-      &grpcagent::NSolidService::StubInterface::async_interface::ExportInfo,
+      &NSolidService::StubInterface::async_interface::ExportInfo,
       std::move(context),
       std::move(arena),
       std::move(event),
@@ -341,17 +371,17 @@ int GrpcClient::DelegateAsyncExport(
 
 
 int GrpcClient::DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::MetricsEvent&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const grpcagent::MetricsEvent&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
   return InternalDelegateAsyncExport<grpcagent::MetricsEvent>(
       stub,
-      &grpcagent::NSolidService::StubInterface::async_interface::ExportMetrics,
+      &NSolidService::StubInterface::async_interface::ExportMetrics,
       std::move(context),
       std::move(arena),
       std::move(event),
@@ -360,17 +390,17 @@ int GrpcClient::DelegateAsyncExport(
 
 
 int GrpcClient::DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::PackagesEvent&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const grpcagent::PackagesEvent&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
   return InternalDelegateAsyncExport<grpcagent::PackagesEvent>(
       stub,
-      &grpcagent::NSolidService::StubInterface::async_interface::ExportPackages,
+      &NSolidService::StubInterface::async_interface::ExportPackages,
       std::move(context),
       std::move(arena),
       std::move(event),
@@ -379,17 +409,17 @@ int GrpcClient::DelegateAsyncExport(
 
 
 int GrpcClient::DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::ReconfigureEvent&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const grpcagent::ReconfigureEvent&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
   return InternalDelegateAsyncExport<grpcagent::ReconfigureEvent>(
       stub,
-      &grpcagent::NSolidService::StubInterface::async_interface::ExportReconfigure,
+      &NSolidService::StubInterface::async_interface::ExportReconfigure,
       std::move(context),
       std::move(arena),
       std::move(event),
@@ -398,17 +428,17 @@ int GrpcClient::DelegateAsyncExport(
 
 
 int GrpcClient::DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::StartupTimesEvent&& event,
-    std::function<bool(::grpc::Status,
-                       std::unique_ptr<google::protobuf::Arena> &&,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
                        const grpcagent::StartupTimesEvent&,
                        grpcagent::EventResponse*)>&& result_callback) noexcept {
   return InternalDelegateAsyncExport<grpcagent::StartupTimesEvent>(
       stub,
-      &grpcagent::NSolidService::StubInterface::async_interface::ExportStartupTimes,
+      &NSolidService::StubInterface::async_interface::ExportStartupTimes,
       std::move(context),
       std::move(arena),
       std::move(event),
