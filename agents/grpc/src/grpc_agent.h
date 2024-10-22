@@ -5,7 +5,7 @@
 #include <nsolid/thread_safe.h>
 #include "nlohmann/json.hpp"
 #include <memory>
-#include <grpcpp/grpcpp.h>
+#include "grpcpp/grpcpp.h"
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "opentelemetry/version.h"
 #include "opentelemetry/sdk/trace/recordable.h"
@@ -107,7 +107,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   struct CommandRequestStor {
     grpcagent::CommandRequest request;
   };
-  
+
   struct ProfileStor {
     std::string req_id;
     uint64_t timestamp;
@@ -116,8 +116,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
     bool done = false;
   };
 
-  using StartProfiling = ErrorType (GrpcAgent::*)(const grpcagent::ProfileArgs&,
-                                                  ProfileOptions& opts);
+  using StartProfiling = ErrorType (GrpcAgent::*)(
+    const grpcagent::ProfileArgs&,
+    ProfileOptions& opts);  // NOLINT(runtime/references)
 
   using ProfileStorMap = std::map<uint64_t, ProfileStor>;
 
@@ -194,29 +195,35 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   void do_stop();
 
-  ErrorType do_start_prof_init(const grpcagent::CommandRequest& req,
-                               const ProfileType& type,
-                               ProfileOptions& options);  // NOLINT(runtime/references)
+  ErrorType do_start_prof_init(
+      const grpcagent::CommandRequest& req,
+      const ProfileType& type,
+      ProfileOptions& options);  // NOLINT(runtime/references)
 
   // ErrorType do_start_prof(const grpcagent::CommandRequest& req,
   //                         const ProfileType& type);
 
-  ErrorType do_start_prof_end(ErrorType err,
-                              const std::string& req_id,
-                              const ProfileType& type,
-                              ProfileOptions&& opts);
+  ErrorType do_start_prof_end(
+      ErrorType err,
+      const std::string& req_id,
+      const ProfileType& type,
+      ProfileOptions&& opts);  // NOLINT(runtime/references)
 
-  ErrorType do_start_cpu_prof(const grpcagent::ProfileArgs&,
-                              ProfileOptions& opts);
+  ErrorType do_start_cpu_prof(
+      const grpcagent::ProfileArgs&,
+      ProfileOptions& opts);  // NOLINT(runtime/references)
 
-  ErrorType do_start_heap_prof(const grpcagent::ProfileArgs& args,
-                               ProfileOptions& opts);
+  ErrorType do_start_heap_prof(
+      const grpcagent::ProfileArgs& args,
+      ProfileOptions& opts);  // NOLINT(runtime/references)
 
-  ErrorType do_start_heap_sampl(const grpcagent::ProfileArgs& args,
-                                ProfileOptions& opts);
+  ErrorType do_start_heap_sampl(
+      const grpcagent::ProfileArgs& args,
+      ProfileOptions& opts);  // NOLINT(runtime/references)
 
-  ErrorType do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
-                                   ProfileOptions& opts);
+  ErrorType do_start_heap_snapshot(
+      const grpcagent::ProfileArgs& args,
+      ProfileOptions& opts);  // NOLINT(runtime/references)
 
   void got_asset_done_msg();
 
@@ -292,7 +299,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   std::shared_ptr<SpanCollector> span_collector_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcExporter>
     trace_exporter_;
-  std::vector<std::unique_ptr<opentelemetry::sdk::trace::Recordable>> recordables_;
+  std::vector<std::unique_ptr<opentelemetry::sdk::trace::Recordable>>
+    recordables_;
 
   // For the Metrics API
   uint64_t metrics_interval_;
@@ -302,7 +310,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
   nsuv::ns_async metrics_msg_;
   TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
-  std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter> metrics_exporter_;
+  std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter>
+    metrics_exporter_;
   std::map<uint64_t, ThreadMetrics::MetricsStor> thr_metrics_cache_;
 
   // For the Configuration API
@@ -347,7 +356,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent> {
 
   nsuv::ns_async asset_done_msg_;
   TSQueue<AssetStream::AssetStor> asset_done_q_;
-  
+
   // For the Assets JS API
   std::map<SharedEnvInst, v8::Global<v8::Function>> asset_cb_map_;
 };
