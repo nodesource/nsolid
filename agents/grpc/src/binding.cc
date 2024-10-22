@@ -4,14 +4,12 @@
 #include "util.h"
 #include "asserts-cpp/asserts.h"
 
-using nlohmann::json;
+
 using v8::Context;
-using v8::Function;
 using v8::FunctionCallbackInfo;
 using v8::Isolate;
-using v8::JSON;
 using v8::Local;
-using v8::NewStringType;
+// using v8::NewStringType;
 using v8::Number;
 using v8::Object;
 using v8::String;
