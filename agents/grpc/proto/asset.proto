@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "common.proto";
+import "google/protobuf/struct.proto";
+
+package grpcagent;
+
+message Asset {
+  CommonResponse common = 1;
+  uint64 thread_id = 2;
+  google.protobuf.Struct metadata = 3;
+  string data = 4;
+}

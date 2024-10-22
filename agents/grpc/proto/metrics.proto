@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+import "common.proto";
+
+import "opentelemetry/proto/metrics/v1/metrics.proto";
+
+package grpcagent;
+
+message MetricsBody {
+  repeated opentelemetry.proto.metrics.v1.ResourceMetrics resource_metrics = 1;
+}
+
+message MetricsEvent {
+  CommonResponse common = 1;
+  MetricsBody body = 2;
+}
