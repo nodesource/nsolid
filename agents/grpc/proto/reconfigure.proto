@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message ReconfigureBody {
+  optional uint64 blockedLoopThreshold = 1;
+  optional uint64 interval = 2;
+  optional bool pauseMetrics = 3;
+  optional bool promiseTracking = 4;
+  optional bool redactSnapshots = 5;
+  optional string statsd = 6;
+  optional string statsdBucket = 7;
+  optional string statsdTags = 8;
+  repeated string tags = 9;
+  optional bool tracingEnabled = 10;
+  optional uint32 tracingModulesBlacklist = 11;
+}
+
+message ReconfigureEvent {
+  CommonResponse common = 1;
+  ReconfigureBody body = 2;
+}
