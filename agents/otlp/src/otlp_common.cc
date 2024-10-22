@@ -190,11 +190,6 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
   InstrumentValueType type;
   ValueType value;
 
-  PointAttributes attrs = {
-    { kProcessOwner, stor.user },
-    { "process.title", stor.title },
-  };
-
   #define V(CType, CName, JSName, MType, Unit)                                 \
 {                                                                              \
   auto it = std::find(discarded_metrics.begin(),                               \
