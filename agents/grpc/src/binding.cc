@@ -42,7 +42,8 @@ static void Snapshot(const FunctionCallbackInfo<Value>& args) {
   auto* metadata = snapshot_args->mutable_metadata();
   auto* fields = metadata->mutable_fields();
   (*fields)["reason"].set_string_value("Agent API");
-  args.GetReturnValue().Set(GrpcAgent::Inst()->start_heap_snapshot_from_js(req));
+  args.GetReturnValue().Set(
+    GrpcAgent::Inst()->start_heap_snapshot_from_js(req));
 }
 
 static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
@@ -56,13 +57,14 @@ static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
   grpcagent::CommandRequest req;
   req.set_command("profile");
   auto* command_args = req.mutable_args();
-  auto* profile_args = command_args->mutable_profile(); 
+  auto* profile_args = command_args->mutable_profile();
   profile_args->set_thread_id(thread_id);
   profile_args->set_duration(timeout);
   auto* metadata = profile_args->mutable_metadata();
   auto* fields = metadata->mutable_fields();
   (*fields)["reason"].set_string_value("Agent API");
-  args.GetReturnValue().Set(GrpcAgent::Inst()->start_cpu_profile_from_js(req));
+  args.GetReturnValue().Set(
+    GrpcAgent::Inst()->start_cpu_profile_from_js(req));
 }
 
 static void EndCPUProfile(const FunctionCallbackInfo<Value>& args) {
@@ -80,12 +82,10 @@ static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
   uint64_t timeout = args[0].As<Number>()->Value();
   bool track_allocations = args[1]->BooleanValue(isolate);
 
-  fprintf(stderr, "StartHeapProfile: %ld, %ld, %d\n", thread_id, timeout, track_allocations);
-
   grpcagent::CommandRequest req;
   req.set_command("heap_profile");
   auto* command_args = req.mutable_args();
-  auto* profile_args = command_args->mutable_profile(); 
+  auto* profile_args = command_args->mutable_profile();
   profile_args->set_thread_id(thread_id);
   profile_args->set_duration(timeout);
   auto* metadata = profile_args->mutable_metadata();
@@ -128,7 +128,8 @@ static void StartHeapSampling(const FunctionCallbackInfo<Value>& args) {
   heap_sampling->set_sample_interval(sample_interval);
   heap_sampling->set_stack_depth(stack_depth);
   heap_sampling->set_flags(flags);
-  args.GetReturnValue().Set(GrpcAgent::Inst()->start_heap_sampling_from_js(req));
+  args.GetReturnValue().Set(
+    GrpcAgent::Inst()->start_heap_sampling_from_js(req));
 }
 
 static void EndHeapSampling(const FunctionCallbackInfo<Value>& args) {
@@ -171,7 +172,7 @@ void InitGrpcAgent(Local<Object> exports,
   NODE_SET_METHOD(exports, "start", Start);
 }
 
-}  // namespace zmq
+}  // namespace grpc
 }  // namespace nsolid
 }  // namespace node
 

@@ -17,6 +17,8 @@
 
 using std::chrono::system_clock;
 using std::chrono::time_point;
+using google::protobuf::Arena;
+using google::protobuf::ArenaOptions;
 using json = nlohmann::json;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
 using opentelemetry::nostd::span;
@@ -569,7 +571,10 @@ int GrpcAgent::stop(bool profile_stopped) {
 int GrpcAgent::start_cpu_profile(const grpcagent::CommandRequest& req) {
   ProfileOptions options = CPUProfileOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kCpu, options);
-  ErrorType error = do_start_prof_end(ret, req.requestid(), ProfileType::kCpu, std::move(options));
+  ErrorType error = do_start_prof_end(ret,
+                                      req.requestid(),
+                                      ProfileType::kCpu,
+                                      std::move(options));
   return fill_error_stor(error).code;
 }
 
@@ -593,11 +598,15 @@ int GrpcAgent::start_cpu_profile_from_js(const grpcagent::CommandRequest& req) {
 int GrpcAgent::start_heap_profile(const grpcagent::CommandRequest& req) {
   ProfileOptions options = HeapProfileOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kHeapProf, options);
-  ErrorType error = do_start_prof_end(ret, req.requestid(), ProfileType::kHeapProf, std::move(options));
+  ErrorType error = do_start_prof_end(ret,
+                                      req.requestid(),
+                                      ProfileType::kHeapProf,
+                                      std::move(options));
   return fill_error_stor(error).code;
 }
 
-int GrpcAgent::start_heap_profile_from_js(const grpcagent::CommandRequest& req) {
+int GrpcAgent::start_heap_profile_from_js(
+      const grpcagent::CommandRequest& req) {
   ProfileOptions options = HeapProfileOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kHeapProf, options);
   if (ret == ErrorType::ESuccess) {
@@ -616,11 +625,15 @@ int GrpcAgent::start_heap_profile_from_js(const grpcagent::CommandRequest& req) 
 int GrpcAgent::start_heap_sampling(const grpcagent::CommandRequest& req) {
   ProfileOptions options = HeapSamplingOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kHeapSampl, options);
-  ErrorType error = do_start_prof_end(ret, req.requestid(), ProfileType::kHeapSampl, std::move(options));
+  ErrorType error = do_start_prof_end(ret,
+                                      req.requestid(),
+                                      ProfileType::kHeapSampl,
+                                      std::move(options));
   return fill_error_stor(error).code;
 }
 
-int GrpcAgent::start_heap_sampling_from_js(const grpcagent::CommandRequest& req) {
+int GrpcAgent::start_heap_sampling_from_js(
+      const grpcagent::CommandRequest& req) {
   ProfileOptions options = HeapSamplingOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kHeapSampl, options);
   if (ret == ErrorType::ESuccess) {
@@ -639,11 +652,15 @@ int GrpcAgent::start_heap_sampling_from_js(const grpcagent::CommandRequest& req)
 int GrpcAgent::start_heap_snapshot(const grpcagent::CommandRequest& req) {
   ProfileOptions options = HeapSnapshotOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kHeapSnapshot, options);
-  ErrorType error = do_start_prof_end(ret, req.requestid(), ProfileType::kHeapSnapshot, std::move(options));
+  ErrorType error = do_start_prof_end(ret,
+                                      req.requestid(),
+                                      ProfileType::kHeapSnapshot,
+                                      std::move(options));
   return fill_error_stor(error).code;
 }
 
-int GrpcAgent::start_heap_snapshot_from_js(const grpcagent::CommandRequest& req) {
+int GrpcAgent::start_heap_snapshot_from_js(
+      const grpcagent::CommandRequest& req) {
   ProfileOptions options = HeapSnapshotOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kHeapSnapshot, options);
   if (ret == ErrorType::ESuccess) {
@@ -822,7 +839,6 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
       }
     }
   }
-
 }
 
 /*static*/void GrpcAgent::log_cb_(SharedEnvInst envinst,
@@ -833,7 +849,8 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->log_msg_q_.enqueue({ GetThreadId(envinst), std::move(info) }) == 1) {
+  if (agent->log_msg_q_.enqueue({ GetThreadId(envinst),
+                                  std::move(info) }) == 1) {
     ASSERT_EQ(0, agent->log_msg_.send());
   }
 }
@@ -856,7 +873,9 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->blocked_loop_msg_q_.enqueue({ true, body, GetThreadId(envinst) }) == 1) {
+  if (agent->blocked_loop_msg_q_.enqueue({ true,
+                                           body,
+                                           GetThreadId(envinst) }) == 1) {
     ASSERT_EQ(0, agent->blocked_loop_msg_.send());
   }
 }
@@ -869,12 +888,15 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->blocked_loop_msg_q_.enqueue({ false, body, GetThreadId(envinst) }) == 1) {
+  if (agent->blocked_loop_msg_q_.enqueue({ false,
+                                           body,
+                                           GetThreadId(envinst) }) == 1) {
     ASSERT_EQ(0, agent->blocked_loop_msg_.send());
   }
 }
 
-/*static*/void GrpcAgent::metrics_msg_cb_(nsuv::ns_async*, WeakGrpcAgent agent_wp) {
+/*static*/void GrpcAgent::metrics_msg_cb_(nsuv::ns_async*,
+                                          WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
   if (agent == nullptr) {
     return;
@@ -896,7 +918,8 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
 
-/*static*/void GrpcAgent::metrics_timer_cb_(nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
+/*static*/void GrpcAgent::metrics_timer_cb_(nsuv::ns_timer*,
+                                            WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
   if (agent == nullptr) {
     return;
@@ -990,13 +1013,16 @@ int GrpcAgent::config(const json& config) {
       std::string insecure_str;
       // Only parse the insecure flag in non SaaS mode.
       if (saas_.empty() &&
-          per_process::system_environment->Get(kNSOLID_GRPC_INSECURE).To(&insecure_str)) {
+          per_process::system_environment->
+            Get(kNSOLID_GRPC_INSECURE).To(&insecure_str)) {
         // insecure = std::stoull(insecure_str);
         insecure = std::stoi(insecure_str);
       }
 
-      const std::string endpoint = console_id_.empty() ? it->get<std::string>() : console_id_ + ".grpc.nodesource.io:443";
-      Debug("GrpcAgent configured. Endpoint: %s. Insecure: %d\n", endpoint.c_str(), static_cast<unsigned>(insecure));
+      const std::string endpoint = console_id_.empty() ?
+        it->get<std::string>() : console_id_ + ".grpc.nodesource.io:443";
+      Debug("GrpcAgent configured. Endpoint: %s. Insecure: %d\n",
+            endpoint.c_str(), static_cast<unsigned>(insecure));
       client_ = std::make_shared<GrpcClient>();
       {
         OtlpGrpcExporterOptions options;
@@ -1069,7 +1095,7 @@ int GrpcAgent::config(const json& config) {
   if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
     setup_blocked_loop_hooks();
   }
-  
+
   // Configure tracing flags
   if (trace_flags_ == 0 ||
       utils::find_any_fields_in_diff(diff, tracing_fields)) {
@@ -1116,7 +1142,8 @@ int GrpcAgent::config(const json& config) {
 
     // uint64_t period = NSOLID_SPANS_FLUSH_INTERVAL;
     // std::string spans_flush_interval;
-    // if (per_process::system_environment->Get(kNSOLID_SPANS_FLUSH_INTERVAL).To(&spans_flush_interval)) {
+    // if (per_process::system_environment->
+    //     Get(kNSOLID_SPANS_FLUSH_INTERVAL).To(&spans_flush_interval)) {
     //   period = std::stoull(spans_flush_interval);
     // }
 
@@ -1130,15 +1157,21 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, env_msg_.init(&loop_, env_msg_cb_, weak_from_this()));
 
-  ASSERT_EQ(0, asset_done_msg_.init(&loop_, asset_done_msg_cb_, weak_from_this()));
+  ASSERT_EQ(0, asset_done_msg_.init(&loop_,
+                                    asset_done_msg_cb_,
+                                    weak_from_this()));
 
-  ASSERT_EQ(0, blocked_loop_msg_.init(&loop_, blocked_loop_msg_cb_, weak_from_this()));
+  ASSERT_EQ(0, blocked_loop_msg_.init(&loop_,
+                                      blocked_loop_msg_cb_,
+                                      weak_from_this()));
 
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, weak_from_this()));
 
   ASSERT_EQ(0, command_msg_.init(&loop_, command_msg_cb_, weak_from_this()));
 
-  ASSERT_EQ(0, command_stream_done_msg_.init(&loop_, command_stream_done_msg_cb_, weak_from_this()));
+  ASSERT_EQ(0, command_stream_done_msg_.init(&loop_,
+                                             command_stream_done_msg_cb_,
+                                             weak_from_this()));
 
   ASSERT_EQ(0, auth_timer_.init(&loop_));
 
@@ -1148,7 +1181,9 @@ void GrpcAgent::do_start() {
 
   ASSERT_EQ(0, metrics_timer_.init(&loop_));
 
-  ASSERT_EQ(0, start_profiling_msg_.init(&loop_, start_profiling_msg_cb, weak_from_this()));
+  ASSERT_EQ(0, start_profiling_msg_.init(&loop_,
+                                         start_profiling_msg_cb,
+                                         weak_from_this()));
 
   profile_collector_ = std::make_shared<ProfileCollector>(
     &loop_,
@@ -1294,7 +1329,11 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
   ASSERT(it != profile_state.pending_profiles_map.end());
   ProfileStor& prof_stor = it->second;
 
-  Debug("got_profile. len: %ld, status: %d. thread_id: %ld. req_id: %s\n", stor.profile.length(), stor.status, thread_id, prof_stor.req_id.c_str());
+  Debug("got_profile. len: %ld, status: %d. thread_id: %ld. req_id: %s\n",
+        stor.profile.length(),
+        stor.status,
+        thread_id,
+        prof_stor.req_id.c_str());
 
   if (thread_id == 0) {
     // Store the req_id of the main thread profile
@@ -1309,7 +1348,11 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     }
 
     prof_stor.done = true;
-    send_asset_error(stor.type, prof_stor.req_id, std::move(prof_stor.options), prof_stor.stream, error);
+    send_asset_error(stor.type,
+                     prof_stor.req_id,
+                     std::move(prof_stor.options),
+                     prof_stor.stream,
+                     error);
     return;
   }
 
@@ -1330,7 +1373,9 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
 
     // send profile chunks
     grpcagent::Asset asset;
-    PopulateCommon(asset.mutable_common(), ProfileTypeStr[stor.type], prof_stor.req_id.c_str());
+    PopulateCommon(asset.mutable_common(),
+                   ProfileTypeStr[stor.type],
+                   prof_stor.req_id.c_str());
     asset.set_thread_id(thread_id);
     asset.mutable_metadata()->CopyFrom(metadata);
     asset.set_data(stor.profile);
@@ -1338,7 +1383,8 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     size_t asset_size = asset.ByteSizeLong();
     if (asset_size > GRPC_MAX_SIZE) {
       // Split the data into chunks
-      Debug("Asset size larger than supported (%ld > %ld): splitting profile into chunks\n", asset_size, GRPC_MAX_SIZE);
+      Debug("Asset size larger than supported (%ld > %ld): "
+            "splitting profile into chunks\n", asset_size, GRPC_MAX_SIZE);
       size_t prof_size = stor.profile.size();
       size_t rest = asset_size - prof_size;
       size_t offset = 0;
@@ -1346,7 +1392,9 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
 
       while (offset < prof_size) {
         grpcagent::Asset chunk_asset;
-        PopulateCommon(chunk_asset.mutable_common(), ProfileTypeStr[stor.type], prof_stor.req_id.c_str());
+        PopulateCommon(chunk_asset.mutable_common(),
+                       ProfileTypeStr[stor.type],
+                       prof_stor.req_id.c_str());
         chunk_asset.set_thread_id(thread_id);
         chunk_asset.mutable_metadata()->CopyFrom(metadata);
 
@@ -1490,15 +1538,13 @@ void GrpcAgent::send_asset_error(const ProfileType& type,
 }
 
 void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
-  google::protobuf::ArenaOptions arena_options;
-  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
-  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
-  // block to reduce memory fragments.
   arena_options.max_block_size = 65536;
-  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
 
-  grpcagent::BlockedLoopEvent* event = google::protobuf::Arena::Create<grpcagent::BlockedLoopEvent>(arena.get());
+  grpcagent::BlockedLoopEvent* event =
+    Arena::Create<grpcagent::BlockedLoopEvent>(arena.get());
   PopulateBlockedLoopEvent(event, stor);
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
@@ -1507,7 +1553,7 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*event),
     [](::grpc::Status,
-        std::unique_ptr<google::protobuf::Arena> &&,
+        std::unique_ptr<Arena> &&,
         const grpcagent::BlockedLoopEvent& event,
         grpcagent::EventResponse*) {
       return true;
@@ -1515,15 +1561,13 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
 }
 
 void GrpcAgent::send_exit() {
-  google::protobuf::ArenaOptions arena_options;
-  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
-  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
-  // block to reduce memory fragments.
   arena_options.max_block_size = 65536;
-  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
 
-  grpcagent::ExitEvent* exit_event = google::protobuf::Arena::Create<grpcagent::ExitEvent>(arena.get());
+  grpcagent::ExitEvent* exit_event =
+    Arena::Create<grpcagent::ExitEvent>(arena.get());
   PopulateCommon(exit_event->mutable_common(), "exit", nullptr);
   grpcagent::ExitBody* exit_body = exit_event->mutable_body();
   exit_body->set_code(GetExitCode());
@@ -1546,7 +1590,7 @@ void GrpcAgent::send_exit() {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*exit_event),
     [&lock, &cond](::grpc::Status,
-        std::unique_ptr<google::protobuf::Arena> &&,
+        std::unique_ptr<Arena> &&,
         const grpcagent::ExitEvent& event,
         grpcagent::EventResponse*) {
       uv_mutex_lock(&lock);
@@ -1566,16 +1610,13 @@ void GrpcAgent::send_exit() {
 }
 
 void GrpcAgent::send_info_event(const char* req_id) {
-  google::protobuf::ArenaOptions arena_options;
-  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
-  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
-  // block to reduce memory fragments.
   arena_options.max_block_size = 65536;
-  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
 
   grpcagent::InfoEvent* info_event =
-      google::protobuf::Arena::Create<grpcagent::InfoEvent>(arena.get());
+      Arena::Create<grpcagent::InfoEvent>(arena.get());
 
   nlohmann::json info = json::parse(GetProcessInfo(), nullptr, false);
   if (info.is_discarded()) {
@@ -1592,7 +1633,7 @@ void GrpcAgent::send_info_event(const char* req_id) {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*info_event),
     [](::grpc::Status,
-        std::unique_ptr<google::protobuf::Arena>&&,
+        std::unique_ptr<Arena>&&,
         const grpcagent::InfoEvent& info_event,
         grpcagent::EventResponse*) {
       return true;
@@ -1600,18 +1641,18 @@ void GrpcAgent::send_info_event(const char* req_id) {
 }
 
 void GrpcAgent::send_metrics_event(const char* req_id) {
-  google::protobuf::ArenaOptions arena_options;
-  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
-  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
-  // block to reduce memory fragments.
   arena_options.max_block_size = 65536;
-  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
 
   grpcagent::MetricsEvent* metrics_event =
-      google::protobuf::Arena::Create<grpcagent::MetricsEvent>(arena.get());
+      Arena::Create<grpcagent::MetricsEvent>(arena.get());
 
-  PopulateMetricsEvent(metrics_event, proc_prev_stor_, thr_metrics_cache_, req_id);
+  PopulateMetricsEvent(metrics_event,
+                       proc_prev_stor_,
+                       thr_metrics_cache_,
+                       req_id);
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
 
@@ -1619,7 +1660,7 @@ void GrpcAgent::send_metrics_event(const char* req_id) {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*metrics_event),
     [](::grpc::Status,
-        std::unique_ptr<google::protobuf::Arena>&&,
+        std::unique_ptr<Arena>&&,
         const grpcagent::MetricsEvent& metrics_event,
         grpcagent::EventResponse*) {
       return true;
@@ -1627,15 +1668,12 @@ void GrpcAgent::send_metrics_event(const char* req_id) {
 }
 
 void GrpcAgent::send_packages_event(const char* req_id) {
-  google::protobuf::ArenaOptions arena_options;
-  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
-  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
-  // block to reduce memory fragments.
   arena_options.max_block_size = 65536;
-  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
 
-  auto packages_event = google::protobuf::Arena::Create<grpcagent::PackagesEvent>(arena.get());
+  auto packages_event = Arena::Create<grpcagent::PackagesEvent>(arena.get());
   PopulatePackagesEvent(packages_event, req_id);
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
@@ -1644,7 +1682,7 @@ void GrpcAgent::send_packages_event(const char* req_id) {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*packages_event),
     [](::grpc::Status,
-        std::unique_ptr<google::protobuf::Arena>&&,
+        std::unique_ptr<Arena>&&,
         const grpcagent::PackagesEvent& info_event,
         grpcagent::EventResponse*) {
       return true;
@@ -1652,15 +1690,13 @@ void GrpcAgent::send_packages_event(const char* req_id) {
 }
 
 void GrpcAgent::send_reconfigure_event(const char* req_id) {
-  google::protobuf::ArenaOptions arena_options;
-  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
-  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
-  // block to reduce memory fragments.
   arena_options.max_block_size = 65536;
-  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
 
-  auto reconfigure_event = google::protobuf::Arena::Create<grpcagent::ReconfigureEvent>(arena.get());
+  grpcagent::ReconfigureEvent* reconfigure_event =
+    Arena::Create<grpcagent::ReconfigureEvent>(arena.get());
   PopulateReconfigureEvent(reconfigure_event, req_id);
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
@@ -1669,7 +1705,7 @@ void GrpcAgent::send_reconfigure_event(const char* req_id) {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*reconfigure_event),
     [](::grpc::Status,
-        std::unique_ptr<google::protobuf::Arena>&&,
+        std::unique_ptr<Arena>&&,
         const grpcagent::ReconfigureEvent& info_event,
         grpcagent::EventResponse*) {
       return true;
@@ -1677,15 +1713,12 @@ void GrpcAgent::send_reconfigure_event(const char* req_id) {
 }
 
 void GrpcAgent::send_startup_times_event(const char* req_id) {
-  google::protobuf::ArenaOptions arena_options;
-  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
-  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
-  // block to reduce memory fragments.
   arena_options.max_block_size = 65536;
-  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
 
-  auto st_event = google::protobuf::Arena::Create<grpcagent::StartupTimesEvent>(arena.get());
+  auto st_event = Arena::Create<grpcagent::StartupTimesEvent>(arena.get());
   PopulateStartupTimesEvent(st_event, req_id);
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
@@ -1694,7 +1727,7 @@ void GrpcAgent::send_startup_times_event(const char* req_id) {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*st_event),
     [](::grpc::Status status,
-        std::unique_ptr<google::protobuf::Arena>&&,
+        std::unique_ptr<Arena>&&,
         const grpcagent::StartupTimesEvent& info_event,
         grpcagent::EventResponse*) {
       Debug("StartupTimesEvent: %s\n", status.error_message().c_str());
@@ -1703,15 +1736,13 @@ void GrpcAgent::send_startup_times_event(const char* req_id) {
 }
 
 void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
-  google::protobuf::ArenaOptions arena_options;
-  // It's easy to allocate datas larger than 1024 when we populate basic resource and attributes
+  ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
-  // When in batch mode, it's easy to export a large number of spans at once, we can alloc a lager
-  // block to reduce memory fragments.
   arena_options.max_block_size = 65536;
-  std::unique_ptr<google::protobuf::Arena> arena{new google::protobuf::Arena{arena_options}};
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
 
-  grpcagent::UnblockedLoopEvent* event = google::protobuf::Arena::Create<grpcagent::UnblockedLoopEvent>(arena.get());
+  grpcagent::UnblockedLoopEvent* event =
+    Arena::Create<grpcagent::UnblockedLoopEvent>(arena.get());
   PopulateUnblockedLoopEvent(event, stor);
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
@@ -1720,7 +1751,7 @@ void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*event),
     [](::grpc::Status,
-        std::unique_ptr<google::protobuf::Arena> &&,
+        std::unique_ptr<Arena> &&,
         const grpcagent::UnblockedLoopEvent& event,
         grpcagent::EventResponse*) {
       return true;
@@ -1743,7 +1774,10 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
 
   // There's no need to stop the timer previously as uv_timer_start() stops the
   // timer if active.
-  return metrics_timer_.start(metrics_timer_cb_, period, period, weak_from_this());
+  return metrics_timer_.start(metrics_timer_cb_,
+                              period,
+                              period,
+                              weak_from_this());
 }
 
 ErrorType GrpcAgent::do_start_prof_init(
@@ -1785,7 +1819,10 @@ ErrorType GrpcAgent::do_start_prof_init(
 
   nsuv::ns_mutex::scoped_lock lock(profile_state_lock_);
   ProfileState& profile_state = profile_state_[type];
-  ProfileStor stor{ req.requestid(), uv_now(&loop_), nullptr, std::move(options) };
+  ProfileStor stor{ req.requestid(),
+                    uv_now(&loop_),
+                    nullptr,
+                    std::move(options) };
   auto iter = profile_state.pending_profiles_map.emplace(thread_id,
                                                          std::move(stor));
   if (iter.second == false) {
@@ -1805,9 +1842,9 @@ ErrorType GrpcAgent::do_start_prof_end(ErrorType err,
                                        ProfileOptions&& opts) {
   uint64_t thread_id =
     std::visit([](auto&& opt) { return opt.thread_id; }, opts);
-  AssetStream* stream = new AssetStream(nsolid_service_stub_.get(),
-                                        weak_from_this(),
-                                        AssetStream::AssetStor{type, thread_id});
+  auto stream = new AssetStream(nsolid_service_stub_.get(),
+                                weak_from_this(),
+                                AssetStream::AssetStor{type, thread_id});
   if (err != ErrorType::ESuccess) {
     send_asset_error(type, req_id, std::move(opts), stream, err);
     return err;
@@ -1860,7 +1897,8 @@ ErrorType GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
     options.stack_depth = 16;
   }
 
-  options.flags = static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());
+  options.flags =
+    static_cast<v8::HeapProfiler::SamplingFlags>(heap_sampling.flags());
   int ret = profile_collector_->StartHeapSampling(options);
   return translate_error(ret);
 }
