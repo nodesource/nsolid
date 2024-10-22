@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "asset.proto";
+import "blocked_loop.proto";
+import "command.proto";
+import "exit.proto";
+import "info.proto";
+import "metrics.proto";
+import "packages.proto";
+import "reconfigure.proto";
+import "startup_times.proto";
+
+package grpcagent;
+
+service NSolidService {
+  rpc Command (stream CommandResponse) returns (stream CommandRequest) {}
+  rpc ExportAsset (stream Asset) returns (EventResponse) {}
+  rpc ExportExit (ExitEvent) returns (EventResponse) {}
+  rpc ExportInfo (InfoEvent) returns (EventResponse) {}
+  rpc ExportMetrics (MetricsEvent) returns (EventResponse) {}
+  rpc ExportPackages (PackagesEvent) returns (EventResponse) {}
+  rpc ExportBlockedLoop (BlockedLoopEvent) returns (EventResponse) {}
+  rpc ExportUnblockedLoop (UnblockedLoopEvent) returns (EventResponse) {}
+  rpc ExportReconfigure (ReconfigureEvent) returns (EventResponse) {}
+  rpc ExportStartupTimes (StartupTimesEvent) returns (EventResponse) {}
+}
+
+message EventResponse {
+  string error_message = 1;
+}

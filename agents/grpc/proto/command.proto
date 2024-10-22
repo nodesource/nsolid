@@ -1,0 +1,30 @@
+// I want to define here RuntimeResponse message which will be oneOf many other types of messages
+// For example:
+// - InfoResponse
+// - PackagesResponse
+
+syntax = "proto3";
+
+import "profile.proto";
+import "reconfigure.proto";
+
+package grpcagent;
+
+message CommandArgs {
+  oneof args {
+    ReconfigureBody reconfigure = 1;
+    ProfileArgs profile = 2;
+  }
+}
+
+message CommandRequest {
+  string requestId = 1;
+  string id = 2;
+  string command = 3;
+  CommandArgs args = 4;
+}
+
+message CommandResponse {
+  uint32 code = 1;
+  string message = 2;
+}
