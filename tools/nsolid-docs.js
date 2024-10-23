@@ -6,7 +6,7 @@ const jsdoc2md = require('jsdoc-to-markdown');
 const jsonparsed = jsdoc2md.getTemplateDataSync({
   files: [ path.join(__dirname, '/../lib/nsolid.js'),
            path.join(__dirname, '/../doc/nsolid/nsolid.jsdoc'),
-           path.join(__dirname, '/../agents/zmq/lib/agent.js') ],
+           path.join(__dirname, '/../lib/internal/nsolid_assets.js') ],
 });
 
 jsonparsed.sort((a, b) => {

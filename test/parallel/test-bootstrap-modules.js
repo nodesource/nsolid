@@ -51,6 +51,7 @@ const expectedModules = new Set([
   'NativeModule internal/agents/statsd/lib/nsolid',
   'NativeModule internal/agents/zmq/lib/agent',
   'NativeModule internal/agents/zmq/lib/nsolid',
+  'NativeModule internal/nsolid_assets',
   'NativeModule internal/errors',
   'NativeModule internal/event_target',
   'NativeModule internal/fixed_queue',
