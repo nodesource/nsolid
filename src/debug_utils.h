@@ -56,6 +56,7 @@ void NODE_EXTERN_PRIVATE FWrite(FILE* file, const std::string& str);
   V(SNAPSHOT_SERDES)                                                           \
   V(PERMISSION_MODEL)                                                          \
   V(QUIC)                                                                      \
+  V(NSOLID_GRPC_AGENT)                                                         \
   V(NSOLID_OTLP_AGENT)                                                         \
   V(NSOLID_STATSD_AGENT)                                                       \
   V(NSOLID_ZMQ_AGENT)
