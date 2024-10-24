@@ -51,6 +51,7 @@ void NODE_EXTERN_PRIVATE FWrite(FILE* file, const std::string& str);
   V(WASI)                                                                      \
   V(MKSNAPSHOT)                                                                \
   V(PERMISSION_MODEL)                                                          \
+  V(NSOLID_GRPC_AGENT)                                                         \
   V(NSOLID_OTLP_AGENT)                                                         \
   V(NSOLID_STATSD_AGENT)                                                       \
   V(NSOLID_ZMQ_AGENT)
