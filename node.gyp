@@ -395,6 +395,8 @@
       'agents/src/profile_collector.h',
       'agents/src/span_collector.cc',
       'agents/src/span_collector.h',
+      'agents/grpc/src/grpc_client.cc',
+      'agents/grpc/src/grpc_client.h',
       'agents/grpc/src/proto/nsolid_service.grpc.pb.cc',
       'agents/grpc/src/proto/nsolid_service.pb.cc',
       'agents/grpc/src/proto/asset.grpc.pb.cc',
