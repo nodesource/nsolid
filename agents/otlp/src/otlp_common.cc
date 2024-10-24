@@ -362,7 +362,7 @@ void fill_log_recordable(LogsRecordable* recordable,
   recordable->SetSeverity(
       static_cast<opentelemetry::logs::Severity>(info.severity));
   SystemTimestamp ts(duration_cast<time_point::duration>(
-    milliseconds(static_cast<uint64_t>(info.timestamp))));
+    nanoseconds(static_cast<uint64_t>(info.timestamp))));
   recordable->SetTimestamp(ts);
   recordable->SetObservedTimestamp(ts);
   recordable->SetResource(*GetResource());
