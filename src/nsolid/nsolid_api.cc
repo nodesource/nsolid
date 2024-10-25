@@ -937,11 +937,13 @@ void EnvList::AddEnv(Environment* env) {
     const AliasedFloat64Array& ps = env->performance_state()->milestones;
     double val;
 #define V(name, str)                                                           \
-    val = ps[performance::NODE_PERFORMANCE_MILESTONE_##name];                  \
-    if (val > 0)                                                               \
-      envinst_sp->startup_times_.insert({                                      \
-          get_startuptime_name(str), static_cast<uint64_t>(val) });
-    NODE_PERFORMANCE_MILESTONES(V)
+    if (std::string(str) != "timeOriginTimestamp") {                           \
+      val = ps[performance::NODE_PERFORMANCE_MILESTONE_##name];                \
+      if (val > 0)                                                             \
+        envinst_sp->startup_times_.insert({                                    \
+          get_startuptime_name(str), static_cast<uint64_t>(val) });            \
+    }
+NODE_PERFORMANCE_MILESTONES(V)
 #undef V
   }
 

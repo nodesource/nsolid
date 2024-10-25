@@ -23,4 +23,5 @@ process.on('exit', () => {
   assert(startupTimes.loop_exit[1] > 0);
   assert.strictEqual(startupTimes.loop_exit[0], 0);
   assert(startupTimes.loop_exit[1] > startupTimes.loop_start[1]);
+  assert.ok(!startupTimes.timeOriginTimestamp);
 });
