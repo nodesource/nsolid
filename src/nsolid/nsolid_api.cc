@@ -240,7 +240,7 @@ static void AppendStartupTimeString(const std::string& name,
 }
 
 
-std::string EnvInst::GetStartupTimes() {
+std::string EnvInst::GetStartupTimesJSON() const {
   std::string mstr = "{";
   {
     ns_mutex::scoped_lock lock(startup_times_lock_);
@@ -253,6 +253,11 @@ std::string EnvInst::GetStartupTimes() {
   mstr.pop_back();
   mstr += "}";
   return mstr;
+}
+
+std::map<std::string, uint64_t> EnvInst::GetStartupTimes() const {
+  ns_mutex::scoped_lock lock(startup_times_lock_);
+  return startup_times_;
 }
 
 
@@ -752,7 +757,7 @@ int EnvInst::CustomCommandResponse(const std::string& req_id,
 }
 
 
-EnvList::EnvList(): info_(nlohmann::json::object()) {
+EnvList::EnvList(): info_(nlohmann::json()) {
   int er;
   // Create event loop and new thread to run EnvList commands.
   uv_loop_init(&thread_loop_);
@@ -2422,7 +2427,7 @@ static void GetStartupTimes(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   EnvInst* envinst = EnvInst::GetEnvLocalInst(isolate);
   CHECK_NE(envinst, nullptr);
-  std::string ms = envinst->GetStartupTimes();
+  std::string ms = envinst->GetStartupTimesJSON();
   Local<String> ms_str =
     String::NewFromUtf8(isolate,
                         ms.c_str(),
