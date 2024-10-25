@@ -418,6 +418,8 @@
       'agents/src/profile_collector.h',
       'agents/src/span_collector.cc',
       'agents/src/span_collector.h',
+      'agents/grpc/src/asset_stream.cc',
+      'agents/grpc/src/asset_stream.h',
       'agents/grpc/src/command_stream.cc',
       'agents/grpc/src/command_stream.h',
       'agents/grpc/src/grpc_client.cc',
