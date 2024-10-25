@@ -52,6 +52,7 @@ function checkStartupTimesData(data, requestId, agentId, additionalTimes = []) {
   assert.ok(data.body.loaded_environment);
   assert.ok(data.body.loop_start);
   assert.ok(data.body.timeOrigin);
+  assert.ok(!data.body.timeOriginTimestamp);
   additionalTimes.forEach((time) => assert.ok(data.body[time]));
   Object.keys(data.body).forEach((key) => {
     validateArray(data.body[key], `data.body.${key}`);
