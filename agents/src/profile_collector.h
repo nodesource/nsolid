@@ -3,6 +3,7 @@
 
 #include <nsolid.h>
 #include <nsolid/thread_safe.h>
+#include "google/protobuf/struct.pb.h"
 #include "nlohmann/json.hpp"
 #include "nsuv-inl.h"
 #include <variant>
@@ -31,6 +32,7 @@ struct ProfileOptionsBase {
   uint64_t thread_id;
   uint64_t duration;
   nlohmann::json metadata;
+  google::protobuf::Struct metadata_pb;
 };
 
 using CPUProfileOptions = ProfileOptionsBase;
