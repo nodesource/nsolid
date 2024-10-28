@@ -69,6 +69,7 @@
   V(process_methods)                                                           \
   V(report)                                                                    \
   V(nsolid_api)                                                                \
+  V(nsolid_grpc_agent)                                                         \
   V(nsolid_statsd_agent)                                                       \
   V(nsolid_zmq_agent)                                                          \
   V(sea)                                                                       \
