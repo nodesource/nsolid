@@ -106,6 +106,7 @@ expected.beforePreExec = new Set([
 ]);
 
 expected.atRunTime = new Set([
+  'NativeModule diagnostics_channel',
   'NativeModule internal/modules/run_main',
   'NativeModule internal/net',
   'NativeModule internal/dns/utils',
@@ -120,6 +121,7 @@ expected.atRunTime = new Set([
   'NativeModule internal/nsolid_assets',
   'NativeModule internal/nsolid_loader',
   'NativeModule internal/nsolid_promise_tracking',
+  'NativeModule internal/nsolid_diag',
 ]);
 
 if (common.isMainThread) {
