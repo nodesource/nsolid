@@ -124,6 +124,7 @@ expected.atRunTime = new Set([
   'NativeModule internal/nsolid_assets',
   'NativeModule internal/nsolid_loader',
   'NativeModule internal/nsolid_promise_tracking',
+  'NativeModule internal/nsolid_diag',
 ]);
 
 if (common.isMainThread) {
