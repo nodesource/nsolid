@@ -1426,6 +1426,8 @@ LINT_CPP_EXCLUDE += src/nlohmann/json.h
 LINT_CPP_EXCLUDE += src/tracing/trace_event.h src/tracing/trace_event_common.h
 
 LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
+	agents/grpc/src/*.cc \
+	agents/grpc/src/*.h \
 	agents/otlp/src/*.cc \
 	agents/otlp/src/*.h \
 	agents/src/*.cc \
@@ -1630,6 +1632,7 @@ test-agents-prereqs:
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 base85 --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm run build:libzmq --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install @opentelemetry/otlp-proto-exporter-base @grpc/grpc-js @grpc/proto-loader --prefix test/common/nsolid-otlp-agent --no-save --no-package-lock
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install @grpc/grpc-js @grpc/proto-loader --prefix test/common/nsolid-grpc-agent --no-save --no-package-lock
 
 .PHONY: test-agents-prereqs-clean
 test-agents-prereqs-clean:
