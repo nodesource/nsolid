@@ -39,7 +39,7 @@ class SpanCollector;
 namespace grpc {
 
 // predeclarations
-class AssetStor;
+struct AssetStor;
 class AssetStream;
 class CommandStream;
 class GrpcAgent;
