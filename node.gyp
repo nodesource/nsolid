@@ -47,6 +47,8 @@
       '<@(linked_module_files)',
     ],
     'agents_files': [
+      'agents/grpc/lib/nsolid.js',
+      'agents/grpc/lib/agent.js',
       'agents/statsd/lib/nsolid.js',
       'agents/statsd/lib/agent.js',
       'agents/zmq/lib/nsolid.js',
@@ -397,6 +399,7 @@
       'agents/src/span_collector.h',
       'agents/grpc/src/asset_stream.cc',
       'agents/grpc/src/asset_stream.h',
+      'agents/grpc/src/binding.cc',
       'agents/grpc/src/command_stream.cc',
       'agents/grpc/src/command_stream.h',
       'agents/grpc/src/grpc_agent.cc',
