@@ -31,8 +31,8 @@ inline void Debug(Args&&... args) {
 
 
 inline void DebugJSON(const char* str, const json& msg) {
-  if (UNLIKELY(per_process::enabled_debug_list.enabled(
-        DebugCategory::NSOLID_STATSD_AGENT))) {
+  if (per_process::enabled_debug_list.enabled(
+        DebugCategory::NSOLID_STATSD_AGENT)) {
     Debug(str, msg.dump(4).c_str());
   }
 }

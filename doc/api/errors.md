@@ -1301,18 +1301,20 @@ added: v16.7.0
 
 When using [`fs.cp()`][], `src` or `dest` pointed to an invalid path.
 
-<a id="ERR_FS_CP_FIFO_PIPE"></a>
+<a id="ERR_HTTP_BODY_NOT_ALLOWED"></a>
 
 ### `ERR_HTTP_BODY_NOT_ALLOWED`
 
 An error is thrown when writing to an HTTP response which does not allow
-contents. <a id="ERR_HTTP_BODY_NOT_ALLOWED"></a>
+contents.
+
+<a id="ERR_HTTP_CONTENT_LENGTH_MISMATCH"></a>
 
 ### `ERR_HTTP_CONTENT_LENGTH_MISMATCH`
 
 Response body size doesn't match with the specified content-length header value.
 
-<a id="ERR_HTTP_CONTENT_LENGTH_MISMATCH"></a>
+<a id="ERR_FS_CP_FIFO_PIPE"></a>
 
 ### `ERR_FS_CP_FIFO_PIPE`
 
@@ -2014,13 +2016,6 @@ An invalid [`package.json`][] file failed parsing.
 The `package.json` [`"exports"`][] field contains an invalid target mapping
 value for the attempted module resolution.
 
-<a id="ERR_INVALID_PERFORMANCE_MARK"></a>
-
-### `ERR_INVALID_PERFORMANCE_MARK`
-
-While using the Performance Timing API (`perf_hooks`), a performance mark is
-invalid.
-
 <a id="ERR_INVALID_PROTOCOL"></a>
 
 ### `ERR_INVALID_PROTOCOL`
@@ -2104,6 +2099,18 @@ An element in the `iterable` provided to the [WHATWG][WHATWG URL API]
 [`URLSearchParams` constructor][`new URLSearchParams(iterable)`] did not
 represent a `[name, value]` tuple – that is, if an element is not iterable, or
 does not consist of exactly two elements.
+
+<a id="ERR_INVALID_TYPESCRIPT_SYNTAX"></a>
+
+### `ERR_INVALID_TYPESCRIPT_SYNTAX`
+
+<!-- YAML
+added: v22.10.0
+-->
+
+The provided TypeScript syntax is not valid or unsupported.
+This could happen when using TypeScript syntax that requires
+transformation with [type-stripping][].
 
 <a id="ERR_INVALID_URI"></a>
 
@@ -2289,21 +2296,6 @@ function.
 An error occurred while attempting to retrieve the JavaScript `undefined`
 value.
 
-<a id="ERR_NAPI_TSFN_START_IDLE_LOOP"></a>
-
-### `ERR_NAPI_TSFN_START_IDLE_LOOP`
-
-On the main thread, values are removed from the queue associated with the
-thread-safe function in an idle loop. This error indicates that an error
-has occurred when attempting to start the loop.
-
-<a id="ERR_NAPI_TSFN_STOP_IDLE_LOOP"></a>
-
-### `ERR_NAPI_TSFN_STOP_IDLE_LOOP`
-
-Once no more items are left in the queue, the idle loop must be suspended. This
-error indicates that the idle loop has failed to stop.
-
 <a id="ERR_NOT_BUILDING_SNAPSHOT"></a>
 
 ### `ERR_NOT_BUILDING_SNAPSHOT`
@@ -2350,6 +2342,17 @@ compiled with ICU support.
 ### `ERR_NON_CONTEXT_AWARE_DISABLED`
 
 A non-context-aware native addon was loaded in a process that disallows them.
+
+<a id="ERR_OPERATION_FAILED"></a>
+
+### `ERR_OPERATION_FAILED`
+
+<!-- YAML
+added: v15.0.0
+-->
+
+An operation failed. This is typically used to signal the general failure
+of an asynchronous operation.
 
 <a id="ERR_OUT_OF_RANGE"></a>
 
@@ -2432,6 +2435,42 @@ Accessing `Object.prototype.__proto__` has been forbidden using
 [`--disable-proto=throw`][]. [`Object.getPrototypeOf`][] and
 [`Object.setPrototypeOf`][] should be used to get and set the prototype of an
 object.
+
+<a id="ERR_QUIC_CONNECTION_FAILED"></a>
+
+### `ERR_QUIC_CONNECTION_FAILED`
+
+<!-- YAML
+added: v22.10.0
+-->
+
+> Stability: 1 - Experimental
+
+Establishing a QUIC connection failed.
+
+<a id="ERR_QUIC_ENDPOINT_CLOSED"></a>
+
+### `ERR_QUIC_ENDPOINT_CLOSED`
+
+<!-- YAML
+added: v22.10.0
+-->
+
+> Stability: 1 - Experimental
+
+A QUIC Endpoint closed with an error.
+
+<a id="ERR_QUIC_OPEN_STREAM_FAILED"></a>
+
+### `ERR_QUIC_OPEN_STREAM_FAILED`
+
+<!-- YAML
+added: v22.10.0
+-->
+
+> Stability: 1 - Experimental
+
+Opening a QUIC stream failed.
 
 <a id="ERR_REQUIRE_CYCLE_MODULE"></a>
 
@@ -2585,6 +2624,18 @@ disconnected socket.
 ### `ERR_SOCKET_DGRAM_NOT_RUNNING`
 
 A call was made and the UDP subsystem was not running.
+
+<a id="ERR_SOURCE_MAP_CORRUPT"></a>
+
+### `ERR_SOURCE_MAP_CORRUPT`
+
+The source map could not be parsed because it does not exist, or is corrupt.
+
+<a id="ERR_SOURCE_MAP_MISSING_SOURCE"></a>
+
+### `ERR_SOURCE_MAP_MISSING_SOURCE`
+
+A file imported from a source map was not found.
 
 <a id="ERR_SQLITE_ERROR"></a>
 
@@ -2990,6 +3041,16 @@ try {
 }
 ```
 
+<a id="ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING"></a>
+
+### `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`
+
+<!-- YAML
+added: v22.6.0
+-->
+
+Type stripping is not supported for files descendent of a `node_modules` directory.
+
 <a id="ERR_USE_AFTER_CLOSE"></a>
 
 ### `ERR_USE_AFTER_CLOSE`
@@ -3381,6 +3442,18 @@ removed: v15.0.0
 
 An invalid or unknown file encoding was passed.
 
+<a id="ERR_INVALID_PERFORMANCE_MARK"></a>
+
+### `ERR_INVALID_PERFORMANCE_MARK`
+
+<!-- YAML
+added: v8.5.0
+removed: v16.7.0
+-->
+
+While using the Performance Timing API (`perf_hooks`), a performance mark is
+invalid.
+
 <a id="ERR_INVALID_TRANSFER_OBJECT"></a>
 
 ### `ERR_INVALID_TRANSFER_OBJECT`
@@ -3573,23 +3646,45 @@ removed: v10.0.0
 
 Used by the `Node-API` when `Constructor.prototype` is not an object.
 
+<a id="ERR_NAPI_TSFN_START_IDLE_LOOP"></a>
+
+### `ERR_NAPI_TSFN_START_IDLE_LOOP`
+
+<!-- YAML
+added:
+  - v10.6.0
+  - v8.16.0
+removed:
+  - v14.2.0
+  - v12.17.0
+-->
+
+On the main thread, values are removed from the queue associated with the
+thread-safe function in an idle loop. This error indicates that an error
+has occurred when attempting to start the loop.
+
+<a id="ERR_NAPI_TSFN_STOP_IDLE_LOOP"></a>
+
+### `ERR_NAPI_TSFN_STOP_IDLE_LOOP`
+
+<!-- YAML
+added:
+  - v10.6.0
+  - v8.16.0
+removed:
+  - v14.2.0
+  - v12.17.0
+-->
+
+Once no more items are left in the queue, the idle loop must be suspended. This
+error indicates that the idle loop has failed to stop.
+
 <a id="ERR_NO_LONGER_SUPPORTED"></a>
 
 ### `ERR_NO_LONGER_SUPPORTED`
 
 A Node.js API was called in an unsupported manner, such as
 `Buffer.write(string, encoding, offset[, length])`.
-
-<a id="ERR_OPERATION_FAILED"></a>
-
-### `ERR_OPERATION_FAILED`
-
-<!-- YAML
-added: v15.0.0
--->
-
-An operation failed. This is typically used to signal the general failure
-of an asynchronous operation.
 
 <a id="ERR_OUTOFMEMORY"></a>
 
@@ -4065,16 +4160,6 @@ The public key in the certificate SubjectPublicKeyInfo could not be read.
 
 An error occurred trying to allocate memory. This should never happen.
 
-<a id="ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING"></a>
-
-#### `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`
-
-<!-- YAML
-added: v22.6.0
--->
-
-Type stripping is not supported for files descendent of a `node_modules` directory.
-
 [ES Module]: esm.md
 [ICU]: intl.md#internationalization-support
 [JSON Web Key Elliptic Curve Registry]: https://www.iana.org/assignments/jose/jose.xhtml#web-key-elliptic-curve
@@ -4169,4 +4254,5 @@ Type stripping is not supported for files descendent of a `node_modules` directo
 [stream-based]: stream.md
 [syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 [try-catch]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/try...catch
+[type-stripping]: typescript.md#type-stripping
 [vm]: vm.md
