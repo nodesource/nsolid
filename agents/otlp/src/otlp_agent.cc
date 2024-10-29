@@ -611,8 +611,7 @@ void OTLPAgent::update_tracer(uint32_t flags) {
 
 UniqRecordable OTLPAgent::transf(const Tracer::SpanStor& span,
                                  OTLPAgent* agent) {
-  // Transform the span
-  fprintf(stderr, "Transforming span\n");
+  // Transform the span into a recordable
   auto recordable = agent->otlp_exporter_->MakeRecordable();
   fill_recordable(recordable.get(), span);
   return recordable;
