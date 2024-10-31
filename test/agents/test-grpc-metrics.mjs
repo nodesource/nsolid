@@ -261,7 +261,7 @@ const testConfigs = [
         NSOLID_GRPC: `localhost:${port}`,
         NSOLID_INTERVAL: 100,
       };
-    }
+    },
   },
 ];
 

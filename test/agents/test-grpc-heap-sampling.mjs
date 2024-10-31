@@ -69,7 +69,7 @@ tests.push({
         const env = {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
+          NSOLID_GRPC: `localhost:${port}`,
         };
 
         const opts = {
@@ -85,13 +85,13 @@ tests.push({
             fields: {
               a: {
                 stringValue: 'x',
-                kind: 'stringValue'
-              }
-            }
+                kind: 'stringValue',
+              },
+            },
           },
           heapSampling: {
-            sampleInterval: 50
-          }
+            sampleInterval: 50,
+          },
         };
 
         const { data, requestId } = await grpcServer.heapSampling(agentId, options);
@@ -113,7 +113,7 @@ tests.push({
         const env = {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
+          NSOLID_GRPC: `localhost:${port}`,
         };
 
         const opts = {
@@ -131,13 +131,13 @@ tests.push({
             fields: {
               a: {
                 stringValue: 'x',
-                kind: 'stringValue'
-              }
-            }
+                kind: 'stringValue',
+              },
+            },
           },
           heapSampling: {
-            sampleInterval: 50
-          }
+            sampleInterval: 50,
+          },
         };
 
         const { data, requestId } = await grpcServer.heapSampling(agentId, options);
@@ -159,7 +159,7 @@ tests.push({
         const env = {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
+          NSOLID_GRPC: `localhost:${port}`,
         };
 
         const opts = {
@@ -192,7 +192,7 @@ tests.push({
         const env = {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
+          NSOLID_GRPC: `localhost:${port}`,
         };
 
         const opts = {
@@ -229,7 +229,7 @@ tests.push({
         const env = {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
+          NSOLID_GRPC: `localhost:${port}`,
         };
 
         const opts = {
@@ -275,7 +275,7 @@ tests.push({
         const env = {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
+          NSOLID_GRPC: `localhost:${port}`,
         };
 
         const opts = {

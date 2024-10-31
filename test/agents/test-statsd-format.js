@@ -22,14 +22,14 @@ describe('format', () => {
     assert.strictEqual(nsolid.statsd.status(), 'unconfigured');
     nsolid.start({
       statsd: 8125,
-      app: 'hello.goodbye.hello'
+      app: 'hello.goodbye.hello',
     });
     waitForStatus('ready', () => {
       const info = nsolid.info();
       const env = info.nodeEnv.replace(/\./g, '-');
       const app = info.app.replace(/\./g, '-');
       const hostname = os.hostname().replace(/\./g, '-');
-      const expectedBucket = `nsolid.${env}.${app}.${hostname}.${nsolid.id.substr(0, 7)}`;
+      const expectedBucket = `nsolid.${env}.${app}.${hostname}.${nsolid.id.substring(0, 7)}`;
       console.log(expectedBucket);
       assert.strictEqual(nsolid.statsd.format.bucket(), expectedBucket);
       assert.strictEqual(nsolid.statsd.format.tags(), '');
@@ -38,7 +38,7 @@ describe('format', () => {
       assert.strictEqual(nsolid.statsd.format.set('name', 'val'), `${expectedBucket}.name:val|s`);
       assert.strictEqual(nsolid.statsd.format.timing('name', 'val'), `${expectedBucket}.name:val|ms`);
       nsolid.start({
-        statsdTags: 'tag1,tag2'
+        statsdTags: 'tag1,tag2',
       });
       waitForStatus('ready', () => {
         assert.strictEqual(nsolid.statsd.format.bucket(), expectedBucket);

@@ -175,7 +175,7 @@ tests.push({
     return new Promise((resolve) => {
       let totalSpans = 0;
       const opts = {
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } }
+        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -194,7 +194,7 @@ tests.push({
         }
       }, 1));
     });
-  }
+  },
 });
 
 tests.push({
@@ -204,7 +204,7 @@ tests.push({
       let totalSpans = 0;
       const opts = {
         args: [ '-t', 'http' ],
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } }
+        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
       };
 
       playground.bootstrap(opts, mustSucceed(() => {
@@ -222,7 +222,7 @@ tests.push({
         }
       }, 1));
     });
-  }
+  },
 });
 
 tests.push({
@@ -233,7 +233,7 @@ tests.push({
       let totalSpans = 0;
       const opts = {
         args: [ '-w', 1 ],
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } }
+        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -254,7 +254,7 @@ tests.push({
         }
       }, 1));
     });
-  }
+  },
 });
 
 tests.push({
@@ -263,7 +263,7 @@ tests.push({
     return new Promise((resolve) => {
       let totalSpans = 0;
       const opts = {
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } }
+        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -282,7 +282,7 @@ tests.push({
         }
       }, 1));
     });
-  }
+  },
 });
 
 tests.push({
@@ -293,7 +293,7 @@ tests.push({
       let totalSpans = 0;
       const opts = {
         args: [ '-w', 1 ],
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } }
+        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -314,7 +314,7 @@ tests.push({
         }
       }, 1));
     });
-  }
+  },
 });
 
 tests.push({
@@ -322,7 +322,7 @@ tests.push({
   test: async (playground) => {
     return new Promise((resolve) => {
       const opts = {
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } }
+        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -336,7 +336,7 @@ tests.push({
         resolve();
       }));
     });
-  }
+  },
 });
 
 tests.push({
@@ -346,7 +346,7 @@ tests.push({
       let wid;
       const opts = {
         args: [ '-w', 1 ],
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } }
+        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -362,7 +362,7 @@ tests.push({
         resolve();
       }));
     });
-  }
+  },
 });
 
 const config = {
@@ -371,7 +371,7 @@ const config = {
   bulkBindAddr: 'tcp://*:9003',
   HWM: 0,
   bulkHWM: 0,
-  commandTimeoutMilliseconds: 5000
+  commandTimeoutMilliseconds: 5000,
 };
 
 

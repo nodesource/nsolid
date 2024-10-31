@@ -103,7 +103,7 @@ tests.push({
         }));
       }));
     });
-  }
+  },
 });
 
 tests.push({
@@ -115,9 +115,9 @@ tests.push({
           env: {
             NSOLID_APPNAME: 'myapp',
             NSOLID_TAGS: 'tag1,tag2',
-            NODE_ENV: 'dev'
-          }
-        }
+            NODE_ENV: 'dev',
+          },
+        },
       };
 
       playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
@@ -125,7 +125,7 @@ tests.push({
           const nsolidConfig = {
             appName: 'myapp',
             tags: ['tag1', 'tag2'],
-            nodeEnv: 'dev'
+            nodeEnv: 'dev',
           };
 
           checkInfoData(info, requestId, agentId, nsolidConfig);
@@ -133,7 +133,7 @@ tests.push({
         }));
       }));
     });
-  }
+  },
 });
 
 const config = {
@@ -142,7 +142,7 @@ const config = {
   bulkBindAddr: 'tcp://*:9003',
   HWM: 0,
   bulkHWM: 0,
-  commandTimeoutMilliseconds: 5000
+  commandTimeoutMilliseconds: 5000,
 };
 
 for (const saas of [false, true]) {

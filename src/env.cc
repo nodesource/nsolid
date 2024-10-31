@@ -1257,8 +1257,9 @@ void Environment::PrintSyncTrace() const {
 
   HandleScope handle_scope(isolate());
 
-  fprintf(
-      stderr, "(nsolid:%d) WARNING: Detected use of sync API\n", uv_os_getpid());
+  fprintf(stderr,
+          "(nsolid:%d) WARNING: Detected use of sync API\n",
+          uv_os_getpid());
   PrintStackTrace(
       isolate(),
       StackTrace::CurrentStackTrace(isolate(),

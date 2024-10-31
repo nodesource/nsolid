@@ -72,7 +72,7 @@ tests.push({
         }));
       }));
     });
-  }
+  },
 });
 
 async function sendReconfigure(zmqAgentBus, agentId, config) {
@@ -112,14 +112,14 @@ tests.push({
             await sendReconfigure(playground.zmqAgentBus, agentId, config);
           }, {
             code: 422,
-            message: errorMsg
+            message: errorMsg,
           });
         }
 
         resolve();
       }));
     });
-  }
+  },
 });
 
 const newConfigs = [
@@ -152,7 +152,7 @@ tests.push({
         resolve();
       }));
     });
-  }
+  },
 });
 
 const config = {
@@ -161,7 +161,7 @@ const config = {
   bulkBindAddr: 'tcp://*:9003',
   HWM: 0,
   bulkHWM: 0,
-  commandTimeoutMilliseconds: 5000
+  commandTimeoutMilliseconds: 5000,
 };
 
 

@@ -43,7 +43,7 @@ async function startUdpServer(port, cb) {
 describe('sending custom metrics', () => {
   afterEach((t, done) => {
     nsolid.start({
-      statsd: null
+      statsd: null,
     });
     waitForStatus('unconfigured', done);
   });
@@ -53,7 +53,7 @@ describe('sending custom metrics', () => {
       let times = 0;
       this.tcpConnection = conn;
       const rl = readline.createInterface({
-        input: conn
+        input: conn,
       });
 
       rl.on('line', (line) => {
@@ -86,7 +86,7 @@ describe('sending custom metrics', () => {
         this.tcpServer = tcpServer;
         this.tcpServer.on('close', resolve);
         nsolid.start({
-          statsd: 'tcp://127.0.0.1:8125'
+          statsd: 'tcp://127.0.0.1:8125',
         });
         waitForStatus('ready', common.mustCall(() => {
           assert.strictEqual(nsolid.statsd.tcpIp(), '127.0.0.1:8125');
@@ -109,7 +109,7 @@ describe('sending custom metrics', () => {
         let times = 0;
         this.udpServer = udpServer;
         const rl = readline.createInterface({
-          input: bufferStream
+          input: bufferStream,
         });
 
         rl.on('line', (line) => {
@@ -139,7 +139,7 @@ describe('sending custom metrics', () => {
         });
 
         nsolid.start({
-          statsd: 'udp://127.0.0.1:8125'
+          statsd: 'udp://127.0.0.1:8125',
         });
         waitForStatus('ready', common.mustCall(() => {
           assert.strictEqual(nsolid.statsd.tcpIp(), null);

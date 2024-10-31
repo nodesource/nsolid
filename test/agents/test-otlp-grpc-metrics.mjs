@@ -25,7 +25,7 @@ if (process.argv[2] === 'child') {
 
   if (isMainThread) {
     nsolid.start({
-      tracingEnabled: false
+      tracingEnabled: false,
     });
 
     nsolid.setThreadName('main-thread');
@@ -612,7 +612,7 @@ if (process.argv[2] === 'child') {
     metrics: [],
     expected: [],
     threadId: null,
-    threadList: [ threadId ]
+    threadList: [ threadId ],
   };
 
   async function runTest(getEnv) {

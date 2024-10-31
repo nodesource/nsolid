@@ -12,7 +12,7 @@ function getExpectedBucket() {
   bucket = bucket.replace(/\${hostname}/ig,
                           config.hostname.replace(/\./g, '-'));
   bucket = bucket.replace(/\${id}/ig, nsolid.id);
-  bucket = bucket.replace(/\${shortId}/ig, nsolid.id.substr(0, 7));
+  bucket = bucket.replace(/\${shortId}/ig, nsolid.id.substring(0, 7));
   return bucket;
 }
 

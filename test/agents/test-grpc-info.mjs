@@ -18,7 +18,7 @@ if (process.argv[2] === 'child') {
 
   if (isMainThread) {
     nsolid.start({
-      tracingEnabled: false
+      tracingEnabled: false,
     });
 
     const worker = new Worker(__filename, { argv: ['child'] });
@@ -102,10 +102,10 @@ if (process.argv[2] === 'child') {
         return {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
+          NSOLID_GRPC: `localhost:${port}`,
         };
       },
-      nsolidConfig: {}
+      nsolidConfig: {},
     },
     {
       getEnv: (port) => {
@@ -115,14 +115,14 @@ if (process.argv[2] === 'child') {
           NSOLID_GRPC: `localhost:${port}`,
           NSOLID_APPNAME: 'myapp',
           NSOLID_TAGS: 'tag1,tag2',
-          NODE_ENV: 'dev'
+          NODE_ENV: 'dev',
         };
       },
       nsolidConfig: {
         appName: 'myapp',
         tags: ['tag1', 'tag2'],
-        nodeEnv: 'dev'
-      }
+        nodeEnv: 'dev',
+      },
     },
   ];
 

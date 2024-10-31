@@ -21,7 +21,7 @@ tests.push({
         await playground.stopServer();
         playground.updateConfig({
           dataBindAddr: 'tcp://*:9004',
-          bulkBindAddr: 'tcp://*:9005'
+          bulkBindAddr: 'tcp://*:9005',
         });
 
         await playground.startServer();

@@ -1,6 +1,8 @@
 'use strict';
 
-const { ArrayIsArray } = primordials;
+const {
+  ArrayIsArray,
+} = primordials;
 const { validateStringArray } = require('internal/validators');
 
 module.exports = ({ bucket,

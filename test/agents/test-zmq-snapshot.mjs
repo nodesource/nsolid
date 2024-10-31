@@ -35,12 +35,12 @@ tests.push({
       let requestId;
       let snapshot = '';
       const options = {
-        threadId: 0
+        threadId: 0,
       };
 
       const bootstrapOpts = {
         // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
       };
 
       playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
@@ -65,7 +65,7 @@ tests.push({
         }
       });
     });
-  }
+  },
 });
 
 tests.push({
@@ -75,13 +75,12 @@ tests.push({
       let events = 0;
       let requestId;
       let snapshot = '';
-      const options = {
-      };
+      const options = {};
 
       const bootstrapOpts = {
         args: [ '-w', 1 ],
         // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
       };
 
       playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
@@ -109,7 +108,7 @@ tests.push({
         }
       });
     });
-  }
+  },
 });
 
 tests.push({
@@ -117,7 +116,7 @@ tests.push({
   test: async (playground) => {
     return new Promise((resolve) => {
       const options = {
-        threadId: 10
+        threadId: 10,
       };
 
       playground.bootstrap(mustSucceed((agentId) => {
@@ -128,7 +127,7 @@ tests.push({
         }));
       }));
     });
-  }
+  },
 });
 
 tests.push({
@@ -136,7 +135,7 @@ tests.push({
   test: async (playground) => {
     return new Promise((resolve) => {
       const options = {
-        threadId: 'wth'
+        threadId: 'wth',
       };
 
       playground.bootstrap(mustSucceed((agentId) => {
@@ -147,7 +146,7 @@ tests.push({
         }));
       }));
     });
-  }
+  },
 });
 
 tests.push({
@@ -155,11 +154,11 @@ tests.push({
   test: async (playground) => {
     return new Promise((resolve) => {
       const options = {
-        threadId: 0
+        threadId: 0,
       };
 
       const bootstrapOpts = {
-        opts: { env: { NSOLID_DISABLE_SNAPSHOTS: 1 } }
+        opts: { env: { NSOLID_DISABLE_SNAPSHOTS: 1 } },
       };
 
       playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
@@ -170,7 +169,7 @@ tests.push({
         }));
       }));
     });
-  }
+  },
 });
 
 tests.push({
@@ -187,7 +186,7 @@ tests.push({
         }));
       }));
     });
-  }
+  },
 });
 
 tests.push({
@@ -197,12 +196,12 @@ tests.push({
       let events = 0;
       let requestId;
       const options = {
-        threadId: 0
+        threadId: 0,
       };
 
       const bootstrapOpts = {
         // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
       };
 
       playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
@@ -229,7 +228,7 @@ tests.push({
         }
       });
     });
-  }
+  },
 });
 
 
@@ -239,7 +238,7 @@ const config = {
   bulkBindAddr: 'tcp://*:9003',
   HWM: 0,
   bulkHWM: 0,
-  commandTimeoutMilliseconds: 5000
+  commandTimeoutMilliseconds: 5000,
 };
 
 

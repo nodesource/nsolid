@@ -50,7 +50,7 @@ for (const track of trackAllocations) {
 
         const bootstrapOpts = {
           // Just to be sure we don't receive the loop_blocked event
-          opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+          opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
         };
 
         playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
@@ -105,7 +105,7 @@ for (const track of trackAllocations) {
         const bootstrapOpts = {
           args: [ '-w', 1 ],
           // Just to be sure we don't receive the loop_blocked event
-          opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+          opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
         };
 
         playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
@@ -258,7 +258,7 @@ tests.push({
 
       const bootstrapOpts = {
         // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
       };
 
       playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
@@ -304,7 +304,7 @@ tests.push({
       const bootstrapOpts = {
         args: [ '-w', 1 ],
         // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
       };
 
       playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
@@ -357,7 +357,7 @@ tests.push({
 
       const bootstrapOpts = {
         // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } }
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
       };
 
       playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {

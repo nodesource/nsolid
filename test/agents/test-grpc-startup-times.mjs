@@ -80,7 +80,7 @@ tests.push({
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
           NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_BLOCKED_LOOP_THRESHOLD: 100
+          NSOLID_BLOCKED_LOOP_THRESHOLD: 100,
         };
 
         const opts = {
@@ -96,7 +96,7 @@ tests.push({
         resolve();
       }));
     });
-  }
+  },
 });
 
 tests.push({
@@ -109,7 +109,7 @@ tests.push({
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
           NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_BLOCKED_LOOP_THRESHOLD: 100
+          NSOLID_BLOCKED_LOOP_THRESHOLD: 100,
         };
 
         const opts = {
@@ -126,7 +126,7 @@ tests.push({
         resolve();
       }));
     });
-  }
+  },
 });
 
 for (const { name, test } of tests) {
