@@ -37,11 +37,10 @@ CommandStream::~CommandStream() {
   // try cancel and wait until OnDone is called
   if (!write_state_.done) {
     context_.TryCancel();
+    do {
+      uv_cond_wait(&on_done_cond_, lock_.base());
+    } while (!write_state_.done);
   }
-
-  do {
-    uv_cond_wait(&on_done_cond_, lock_.base());
-  } while (!write_state_.done);
 
   uv_cond_destroy(&on_done_cond_);
 }
@@ -58,8 +57,8 @@ void CommandStream::OnDone(const Status& s) {
   {
     nsuv::ns_mutex::scoped_lock lock(lock_);
     write_state_.done = true;
+    uv_cond_signal(&on_done_cond_);
     if (!obs) {
-      uv_cond_signal(&on_done_cond_);
       return;
     }
   }
