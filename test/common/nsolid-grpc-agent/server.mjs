@@ -7,10 +7,9 @@ const logsServiceProtoPath = 'opentelemetry/proto/collector/logs/v1/logs_service
 const metricsServiceProtoPath = 'opentelemetry/proto/collector/metrics/v1/metrics_service.proto';
 const traceServiceProtoPath = 'opentelemetry/proto/collector/trace/v1/trace_service.proto';
 const serviceProtoPath = 'nsolid_service.proto';
-const includeDirs = [path.resolve(import.meta.dirname,
-                                  '../../../deps/opentelemetry-cpp/third_party/opentelemetry-proto'),
-                     path.resolve(import.meta.dirname,
-                                  '../../../agents/grpc/proto')];
+const dirname = new URL('.', import.meta.url).pathname;
+const includeDirs = [path.resolve(dirname, '../../../deps/opentelemetry-cpp/third_party/opentelemetry-proto'),
+                     path.resolve(dirname, '../../../agents/grpc/proto')];
 
 const commandCallMap = new Map();
 
