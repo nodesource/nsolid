@@ -2,6 +2,38 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-11-01, Version 5.4.0 'Hydrogen'
+
+* \[[`e05b8cfa96`](https://github.com/nodesource/nsolid/commit/e05b8cfa96)] - **src**: remove unintended code added during backport (Santiago Gimeno) [nodesource/nsolid#208](https://github.com/nodesource/nsolid/pull/208)
+* \[[`29f64f6946`](https://github.com/nodesource/nsolid/commit/29f64f6946)] - **test**: adapt grpc agent tests to v18 (Santiago Gimeno) [nodesource/nsolid#208](https://github.com/nodesource/nsolid/pull/208)
+* \[[`502b6c57ea`](https://github.com/nodesource/nsolid/commit/502b6c57ea)] - **agents**: fix deadlock on CommandStream destruction (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`36d5103ec1`](https://github.com/nodesource/nsolid/commit/36d5103ec1)] - **lib**: validate NSOLID\_GRPC value (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`b098485dd1`](https://github.com/nodesource/nsolid/commit/b098485dd1)] - **test**: add gRPC agent tests (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`e3005a3682`](https://github.com/nodesource/nsolid/commit/e3005a3682)] - **lib,src**: gRPCAgent integration in N|Solid (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`37f4eaac2d`](https://github.com/nodesource/nsolid/commit/37f4eaac2d)] - **agents**: implement JS bindings to the gRPC Agent (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`a6357514ef`](https://github.com/nodesource/nsolid/commit/a6357514ef)] - **agents**: GrpcAgent initial implementation (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`d0c57ca226`](https://github.com/nodesource/nsolid/commit/d0c57ca226)] - **agents**: implement AssetStream class (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`008d9a2cf4`](https://github.com/nodesource/nsolid/commit/008d9a2cf4)] - **agents**: implement CommandStream class (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`e34d0950d2`](https://github.com/nodesource/nsolid/commit/e34d0950d2)] - **agents**: add GrpcClient implementation (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`c2a8299fd0`](https://github.com/nodesource/nsolid/commit/c2a8299fd0)] - **agents**: add protofiles for GRPCAgent service (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`d6ec8c2ca8`](https://github.com/nodesource/nsolid/commit/d6ec8c2ca8)] - **lib**: add counter support for undici fetch() (Santiago Gimeno) [nodesource/nsolid#204](https://github.com/nodesource/nsolid/pull/204)
+* \[[`064d942aec`](https://github.com/nodesource/nsolid/commit/064d942aec)] - **agents**: remove debug log leftover (Santiago Gimeno) [nodesource/nsolid#206](https://github.com/nodesource/nsolid/pull/206)
+* \[[`814bb41556`](https://github.com/nodesource/nsolid/commit/814bb41556)] - **src**: remove timeOriginTimestamp from startupTimes (Santiago Gimeno) [nodesource/nsolid#202](https://github.com/nodesource/nsolid/pull/202)
+* \[[`dc70274bdd`](https://github.com/nodesource/nsolid/commit/dc70274bdd)] - **src**: change internal GetStartupTimes() signature (Santiago Gimeno) [nodesource/nsolid#202](https://github.com/nodesource/nsolid/pull/202)
+* \[[`24cfad87a5`](https://github.com/nodesource/nsolid/commit/24cfad87a5)] - **agents**: use correct unit (ns) for log timestamp (Santiago Gimeno) [nodesource/nsolid#201](https://github.com/nodesource/nsolid/pull/201)
+* \[[`936e538619`](https://github.com/nodesource/nsolid/commit/936e538619)] - **lib**: move assets JS API interface to lib/internal (Santiago Gimeno) [nodesource/nsolid#200](https://github.com/nodesource/nsolid/pull/200)
+* \[[`185a18fffe`](https://github.com/nodesource/nsolid/commit/185a18fffe)] - **deps**: fix grpc\_cpp\_plugin build (Santiago Gimeno) [nodesource/nsolid#199](https://github.com/nodesource/nsolid/pull/199)
+* \[[`3c0dfb603a`](https://github.com/nodesource/nsolid/commit/3c0dfb603a)] - **deps**: update json to 3.11.3 (Santiago Gimeno) [nodesource/nsolid#165](https://github.com/nodesource/nsolid/pull/165)
+* \[[`0ba090bce4`](https://github.com/nodesource/nsolid/commit/0ba090bce4)] - **doc**: fix linting issue (Santiago Gimeno) [nodesource/nsolid#198](https://github.com/nodesource/nsolid/pull/198)
+* \[[`8feb1cfc87`](https://github.com/nodesource/nsolid/commit/8feb1cfc87)] - **agents**: add nsolid.span\_kind attribute to Spans (Santiago Gimeno) [nodesource/nsolid#198](https://github.com/nodesource/nsolid/pull/198)
+* \[[`8457860a02`](https://github.com/nodesource/nsolid/commit/8457860a02)] - **agents**: make metrics name format configure (Santiago Gimeno) [nodesource/nsolid#198](https://github.com/nodesource/nsolid/pull/198)
+* \[[`830a2c664c`](https://github.com/nodesource/nsolid/commit/830a2c664c)] - **agents**: move text metrics calculation to common (Santiago Gimeno) [nodesource/nsolid#198](https://github.com/nodesource/nsolid/pull/198)
+* \[[`3d808865eb`](https://github.com/nodesource/nsolid/commit/3d808865eb)] - **agents**: fix linting issue (Santiago Gimeno) [nodesource/nsolid#196](https://github.com/nodesource/nsolid/pull/196)
+* \[[`e80fb52852`](https://github.com/nodesource/nsolid/commit/e80fb52852)] - **agents**: fix otlp endpoint calculation (Santiago Gimeno) [nodesource/nsolid#194](https://github.com/nodesource/nsolid/pull/194)
+* \[[`65b3c2854f`](https://github.com/nodesource/nsolid/commit/65b3c2854f)] - **agents**: add missing text metrics (Santiago Gimeno) [nodesource/nsolid#193](https://github.com/nodesource/nsolid/pull/193)
+* \[[`1580e29525`](https://github.com/nodesource/nsolid/commit/1580e29525)] - **agents**: fix ZmqAgent asset JS API (Santiago Gimeno) [nodesource/nsolid#192](https://github.com/nodesource/nsolid/pull/192)
+* \[[`c5426499fa`](https://github.com/nodesource/nsolid/commit/c5426499fa)] - **build**: reclaim disk space on macOS GHA runner (jakecastelli) [nodesource/nsolid#182](https://github.com/nodesource/nsolid/pull/182)
+
 ## 2024-10-04, Version 5.3.4 'Hydrogen'
 
 ### Commits
