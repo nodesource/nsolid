@@ -1,7 +1,6 @@
 // Flags: --expose-internals
-import { mustSucceed } from '../common/index.mjs';
+import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
-import { setTimeout } from 'node:timers/promises';
 import {
   checkResource,
   GRPCServer,
@@ -174,7 +173,6 @@ function checkScopeMetrics(scopeMetrics) {
     const [ name, unit, type, aggregation ] = expectedMetric;
     const metric = metrics.find((m) => m.name === name);
     assert.ok(metric, `Expected metric ${name} not found`);
-    console.dir(metric, { depth: null });
     assert.strictEqual(metric.unit, unit);
     assert.strictEqual(metric.data, aggregation);
     const dataPoints = metric[aggregation].dataPoints;
@@ -210,7 +208,6 @@ function checkScopeMetrics(scopeMetrics) {
 }
 
 function checkMetricsData(msg, metadata, requestId, agentId, nsolidConfig, nsolidMetrics) {
-  console.dir(msg, { depth: null });
   const metrics = msg;
   assert.strictEqual(metrics.common.requestId, requestId);
   assert.strictEqual(metrics.common.command, 'metrics');
@@ -241,13 +238,14 @@ async function runTest({ getEnv }) {
       const child = new TestClient([], opts);
       const agentId = await child.id();
       const config = await child.config();
-      const metrics = await child.metrics();
-      await setTimeout(200);
-      const { data, requestId } = await grpcServer.metrics(agentId);
-      checkMetricsData(data.msg, data.metadata, requestId, agentId, config, metrics);
-      await child.shutdown(0);
-      grpcServer.close();
-      resolve();
+      grpcServer.once('metrics', mustCall(async () => {
+        const metrics = await child.metrics();
+        const { data, requestId } = await grpcServer.metrics(agentId);
+        checkMetricsData(data.msg, data.metadata, requestId, agentId, config, metrics);
+        await child.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
     }));
   });
 }

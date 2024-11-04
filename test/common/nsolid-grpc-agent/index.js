@@ -206,7 +206,7 @@ class GRPCServer extends EventEmitter {
       if (this.#server) {
         const requestId = randomUUID();
         this.#server.send({ type: 'metrics', agentId, requestId });
-        this.#server.once('message', (msg) => {
+        this.#server.on('message', (msg) => {
           if (msg.type === 'metrics_cmd') {
             resolve({ requestId, data: msg.data });
           }
