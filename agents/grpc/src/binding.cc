@@ -2,6 +2,7 @@
 #include "node_external_reference.h"
 #include "grpc_agent.h"
 #include "util.h"
+#include "nsolid/nsolid_util.h"
 #include "asserts-cpp/asserts.h"
 
 
@@ -25,6 +26,7 @@ static void Snapshot(const FunctionCallbackInfo<Value>& args) {
 
   grpcagent::CommandRequest req;
   req.set_command("snapshot");
+  req.set_requestid(utils::generate_unique_id());
   auto* command_args = req.mutable_args();
   auto* snapshot_args = command_args->mutable_profile();
   snapshot_args->set_thread_id(thread_id);
@@ -45,6 +47,7 @@ static void StartCPUProfile(const FunctionCallbackInfo<Value>& args) {
 
   grpcagent::CommandRequest req;
   req.set_command("profile");
+  req.set_requestid(utils::generate_unique_id());
   auto* command_args = req.mutable_args();
   auto* profile_args = command_args->mutable_profile();
   profile_args->set_thread_id(thread_id);
@@ -73,6 +76,7 @@ static void StartHeapProfile(const FunctionCallbackInfo<Value>& args) {
 
   grpcagent::CommandRequest req;
   req.set_command("heap_profile");
+  req.set_requestid(utils::generate_unique_id());
   auto* command_args = req.mutable_args();
   auto* profile_args = command_args->mutable_profile();
   profile_args->set_thread_id(thread_id);
@@ -106,6 +110,7 @@ static void StartHeapSampling(const FunctionCallbackInfo<Value>& args) {
 
   grpcagent::CommandRequest req;
   req.set_command("heap_sampling");
+  req.set_requestid(utils::generate_unique_id());
   auto* command_args = req.mutable_args();
   auto* profile_args = command_args->mutable_profile();
   profile_args->set_thread_id(thread_id);
