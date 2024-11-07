@@ -85,6 +85,12 @@ class GRPCServer extends EventEmitter {
         case 'exit':
           this.emit('exit', message.data);
           break;
+        case 'heap_profile':
+          this.emit('heap_profile', message.data);
+          break;
+        case 'heap_sampling':
+          this.emit('heap_sampling', message.data);
+          break;
         case 'logs':
           this.emit('logs', message.data);
           break;
@@ -99,6 +105,12 @@ class GRPCServer extends EventEmitter {
           break;
         case 'metrics_cmd':
           this.emit('metrics_cmd', message.data);
+          break;
+        case 'profile':
+          this.emit('profile', message.data);
+          break;
+        case 'snapshot':
+          this.emit('snapshot', message.data);
           break;
         case 'spans':
           this.emit('spans', message.data);
@@ -316,6 +328,30 @@ class TestClient {
     });
   }
 
+  async heapProfile(duration) {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'heap_profile', duration }, () => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  async heapSampling(duration) {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'heap_sampling', duration }, () => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+
   async id() {
     return new Promise((resolve) => {
       if (this.#child) {
@@ -385,6 +421,17 @@ class TestClient {
     });
   }
 
+  async profile(duration) {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'profile', duration }, () => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
 
   async shutdown(code) {
     return new Promise((resolve) => {
@@ -394,6 +441,18 @@ class TestClient {
           this.#child = null;
           resolve({ code, signal });
         }));
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  async snapshot(duration) {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'snapshot', duration }, () => {
+          resolve();
+        });
       } else {
         resolve();
       }
