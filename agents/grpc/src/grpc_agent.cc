@@ -585,10 +585,9 @@ int GrpcAgent::start_cpu_profile_from_js(const grpcagent::CommandRequest& req) {
   ProfileOptions options = CPUProfileOptions();
   ErrorType ret = do_start_prof_init(req, ProfileType::kCpu, options);
   if (ret == ErrorType::ESuccess) {
-    std::string req_id = utils::generate_unique_id();
     start_profiling_msg_q_.enqueue({
       ret,
-      std::move(req_id),
+      req.requestid(),
       ProfileType::kCpu,
       std::move(options)
     });
@@ -615,7 +614,7 @@ int GrpcAgent::start_heap_profile_from_js(
   if (ret == ErrorType::ESuccess) {
     start_profiling_msg_q_.enqueue({
       ret,
-      utils::generate_unique_id(),
+      req.requestid(),
       ProfileType::kHeapProf,
       std::move(options)
     });
@@ -642,7 +641,7 @@ int GrpcAgent::start_heap_sampling_from_js(
   if (ret == ErrorType::ESuccess) {
     start_profiling_msg_q_.enqueue({
       ret,
-      utils::generate_unique_id(),
+      req.requestid(),
       ProfileType::kHeapSampl,
       std::move(options)
     });
@@ -669,7 +668,7 @@ int GrpcAgent::start_heap_snapshot_from_js(
   if (ret == ErrorType::ESuccess) {
     start_profiling_msg_q_.enqueue({
       ret,
-      utils::generate_unique_id(),
+      req.requestid(),
       ProfileType::kHeapSnapshot,
       std::move(options)
     });

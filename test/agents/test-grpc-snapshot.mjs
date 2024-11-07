@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustSucceed } from '../common/index.mjs';
+import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import validators from 'internal/validators';
 import {
@@ -15,7 +15,12 @@ const {
 
 function checkSnapshotData(snapshot, metadata, requestId, agentId, options) {
   console.dir(snapshot, { depth: null });
-  assert.strictEqual(snapshot.common.requestId, requestId);
+  validateString(snapshot.common.requestId, 'requestId');
+  assert.ok(snapshot.common.requestId.length > 0);
+  if (requestId) {
+    assert.strictEqual(snapshot.common.requestId, requestId);
+  }
+
   assert.strictEqual(snapshot.common.command, 'snapshot');
   // From here check at least that all the fields are present
   validateObject(snapshot.common.recorded, 'recorded');
@@ -253,6 +258,37 @@ tests.push({
 
         const { data, requestId } = await grpcServer.heapSnapshot(agentId, options);
         checkSnapshotError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should also work from the JS api',
+  test: async () => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = {
+          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+          NSOLID_GRPC_INSECURE: 1,
+          NSOLID_GRPC: `localhost:${port}`
+        };
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        grpcServer.once('snapshot', mustCall(async (data) => {
+          checkSnapshotData(data.msg, data.metadata, null, agentId, { threadId: 0 }, true);
+          await child.shutdown(0);
+          grpcServer.close();
+          resolve();
+        }));
+
+        const agentId = await child.id();
+        await child.snapshot();
       }));
     });
   },

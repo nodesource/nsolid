@@ -17,7 +17,12 @@ const {
 
 function checkProfileData(profile, metadata, requestId, agentId, options) {
   console.dir(profile, { depth: null });
-  assert.strictEqual(profile.common.requestId, requestId);
+  validateString(profile.common.requestId, 'requestId');
+  assert.ok(profile.common.requestId.length > 0);
+  if (requestId) {
+    assert.strictEqual(profile.common.requestId, requestId);
+  }
+
   assert.strictEqual(profile.common.command, 'heap_sampling');
   // From here check at least that all the fields are present
   validateObject(profile.common.recorded, 'recorded');
@@ -298,6 +303,38 @@ tests.push({
         assert.ok(exit);
         assert.strictEqual(exit.code, 0);
         assert.strictEqual(exit.signal, null);
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should also work from the JS api',
+  test: async () => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = {
+          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+          NSOLID_GRPC_INSECURE: 1,
+          NSOLID_GRPC: `localhost:${port}`
+        };
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const duration = 100;
+        grpcServer.once('heap_sampling', mustCall(async (data) => {
+          checkProfileData(data.msg, data.metadata, null, agentId, { duration, threadId: 0 }, true);
+          await child.shutdown(0);
+          grpcServer.close();
+          resolve();
+        }));
+
+        const agentId = await child.id();
+        await child.heapSampling(duration);
       }));
     });
   },
