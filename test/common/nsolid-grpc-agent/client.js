@@ -105,6 +105,10 @@ if (isMainThread) {
       }
     } else if (msg.type === 'config') {
       process.send({ type: 'config', config: nsolid.config });
+    } else if (msg.type === 'heap_profile') {
+      nsolid.heapProfile(msg.duration);
+    } else if (msg.type === 'heap_sampling') {
+      nsolid.heapSampling(msg.duration);
     } else if (msg.type === 'id') {
       process.send({ type: 'id', id: nsolid.id });
     } else if (msg.type === 'log') {
@@ -117,6 +121,8 @@ if (isMainThread) {
       process.send({ type: 'log' });
     } else if (msg.type === 'metrics') {
       process.send({ type: 'metrics', metrics: nsolid.metrics() });
+    } else if (msg.type === 'profile') {
+      nsolid.profile(msg.duration);
     } else if (msg.type === 'shutdown') {
       clearInterval(interval);
       if (!msg.error) {
@@ -124,6 +130,8 @@ if (isMainThread) {
       } else {
         throw new Error('error');
       }
+    } else if (msg.type === 'snapshot') {
+      nsolid.snapshot();
     } else if (msg.type === 'startupTimes') {
       process.recordStartupTime(msg.name);
       process.send(msg);
