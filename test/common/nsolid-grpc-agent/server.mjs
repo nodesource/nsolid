@@ -82,6 +82,7 @@ async function startServer(cb) {
         threadId: null,
         metadata: null,
         data: '',
+        duration: null,
       };
       call._my_data = '';
       call.on('data', (data) => {
@@ -90,6 +91,9 @@ async function startServer(cb) {
         asset.threadId = data.threadId;
         asset.metadata = data.metadata;
         asset.data += data.data;
+        if (data.complete) {
+          asset.duration = data.duration;
+        }
       });
       call.on('error', (err) => {
         console.error('[ExportAsset] error', err);
