@@ -27,6 +27,8 @@ PROTOBUF_CONSTEXPR Asset::Asset(
   , /*decltype(_impl_.common_)*/nullptr
   , /*decltype(_impl_.metadata_)*/nullptr
   , /*decltype(_impl_.thread_id_)*/uint64_t{0u}
+  , /*decltype(_impl_.duration_)*/uint64_t{0u}
+  , /*decltype(_impl_.complete_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AssetDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AssetDefaultTypeInternal()
@@ -53,6 +55,8 @@ const uint32_t TableStruct_asset_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.thread_id_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.metadata_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.data_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.complete_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::Asset, _impl_.duration_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::grpcagent::Asset)},
@@ -64,11 +68,12 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_asset_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\013asset.proto\022\tgrpcagent\032\014common.proto\032\034"
-  "google/protobuf/struct.proto\"~\n\005Asset\022)\n"
-  "\006common\030\001 \001(\0132\031.grpcagent.CommonResponse"
-  "\022\021\n\tthread_id\030\002 \001(\004\022)\n\010metadata\030\003 \001(\0132\027."
-  "google.protobuf.Struct\022\014\n\004data\030\004 \001(\tb\006pr"
-  "oto3"
+  "google/protobuf/struct.proto\"\242\001\n\005Asset\022)"
+  "\n\006common\030\001 \001(\0132\031.grpcagent.CommonRespons"
+  "e\022\021\n\tthread_id\030\002 \001(\004\022)\n\010metadata\030\003 \001(\0132\027"
+  ".google.protobuf.Struct\022\014\n\004data\030\004 \001(\t\022\020\n"
+  "\010complete\030\005 \001(\010\022\020\n\010duration\030\006 \001(\004b\006proto"
+  "3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_asset_2eproto_deps[2] = {
   &::descriptor_table_common_2eproto,
@@ -76,7 +81,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_asset_2eproto_deps[
 };
 static ::_pbi::once_flag descriptor_table_asset_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_asset_2eproto = {
-    false, false, 204, descriptor_table_protodef_asset_2eproto,
+    false, false, 241, descriptor_table_protodef_asset_2eproto,
     "asset.proto",
     &descriptor_table_asset_2eproto_once, descriptor_table_asset_2eproto_deps, 2, 1,
     schemas, file_default_instances, TableStruct_asset_2eproto::offsets,
@@ -133,6 +138,8 @@ Asset::Asset(const Asset& from)
     , decltype(_impl_.common_){nullptr}
     , decltype(_impl_.metadata_){nullptr}
     , decltype(_impl_.thread_id_){}
+    , decltype(_impl_.duration_){}
+    , decltype(_impl_.complete_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -150,7 +157,9 @@ Asset::Asset(const Asset& from)
   if (from._internal_has_metadata()) {
     _this->_impl_.metadata_ = new ::PROTOBUF_NAMESPACE_ID::Struct(*from._impl_.metadata_);
   }
-  _this->_impl_.thread_id_ = from._impl_.thread_id_;
+  ::memcpy(&_impl_.thread_id_, &from._impl_.thread_id_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.complete_) -
+    reinterpret_cast<char*>(&_impl_.thread_id_)) + sizeof(_impl_.complete_));
   // @@protoc_insertion_point(copy_constructor:grpcagent.Asset)
 }
 
@@ -163,6 +172,8 @@ inline void Asset::SharedCtor(
     , decltype(_impl_.common_){nullptr}
     , decltype(_impl_.metadata_){nullptr}
     , decltype(_impl_.thread_id_){uint64_t{0u}}
+    , decltype(_impl_.duration_){uint64_t{0u}}
+    , decltype(_impl_.complete_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.data_.InitDefault();
@@ -206,7 +217,9 @@ void Asset::Clear() {
     delete _impl_.metadata_;
   }
   _impl_.metadata_ = nullptr;
-  _impl_.thread_id_ = uint64_t{0u};
+  ::memset(&_impl_.thread_id_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.complete_) -
+      reinterpret_cast<char*>(&_impl_.thread_id_)) + sizeof(_impl_.complete_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -247,6 +260,22 @@ const char* Asset::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
           CHK_(::_pbi::VerifyUTF8(str, "grpcagent.Asset.data"));
+        } else
+          goto handle_unusual;
+        continue;
+      // bool complete = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+          _impl_.complete_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 duration = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
+          _impl_.duration_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
@@ -309,6 +338,18 @@ uint8_t* Asset::_InternalSerialize(
         4, this->_internal_data(), target);
   }
 
+  // bool complete = 5;
+  if (this->_internal_complete() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(5, this->_internal_complete(), target);
+  }
+
+  // uint64 duration = 6;
+  if (this->_internal_duration() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(6, this->_internal_duration(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -351,6 +392,16 @@ size_t Asset::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_thread_id());
   }
 
+  // uint64 duration = 6;
+  if (this->_internal_duration() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_duration());
+  }
+
+  // bool complete = 5;
+  if (this->_internal_complete() != 0) {
+    total_size += 1 + 1;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -383,6 +434,12 @@ void Asset::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
   if (from._internal_thread_id() != 0) {
     _this->_internal_set_thread_id(from._internal_thread_id());
   }
+  if (from._internal_duration() != 0) {
+    _this->_internal_set_duration(from._internal_duration());
+  }
+  if (from._internal_complete() != 0) {
+    _this->_internal_set_complete(from._internal_complete());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -407,8 +464,8 @@ void Asset::InternalSwap(Asset* other) {
       &other->_impl_.data_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(Asset, _impl_.thread_id_)
-      + sizeof(Asset::_impl_.thread_id_)
+      PROTOBUF_FIELD_OFFSET(Asset, _impl_.complete_)
+      + sizeof(Asset::_impl_.complete_)
       - PROTOBUF_FIELD_OFFSET(Asset, _impl_.common_)>(
           reinterpret_cast<char*>(&_impl_.common_),
           reinterpret_cast<char*>(&other->_impl_.common_));
