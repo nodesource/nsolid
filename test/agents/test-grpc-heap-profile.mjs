@@ -35,6 +35,11 @@ function checkProfileData(profile, metadata, requestId, agentId, options) {
   if (options.metadata) {
     assert.deepStrictEqual(profile.metadata, options.metadata);
   }
+
+  validateString(profile.duration, 'profile.duration');
+  const duration = BigInt(profile.duration);
+  assert.ok(duration > 0);
+
   validateString(profile.data, 'profile.data');
   const heapProf = JSON.parse(profile.data);
   validateObject(heapProf, 'heapProf');
