@@ -121,6 +121,56 @@ function execProc5() {
   });
 }
 
+// NSOLID_COMMAND trumps NSOLID_SAAS, so the token should be ignored. It
+// connects to both ZMQ and gRPC.
+function execProc6() {
+  let output = '';
+  const proc = spawn(process.execPath,
+                     [ __filename, 'child1' ],
+                     {
+                       env: {
+                         NSOLID_COMMAND: PORT,
+                         NSOLID_GRPC: PORT,
+                         NSOLID_SAAS: saasToken
+                       }
+                     });
+  proc.stdout.on('data', (d) => {
+    output += d;
+  });
+
+  proc.on('close', (code) => {
+    assert.strictEqual(code, 0);
+    const config = JSON.parse(output);
+    assert.strictEqual(config.command, `localhost:${PORT}`);
+    assert.strictEqual(config.grpc, `localhost:${PORT}`);
+    assert.strictEqual(config.saas, undefined);
+  });
+}
+
+// If NSOLID_SAAS with NSOLID_GRPC, the token connects to SaaS using gRPC.
+function execProc7() {
+  let output = '';
+  const proc = spawn(process.execPath,
+                     [ __filename, 'child1' ],
+                     {
+                       env: {
+                         NSOLID_SAAS: saasToken,
+                         NSOLID_GRPC: PORT,
+                       }
+                     });
+  proc.stdout.on('data', (d) => {
+    output += d;
+  });
+
+  proc.on('close', (code) => {
+    assert.strictEqual(code, 0);
+    const config = JSON.parse(output);
+    assert.strictEqual(config.command, undefined);
+    assert.strictEqual(config.grpc, `${PORT}`);
+    assert.strictEqual(config.saas, saasToken);
+  });
+}
+
 switch (process.argv[2]) {
   case 'child1':
     process.stdout.write(JSON.stringify(nsolid.config));
@@ -157,4 +207,6 @@ switch (process.argv[2]) {
     execProc3();
     execProc4();
     execProc5();
+    execProc6();
+    execProc7();
 }
