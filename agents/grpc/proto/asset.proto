@@ -10,4 +10,6 @@ message Asset {
   uint64 thread_id = 2;
   google.protobuf.Struct metadata = 3;
   string data = 4;
+  bool complete = 5;
+  uint64 duration = 6;
 }

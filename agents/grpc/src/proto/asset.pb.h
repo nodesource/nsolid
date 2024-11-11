@@ -183,6 +183,8 @@ class Asset final :
     kCommonFieldNumber = 1,
     kMetadataFieldNumber = 3,
     kThreadIdFieldNumber = 2,
+    kDurationFieldNumber = 6,
+    kCompleteFieldNumber = 5,
   };
   // string data = 4;
   void clear_data();
@@ -243,6 +245,24 @@ class Asset final :
   void _internal_set_thread_id(uint64_t value);
   public:
 
+  // uint64 duration = 6;
+  void clear_duration();
+  uint64_t duration() const;
+  void set_duration(uint64_t value);
+  private:
+  uint64_t _internal_duration() const;
+  void _internal_set_duration(uint64_t value);
+  public:
+
+  // bool complete = 5;
+  void clear_complete();
+  bool complete() const;
+  void set_complete(bool value);
+  private:
+  bool _internal_complete() const;
+  void _internal_set_complete(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:grpcagent.Asset)
  private:
   class _Internal;
@@ -255,6 +275,8 @@ class Asset final :
     ::grpcagent::CommonResponse* common_;
     ::PROTOBUF_NAMESPACE_ID::Struct* metadata_;
     uint64_t thread_id_;
+    uint64_t duration_;
+    bool complete_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -509,6 +531,46 @@ inline void Asset::set_allocated_data(std::string* data) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:grpcagent.Asset.data)
+}
+
+// bool complete = 5;
+inline void Asset::clear_complete() {
+  _impl_.complete_ = false;
+}
+inline bool Asset::_internal_complete() const {
+  return _impl_.complete_;
+}
+inline bool Asset::complete() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Asset.complete)
+  return _internal_complete();
+}
+inline void Asset::_internal_set_complete(bool value) {
+  
+  _impl_.complete_ = value;
+}
+inline void Asset::set_complete(bool value) {
+  _internal_set_complete(value);
+  // @@protoc_insertion_point(field_set:grpcagent.Asset.complete)
+}
+
+// uint64 duration = 6;
+inline void Asset::clear_duration() {
+  _impl_.duration_ = uint64_t{0u};
+}
+inline uint64_t Asset::_internal_duration() const {
+  return _impl_.duration_;
+}
+inline uint64_t Asset::duration() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Asset.duration)
+  return _internal_duration();
+}
+inline void Asset::_internal_set_duration(uint64_t value) {
+  
+  _impl_.duration_ = value;
+}
+inline void Asset::set_duration(uint64_t value) {
+  _internal_set_duration(value);
+  // @@protoc_insertion_point(field_set:grpcagent.Asset.duration)
 }
 
 #ifdef __GNUC__

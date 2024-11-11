@@ -33,6 +33,11 @@ function checkSnapshotData(snapshot, metadata, requestId, agentId, options) {
   if (options.metadata) {
     assert.deepStrictEqual(snapshot.metadata, options.metadata);
   }
+
+  validateString(snapshot.duration, 'snapshot.duration');
+  const duration = BigInt(snapshot.duration);
+  assert.ok(duration > 0);
+
   validateString(snapshot.data, 'snapshot.data');
   const heapSnapshot = JSON.parse(snapshot.data);
   validateObject(heapSnapshot, 'heapSnapshot');

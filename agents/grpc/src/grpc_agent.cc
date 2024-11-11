@@ -1358,6 +1358,16 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
       profile_state.pending_profiles_map.erase(it);
       return;
     }
+
+    grpcagent::Asset asset;
+    PopulateCommon(asset.mutable_common(),
+                   ProfileTypeStr[stor.type],
+                   prof_stor.req_id.c_str());
+    asset.set_thread_id(thread_id);
+    asset.mutable_metadata()->CopyFrom(metadata);
+    asset.set_complete(true);
+    asset.set_duration(uv_now(&loop_) - prof_stor.timestamp);
+    prof_stor.stream->Write(std::move(asset));
     prof_stor.stream->WritesDone();
   } else {
     if (prof_stor.stream == nullptr) {
