@@ -166,7 +166,7 @@ function execProc7() {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, undefined);
-    assert.strictEqual(config.grpc, saasCommand);
+    assert.strictEqual(config.grpc, `${PORT}`);
     assert.strictEqual(config.saas, saasToken);
   });
 }
