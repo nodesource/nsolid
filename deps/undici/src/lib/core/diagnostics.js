@@ -6,6 +6,12 @@ const undiciDebugLog = util.debuglog('undici')
 const fetchDebuglog = util.debuglog('fetch')
 const websocketDebuglog = util.debuglog('websocket')
 let isClientSet = false
+let tracingChannel
+
+if (diagnosticsChannel.tracingChannel) {
+  tracingChannel = diagnosticsChannel.tracingChannel('undici:fetch')
+}
+
 const channels = {
   // Client
   beforeConnect: diagnosticsChannel.channel('undici:client:beforeConnect'),
@@ -23,7 +29,9 @@ const channels = {
   close: diagnosticsChannel.channel('undici:websocket:close'),
   socketError: diagnosticsChannel.channel('undici:websocket:socket_error'),
   ping: diagnosticsChannel.channel('undici:websocket:ping'),
-  pong: diagnosticsChannel.channel('undici:websocket:pong')
+  pong: diagnosticsChannel.channel('undici:websocket:pong'),
+  // Fetch channels
+  tracingChannel
 }
 
 if (undiciDebugLog.enabled || fetchDebuglog.enabled) {
