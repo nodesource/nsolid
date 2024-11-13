@@ -42,7 +42,8 @@ cleanup () {
 trap cleanup INT TERM EXIT
 
 LIBSODIUM_REF="$NEW_VERSION-RELEASE"
-LIBSODIUM_TARBALL="libsodium-$NEW_VERSION.tar.gz"
+LIBSODIUM_VERSION="libsodium-$NEW_VERSION"
+LIBSODIUM_TARBALL="$LIBSODIUM_VERSION.tar.gz"
 
 cd "$WORKSPACE"
 
@@ -53,7 +54,7 @@ log_and_verify_sha256sum "libsodium" "$LIBSODIUM_TARBALL"
 
 gzip -dc "$LIBSODIUM_TARBALL" | tar xf -
 rm "$LIBSODIUM_TARBALL"
-mv libsodium-stable sodium
+mv "$LIBSODIUM_VERSION" sodium
 
 cd sodium
 
@@ -68,7 +69,6 @@ for dir in *; do
   fi
   rm -rf "$dir"
 done
-rm -r .git*
 # Find and delete ".deps" directories
 find ./ -type d -name ".deps" | while read -r dir; do
     rm -r "$dir"
