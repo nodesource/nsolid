@@ -1,7 +1,7 @@
 #ifdef IN_SANDY2X
 
 /*
-   This file is the result of merging
+   This file is the result of merging 
    amd64-51/fe25519_pack.c and amd64-51/fe25519_freeze.s.
 */
 #include "private/asm_cet.h"
