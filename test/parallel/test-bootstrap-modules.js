@@ -122,6 +122,10 @@ expected.atRunTime = new Set([
   'NativeModule internal/nsolid_loader',
   'NativeModule internal/nsolid_promise_tracking',
   'NativeModule internal/nsolid_diag',
+  'NativeModule internal/nsolid_trace',
+  'NativeModule internal/otel/api',
+  'NativeModule internal/otel/context',
+  'NativeModule internal/otel/core',
 ]);
 
 if (common.isMainThread) {
