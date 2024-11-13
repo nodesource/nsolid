@@ -13,3 +13,4 @@ int crypto_stream_chacha20_ietf_ext_xor_ic(unsigned char *c, const unsigned char
                                            const unsigned char *n, uint32_t ic,
                                            const unsigned char *k);
 #endif
+
