@@ -37,7 +37,6 @@
 #include <grpc/status.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/atm.h>
-#include <grpc/support/log.h>
 #include <grpc/support/port_platform.h>
 #include <grpc/support/string_util.h>
 
@@ -188,6 +187,8 @@ void ServerCall::CommitBatch(const grpc_op* ops, size_t nops, void* notify_tag,
         [this, cancelled = op->data.recv_close_on_server.cancelled]() {
           return Map(call_handler_.WasCancelled(),
                      [cancelled, this](bool result) -> Success {
+                       saw_was_cancelled_.store(true,
+                                                std::memory_order_relaxed);
                        ResetDeadline();
                        *cancelled = result ? 1 : 0;
                        return Success{};
