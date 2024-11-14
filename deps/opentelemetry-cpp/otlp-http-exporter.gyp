@@ -66,6 +66,7 @@
         '../curl/curl.gyp:curl',
         '../grpc/grpc.gyp:grpc++',
         '../grpc/grpc.gyp:abseil',
+        '../zlib/zlib.gyp:zlib',
       ],
       'direct_dependent_settings': {
         'defines': [
