@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -41,7 +42,6 @@
 #include <grpc/status.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/atm.h>
-#include <grpc/support/log.h>
 #include <grpc/support/port_platform.h>
 #include <grpc/support/string_util.h>
 
@@ -68,7 +68,7 @@ class ServerCall final : public Call, public DualRefCounted<ServerCall> {
       : Call(false,
              client_initial_metadata->get(GrpcTimeoutMetadata())
                  .value_or(Timestamp::InfFuture()),
-             call_handler.arena()->Ref(), call_handler.event_engine()),
+             call_handler.arena()->Ref()),
         call_handler_(std::move(call_handler)),
         client_initial_metadata_stored_(std::move(client_initial_metadata)),
         cq_(cq),
@@ -80,9 +80,8 @@ class ServerCall final : public Call, public DualRefCounted<ServerCall> {
     call_handler_.SpawnInfallible(
         "CancelWithError",
         [self = WeakRefAsSubclass<ServerCall>(), error = std::move(error)] {
-          auto status = ServerMetadataFromStatus(error);
-          status->Set(GrpcCallWasCancelled(), true);
-          self->call_handler_.PushServerTrailingMetadata(std::move(status));
+          self->call_handler_.PushServerTrailingMetadata(
+              CancelledServerMetadataFromStatus(error));
           return Empty{};
         });
   }
@@ -101,8 +100,9 @@ class ServerCall final : public Call, public DualRefCounted<ServerCall> {
   void InternalUnref(const char*) override { WeakUnref(); }
 
   void Orphaned() override {
-    // TODO(ctiller): only when we're not already finished
-    CancelWithError(absl::CancelledError());
+    if (!saw_was_cancelled_.load(std::memory_order_relaxed)) {
+      CancelWithError(absl::CancelledError());
+    }
   }
 
   void SetCompletionQueue(grpc_completion_queue*) override {
@@ -155,6 +155,7 @@ class ServerCall final : public Call, public DualRefCounted<ServerCall> {
   ClientMetadataHandle client_initial_metadata_stored_;
   grpc_completion_queue* const cq_;
   ServerInterface* const server_;
+  std::atomic<bool> saw_was_cancelled_{false};
 };
 
 grpc_call* MakeServerCall(CallHandler call_handler,

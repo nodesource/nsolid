@@ -41,12 +41,12 @@
 #include <grpc/status.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/atm.h>
-#include <grpc/support/log.h>
 #include <grpc/support/port_platform.h>
 #include <grpc/support/string_util.h>
 
 #include "src/core/channelz/channelz.h"
 #include "src/core/lib/channel/channel_stack.h"
+#include "src/core/lib/event_engine/event_engine_context.h"
 #include "src/core/lib/experiments/experiments.h"
 #include "src/core/lib/gprpp/crash.h"
 #include "src/core/lib/gprpp/debug_location.h"
@@ -59,7 +59,6 @@
 #include "src/core/lib/resource_quota/arena.h"
 #include "src/core/lib/slice/slice_buffer.h"
 #include "src/core/lib/slice/slice_internal.h"
-#include "src/core/lib/surface/api_trace.h"
 #include "src/core/lib/surface/call_utils.h"
 #include "src/core/lib/surface/channel.h"
 #include "src/core/lib/surface/completion_queue.h"
@@ -83,7 +82,7 @@ using GrpcClosure = Closure;
 FilterStackCall::FilterStackCall(RefCountedPtr<Arena> arena,
                                  const grpc_call_create_args& args)
     : Call(args.server_transport_data == nullptr, args.send_deadline,
-           std::move(arena), args.channel->event_engine()),
+           std::move(arena)),
       channel_(args.channel->RefAsSubclass<Channel>()),
       cq_(args.cq),
       stream_op_payload_{} {}
@@ -109,6 +108,8 @@ grpc_error_handle FilterStackCall::Create(grpc_call_create_args* args,
       channel_stack->call_stack_size;
 
   RefCountedPtr<Arena> arena = channel->call_arena_allocator()->MakeArena();
+  arena->SetContext<grpc_event_engine::experimental::EventEngine>(
+      args->channel->event_engine());
   call = new (arena->Alloc(call_alloc_size)) FilterStackCall(arena, *args);
   DCHECK(FromC(call->c_ptr()) == call);
   DCHECK(FromCallStack(call->call_stack()) == call);
@@ -267,7 +268,7 @@ void FilterStackCall::ExternalUnref() {
   ApplicationCallbackExecCtx callback_exec_ctx;
   ExecCtx exec_ctx;
 
-  GRPC_API_TRACE("grpc_call_unref(c=%p)", 1, (this));
+  GRPC_TRACE_LOG(api, INFO) << "grpc_call_unref(c=" << this << ")";
 
   MaybeUnpublishFromParent();
 
@@ -298,7 +299,9 @@ void FilterStackCall::ExecuteBatch(grpc_transport_stream_op_batch* batch,
     auto* call =
         static_cast<FilterStackCall*>(batch->handler_private.extra_arg);
     grpc_call_element* elem = call->call_elem(0);
-    GRPC_CALL_LOG_OP(GPR_INFO, elem, batch);
+    GRPC_TRACE_LOG(channel, INFO)
+        << "OP[" << elem->filter->name << ":" << elem
+        << "]: " << grpc_transport_stream_op_batch_string(batch, false);
     elem->filter->start_transport_stream_op_batch(elem, batch);
   };
   batch->handler_private.extra_arg = this;
@@ -412,11 +415,10 @@ bool FilterStackCall::PrepareApplicationMetadata(size_t count,
     }
     batch->Append(StringViewFromSlice(md->key), Slice(CSliceRef(md->value)),
                   [md](absl::string_view error, const Slice& value) {
-                    gpr_log(GPR_DEBUG, "Append error: %s",
-                            absl::StrCat("key=", StringViewFromSlice(md->key),
-                                         " error=", error,
-                                         " value=", value.as_string_view())
-                                .c_str());
+                    VLOG(2)
+                        << "Append error: key=" << StringViewFromSlice(md->key)
+                        << " error=" << error
+                        << " value=" << value.as_string_view();
                   });
   }
 
@@ -531,15 +533,13 @@ void FilterStackCall::BatchControl::PostCompletion() {
   FilterStackCall* call = call_;
   grpc_error_handle error = batch_error_.get();
 
-  if (IsCallStatusOverrideOnCancellationEnabled()) {
-    // On the client side, if final call status is already known (i.e if this op
-    // includes recv_trailing_metadata) and if the call status is known to be
-    // OK, then disregard the batch error to ensure call->receiving_buffer_ is
-    // not cleared.
-    if (op_.recv_trailing_metadata && call->is_client() &&
-        call->status_error_.ok()) {
-      error = absl::OkStatus();
-    }
+  // On the client side, if final call status is already known (i.e if this op
+  // includes recv_trailing_metadata) and if the call status is known to be
+  // OK, then disregard the batch error to ensure call->receiving_buffer_ is
+  // not cleared.
+  if (op_.recv_trailing_metadata && call->is_client() &&
+      call->status_error_.ok()) {
+    error = absl::OkStatus();
   }
 
   GRPC_TRACE_VLOG(call, 2) << "tag:" << completion_data_.notify_tag.tag
@@ -728,6 +728,8 @@ void FilterStackCall::BatchControl::FinishBatch(grpc_error_handle error) {
 grpc_call_error FilterStackCall::StartBatch(const grpc_op* ops, size_t nops,
                                             void* notify_tag,
                                             bool is_notify_tag_closure) {
+  GRPC_LATENT_SEE_INNER_SCOPE("FilterStackCall::StartBatch");
+
   size_t i;
   const grpc_op* op;
   BatchControl* bctl;
@@ -747,13 +749,12 @@ grpc_call_error FilterStackCall::StartBatch(const grpc_op* ops, size_t nops,
   if (!is_client() &&
       (seen_ops & (1u << GRPC_OP_SEND_STATUS_FROM_SERVER)) != 0 &&
       (seen_ops & (1u << GRPC_OP_RECV_MESSAGE)) != 0) {
-    gpr_log(GPR_ERROR,
-            "******************* SEND_STATUS WITH RECV_MESSAGE "
-            "*******************");
+    LOG(ERROR) << "******************* SEND_STATUS WITH RECV_MESSAGE "
+                  "*******************";
     return GRPC_CALL_ERROR;
   }
 
-  GRPC_CALL_LOG_BATCH(GPR_INFO, ops, nops);
+  GRPC_CALL_LOG_BATCH(ops, nops);
 
   if (nops == 0) {
     EndOpImmediately(cq_, notify_tag, is_notify_tag_closure);

@@ -24,26 +24,13 @@
 #include "absl/types/optional.h"
 
 #include <grpc/event_engine/event_engine.h>
-#include <grpc/support/log.h>
 #include <grpc/support/port_platform.h>
 #include <grpc/support/time.h>
 
 #include "src/core/util/time_precise.h"
 #include "src/core/util/useful.h"
 
-#define GRPC_LOG_EVERY_N_SEC(n, severity, format, ...)          \
-  do {                                                          \
-    static std::atomic<uint64_t> prev{0};                       \
-    uint64_t now = grpc_core::Timestamp::FromTimespecRoundDown( \
-                       gpr_now(GPR_CLOCK_MONOTONIC))            \
-                       .milliseconds_after_process_epoch();     \
-    if (prev == 0 || now - prev > (n) * 1000) {                 \
-      prev = now;                                               \
-      gpr_log(severity, format, __VA_ARGS__);                   \
-    }                                                           \
-  } while (0)
-
-#define GRPC_LOG_EVERY_N_SEC_DELAYED(n, severity, format, ...)  \
+#define GRPC_LOG_EVERY_N_SEC_DELAYED_DEBUG(n, format, ...)      \
   do {                                                          \
     static std::atomic<uint64_t> prev{0};                       \
     uint64_t now = grpc_core::Timestamp::FromTimespecRoundDown( \
@@ -52,7 +39,7 @@
     if (prev == 0) prev = now;                                  \
     if (now - prev > (n) * 1000) {                              \
       prev = now;                                               \
-      gpr_log(severity, format, __VA_ARGS__);                   \
+      VLOG(2) << absl::StrFormat(format, __VA_ARGS__);          \
     }                                                           \
   } while (0)
 
@@ -168,6 +155,11 @@ class Timestamp {
   gpr_timespec as_timespec(gpr_clock_type type) const;
 
   std::string ToString() const;
+
+  template <typename Sink>
+  friend void AbslStringify(Sink& sink, const Timestamp& t) {
+    sink.Append(t.ToString());
+  }
 
  private:
   explicit constexpr Timestamp(int64_t millis) : millis_(millis) {}
@@ -293,6 +285,11 @@ class Duration {
   // https://developers.google.com/protocol-buffers/docs/proto3#json
   std::string ToJsonString() const;
 
+  template <typename Sink>
+  friend void AbslStringify(Sink& sink, const Duration& t) {
+    sink.Append(t.ToString());
+  }
+
  private:
   explicit constexpr Duration(int64_t millis) : millis_(millis) {}
 
@@ -376,9 +373,6 @@ inline Timestamp& Timestamp::operator+=(Duration duration) {
 }
 
 void TestOnlySetProcessEpoch(gpr_timespec epoch);
-
-std::ostream& operator<<(std::ostream& out, Timestamp timestamp);
-std::ostream& operator<<(std::ostream& out, Duration duration);
 
 }  // namespace grpc_core
 
