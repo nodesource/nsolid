@@ -24,9 +24,9 @@ console.log(tag_name.replace('v', ''));
 EOF
 )"
 
-VERSION_MAJOR=$(grep "#define NLOHMANN_JSON_VERSION_MAJOR" ./deps/json/single_include/nlohmann/json.hpp | awk  '{print $NF}')
-VERSION_MINOR=$(grep "#define NLOHMANN_JSON_VERSION_MINOR" ./deps/json/single_include/nlohmann/json.hpp | awk  '{print $NF}')
-VERSION_PATCH=$(grep "#define NLOHMANN_JSON_VERSION_PATCH" ./deps/json/single_include/nlohmann/json.hpp | awk  '{print $NF}')
+VERSION_MAJOR=$(grep "#define NLOHMANN_JSON_VERSION_MAJOR" ./deps/json/single_include/nlohmann/json_fwd.hpp | awk  '{print $3}')
+VERSION_MINOR=$(grep "#define NLOHMANN_JSON_VERSION_MINOR" ./deps/json/single_include/nlohmann/json_fwd.hpp | awk  '{print $3}')
+VERSION_PATCH=$(grep "#define NLOHMANN_JSON_VERSION_PATCH" ./deps/json/single_include/nlohmann/json_fwd.hpp | awk  '{print $3}')
 CURRENT_VERSION=$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH
 
 # This function exit with 0 if new version and current version are the same
