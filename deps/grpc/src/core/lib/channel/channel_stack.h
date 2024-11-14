@@ -53,7 +53,6 @@
 #include <grpc/grpc.h>
 #include <grpc/slice.h>
 #include <grpc/status.h>
-#include <grpc/support/log.h>
 #include <grpc/support/port_platform.h>
 #include <grpc/support/time.h>
 
@@ -63,6 +62,7 @@
 #include "src/core/lib/gprpp/manual_constructor.h"
 #include "src/core/lib/gprpp/ref_counted_ptr.h"
 #include "src/core/lib/gprpp/time.h"
+#include "src/core/lib/gprpp/unique_type_name.h"
 #include "src/core/lib/iomgr/call_combiner.h"
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/iomgr/error.h"
@@ -159,7 +159,7 @@ struct grpc_channel_filter {
                            const grpc_channel_info* channel_info);
 
   // The name of this filter
-  const char* name;
+  grpc_core::UniqueTypeName name;
 };
 // A channel_element tracks its filter and the filter requested memory within
 // a channel allocation
@@ -357,18 +357,7 @@ grpc_channel_stack* grpc_channel_stack_from_top_element(
 // Given the top element of a call stack, get the call stack itself
 grpc_call_stack* grpc_call_stack_from_top_element(grpc_call_element* elem);
 
-void grpc_call_log_op(const char* file, int line, gpr_log_severity severity,
-                      grpc_call_element* elem,
-                      grpc_transport_stream_op_batch* op);
-
 void grpc_channel_stack_no_post_init(grpc_channel_stack* stk,
                                      grpc_channel_element* elem);
-
-#define GRPC_CALL_LOG_OP(sev, elem, op)     \
-  do {                                      \
-    if (GRPC_TRACE_FLAG_ENABLED(channel)) { \
-      grpc_call_log_op(sev, elem, op);      \
-    }                                       \
-  } while (0)
 
 #endif  // GRPC_SRC_CORE_LIB_CHANNEL_CHANNEL_STACK_H

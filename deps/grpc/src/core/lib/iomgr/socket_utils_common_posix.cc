@@ -49,7 +49,6 @@
 
 #include <grpc/event_engine/endpoint_config.h>
 #include <grpc/support/alloc.h>
-#include <grpc/support/log.h>
 #include <grpc/support/sync.h>
 
 #include "src/core/lib/address_utils/sockaddr_utils.h"
@@ -391,13 +390,13 @@ grpc_error_handle grpc_set_socket_tcp_user_timeout(
             << " ms";
         if (0 != setsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &timeout,
                             sizeof(timeout))) {
-          gpr_log(GPR_ERROR, "setsockopt(TCP_USER_TIMEOUT) %s",
-                  grpc_core::StrError(errno).c_str());
+          LOG(ERROR) << "setsockopt(TCP_USER_TIMEOUT) "
+                     << grpc_core::StrError(errno);
           return absl::OkStatus();
         }
         if (0 != getsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &newval, &len)) {
-          gpr_log(GPR_ERROR, "getsockopt(TCP_USER_TIMEOUT) %s",
-                  grpc_core::StrError(errno).c_str());
+          LOG(ERROR) << "getsockopt(TCP_USER_TIMEOUT) "
+                     << grpc_core::StrError(errno);
           return absl::OkStatus();
         }
         if (newval != timeout) {
@@ -481,14 +480,15 @@ static int create_socket(grpc_socket_factory* factory, int domain, int type,
                 : socket(domain, type, protocol);
   if (res < 0 && errno == EMFILE) {
     int saved_errno = errno;
-    GRPC_LOG_EVERY_N_SEC(
-        10, GPR_ERROR,
-        "socket(%d, %d, %d) returned %d with error: |%s|. This process "
-        "might not have a sufficient file descriptor limit for the number "
-        "of connections grpc wants to open (which is generally a function of "
-        "the number of grpc channels, the lb policy of each channel, and the "
-        "number of backends each channel is load balancing across).",
-        domain, type, protocol, res, grpc_core::StrError(errno).c_str());
+    LOG_EVERY_N_SEC(ERROR, 10)
+        << "socket(" << domain << ", " << type << ", " << protocol
+        << ") returned " << res << " with error: |"
+        << grpc_core::StrError(errno)
+        << "|. This process might not have a sufficient file descriptor limit "
+           "for the number of connections grpc wants to open (which is "
+           "generally a function of the number of grpc channels, the lb policy "
+           "of each channel, and the number of backends each channel is load "
+           "balancing across).";
     errno = saved_errno;
   }
   return res;
