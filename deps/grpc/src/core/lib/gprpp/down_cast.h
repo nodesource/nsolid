@@ -20,13 +20,12 @@
 #include "absl/base/config.h"
 #include "absl/log/check.h"
 
-#include <grpc/support/log.h>
 #include <grpc/support/port_platform.h>
 
 namespace grpc_core {
 
 template <typename To, typename From>
-inline To DownCast(From* f) {
+GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION To DownCast(From* f) {
   static_assert(
       std::is_base_of<From, typename std::remove_pointer<To>::type>::value,
       "DownCast requires a base-to-derived relationship");
@@ -40,7 +39,7 @@ inline To DownCast(From* f) {
 }
 
 template <typename To, typename From>
-inline To DownCast(From& f) {
+GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION To DownCast(From& f) {
   return *DownCast<typename std::remove_reference<To>::type*>(&f);
 }
 
