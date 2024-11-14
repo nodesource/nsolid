@@ -24,7 +24,7 @@ console.log(tag_name.replace('v', ''));
 EOF
 )"
 
-CURRENT_VERSION=$(grep "#define OPENTELEMETRY_VERSION" ./deps/opentelemetry-cpp/api/include/version.h | awk -F'"' '{print $2}')
+CURRENT_VERSION=$(grep "#define OPENTELEMETRY_VERSION" ./deps/opentelemetry-cpp/api/include/opentelemetry/version.h | awk -F'"' '{print $2}')
 
 # This function exit with 0 if new version and current version are the same
 compare_dependency_version "opentelemetry-cpp" "$NEW_VERSION" "$CURRENT_VERSION"
@@ -58,7 +58,13 @@ cd opentelemetry-cpp
 
 echo "Removing everything, except src/ and LICENSE"
 for dir in *; do
-  if [ "$dir" = "api" ] || [ "$dir" = "exporters" ] || [ "$dir" = "ext" ] || [ "$dir" = "sdk" ] || [ "$dir" = "third_party" ] || [ "$dir" = "LICENSE" ]; then
+  if [ "$dir" = "api" ] || \
+     [ "$dir" = "exporters" ] || \
+     [ "$dir" = "ext" ] || \
+     [ "$dir" = "sdk" ] || \
+     [ "$dir" = "third_party" ] || \
+     [ "$dir" = "LICENSE" ] || \
+     [ "$dir" = "third_party_release" ]; then
     continue
   fi
   rm -rf "$dir"
@@ -79,7 +85,7 @@ curl -sL -o "$PROTOC_ZIP" "https://github.com/protocolbuffers/protobuf/releases/
 unzip -o "$PROTOC_ZIP" -d ./protoc/
 
 echo "Getting opentelemetry-proto files"
-OTEL_PROTO_VERSION="1.3.1"
+OTEL_PROTO_VERSION=$(grep "opentelemetry-proto" "opentelemetry-cpp/third_party_release" | awk -F"=v" '{print $2}')
 OTEL_PROTO_TARBALL=v$OTEL_PROTO_VERSION.tar.gz
 
 curl -sL -o "$OTEL_PROTO_TARBALL" "https://github.com/open-telemetry/opentelemetry-proto/archive/refs/tags/$OTEL_PROTO_TARBALL"
@@ -96,7 +102,7 @@ cp out/Release/grpc_cpp_plugin "$WORKSPACE/protoc/bin/"
 cd "$WORKSPACE"
 
 echo "Building protobuf files"
-cd opentelemetry-proto-$OTEL_PROTO_VERSION
+cd "opentelemetry-proto-$OTEL_PROTO_VERSION"
 mkdir -p "$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp"
 "$WORKSPACE/protoc/bin/protoc" \
     --cpp_out="$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp" \
