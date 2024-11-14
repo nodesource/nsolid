@@ -29,7 +29,6 @@
 #include "opentelemetry/version.h"
 
 using opentelemetry::sdk::common::AtomicUniquePtr;
-using opentelemetry::sdk::common::CircularBuffer;
 using opentelemetry::sdk::common::CircularBufferRange;
 using opentelemetry::trace::SpanContext;
 
@@ -67,7 +66,7 @@ void BatchSpanProcessor::OnEnd(std::unique_ptr<Recordable> &&span) noexcept
     return;
   }
 
-  if (buffer_.Add(span) == false)
+  if (buffer_.Add(std::move(span)) == false)
   {
     OTEL_INTERNAL_LOG_WARN("BatchSpanProcessor queue is full - dropping span.");
     return;
@@ -206,6 +205,10 @@ void BatchSpanProcessor::Export()
       NotifyCompletion(notify_force_flush, exporter_, synchronization_data_);
       break;
     }
+
+    // Reserve space for the number of records
+    spans_arr.reserve(num_records_to_export);
+
     buffer_.Consume(num_records_to_export,
                     [&](CircularBufferRange<AtomicUniquePtr<Recordable>> range) noexcept {
                       range.ForEach([&](AtomicUniquePtr<Recordable> &ptr) {
