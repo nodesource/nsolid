@@ -88,7 +88,7 @@ inline std::string Sanitize(std::string name, const T &valid)
  */
 std::string SanitizeLabel(std::string label_key)
 {
-  return Sanitize(label_key, [](int i, char c) {
+  return Sanitize(std::move(label_key), [](int i, char c) {
     return (c >= 'a' && c <= 'z') ||  //
            (c >= 'A' && c <= 'Z') ||  //
            c == '_' ||                //
@@ -284,11 +284,11 @@ std::string PrometheusExporterUtils::SanitizeNames(std::string name)
 }
 
 #if OPENTELEMETRY_HAVE_WORKING_REGEX
-std::regex INVALID_CHARACTERS_PATTERN("[^a-zA-Z0-9]");
-std::regex CHARACTERS_BETWEEN_BRACES_PATTERN("\\{(.*?)\\}");
-std::regex SANITIZE_LEADING_UNDERSCORES("^_+");
-std::regex SANITIZE_TRAILING_UNDERSCORES("_+$");
-std::regex SANITIZE_CONSECUTIVE_UNDERSCORES("[_]{2,}");
+const std::regex INVALID_CHARACTERS_PATTERN("[^a-zA-Z0-9]");
+const std::regex CHARACTERS_BETWEEN_BRACES_PATTERN("\\{(.*?)\\}");
+const std::regex SANITIZE_LEADING_UNDERSCORES("^_+");
+const std::regex SANITIZE_TRAILING_UNDERSCORES("_+$");
+const std::regex SANITIZE_CONSECUTIVE_UNDERSCORES("[_]{2,}");
 #endif
 
 std::string PrometheusExporterUtils::GetEquivalentPrometheusUnit(
@@ -396,7 +396,7 @@ std::string PrometheusExporterUtils::RemoveUnitPortionInBraces(const std::string
 std::string PrometheusExporterUtils::ConvertRateExpressedToPrometheusUnit(
     const std::string &rate_expressed_unit)
 {
-  size_t pos = rate_expressed_unit.find("/");
+  size_t pos = rate_expressed_unit.find('/');
   if (pos == std::string::npos)
   {
     return rate_expressed_unit;
