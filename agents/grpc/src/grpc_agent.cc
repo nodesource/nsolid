@@ -1823,21 +1823,22 @@ ErrorType GrpcAgent::do_start_prof_init(
     opt.metadata_pb = std::move(args.metadata());
   }, options);
 
-  ErrorType error = (this->*start_profiling)(args, options);
-  if (error != ErrorType::ESuccess) {
-    return error;
-  }
-
   nsuv::ns_mutex::scoped_lock lock(profile_state_lock_);
   ProfileState& profile_state = profile_state_[type];
   ProfileStor stor{ req.requestid(),
                     uv_now(&loop_),
                     nullptr,
-                    std::move(options) };
+                    options };
   auto iter = profile_state.pending_profiles_map.emplace(thread_id,
                                                          std::move(stor));
   if (iter.second == false) {
     return ErrorType::EInProgressError;
+  }
+
+  ErrorType error = (this->*start_profiling)(args, options);
+  if (error != ErrorType::ESuccess) {
+    profile_state.pending_profiles_map.erase(iter.first);
+    return error;
   }
 
   if (type != kHeapSnapshot) {
