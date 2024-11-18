@@ -1593,24 +1593,29 @@ void GrpcAgent::send_exit() {
   auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
   uv_cond_t cond;
   uv_mutex_t lock;
+  bool signaled = false;
+
+  uv_mutex_init(&lock);
+  uv_cond_init(&cond);
   GrpcClient::DelegateAsyncExport(
     nsolid_service_stub_.get(), std::move(context), std::move(arena),
     std::move(*exit_event),
-    [&lock, &cond](::grpc::Status,
+    [&lock, &cond, &signaled](::grpc::Status,
         std::unique_ptr<Arena> &&,
         const grpcagent::ExitEvent& event,
         grpcagent::EventResponse*) {
       uv_mutex_lock(&lock);
+      signaled = true;
       uv_cond_signal(&cond);
       uv_mutex_unlock(&lock);
       return true;
     });
 
   // wait for the exit event to be sent
-  uv_mutex_init(&lock);
-  uv_cond_init(&cond);
   uv_mutex_lock(&lock);
-  uv_cond_wait(&cond, &lock);
+  while (!signaled) {
+    uv_cond_wait(&cond, &lock);
+  }
   uv_mutex_unlock(&lock);
   uv_cond_destroy(&cond);
   uv_mutex_destroy(&lock);
