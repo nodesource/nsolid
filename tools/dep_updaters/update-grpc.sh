@@ -77,7 +77,7 @@ for dir in *; do
 done
 
 for dir in src/*; do
-  if [ "$dir" = "src/core" ] || [ "$dir" = "src/cpp" ]; then
+  if [ "$dir" = "src/core" ] || [ "$dir" = "src/cpp" ] || [ "$dir" = "src/compiler" ]; then
     continue
   fi
   rm -rf "$dir"
