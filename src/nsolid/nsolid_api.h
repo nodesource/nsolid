@@ -206,6 +206,8 @@ class EnvInst {
                             const char* value,
                             bool is_return);
 
+  void CloseUvHandles();
+
   void PushClientBucket(double value);
   void PushServerBucket(double value);
   void PushDnsBucket(double value);
@@ -291,9 +293,6 @@ class EnvInst {
   static void run_interrupt_msg_(nsuv::ns_async*, EnvInst*);
   static void run_interrupt_(v8::Isolate* isolate, void* arg);
   static void run_interrupt_only_(v8::Isolate* isolate, void* arg);
-  static void handle_cleanup_cb_(Environment* env,
-                                 uv_handle_t* handle,
-                                 void*);
 
   static void uv_metrics_cb_(nsuv::ns_prepare* handle, EnvInst* envinst);
   static void v8_gc_prologue_cb_(v8::Isolate* isolate,

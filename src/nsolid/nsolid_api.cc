@@ -125,15 +125,7 @@ EnvInst::EnvInst(Environment* env)
   eloop_cmds_msg_.unref();
   interrupt_msg_.unref();
   metrics_handle_.unref();
-  env->RegisterHandleCleanup(eloop_cmds_msg_.base_handle(),
-                             handle_cleanup_cb_,
-                             nullptr);
-  env->RegisterHandleCleanup(interrupt_msg_.base_handle(),
-                             handle_cleanup_cb_,
-                             nullptr);
-  env->RegisterHandleCleanup(metrics_handle_.base_handle(),
-                             handle_cleanup_cb_,
-                             nullptr);
+
   er = metrics_handle_.start(uv_metrics_cb_, this);
   CHECK_EQ(er, 0);
 }
@@ -186,6 +178,20 @@ int EnvInst::RunCommand(SharedEnvInst envinst_sp,
   return UV_EINVAL;
 }
 
+
+void EnvInst::CloseUvHandles() {
+  auto close_and_finish = [&](uv_handle_t* handle) {
+    env()->CloseHandle(handle, [](uv_handle_t* handle) {
+#ifdef DEBUG
+      memset(handle, 0xab, uv_handle_size(handle->type));
+#endif
+    });
+  };
+
+  close_and_finish(eloop_cmds_msg_.base_handle());
+  close_and_finish(interrupt_msg_.base_handle());
+  close_and_finish(metrics_handle_.base_handle());
+}
 
 
 void EnvInst::PushClientBucket(double value) {
@@ -514,11 +520,6 @@ void EnvInst::run_interrupt_only_(Isolate* isolate, void*) {
   while (envinst_sp->interrupt_only_cb_q_.dequeue(stor)) {
     stor.cb(stor.envinst_sp, stor.data);
   }
-}
-
-
-void EnvInst::handle_cleanup_cb_(Environment* env, uv_handle_t* handle, void*) {
-  env->CloseHandle(handle, [](uv_handle_t*) { /* do something here? */ });
 }
 
 

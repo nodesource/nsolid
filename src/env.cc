@@ -1138,6 +1138,8 @@ void Environment::ExitEnv(StopFlags::Flags flags) {
 }
 
 void Environment::ClosePerEnvHandles() {
+  envinst_->CloseUvHandles();
+
   // If LoadEnvironment and InitializeLibuv are not called, like when building
   // snapshots, skip closing the per environment handles.
   if (!env_handle_initialized_) {
