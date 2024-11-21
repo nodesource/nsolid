@@ -170,6 +170,13 @@ relative, and based on the real path of the files making the calls to
 
 ## Loading ECMAScript modules using `require()`
 
+<!-- YAML
+added: v20.17.0
+-->
+
+> Stability: 1.1 - Active Development. Enable this API with the
+> [`--experimental-require-module`][] CLI flag.
+
 The `.mjs` extension is reserved for [ECMAScript Modules][].
 Currently, if the flag `--experimental-require-module` is not used, loading
 an ECMAScript module using `require()` will throw a [`ERR_REQUIRE_ESM`][]
@@ -295,7 +302,7 @@ NODE_MODULES_PATHS(START)
 2. let I = count of PARTS - 1
 3. let DIRS = []
 4. while I >= 0,
-   a. if PARTS[I] = "node_modules" CONTINUE
+   a. if PARTS[I] = "node_modules", GOTO d.
    b. DIR = path join(PARTS[0 .. I] + "node_modules")
    c. DIRS = DIR + DIRS
    d. let I = I - 1
@@ -1153,6 +1160,7 @@ This section was moved to
 [GLOBAL_FOLDERS]: #loading-from-the-global-folders
 [`"main"`]: packages.md#main
 [`"type"`]: packages.md#type
+[`--experimental-require-module`]: cli.md#--experimental-require-module
 [`ERR_REQUIRE_ASYNC_MODULE`]: errors.md#err_require_async_module
 [`ERR_REQUIRE_ESM`]: errors.md#err_require_esm
 [`ERR_UNSUPPORTED_DIR_IMPORT`]: errors.md#err_unsupported_dir_import
