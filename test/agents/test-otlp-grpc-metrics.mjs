@@ -448,7 +448,7 @@ if (process.argv[2] === 'child') {
     validateArray(resource.attributes, 'attributes');
 
     const expectedAttributes = {
-      'telemetry.sdk.version': '1.16.0',
+      'telemetry.sdk.version': process.versions.opentelemetry,
       'telemetry.sdk.language': 'cpp',
       'telemetry.sdk.name': 'opentelemetry',
       'service.instance.id': nsolidId,
