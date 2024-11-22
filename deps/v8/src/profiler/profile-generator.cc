@@ -872,12 +872,12 @@ void CpuProfileJSONSerializer::SerializeNodes() {
 
 void CpuProfileJSONSerializer::SerializeTimeDeltas() {
   int count = profile_->samples_count();
-  uint64_t lastTime = profile_->start_time().since_origin().InMicroseconds();
+  base::TimeTicks lastTimestamp = profile_->start_time();
   for (int i = 0; i < count; i++) {
-    uint64_t ts = profile_->sample(i).timestamp.since_origin().InMicroseconds();
-    writer_->AddNumber(static_cast<int>(ts - lastTime));
+    writer_->AddNumber(static_cast<int>(
+          (profile_->sample(i).timestamp - lastTimestamp).InMicroseconds()));
     if (i != (count - 1)) writer_->AddString(",");
-    lastTime = ts;
+    lastTimestamp = profile_->sample(i).timestamp;
   }
 }
 
