@@ -2,6 +2,27 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-11-22, Version 22.11.0-nsolid-v5.5.0 'Jod'
+
+### Commits
+
+* \[[`df24711dfb`](https://github.com/nodesource/nsolid/df24711dfb)] - **agents**: fix synchronized code in GrpcAgent (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`eca85a3a1a`](https://github.com/nodesource/nsolid/eca85a3a1a)] - **agents**: fix ExitEvent condition handling (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`b37f31bc6f`](https://github.com/nodesource/nsolid/b37f31bc6f)] - **agents**: add `complete` and `duration` to Asset msg (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`a1d67b2ca5`](https://github.com/nodesource/nsolid/a1d67b2ca5)] - **agents**: gRPC JS asset methods must add requestId (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`8df64fe37d`](https://github.com/nodesource/nsolid/8df64fe37d)] - **deps**: avoid overflow when calculating timeDeltas (Santiago Gimeno) [nodesource/nsolid#229](https://github.com/nodesource/nsolid/pull/229)
+* \[[`d95c588976`](https://github.com/nodesource/nsolid/d95c588976)] - **deps**: escape funtionName in CPU Profiles (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`41ae8bd7f1`](https://github.com/nodesource/nsolid/41ae8bd7f1)] - **deps**: fix Windows 11 SDK compilation (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`47e827103f`](https://github.com/nodesource/nsolid/47e827103f)] - **deps**: update grpc to 1.67.1 (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`b1762942cf`](https://github.com/nodesource/nsolid/b1762942cf)] - **deps**: update libsodium to 1.0.20 (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`61c29d909e`](https://github.com/nodesource/nsolid/61c29d909e)] - **deps**: update to libcurl 8.11.0 (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`61b25269fc`](https://github.com/nodesource/nsolid/61b25269fc)] - **deps,tools**: add missing grpc compiler folder (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`26c6b12b99`](https://github.com/nodesource/nsolid/26c6b12b99)] - **lib**: make sure only gRPC or ZMQ connects to SaaS (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`77c03836cb`](https://github.com/nodesource/nsolid/77c03836cb)] - **test**: fix linting issues (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`fc018154ca`](https://github.com/nodesource/nsolid/fc018154ca)] - **test**: unflake test-nsolid asset tests (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+* \[[`1d60b95003`](https://github.com/nodesource/nsolid/1d60b95003)] - **test**: backport missing tests from v20.x (Santiago Gimeno) [nodesource/nsolid#212](https://github.com/nodesource/nsolid/pull/212)
+* \[[`bbc12fcad2`](https://github.com/nodesource/nsolid/bbc12fcad2)] - **tools**: fix CURRENT\_VERSION calculation (Santiago Gimeno) [nodesource/nsolid#225](https://github.com/nodesource/nsolid/pull/225)
+
 ## 2024-11-01, Version 22.11.0-nsolid-v5.4.0 'Jod'
 
 ### Commits
