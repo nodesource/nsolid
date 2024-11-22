@@ -2,6 +2,23 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-10-22, Version 5.5.0 'Hydrogen'
+
+* \[[`fdbc9e27e2`](https://github.com/nodesource/nsolid/commit/fdbc9e27e2)] - **agents**: fix synchronized code in GrpcAgent (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`6f696b6a1b`](https://github.com/nodesource/nsolid/commit/6f696b6a1b)] - **agents**: fix ExitEvent condition handling (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`7645bb1e6c`](https://github.com/nodesource/nsolid/commit/7645bb1e6c)] - **agents**: add `complete` and `duration` to Asset msg (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`531d7127e9`](https://github.com/nodesource/nsolid/commit/531d7127e9)] - **agents**: gRPC JS asset methods must add requestId (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`59340cc086`](https://github.com/nodesource/nsolid/commit/59340cc086)] - **deps**: avoid overflow when calculating timeDeltas (Santiago Gimeno) [nodesource/nsolid#229](https://github.com/nodesource/nsolid/pull/229)
+* \[[`fea348149e`](https://github.com/nodesource/nsolid/commit/fea348149e)] - **deps**: escape funtionName in CPU Profiles (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`3ab51742cc`](https://github.com/nodesource/nsolid/commit/3ab51742cc)] - **deps**: fix Windows 11 SDK compilation (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`d306fc8b50`](https://github.com/nodesource/nsolid/commit/d306fc8b50)] - **deps**: update grpc to 1.67.1 (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`7de95689b9`](https://github.com/nodesource/nsolid/commit/7de95689b9)] - **deps**: update libsodium to 1.0.20 (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`1ba7460834`](https://github.com/nodesource/nsolid/commit/1ba7460834)] - **deps**: update to libcurl 8.11.0 (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`db02d23cec`](https://github.com/nodesource/nsolid/commit/db02d23cec)] - **deps,tools**: add missing grpc compiler folder (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`ed40d7332a`](https://github.com/nodesource/nsolid/commit/ed40d7332a)] - **lib**: make sure only gRPC or ZMQ connects to SaaS (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`3dbbe29699`](https://github.com/nodesource/nsolid/commit/3dbbe29699)] - **test**: unflake test-nsolid asset tests (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+* \[[`9326c24f53`](https://github.com/nodesource/nsolid/commit/9326c24f53)] - **tools**: fix CURRENT\_VERSION calculation (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
+
 ## 2024-11-01, Version 5.4.0 'Hydrogen'
 
 * \[[`e05b8cfa96`](https://github.com/nodesource/nsolid/commit/e05b8cfa96)] - **src**: remove unintended code added during backport (Santiago Gimeno) [nodesource/nsolid#208](https://github.com/nodesource/nsolid/pull/208)
