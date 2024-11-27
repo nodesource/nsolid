@@ -2,6 +2,24 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2024-11-22, Version 20.18.1-nsolid-v5.5.0 'Iron'
+
+### Commits
+
+* \[[`baed8d4021`](https://github.com/nodesource/nsolid/commit/baed8d4021)] - **deps**: avoid overflow when calculating timeDeltas (Santiago Gimeno) [nodesource/nsolid#229](https://github.com/nodesource/nsolid/pull/229)
+* \[[`6fafa1d38c`](https://github.com/nodesource/nsolid/commit/6fafa1d38c)] - **src**: close EnvInst handles after v20.18.1 merge
+* \[[`e95835387c`](https://github.com/nodesource/nsolid/commit/e95835387c)] - **agents**: fix synchronized code in GrpcAgent (Santiago Gimeno) [nodesource/nsolid#222](https://github.com/nodesource/nsolid/pull/222)
+* \[[`39a6fb92d8`](https://github.com/nodesource/nsolid/commit/39a6fb92d8)] - **agents**: fix ExitEvent condition handling (Santiago Gimeno) [nodesource/nsolid#222](https://github.com/nodesource/nsolid/pull/222)
+* \[[`9a844ef45e`](https://github.com/nodesource/nsolid/commit/9a844ef45e)] - **deps**: escape funtionName in CPU Profiles (Santiago Gimeno) [nodesource/nsolid#179](https://github.com/nodesource/nsolid/pull/179)
+* \[[`04a1aa08f4`](https://github.com/nodesource/nsolid/commit/04a1aa08f4)] - **deps**: fix Windows 11 SDK compilation (Santiago Gimeno) [nodesource/nsolid#222](https://github.com/nodesource/nsolid/pull/222)
+* \[[`fef5776e1b`](https://github.com/nodesource/nsolid/commit/fef5776e1b)] - **deps**: update grpc to 1.67.1 (Santiago Gimeno) [nodesource/nsolid#220](https://github.com/nodesource/nsolid/pull/220)
+* \[[`1eb24c02fb`](https://github.com/nodesource/nsolid/commit/1eb24c02fb)] - **deps**: update libsodium to 1.0.20 (Santiago Gimeno) [nodesource/nsolid#219](https://github.com/nodesource/nsolid/pull/219)
+* \[[`693bb4f31e`](https://github.com/nodesource/nsolid/commit/693bb4f31e)] - **deps**: update to libcurl 8.11.0 (Santiago Gimeno) [nodesource/nsolid#217](https://github.com/nodesource/nsolid/pull/217)
+* \[[`a7a6f2aa16`](https://github.com/nodesource/nsolid/commit/a7a6f2aa16)] - **deps,tools**: add missing grpc compiler folder (Santiago Gimeno) [nodesource/nsolid#223](https://github.com/nodesource/nsolid/pull/223)
+* \[[`6fafa1d38c`](https://github.com/nodesource/nsolid/commit/6fafa1d38c)] - **src**: close EnvInst handles after v20.18.1 merge (Santiago Gimeno)
+* \[[`e78ded9d9d`](https://github.com/nodesource/nsolid/commit/e78ded9d9d)] - **test**: unflake test-nsolid asset tests (Santiago Gimeno) [nodesource/nsolid#222](https://github.com/nodesource/nsolid/pull/222)
+* \[[`52fbfb15b9`](https://github.com/nodesource/nsolid/commit/52fbfb15b9)] - **tools**: fix CURRENT\_VERSION calculation (Santiago Gimeno) [nodesource/nsolid#218](https://github.com/nodesource/nsolid/pull/218)
+
 ## 2024-11-01, Version 20.18.0-nsolid-v5.4.0 'Iron'
 
 ### Commits
