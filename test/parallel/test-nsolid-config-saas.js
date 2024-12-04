@@ -9,6 +9,7 @@ const PORT = 12345;
 const saasToken =
   'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ.example.org:9001';
 const saasCommand = 'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ.example.org:9001';
+const invalidSaasToken = 'invalid.example.org:9001';
 
 if (process.config.variables.asan)
   common.skip('incorrect leak reporting in curl.');
@@ -171,6 +172,85 @@ function execProc7() {
   });
 }
 
+function execProc8() {
+  let output = '';
+  const proc = spawn(process.execPath,
+                     [ __filename, 'child1' ],
+                     {
+                       env: {
+                         NSOLID_SAAS: invalidSaasToken
+                       }
+                     });
+  proc.stdout.on('data', (d) => {
+    output += d;
+  });
+
+  proc.on('close', (code) => {
+    assert.strictEqual(code, 0);
+    const config = JSON.parse(output);
+    assert.strictEqual(config.command, undefined);
+    assert.strictEqual(config.saas, undefined);
+  });
+}
+
+function execProc9() {
+  let output = '';
+  const proc = spawn(process.execPath,
+                     [ __filename, 'child1' ],
+                     {
+                       env: {
+                         NSOLID_SAAS: invalidSaasToken,
+                         NSOLID_GRPC: PORT,
+                       }
+                     });
+  proc.stdout.on('data', (d) => {
+    output += d;
+  });
+
+  proc.on('close', (code) => {
+    assert.strictEqual(code, 0);
+    const config = JSON.parse(output);
+    assert.strictEqual(config.command, undefined);
+    assert.strictEqual(config.grpc, `localhost:${PORT}`);
+    assert.strictEqual(config.saas, undefined);
+  });
+}
+
+function execProc10() {
+  let output = '';
+  const proc = spawn(process.execPath,
+                     [ __filename, 'child5' ]);
+  proc.stdout.on('data', (d) => {
+    output += d;
+  });
+
+  proc.on('close', (code) => {
+    assert.strictEqual(code, 0);
+    const config = JSON.parse(output);
+    assert.strictEqual(config.command, undefined);
+    assert.strictEqual(config.grpc, `localhost:${PORT}`);
+    assert.strictEqual(config.saas, undefined);
+  });
+}
+
+function execProc11() {
+  let output = '';
+  const proc = spawn(process.execPath,
+                     [ __filename, 'child6' ]);
+  proc.stdout.on('data', (d) => {
+    output += d;
+  });
+
+  proc.on('close', (code) => {
+    assert.strictEqual(code, 0);
+    const config = JSON.parse(output);
+    assert.strictEqual(config.command, undefined);
+    assert.strictEqual(config.grpc, `${PORT}`);
+    assert.strictEqual(config.saas, saasToken);
+  });
+}
+
+
 switch (process.argv[2]) {
   case 'child1':
     process.stdout.write(JSON.stringify(nsolid.config));
@@ -201,6 +281,20 @@ switch (process.argv[2]) {
       process.stdout.write(JSON.stringify(out));
     }
     break;
+  case 'child5':
+    nsolid.start({
+      grpc: PORT,
+      saas: invalidSaasToken
+    });
+    process.stdout.write(JSON.stringify(nsolid.config));
+    break;
+  case 'child6':
+    nsolid.start({
+      grpc: PORT,
+      saas: saasToken
+    });
+    process.stdout.write(JSON.stringify(nsolid.config));
+    break;
   default:
     execProc1();
     execProc2();
@@ -209,4 +303,8 @@ switch (process.argv[2]) {
     execProc5();
     execProc6();
     execProc7();
+    execProc8();
+    execProc9();
+    execProc10();
+    execProc11();
 }
