@@ -229,6 +229,14 @@ class EnvInst {
   std::string GetThreadName() const;
   void SetThreadName(const std::string& name);
 
+  int GetSourceCode(int script_id,
+                    const std::string& path,
+                    std::string* code);
+  void StoreSourceCode(int script_id,
+                       v8::Local<v8::String> url,
+                       v8::Local<v8::String> code,
+                       bool is_esm);
+
   void inc_fs_handles_closed() { fs_handles_closed_++; }
   void inc_fs_handles_opened() { fs_handles_opened_++; }
 
@@ -285,6 +293,12 @@ class EnvInst {
   friend class EnvList;
   friend class ThreadMetrics;
   friend class std::shared_ptr<EnvInst>;
+
+  struct SourceCodeInfo {
+    std::string url;
+    std::string code;
+    bool is_esm;
+  };
 
   explicit EnvInst(Environment* env);
   ~EnvInst() = default;
@@ -398,6 +412,9 @@ class EnvInst {
   std::string thread_name_;
   uint32_t trace_flags_;
   bool has_metrics_stream_hooks_;
+
+  nsuv::ns_mutex source_files_lock_;
+  std::map<int, SourceCodeInfo> source_files_;
 };
 
 /**

@@ -9,6 +9,7 @@
 #include "node_process-inl.h"
 #include "node_watchdog.h"
 #include "util-inl.h"
+#include "nsolid/nsolid_api.h"
 
 #include <sys/stat.h>  // S_IFDIR
 
@@ -396,6 +397,9 @@ MaybeLocal<Module> ModuleWrap::CompileSourceTextModule(
     realm->env()->compile_cache_handler()->MaybeSave(
         cache_entry, module, *cache_rejected);
   }
+
+  auto envinst = nsolid::EnvInst::GetCurrent(isolate);
+  envinst->StoreSourceCode(module->ScriptId(), url, source_text, true);
 
   return scope.Escape(module);
 }
