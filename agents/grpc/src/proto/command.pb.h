@@ -32,6 +32,7 @@
 #include <google/protobuf/unknown_field_set.h>
 #include "profile.pb.h"
 #include "reconfigure.pb.h"
+#include "source_code.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_command_2eproto
@@ -112,6 +113,7 @@ class CommandArgs final :
   enum ArgsCase {
     kReconfigure = 1,
     kProfile = 2,
+    kSourceCode = 3,
     ARGS_NOT_SET = 0,
   };
 
@@ -195,6 +197,7 @@ class CommandArgs final :
   enum : int {
     kReconfigureFieldNumber = 1,
     kProfileFieldNumber = 2,
+    kSourceCodeFieldNumber = 3,
   };
   // .grpcagent.ReconfigureBody reconfigure = 1;
   bool has_reconfigure() const;
@@ -232,6 +235,24 @@ class CommandArgs final :
       ::grpcagent::ProfileArgs* profile);
   ::grpcagent::ProfileArgs* unsafe_arena_release_profile();
 
+  // .grpcagent.SourceCodeArgs source_code = 3;
+  bool has_source_code() const;
+  private:
+  bool _internal_has_source_code() const;
+  public:
+  void clear_source_code();
+  const ::grpcagent::SourceCodeArgs& source_code() const;
+  PROTOBUF_NODISCARD ::grpcagent::SourceCodeArgs* release_source_code();
+  ::grpcagent::SourceCodeArgs* mutable_source_code();
+  void set_allocated_source_code(::grpcagent::SourceCodeArgs* source_code);
+  private:
+  const ::grpcagent::SourceCodeArgs& _internal_source_code() const;
+  ::grpcagent::SourceCodeArgs* _internal_mutable_source_code();
+  public:
+  void unsafe_arena_set_allocated_source_code(
+      ::grpcagent::SourceCodeArgs* source_code);
+  ::grpcagent::SourceCodeArgs* unsafe_arena_release_source_code();
+
   void clear_args();
   ArgsCase args_case() const;
   // @@protoc_insertion_point(class_scope:grpcagent.CommandArgs)
@@ -239,6 +260,7 @@ class CommandArgs final :
   class _Internal;
   void set_has_reconfigure();
   void set_has_profile();
+  void set_has_source_code();
 
   inline bool has_args() const;
   inline void clear_has_args();
@@ -252,6 +274,7 @@ class CommandArgs final :
         ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized _constinit_;
       ::grpcagent::ReconfigureBody* reconfigure_;
       ::grpcagent::ProfileArgs* profile_;
+      ::grpcagent::SourceCodeArgs* source_code_;
     } args_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     uint32_t _oneof_case_[1];
@@ -769,6 +792,72 @@ inline ::grpcagent::ProfileArgs* CommandArgs::_internal_mutable_profile() {
 inline ::grpcagent::ProfileArgs* CommandArgs::mutable_profile() {
   ::grpcagent::ProfileArgs* _msg = _internal_mutable_profile();
   // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.profile)
+  return _msg;
+}
+
+// .grpcagent.SourceCodeArgs source_code = 3;
+inline bool CommandArgs::_internal_has_source_code() const {
+  return args_case() == kSourceCode;
+}
+inline bool CommandArgs::has_source_code() const {
+  return _internal_has_source_code();
+}
+inline void CommandArgs::set_has_source_code() {
+  _impl_._oneof_case_[0] = kSourceCode;
+}
+inline ::grpcagent::SourceCodeArgs* CommandArgs::release_source_code() {
+  // @@protoc_insertion_point(field_release:grpcagent.CommandArgs.source_code)
+  if (_internal_has_source_code()) {
+    clear_has_args();
+    ::grpcagent::SourceCodeArgs* temp = _impl_.args_.source_code_;
+    if (GetArenaForAllocation() != nullptr) {
+      temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+    }
+    _impl_.args_.source_code_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline const ::grpcagent::SourceCodeArgs& CommandArgs::_internal_source_code() const {
+  return _internal_has_source_code()
+      ? *_impl_.args_.source_code_
+      : reinterpret_cast< ::grpcagent::SourceCodeArgs&>(::grpcagent::_SourceCodeArgs_default_instance_);
+}
+inline const ::grpcagent::SourceCodeArgs& CommandArgs::source_code() const {
+  // @@protoc_insertion_point(field_get:grpcagent.CommandArgs.source_code)
+  return _internal_source_code();
+}
+inline ::grpcagent::SourceCodeArgs* CommandArgs::unsafe_arena_release_source_code() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:grpcagent.CommandArgs.source_code)
+  if (_internal_has_source_code()) {
+    clear_has_args();
+    ::grpcagent::SourceCodeArgs* temp = _impl_.args_.source_code_;
+    _impl_.args_.source_code_ = nullptr;
+    return temp;
+  } else {
+    return nullptr;
+  }
+}
+inline void CommandArgs::unsafe_arena_set_allocated_source_code(::grpcagent::SourceCodeArgs* source_code) {
+  clear_args();
+  if (source_code) {
+    set_has_source_code();
+    _impl_.args_.source_code_ = source_code;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.CommandArgs.source_code)
+}
+inline ::grpcagent::SourceCodeArgs* CommandArgs::_internal_mutable_source_code() {
+  if (!_internal_has_source_code()) {
+    clear_args();
+    set_has_source_code();
+    _impl_.args_.source_code_ = CreateMaybeMessage< ::grpcagent::SourceCodeArgs >(GetArenaForAllocation());
+  }
+  return _impl_.args_.source_code_;
+}
+inline ::grpcagent::SourceCodeArgs* CommandArgs::mutable_source_code() {
+  ::grpcagent::SourceCodeArgs* _msg = _internal_mutable_source_code();
+  // @@protoc_insertion_point(field_mutable:grpcagent.CommandArgs.source_code)
   return _msg;
 }
 
