@@ -153,6 +153,13 @@ async function startServer(cb) {
       console.dir(call.metadata, { depth: null });
       callback(null, {});
     },
+    ExportSourceCode: (call, callback) => {
+      // Extract data from the request object
+      console.dir(call.request, { depth: null });
+      console.dir(call.metadata, { depth: null });
+      callback(null, {});
+      process.send({ type: 'source_code', data: { msg: call.request, metadata: call.metadata } });
+    },
     ExportStartupTimes: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
@@ -199,6 +206,8 @@ process.on('message', (message) => {
     sendPackages(message.agentId, message.requestId);
   } else if (message.type === 'snapshot') {
     sendHeapSnapshot(message.agentId, message.requestId, message.options);
+  } else if (message.type === 'source_code') {
+    sendSourceCode(message.agentId, message.requestId, message.options);
   } else if (message.type === 'startup_times') {
     sendStartupTimes(message.agentId, message.requestId);
   } else if (message.type === 'close') {
@@ -271,6 +280,14 @@ async function sendMetrics(agentId, requestId) {
 
 async function sendPackages(agentId, requestId) {
   return sendCommand('packages', agentId, requestId);
+}
+
+async function sendSourceCode(agentId, requestId, options) {
+  const args = {
+    sourceCode: options,
+  };
+
+  return sendCommand('source_code', agentId, requestId, args);
 }
 
 async function sendStartupTimes(agentId, requestId) {

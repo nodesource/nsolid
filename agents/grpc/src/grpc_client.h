@@ -117,6 +117,16 @@ class GrpcClient {
     grpcagent::NSolidService::StubInterface* stub,
     std::unique_ptr<::grpc::ClientContext>&& context,
     std::unique_ptr<google::protobuf::Arena>&& arena,
+    grpcagent::SourceCodeEvent&& event,
+    std::function<bool(::grpc::Status,
+                        std::unique_ptr<google::protobuf::Arena> &&,
+                        const grpcagent::SourceCodeEvent&,
+                        grpcagent::EventResponse*)>&& result_callback) noexcept;
+
+  static int DelegateAsyncExport(
+    grpcagent::NSolidService::StubInterface* stub,
+    std::unique_ptr<::grpc::ClientContext>&& context,
+    std::unique_ptr<google::protobuf::Arena>&& arena,
     grpcagent::StartupTimesEvent&& event,
     std::function<bool(::grpc::Status,
                         std::unique_ptr<google::protobuf::Arena> &&,

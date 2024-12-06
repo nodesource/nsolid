@@ -32,6 +32,7 @@
 #include "node_snapshot_builder.h"
 #include "node_watchdog.h"
 #include "util-inl.h"
+#include "nsolid/nsolid_api.h"
 
 namespace node {
 namespace contextify {
@@ -1696,6 +1697,10 @@ static void CompileFunctionForCJSLoader(
   };
   Local<Object> result = Object::New(
       isolate, v8::Null(isolate), names.data(), values.data(), names.size());
+
+  auto envinst = nsolid::EnvInst::GetCurrent(isolate);
+  envinst->StoreSourceCode(fn->ScriptId(), filename, code, false);
+
   args.GetReturnValue().Set(result);
 }
 

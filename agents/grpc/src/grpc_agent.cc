@@ -1439,6 +1439,8 @@ void GrpcAgent::handle_command_request(CommandRequestStor&& req) {
     start_heap_sampling(request);
   } else if (cmd == "snapshot") {
     start_heap_snapshot(request);
+  } else if (cmd == "source_code") {
+    send_source_code_event(request);
   } else if (cmd == "startup_times") {
     send_startup_times_event(request.requestid().c_str());
   } else {
@@ -1719,6 +1721,56 @@ void GrpcAgent::send_reconfigure_event(const char* req_id) {
     [](::grpc::Status,
         std::unique_ptr<Arena>&&,
         const grpcagent::ReconfigureEvent& info_event,
+        grpcagent::EventResponse*) {
+      return true;
+    });
+}
+
+void GrpcAgent::send_source_code_event(const grpcagent::CommandRequest& req) {
+  const grpcagent::SourceCodeArgs& args = req.args().source_code();
+  uint64_t thread_id = args.thread_id();
+  int script_id = args.script_id();
+  const std::string path = args.path();
+
+  ArenaOptions arena_options;
+  arena_options.initial_block_size = 1024;
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
+
+  auto source_code_event =
+      Arena::Create<grpcagent::SourceCodeEvent>(arena.get());
+  PopulateCommon(source_code_event->mutable_common(),
+                 "source_code",
+                 req.requestid().c_str());
+
+  source_code_event->set_thread_id(thread_id);
+  source_code_event->set_path(path);
+
+
+  auto envinst_sp = EnvInst::GetInst(thread_id);
+  if (envinst_sp == nullptr) {
+    Debug("Error getting EnvInst for thread: %ld\n", thread_id);
+    PopulateError(source_code_event->mutable_common(),
+                  ErrorType::EThreadGoneError);
+  } else {
+    int r = envinst_sp->GetSourceCode(script_id,
+                                      path,
+                                      source_code_event->mutable_code());
+    if (r != 0) {
+      Debug("Error reading file from: %s. Error: %d.\n", path.c_str(), r);
+      PopulateError(source_code_event->mutable_common(),
+                    ErrorType::ESourceCodeFileError);
+    }
+  }
+
+  auto context = GrpcClient::MakeClientContext(agent_id_, saas_);
+
+  GrpcClient::DelegateAsyncExport(
+    nsolid_service_stub_.get(), std::move(context), std::move(arena),
+    std::move(*source_code_event),
+    [](::grpc::Status,
+        std::unique_ptr<Arena>&&,
+        const grpcagent::SourceCodeEvent& info_event,
         grpcagent::EventResponse*) {
       return true;
     });
