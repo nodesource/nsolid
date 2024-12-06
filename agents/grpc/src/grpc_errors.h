@@ -8,7 +8,8 @@
   X(EProfSnapshotError, 500, "Profile/Snapshot creation failure", 1003)        \
   X(ESnapshotDisabled, 500, "Heap Snapshots disabled", 1004)                   \
   X(ENoMemory, 500, "Internal Runtime Error", 1005)                            \
-  X(ENotAvailable, 404, "Resource not available", 1006)
+  X(ENotAvailable, 404, "Resource not available", 1006)                        \
+  X(ESourceCodeFileError, 500, "Internal Runtime Error", 1007)
 
 namespace node {
 namespace nsolid {

@@ -277,6 +277,25 @@ int GrpcClient::DelegateAsyncExport(
     NSolidService::StubInterface* stub,
     std::unique_ptr<ClientContext>&& context,
     std::unique_ptr<Arena>&& arena,
+    grpcagent::SourceCodeEvent&& event,
+    std::function<bool(Status,
+                       std::unique_ptr<Arena> &&,
+                       const grpcagent::SourceCodeEvent&,
+                       grpcagent::EventResponse*)>&& result_callback) noexcept {
+  return InternalDelegateAsyncExport<grpcagent::SourceCodeEvent>(
+      stub,
+      &NSolidService::StubInterface::async_interface::ExportSourceCode,
+      std::move(context),
+      std::move(arena),
+      std::move(event),
+      std::move(result_callback));
+}
+
+
+int GrpcClient::DelegateAsyncExport(
+    NSolidService::StubInterface* stub,
+    std::unique_ptr<ClientContext>&& context,
+    std::unique_ptr<Arena>&& arena,
     grpcagent::StartupTimesEvent&& event,
     std::function<bool(Status,
                        std::unique_ptr<Arena> &&,

@@ -121,6 +121,8 @@ EnvInst::EnvInst(Environment* env)
   CHECK_EQ(er, 0);
   er = custom_command_stor_map_lock_.init(true);
   CHECK_EQ(er, 0);
+  er = source_files_lock_.init(true);
+  CHECK_EQ(er, 0);
 
   eloop_cmds_msg_.unref();
   interrupt_msg_.unref();
@@ -757,6 +759,67 @@ int EnvInst::CustomCommandResponse(const std::string& req_id,
           { is_return, is_return ? value : std::string() },
           stor.data);
   return 0;
+}
+
+
+int EnvInst::GetSourceCode(int script_id,
+                           const std::string& path,
+                           std::string* code) {
+  SourceCodeInfo info;
+  {
+    ns_mutex::scoped_lock lock(source_files_lock_);
+    auto it = source_files_.find(script_id);
+    if (it == source_files_.end()) {
+      return UV_ENOENT;
+    }
+
+    info = it->second;
+  }
+
+  if (info.url != path) {
+    return UV_ENOENT;
+  }
+
+  if (!info.code.empty()) {
+    *code = info.code;
+    return 0;
+  }
+
+  std::string real_path;
+  if (info.is_esm && path.find("file://") == 0) {
+    real_path = path.substr(7);
+  } else {
+    real_path = path;
+  }
+
+  return ReadFileSync(code, real_path.c_str());;
+}
+
+
+void EnvInst::StoreSourceCode(int script_id,
+                              v8::Local<v8::String> url,
+                              v8::Local<v8::String> code,
+                              bool is_esm) {
+  if (url.IsEmpty() || code.IsEmpty()) {
+    return;
+  }
+
+  // fprintf(stderr, "[%d][%ld] StoreSourceCode: %s\n", script_id, thread_id_,
+  // *Utf8Value(isolate_, url));
+  ns_mutex::scoped_lock lock(source_files_lock_);
+  auto pair = source_files_.try_emplace(script_id, SourceCodeInfo{});
+  if (!pair.second) {
+    return;
+  }
+
+  SourceCodeInfo& info = pair.first->second;
+  info.url = *Utf8Value(isolate_, url);
+  if (is_esm && info.url.find("file://") != 0) {
+    // If the URL is not a file URL, store the code.
+    info.code = *Utf8Value(isolate_, code);
+  }
+
+  info.is_esm = is_esm;
 }
 
 
@@ -2689,6 +2752,7 @@ static void HeapSampling(const FunctionCallbackInfo<Value>& args) {
 
   args.GetReturnValue().Set(ret);
 }
+
 
 static void HeapSamplingEnd(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsNumber());  // thread_id

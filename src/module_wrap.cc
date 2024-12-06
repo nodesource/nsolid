@@ -9,6 +9,7 @@
 #include "node_process-inl.h"
 #include "node_watchdog.h"
 #include "util-inl.h"
+#include "nsolid/nsolid_api.h"
 
 #include <sys/stat.h>  // S_IFDIR
 
@@ -219,6 +220,9 @@ void ModuleWrap::New(const FunctionCallbackInfo<Value>& args) {
         try_catch.ReThrow();
         return;
       }
+
+      auto envinst = nsolid::EnvInst::GetCurrent(isolate);
+      envinst->StoreSourceCode(module->ScriptId(), url, source_text, true);
     }
   }
 

@@ -245,6 +245,22 @@ class GRPCServer extends EventEmitter {
     });
   }
 
+  async sourceCode(agentId, options) {
+    return new Promise((resolve) => {
+      if (this.#server) {
+        const requestId = randomUUID();
+        this.#server.send({ type: 'source_code', agentId, requestId, options });
+        this.#server.on('message', (msg) => {
+          if (msg.type === 'source_code') {
+            resolve({ requestId, data: msg.data });
+          }
+        });
+      } else {
+        resolve(null);
+      }
+    });
+  }
+
   async startupTimes(agentId) {
     return new Promise((resolve) => {
       if (this.#server) {
@@ -361,6 +377,21 @@ class TestClient {
             resolve(msg.id);
           }
         }));
+      } else {
+        resolve(null);
+      }
+    });
+  }
+
+  async importURL(url, threadId) {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'import', url, threadId });
+        this.#child.on('message', (msg) => {
+          if (msg.type === 'import') {
+            resolve();
+          }
+        });
       } else {
         resolve(null);
       }

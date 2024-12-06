@@ -78,6 +78,12 @@ function blockFor(duration) {
   while (Date.now() - start < duration);
 }
 
+async function handleImport(msg) {
+  const { url } = msg;
+  const { blockFor } = await import(url);
+  blockFor(500);
+}
+
 function handleTrace(msg) {
   if (msg.type === 'trace') {
     switch (msg.kind) {
@@ -111,6 +117,20 @@ if (isMainThread) {
       nsolid.heapSampling(msg.duration);
     } else if (msg.type === 'id') {
       process.send({ type: 'id', id: nsolid.id });
+    } else if (msg.type === 'import') {
+      console.log(msg);
+      if (threadId === msg.threadId) {
+        handleImport(msg).then(() => {
+          process.send(msg);
+        });
+      } else {
+        const worker = workers.get(msg.threadId);
+        worker.on('message', (msg) => {
+          process.send(msg);
+        });
+
+        worker.postMessage(msg);
+      }
     } else if (msg.type === 'log') {
       if (threadId === msg.threadId) {
         nsolid.logger[msg.level](msg.message);
@@ -186,6 +206,11 @@ if (isMainThread) {
     switch (msg.type) {
       case 'block':
         blockFor(msg.duration);
+        break;
+      case 'import':
+        handleImport(msg).then(() => {
+          parentPort.postMessage(msg);
+        });
         break;
       case 'log':
         nsolid.logger[msg.level](msg.message);
