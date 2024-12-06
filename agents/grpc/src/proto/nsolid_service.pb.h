@@ -38,6 +38,7 @@
 #include "metrics.pb.h"
 #include "packages.pb.h"
 #include "reconfigure.pb.h"
+#include "source_code.pb.h"
 #include "startup_times.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>

@@ -31,6 +31,7 @@
 #include "node_snapshot_builder.h"
 #include "node_watchdog.h"
 #include "util-inl.h"
+#include "nsolid/nsolid_api.h"
 
 namespace node {
 namespace contextify {
@@ -1303,6 +1304,9 @@ void ContextifyContext::CompileFunction(
           .IsNothing()) {
     return;
   }
+
+  auto envinst = nsolid::EnvInst::GetCurrent(isolate);
+  envinst->StoreSourceCode(fn->ScriptId(), filename, code, false);
 
   args.GetReturnValue().Set(result);
 }
