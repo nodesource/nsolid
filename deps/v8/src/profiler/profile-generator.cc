@@ -804,14 +804,24 @@ void CpuProfileJSONSerializer::SerializeCallFrame(
     const v8::CpuProfileNode* node) {
   writer_->AddString("\"functionName\":");
   writer_->EscapeAndAddString(node->GetFunctionNameStr());
-  writer_->AddString(",\"lineNumber\":");
-  writer_->AddNumber(node->GetLineNumber() - 1);
-  writer_->AddString(",\"columnNumber\":");
-  writer_->AddNumber(node->GetColumnNumber() - 1);
+  if (node->GetLineNumber()) {
+    writer_->AddString(",\"lineNumber\":");
+    writer_->AddNumber(node->GetLineNumber() - 1);
+  }
+
+  if (node->GetColumnNumber()) {
+    writer_->AddString(",\"columnNumber\":");
+    writer_->AddNumber(node->GetColumnNumber() - 1);
+  }
+
   writer_->AddString(",\"scriptId\":");
   writer_->AddNumber(node->GetScriptId());
-  writer_->AddString(",\"url\":");
-  writer_->EscapeAndAddString(node->GetScriptResourceNameStr());
+
+  const char* url = node->GetScriptResourceNameStr();
+  if (url) {
+    writer_->AddString(",\"url\":");
+    writer_->EscapeAndAddString(url);
+  }
 }
 
 void CpuProfileJSONSerializer::SerializeChildren(const v8::CpuProfileNode* node,
