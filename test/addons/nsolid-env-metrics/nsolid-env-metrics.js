@@ -25,6 +25,7 @@ process.on('beforeExit', mustCall(() => {
   assert.strictEqual(binding.getCbCntr(), 11);
 }));
 
+const workers = [];
 for (let i = 0; i < 10; i++) {
   const worker = new Worker(__filename, { argv: [process.pid] });
   worker.on('exit', (code) => {
@@ -33,12 +34,18 @@ for (let i = 0; i < 10; i++) {
   worker.on('message', mustCall((msg) => {
     assert.strictEqual(msg, 'init');
     binding.getMetrics(worker.threadId);
-    worker.postMessage('exit');
   }));
+  workers.push(worker);
 }
 
 // Let then main thread be a bit idle so we can check that loop_utilization is
 // correctly calculdate.
 setTimeout(() => {
   binding.getMetrics();
-}, 100);
+  const interval = setInterval(() => {
+    if (binding.getCbCntr() === 11) {
+      clearInterval(interval);
+      workers.forEach((worker) => worker.postMessage('exit'));
+    }
+  }, 50);
+}, 300);
