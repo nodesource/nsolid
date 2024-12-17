@@ -28,6 +28,7 @@ PROTOBUF_CONSTEXPR Stack::Stack(
   , /*decltype(_impl_.is_eval_)*/false
   , /*decltype(_impl_.line_number_)*/0
   , /*decltype(_impl_.column_)*/0
+  , /*decltype(_impl_.script_id_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct StackDefaultTypeInternal {
   PROTOBUF_CONSTEXPR StackDefaultTypeInternal()
@@ -116,6 +117,7 @@ const uint32_t TableStruct_blocked_5floop_2eproto::offsets[] PROTOBUF_SECTION_VA
   PROTOBUF_FIELD_OFFSET(::grpcagent::Stack, _impl_.function_name_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::Stack, _impl_.line_number_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::Stack, _impl_.column_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::Stack, _impl_.script_id_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::BlockedLoopBody, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -156,10 +158,10 @@ const uint32_t TableStruct_blocked_5floop_2eproto::offsets[] PROTOBUF_SECTION_VA
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::grpcagent::Stack)},
-  { 11, -1, -1, sizeof(::grpcagent::BlockedLoopBody)},
-  { 22, -1, -1, sizeof(::grpcagent::BlockedLoopEvent)},
-  { 30, -1, -1, sizeof(::grpcagent::UnblockedLoopBody)},
-  { 40, -1, -1, sizeof(::grpcagent::UnblockedLoopEvent)},
+  { 12, -1, -1, sizeof(::grpcagent::BlockedLoopBody)},
+  { 23, -1, -1, sizeof(::grpcagent::BlockedLoopEvent)},
+  { 31, -1, -1, sizeof(::grpcagent::UnblockedLoopBody)},
+  { 41, -1, -1, sizeof(::grpcagent::UnblockedLoopEvent)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -172,28 +174,28 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_blocked_5floop_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\022blocked_loop.proto\022\tgrpcagent\032\014common."
-  "proto\"i\n\005Stack\022\017\n\007is_eval\030\001 \001(\010\022\023\n\013scrip"
+  "proto\"|\n\005Stack\022\017\n\007is_eval\030\001 \001(\010\022\023\n\013scrip"
   "t_name\030\002 \001(\t\022\025\n\rfunction_name\030\003 \001(\t\022\023\n\013l"
-  "ine_number\030\004 \001(\005\022\016\n\006column\030\005 \001(\005\"\202\001\n\017Blo"
-  "ckedLoopBody\022\021\n\tthread_id\030\001 \001(\003\022\023\n\013block"
-  "ed_for\030\002 \001(\005\022\017\n\007loop_id\030\003 \001(\005\022\025\n\rcallbac"
-  "k_cntr\030\004 \001(\005\022\037\n\005stack\030\005 \003(\0132\020.grpcagent."
-  "Stack\"g\n\020BlockedLoopEvent\022)\n\006common\030\001 \001("
-  "\0132\031.grpcagent.CommonResponse\022(\n\004body\030\002 \001"
-  "(\0132\032.grpcagent.BlockedLoopBody\"c\n\021Unbloc"
-  "kedLoopBody\022\021\n\tthread_id\030\001 \001(\003\022\023\n\013blocke"
-  "d_for\030\002 \001(\005\022\017\n\007loop_id\030\003 \001(\005\022\025\n\rcallback"
-  "_cntr\030\004 \001(\005\"k\n\022UnblockedLoopEvent\022)\n\006com"
-  "mon\030\001 \001(\0132\031.grpcagent.CommonResponse\022*\n\004"
-  "body\030\002 \001(\0132\034.grpcagent.UnblockedLoopBody"
-  "b\006proto3"
+  "ine_number\030\004 \001(\005\022\016\n\006column\030\005 \001(\005\022\021\n\tscri"
+  "pt_id\030\006 \001(\005\"\202\001\n\017BlockedLoopBody\022\021\n\tthrea"
+  "d_id\030\001 \001(\003\022\023\n\013blocked_for\030\002 \001(\005\022\017\n\007loop_"
+  "id\030\003 \001(\005\022\025\n\rcallback_cntr\030\004 \001(\005\022\037\n\005stack"
+  "\030\005 \003(\0132\020.grpcagent.Stack\"g\n\020BlockedLoopE"
+  "vent\022)\n\006common\030\001 \001(\0132\031.grpcagent.CommonR"
+  "esponse\022(\n\004body\030\002 \001(\0132\032.grpcagent.Blocke"
+  "dLoopBody\"c\n\021UnblockedLoopBody\022\021\n\tthread"
+  "_id\030\001 \001(\003\022\023\n\013blocked_for\030\002 \001(\005\022\017\n\007loop_i"
+  "d\030\003 \001(\005\022\025\n\rcallback_cntr\030\004 \001(\005\"k\n\022Unbloc"
+  "kedLoopEvent\022)\n\006common\030\001 \001(\0132\031.grpcagent"
+  ".CommonResponse\022*\n\004body\030\002 \001(\0132\034.grpcagen"
+  "t.UnblockedLoopBodyb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_blocked_5floop_2eproto_deps[1] = {
   &::descriptor_table_common_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_blocked_5floop_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_blocked_5floop_2eproto = {
-    false, false, 608, descriptor_table_protodef_blocked_5floop_2eproto,
+    false, false, 627, descriptor_table_protodef_blocked_5floop_2eproto,
     "blocked_loop.proto",
     &descriptor_table_blocked_5floop_2eproto_once, descriptor_table_blocked_5floop_2eproto_deps, 1, 5,
     schemas, file_default_instances, TableStruct_blocked_5floop_2eproto::offsets,
@@ -229,6 +231,7 @@ Stack::Stack(const Stack& from)
     , decltype(_impl_.is_eval_){}
     , decltype(_impl_.line_number_){}
     , decltype(_impl_.column_){}
+    , decltype(_impl_.script_id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -249,8 +252,8 @@ Stack::Stack(const Stack& from)
       _this->GetArenaForAllocation());
   }
   ::memcpy(&_impl_.is_eval_, &from._impl_.is_eval_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.column_) -
-    reinterpret_cast<char*>(&_impl_.is_eval_)) + sizeof(_impl_.column_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.script_id_) -
+    reinterpret_cast<char*>(&_impl_.is_eval_)) + sizeof(_impl_.script_id_));
   // @@protoc_insertion_point(copy_constructor:grpcagent.Stack)
 }
 
@@ -264,6 +267,7 @@ inline void Stack::SharedCtor(
     , decltype(_impl_.is_eval_){false}
     , decltype(_impl_.line_number_){0}
     , decltype(_impl_.column_){0}
+    , decltype(_impl_.script_id_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.script_name_.InitDefault();
@@ -304,8 +308,8 @@ void Stack::Clear() {
   _impl_.script_name_.ClearToEmpty();
   _impl_.function_name_.ClearToEmpty();
   ::memset(&_impl_.is_eval_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.column_) -
-      reinterpret_cast<char*>(&_impl_.is_eval_)) + sizeof(_impl_.column_));
+      reinterpret_cast<char*>(&_impl_.script_id_) -
+      reinterpret_cast<char*>(&_impl_.is_eval_)) + sizeof(_impl_.script_id_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -355,6 +359,14 @@ const char* Stack::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
       case 5:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
           _impl_.column_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // int32 script_id = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
+          _impl_.script_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -426,6 +438,12 @@ uint8_t* Stack::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteInt32ToArray(5, this->_internal_column(), target);
   }
 
+  // int32 script_id = 6;
+  if (this->_internal_script_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(6, this->_internal_script_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -471,6 +489,11 @@ size_t Stack::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_column());
   }
 
+  // int32 script_id = 6;
+  if (this->_internal_script_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_script_id());
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -504,6 +527,9 @@ void Stack::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
   if (from._internal_column() != 0) {
     _this->_internal_set_column(from._internal_column());
   }
+  if (from._internal_script_id() != 0) {
+    _this->_internal_set_script_id(from._internal_script_id());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -532,8 +558,8 @@ void Stack::InternalSwap(Stack* other) {
       &other->_impl_.function_name_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(Stack, _impl_.column_)
-      + sizeof(Stack::_impl_.column_)
+      PROTOBUF_FIELD_OFFSET(Stack, _impl_.script_id_)
+      + sizeof(Stack::_impl_.script_id_)
       - PROTOBUF_FIELD_OFFSET(Stack, _impl_.is_eval_)>(
           reinterpret_cast<char*>(&_impl_.is_eval_),
           reinterpret_cast<char*>(&other->_impl_.is_eval_));
