@@ -92,6 +92,7 @@ function checkBlockedLoopData(blocked, metadata, agentId, threadId) {
 
     validateInteger(frame.lineNumber, 'lineNumber');
     validateInteger(frame.column, 'column');
+    validateInteger(frame.scriptId, 'scriptId');
   }
 
   assert.strictEqual(blocked.body.threadId, `${threadId}`);
