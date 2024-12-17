@@ -15,6 +15,7 @@ message Stack {
   string function_name = 3;
   int32 line_number = 4;
   int32 column = 5;
+  int32 script_id = 6;
 }
 
 message BlockedLoopBody {
