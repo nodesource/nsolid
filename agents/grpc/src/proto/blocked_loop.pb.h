@@ -199,6 +199,7 @@ class Stack final :
     kIsEvalFieldNumber = 1,
     kLineNumberFieldNumber = 4,
     kColumnFieldNumber = 5,
+    kScriptIdFieldNumber = 6,
   };
   // string script_name = 2;
   void clear_script_name();
@@ -255,6 +256,15 @@ class Stack final :
   void _internal_set_column(int32_t value);
   public:
 
+  // int32 script_id = 6;
+  void clear_script_id();
+  int32_t script_id() const;
+  void set_script_id(int32_t value);
+  private:
+  int32_t _internal_script_id() const;
+  void _internal_set_script_id(int32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:grpcagent.Stack)
  private:
   class _Internal;
@@ -268,6 +278,7 @@ class Stack final :
     bool is_eval_;
     int32_t line_number_;
     int32_t column_;
+    int32_t script_id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1178,6 +1189,26 @@ inline void Stack::_internal_set_column(int32_t value) {
 inline void Stack::set_column(int32_t value) {
   _internal_set_column(value);
   // @@protoc_insertion_point(field_set:grpcagent.Stack.column)
+}
+
+// int32 script_id = 6;
+inline void Stack::clear_script_id() {
+  _impl_.script_id_ = 0;
+}
+inline int32_t Stack::_internal_script_id() const {
+  return _impl_.script_id_;
+}
+inline int32_t Stack::script_id() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Stack.script_id)
+  return _internal_script_id();
+}
+inline void Stack::_internal_set_script_id(int32_t value) {
+  
+  _impl_.script_id_ = value;
+}
+inline void Stack::set_script_id(int32_t value) {
+  _internal_set_script_id(value);
+  // @@protoc_insertion_point(field_set:grpcagent.Stack.script_id)
 }
 
 // -------------------------------------------------------------------
