@@ -170,6 +170,7 @@ void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
 
     proto_stack->set_line_number(stack["line_number"].get<int32_t>());
     proto_stack->set_column(stack["column"].get<int32_t>());
+    proto_stack->set_script_id(stack["scriptId"].get<int32_t>());
   }
 }
 

@@ -388,6 +388,8 @@ std::string EnvInst::GetOnBlockedBody() {
     frame += std::to_string(stack_frame->GetLineNumber());
     frame += ",\"column\":";
     frame += std::to_string(stack_frame->GetColumn());
+    frame += ",\"scriptId\":";
+    frame += std::to_string(stack_frame->GetScriptId());
 
     frame += "},";
     body_string += frame;
