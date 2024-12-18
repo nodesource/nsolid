@@ -22,6 +22,7 @@ enum class InstrumentType
   kObservableCounter,
   kObservableGauge,
   kObservableUpDownCounter,
+  kGauge,
   kSummary
 };
 
