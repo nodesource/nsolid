@@ -6,6 +6,7 @@
       'sources': [
         'exporters/otlp/src/otlp_environment.cc',
         'exporters/otlp/src/otlp_grpc_client.cc',
+        'exporters/otlp/src/otlp_grpc_client_factory.cc',
         'exporters/otlp/src/otlp_grpc_exporter_options.cc',
         'exporters/otlp/src/otlp_grpc_exporter.cc',
         'exporters/otlp/src/otlp_grpc_log_record_exporter.cc',
