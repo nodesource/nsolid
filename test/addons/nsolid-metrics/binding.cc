@@ -44,8 +44,8 @@ static void GetEnvMetricsGone(const FunctionCallbackInfo<Value>& args) {
   assert(args[0]->IsNumber());
   uint64_t thread_id = args[0].As<Uint32>()->Value();
   SharedThreadMetrics tm = ThreadMetrics::Create(GetEnvInst(thread_id));
-  // The cb should never be called as SharedThreadMetrics is destroyed right
-  // after leaving the current scope.
+  // The cb should not be called most of the time as SharedThreadMetrics might
+  // be destroyed right after leaving the current scope.
   args.GetReturnValue().Set(tm->Update(metrics_cb_gone, nullptr, tm.get()));
 }
 
