@@ -9,9 +9,14 @@
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_client_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "opentelemetry/trace/semantic_conventions.h"
 
@@ -29,12 +34,17 @@ using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::sdk::trace::Recordable;
+using opentelemetry::v1::exporter::otlp::OtlpGrpcClient;
+using opentelemetry::v1::exporter::otlp::OtlpGrpcClientFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcExporter;
+using opentelemetry::v1::exporter::otlp::OtlpGrpcExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporter;
+using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
+using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
 using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
@@ -1019,6 +1029,24 @@ int GrpcAgent::config(const json& config) {
         it->get<std::string>() : console_id_ + ".grpc.nodesource.io:443";
       Debug("GrpcAgent configured. Endpoint: %s. Insecure: %d\n",
             endpoint.c_str(), static_cast<unsigned>(insecure));
+
+
+      OtlpGrpcClientOptions opts;
+      opts.endpoint = endpoint;
+      opts.metadata = {{"nsolid-agent-id", agent_id_},
+                        {"nsolid-saas", saas_}};
+      if (!insecure) {
+        opts.use_ssl_credentials = true;
+        if (!custom_certs_.empty()) {
+          opts.ssl_credentials_cacert_as_string = custom_certs_;
+        } else {
+          opts.ssl_credentials_cacert_as_string = cacert_;
+        }
+      }
+
+      std::shared_ptr<OtlpGrpcClient> client = OtlpGrpcClientFactory::Create(opts);
+      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(opts);
+
       {
         OtlpGrpcExporterOptions options;
         options.endpoint = endpoint;
@@ -1033,7 +1061,7 @@ int GrpcAgent::config(const json& config) {
           }
         }
 
-        trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options);
+        trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options, client);
       }
       {
         OtlpGrpcMetricExporterOptions options;
@@ -1049,7 +1077,8 @@ int GrpcAgent::config(const json& config) {
           }
         }
 
-        metrics_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(options);
+        metrics_exporter_ =
+          std::make_unique<OtlpGrpcMetricExporter>(options, client);
       }
       {
         OtlpGrpcLogRecordExporterOptions options;
@@ -1065,24 +1094,10 @@ int GrpcAgent::config(const json& config) {
           }
         }
 
-        log_exporter_ = std::make_unique<OtlpGrpcLogRecordExporter>(options);
+        log_exporter_ =
+          std::make_unique<OtlpGrpcLogRecordExporter>(options, client);
       }
-      {
-        OtlpGrpcClientOptions options;
-        options.endpoint = endpoint;
-        options.metadata = {{"nsolid-agent-id", agent_id_},
-                            {"nsolid-saas", saas_}};
-        if (!insecure) {
-          options.use_ssl_credentials = true;
-          if (!custom_certs_.empty()) {
-            options.ssl_credentials_cacert_as_string = custom_certs_;
-          } else {
-            options.ssl_credentials_cacert_as_string = cacert_;
-          }
-        }
 
-        nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(options);
-      }
       reset_command_stream();
     }
   }
