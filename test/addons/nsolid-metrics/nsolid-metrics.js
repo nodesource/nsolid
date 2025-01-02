@@ -25,7 +25,7 @@ if (!isMainThread) {
 
 process.on('beforeExit', mustCall(() => {
   assert.strictEqual(binding.getCbCntr(), wkr_count);
-  assert.ok(binding.getCbCntrGone() < wkr_count/ 2);
+  assert.ok(binding.getCbCntrGone() < wkr_count / 2);
   assert.strictEqual(binding.getCbCntrLambda(), wkr_count);
 }));
 
