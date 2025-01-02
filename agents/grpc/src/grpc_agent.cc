@@ -1046,7 +1046,8 @@ int GrpcAgent::config(const json& config) {
         }
       }
 
-      std::shared_ptr<OtlpGrpcClient> client = OtlpGrpcClientFactory::Create(opts);
+      std::shared_ptr<OtlpGrpcClient> client =
+          OtlpGrpcClientFactory::Create(opts);
       nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(opts);
 
       {
