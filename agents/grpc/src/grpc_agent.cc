@@ -1037,8 +1037,8 @@ int GrpcAgent::config(const json& config) {
       opts.endpoint = endpoint;
       opts.metadata = {{"nsolid-agent-id", agent_id_},
                        {"nsolid-saas", saas()}};
+      opts.use_ssl_credentials = !insecure;
       if (!insecure) {
-        opts.use_ssl_credentials = true;
         if (!custom_certs_.empty()) {
           opts.ssl_credentials_cacert_as_string = custom_certs_;
         } else {
