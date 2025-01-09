@@ -1228,7 +1228,9 @@ void GrpcAgent::do_start() {
 }
 
 void GrpcAgent::do_stop() {
-  if (!unauthorized_) {
+  // Don't try to send the exit event when grpc connection wasn't authorized or
+  // the agent wasn't fully configured.
+  if (!unauthorized_ && nsolid_service_stub_) {
     send_exit();
   }
 
