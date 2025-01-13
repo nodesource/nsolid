@@ -2,6 +2,31 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-01-13, Version 22.13.0-nsolid-v5.6.0 'Jod'
+
+### Commits
+
+* \[[`4ee0aba6b6`](https://github.com/nodesource/nsolid/commit/4ee0aba6b6)] - Merge tag 'v22.13.0' into node-v22.13.0-nsolid-v5.6.0-release (Santiago Gimeno) [#249](https://github.com/nodesource/nsolid/pull/249)
+* \[[`c82802ac28`](https://github.com/nodesource/nsolid/commit/c82802ac28)] - **agents**: fix grpc insecure opt initialization (Santiago Gimeno) [#247](https://github.com/nodesource/nsolid/pull/247)
+* \[[`4813152b9c`](https://github.com/nodesource/nsolid/commit/4813152b9c)] - **agents**: don't send exit if grpc agent unconfigured (Santiago Gimeno) [#248](https://github.com/nodesource/nsolid/pull/248)
+* \[[`fd5e9476b0`](https://github.com/nodesource/nsolid/commit/fd5e9476b0)] - **agents**: improve SaaS token handling (Santiago Gimeno) [#237](https://github.com/nodesource/nsolid/pull/237)
+* \[[`f40acf9eb2`](https://github.com/nodesource/nsolid/commit/f40acf9eb2)] - **agents**: share channel between OTLP exporters (Santiago Gimeno) [#242](https://github.com/nodesource/nsolid/pull/242)
+* \[[`325536c320`](https://github.com/nodesource/nsolid/commit/325536c320)] - **deps**: update libcurl to 8.11.1 (Santiago Gimeno) [#243](https://github.com/nodesource/nsolid/pull/243)
+* \[[`8cc0bb54e6`](https://github.com/nodesource/nsolid/commit/8cc0bb54e6)] - **deps**: update opentelemetry-cpp to 1.18.0 (Santiago Gimeno) [#241](https://github.com/nodesource/nsolid/pull/241)
+* \[[`a4dfbf64b5`](https://github.com/nodesource/nsolid/commit/a4dfbf64b5)] - **deps**: avoid using unset values in cpu profiler (Santiago Gimeno) [#233](https://github.com/nodesource/nsolid/pull/233)
+* \[[`d4047ede8f`](https://github.com/nodesource/nsolid/commit/d4047ede8f)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#221](https://github.com/nodesource/nsolid/pull/221)
+* \[[`f47334bae9`](https://github.com/nodesource/nsolid/commit/f47334bae9)] - **deps**: update opentelemetry-cpp to 1.17.0 (Santiago Gimeno) [#221](https://github.com/nodesource/nsolid/pull/221)
+* \[[`2ab4a1edd9`](https://github.com/nodesource/nsolid/commit/2ab4a1edd9)] - **deps**: update undici adding code from <https://github.com/nodejs/undici/pull/2701> (Santiago Gimeno) [#216](https://github.com/nodesource/nsolid/pull/216)
+* \[[`6b23418151`](https://github.com/nodesource/nsolid/commit/6b23418151)] - **lib**: fix crash if invalid SaaS token (Santiago Gimeno) [#235](https://github.com/nodesource/nsolid/pull/235)
+* \[[`f8697d4c7c`](https://github.com/nodesource/nsolid/commit/f8697d4c7c)] - **lib**: add tracing support for fetch(undici) (Santiago Gimeno) [#216](https://github.com/nodesource/nsolid/pull/216)
+* \[[`16c1b8c36d`](https://github.com/nodesource/nsolid/commit/16c1b8c36d)] - **lib**: add nsolidTracer EventEmitter (Santiago Gimeno) [#216](https://github.com/nodesource/nsolid/pull/216)
+* \[[`c3d728159d`](https://github.com/nodesource/nsolid/commit/c3d728159d)] - **lib,src**: fix a couple of linting issues (Santiago Gimeno)
+* \[[`fcf0865433`](https://github.com/nodesource/nsolid/commit/fcf0865433)] - **src**: add scriptId to stack\@blocked\_loop event (Santiago Gimeno) [#238](https://github.com/nodesource/nsolid/pull/238)
+* \[[`1d1560f713`](https://github.com/nodesource/nsolid/commit/1d1560f713)] - **src,agents**: add support for source code collection (Santiago Gimeno) [#240](https://github.com/nodesource/nsolid/pull/240)
+* \[[`ce9874bc02`](https://github.com/nodesource/nsolid/commit/ce9874bc02)] - **test**: unflake nsolid-env-metrics test (Santiago Gimeno) [#236](https://github.com/nodesource/nsolid/pull/236)
+* \[[`20e83c7a2b`](https://github.com/nodesource/nsolid/commit/20e83c7a2b)] - **test**: fix flaky nsolid-metrics test (Santiago Gimeno) [#239](https://github.com/nodesource/nsolid/pull/239)
+* \[[`5eae00f2e9`](https://github.com/nodesource/nsolid/commit/5eae00f2e9)] - **test**: get opentelemetry version from process (Santiago Gimeno) [#221](https://github.com/nodesource/nsolid/pull/221)
+
 ## 2024-11-22, Version 22.11.0-nsolid-v5.5.0 'Jod'
 
 ### Commits
