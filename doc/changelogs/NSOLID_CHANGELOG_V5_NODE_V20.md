@@ -2,6 +2,31 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-01-13, Version 20.18.1-nsolid-v5.6.0 'Iron'
+
+### Commits
+
+* \[[`477e2012cf`](https://github.com/nsolid/node/commit/477e2012cf)] - **agents**: fix grpc insecure opt initialization (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`606c97bc99`](https://github.com/nsolid/node/commit/606c97bc99)] - **agents**: don't send exit if grpc agent unconfigured (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`8eff90d786`](https://github.com/nsolid/node/commit/8eff90d786)] - **agents**: improve SaaS token handling (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`2d7ccc1f45`](https://github.com/nsolid/node/commit/2d7ccc1f45)] - **agents**: share channel between OTLP exporters (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`db014ab412`](https://github.com/nsolid/node/commit/db014ab412)] - **deps**: update libcurl to 8.11.1 (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`357e61013b`](https://github.com/nsolid/node/commit/357e61013b)] - **deps**: update opentelemetry-cpp to 1.18.0 (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`4c5a01913f`](https://github.com/nsolid/node/commit/4c5a01913f)] - **deps**: avoid using unset values in cpu profiler (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`b40869a4fd`](https://github.com/nsolid/node/commit/b40869a4fd)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`4ec5ae8396`](https://github.com/nsolid/node/commit/4ec5ae8396)] - **deps**: update opentelemetry-cpp to 1.17.0 (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`ab0eea8f69`](https://github.com/nsolid/node/commit/ab0eea8f69)] - **deps**: update undici adding code from <https://github.com/nodejs/undici/pull/2701> (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`0b0560fe7f`](https://github.com/nsolid/node/commit/0b0560fe7f)] - **lib**: fix crash if invalid SaaS token (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`41edf02151`](https://github.com/nsolid/node/commit/41edf02151)] - **lib**: add tracing support for fetch(undici) (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`9085399d72`](https://github.com/nsolid/node/commit/9085399d72)] - **lib**: add nsolidTracer EventEmitter (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`b962a0b007`](https://github.com/nsolid/node/commit/b962a0b007)] - **lib,src**: fix a couple of linting issues (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`96f92ed142`](https://github.com/nsolid/node/commit/96f92ed142)] - **src**: add scriptId to stack\@blocked\_loop event (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`70f068c373`](https://github.com/nsolid/node/commit/70f068c373)] - **src,agents**: add support for source code collection (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`eb2932ce12`](https://github.com/nsolid/node/commit/eb2932ce12)] - **test**: unflake nsolid-env-metrics test (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`366fab076f`](https://github.com/nsolid/node/commit/366fab076f)] - **test**: fix flaky nsolid-metrics test (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`67d4f32c36`](https://github.com/nsolid/node/commit/67d4f32c36)] - **test**: get opentelemetry version from process (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+
+
 ## 2024-11-22, Version 20.18.1-nsolid-v5.5.0 'Iron'
 
 ### Commits
