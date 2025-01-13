@@ -2,6 +2,27 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-01-13, Version 18.20.5-nsolid-v5.6.0 'Hydrogen'
+
+### Commits
+
+* \[[`5d97793cfe`](https://github.com/nsolid/node/commit/5d97793cfe)] - **agents**: fix grpc insecure opt initialization (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`5d115d3ebe`](https://github.com/nsolid/node/commit/5d115d3ebe)] - **agents**: don't send exit if grpc agent unconfigured (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`a0318dcf4c`](https://github.com/nsolid/node/commit/a0318dcf4c)] - **agents**: improve SaaS token handling (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`a7aebe128f`](https://github.com/nsolid/node/commit/a7aebe128f)] - **agents**: share channel between OTLP exporters (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`16871b3851`](https://github.com/nsolid/node/commit/16871b3851)] - **deps**: update libcurl to 8.11.1 (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`24dbbcd177`](https://github.com/nsolid/node/commit/24dbbcd177)] - **deps**: update opentelemetry-cpp to 1.18.0 (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`426cb3adc5`](https://github.com/nsolid/node/commit/426cb3adc5)] - **deps**: avoid using unset values in cpu profiler (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`ec137295fd`](https://github.com/nsolid/node/commit/ec137295fd)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`14027b4718`](https://github.com/nsolid/node/commit/14027b4718)] - **deps**: update opentelemetry-cpp to 1.17.0 (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`86cb64d8d1`](https://github.com/nsolid/node/commit/86cb64d8d1)] - **lib**: fix crash if invalid SaaS token (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`e3d886ce29`](https://github.com/nsolid/node/commit/e3d886ce29)] - **lib,src**: fix a couple of linting issues (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`2d075bbcb2`](https://github.com/nsolid/node/commit/2d075bbcb2)] - **src**: add scriptId to stack\@blocked\_loop event (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`5afd8c91fb`](https://github.com/nsolid/node/commit/5afd8c91fb)] - **src,agents**: add support for source code collection (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`c2aa6505fe`](https://github.com/nsolid/node/commit/c2aa6505fe)] - **test**: unflake nsolid-env-metrics test (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`7c51bd933f`](https://github.com/nsolid/node/commit/7c51bd933f)] - **test**: fix flaky nsolid-metrics test (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+* \[[`a1ebfb0555`](https://github.com/nsolid/node/commit/a1ebfb0555)] - **test**: get opentelemetry version from process (Santiago Gimeno) [nodesource/nsolid#246](https://github.com/nodesource/nsolid/pull/246)
+
 ## 2024-10-22, Version 5.5.0 'Hydrogen'
 
 * \[[`fdbc9e27e2`](https://github.com/nodesource/nsolid/commit/fdbc9e27e2)] - **agents**: fix synchronized code in GrpcAgent (Santiago Gimeno) [nodesource/nsolid#224](https://github.com/nodesource/nsolid/pull/224)
