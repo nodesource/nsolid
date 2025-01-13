@@ -170,8 +170,7 @@ with-code-cache test-code-cache:
 	$(warning '$@' target is a noop)
 
 out/Makefile: config.gypi common.gypi common_node.gypi node.gyp \
-	deps/uv/uv.gyp deps/llhttp/llhttp.gyp deps/zlib/zlib.gyp \
-	deps/simdutf/simdutf.gyp deps/ada/ada.gyp deps/nbytes/nbytes.gyp \
+	deps/*/*.gyp \
 	tools/v8_gypfiles/toolchain.gypi \
 	tools/v8_gypfiles/features.gypi \
 	tools/v8_gypfiles/inspector.gypi tools/v8_gypfiles/v8.gyp
@@ -241,7 +240,7 @@ coverage-clean: ## Remove coverage artifacts.
 	$(RM) -r coverage/tmp
 	@if [ -d "out/Release/obj.target" ]; then \
 		$(FIND) out/$(BUILDTYPE)/obj.target \( -name "*.gcda" -o -name "*.gcno" \) \
-			-type f -exec $(RM) {};\
+			-type f | xargs $(RM); \
 	fi
 
 .PHONY: coverage
@@ -267,7 +266,7 @@ coverage-build-js: ## Build JavaScript coverage files.
 .PHONY: coverage-test
 coverage-test: coverage-build ## Run the tests and generate a coverage report.
 	@if [ -d "out/Release/obj.target" ]; then \
-		$(FIND) out/$(BUILDTYPE)/obj.target -name "*.gcda" -type f -exec $(RM) {}; \
+		$(FIND) out/$(BUILDTYPE)/obj.target -name "*.gcda" -type f | xargs $(RM); \
 	fi
 	-NODE_V8_COVERAGE=coverage/tmp \
 		TEST_CI_ARGS="$(TEST_CI_ARGS) --type=coverage" $(MAKE) $(COVTESTS)
@@ -295,6 +294,7 @@ coverage-report-js: ## Report JavaScript coverage results.
 cctest: all ## Run the C++ tests using the built `cctest` executable.
 	@out/$(BUILDTYPE)/$@ --gtest_filter=$(GTEST_FILTER)
 	$(NODE) ./test/embedding/test-embedding.js
+	$(NODE) ./test/sqlite/test-sqlite-extensions.mjs
 
 .PHONY: list-gtests
 list-gtests: ## List all available C++ gtests.
@@ -579,6 +579,7 @@ test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tes
 		--mode=$(BUILDTYPE_LOWER) --flaky-tests=$(FLAKY_TESTS) \
 		$(TEST_CI_ARGS) $(CI_JS_SUITES) $(CI_NATIVE_SUITES) $(CI_DOC)
 	$(NODE) ./test/embedding/test-embedding.js
+	$(NODE) ./test/sqlite/test-sqlite-extensions.mjs
 	$(info Clean up any leftover processes, error if found.)
 	ps awwx | grep Release/node | grep -v grep | cat
 	@PS_OUT=`ps awwx | grep Release/node | grep -v grep | awk '{print $$1}'`; \
@@ -937,7 +938,11 @@ else
 ifeq ($(findstring riscv64,$(UNAME_M)),riscv64)
 DESTCPU ?= riscv64
 else
+ifeq ($(findstring loongarch64,$(UNAME_M)),loongarch64)
+DESTCPU ?= loong64
+else
 DESTCPU ?= x86
+endif
 endif
 endif
 endif
@@ -974,7 +979,11 @@ else
 ifeq ($(DESTCPU),riscv64)
 ARCH=riscv64
 else
+ifeq ($(DESTCPU),loong64)
+ARCH=loong64
+else
 ARCH=x86
+endif
 endif
 endif
 endif
@@ -1330,21 +1339,6 @@ bench-addons-clean:
 	$(RM) -r benchmark/napi/*/build
 	$(RM) benchmark/napi/.buildstamp
 
-.PHONY: lint-md-rollup
-lint-md-rollup:
-	$(RM) tools/.*mdlintstamp
-	cd tools/lint-md && npm ci && npm run build
-
-.PHONY: lint-md-clean
-.NOTPARALLEL: lint-md-clean
-lint-md-clean:
-	$(RM) -r tools/lint-md/node_modules
-	$(RM) tools/.*mdlintstamp
-
-.PHONY: lint-md-build
-lint-md-build:
-	$(warning Deprecated no-op target 'lint-md-build')
-
 ifeq ("$(wildcard tools/.mdlintstamp)","")
 LINT_MD_NEWER =
 else
@@ -1356,8 +1350,13 @@ LINT_MD_FILES = $(shell $(FIND) $(LINT_MD_TARGETS) -type f \
 	! -path '*node_modules*' ! -path 'test/fixtures/*' -name '*.md' \
 	$(LINT_MD_NEWER))
 run-lint-md = tools/lint-md/lint-md.mjs $(LINT_MD_FILES)
+
+# Check for a specific file, as (empty) directories are persisted in git.
+tools/lint-md/node_modules/remark-parse/package.json:
+	-cd tools/lint-md && $(call available-node,$(run-npm-ci))
+
 # Lint all changed markdown files maintained by us
-tools/.mdlintstamp: $(LINT_MD_FILES)
+tools/.mdlintstamp: tools/lint-md/node_modules/remark-parse/package.json $(LINT_MD_FILES)
 	$(info Running Markdown linter...)
 	@$(call available-node,$(run-lint-md))
 	@touch $@
@@ -1367,7 +1366,7 @@ lint-md: lint-js-doc | tools/.mdlintstamp ## Lint the markdown documents maintai
 
 run-format-md = tools/lint-md/lint-md.mjs --format $(LINT_MD_FILES)
 .PHONY: format-md
-format-md: ## Format the markdown documents maintained by us in the codebase.
+format-md: tools/lint-md/node_modules/remark-parse/package.json ## Format the markdown documents maintained by us in the codebase.
 	@$(call available-node,$(run-format-md))
 
 
@@ -1425,6 +1424,11 @@ LINT_CPP_EXCLUDE += src/nlohmann/json.h
 # These files were copied more or less verbatim from V8.
 LINT_CPP_EXCLUDE += src/tracing/trace_event.h src/tracing/trace_event_common.h
 
+# deps/ncrypto is included in this list, as it is maintained in
+# this repository, and should be linted. Eventually it should move
+# to its own repo, at which point we should remove it from this list.
+LINT_CPP_DEPS = deps/ncrypto/*.cc deps/ncrypto/*.h
+
 LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	agents/grpc/src/*.cc \
 	agents/grpc/src/*.h \
@@ -1449,6 +1453,7 @@ LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	test/cctest/*.h \
 	test/embedding/*.cc \
 	test/embedding/*.h \
+	test/sqlite/*.c \
 	test/fixtures/*.c \
 	test/js-native-api/*/*.cc \
 	test/node-api/*/*.cc \
@@ -1465,6 +1470,7 @@ LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	deps/nsolid_heap_profiler/bindings/*.cc \
 	deps/nsolid_heap_profiler/src/*.cc \
 	deps/nsolid_heap_profiler/include/*.h \
+	$(LINT_CPP_DEPS) \
 	))
 
 FORMAT_CPP_FILES ?=
@@ -1616,6 +1622,7 @@ lint-clean: ## Remove linting artifacts.
 	$(RM) tools/.*lintstamp
 	$(RM) .eslintcache
 	$(RM) -r tools/eslint/node_modules
+	$(RM) -r tools/lint-md/node_modules
 	$(RM) tools/pip/site_packages
 
 .PHONY: get-nsolid-version
