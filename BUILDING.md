@@ -34,7 +34,6 @@ file a new issue.
   * [Windows](#windows)
     * [Windows Prerequisites](#windows-prerequisites)
       * [Option 1: Manual install](#option-1-manual-install)
-      * [Option 2: Automated install with Boxstarter](#option-2-automated-install-with-boxstarter)
     * [Building N|Solid](#building-nsolid-2)
   * [Android](#android)
 * [`Intl` (ECMA-402) support](#intl-ecma-402-support)
