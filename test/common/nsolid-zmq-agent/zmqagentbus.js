@@ -321,7 +321,7 @@ class ZmqAgentBus extends EventEmitter {
       return;
     }
 
-    message.command = message.command || '_';
+    message.command ||= '_';
     debuglog(`Handling message: command: ${message.command} requestId: ${message.requestId} agentId: ${message.agentId}`);
 
     fixTimeProperties(message);

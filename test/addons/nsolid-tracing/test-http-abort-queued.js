@@ -80,7 +80,7 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
     res.writeHead(200);
     res.write('foo');
 
-    complete = complete || function() {
+    complete ||= function() {
       res.end();
     };
   }));
