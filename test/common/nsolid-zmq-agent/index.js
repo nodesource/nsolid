@@ -244,7 +244,7 @@ class TestPlayground {
       options = {};
     }
 
-    options = options || {};
+    options ||= {};
 
     const state = {
       id: null,

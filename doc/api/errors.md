@@ -3957,7 +3957,9 @@ added: v9.0.0
 removed: v10.0.0
 -->
 
-### NSolid Error Codes
+<a id="nsolid-error-codes"></a>
+
+## NSolid Error Codes
 
 <a id="ERR_NSOLID_CPU_PROFILE_START"></a>
 
