@@ -884,8 +884,9 @@ void CpuProfileJSONSerializer::SerializeTimeDeltas() {
   int count = profile_->samples_count();
   base::TimeTicks lastTimestamp = profile_->start_time();
   for (int i = 0; i < count; i++) {
-    writer_->AddNumber(static_cast<int>(
-          (profile_->sample(i).timestamp - lastTimestamp).InMicroseconds()));
+    int delta = static_cast<int>(
+        (profile_->sample(i).timestamp - lastTimestamp).InMicroseconds());
+    writer_->AddString(std::to_string(delta).c_str());
     if (i != (count - 1)) writer_->AddString(",");
     lastTimestamp = profile_->sample(i).timestamp;
   }
