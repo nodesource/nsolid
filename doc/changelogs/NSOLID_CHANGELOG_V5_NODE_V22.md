@@ -2,6 +2,15 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-01-21, Version 22.13.1-nsolid-v5.6.1 'Jod'
+
+### Commits
+
+* \[[`010d8793ba`](https://github.com/nodesource/nsolid/commit/010d8793ba)] - Merge tag 'v22.13.1' into node-v22.13.1-nsolid-v5.6.1-release (Santiago Gimeno)
+* \[[`3fedf3b45b`](https://github.com/nodesource/nsolid/commit/3fedf3b45b)] - **build**: disable lint-readme job (Santiago Gimeno) [#255](https://github.com/nodesource/nsolid/pull/255)
+* \[[`ca97de2342`](https://github.com/nodesource/nsolid/commit/ca97de2342)] - **doc,lib,test**: fix linting issues (Santiago Gimeno) [#255](https://github.com/nodesource/nsolid/pull/255)
+* \[[`06677cc004`](https://github.com/nodesource/nsolid/commit/06677cc004)] - **tools**: extend documented-errors lint rule (Santiago Gimeno) [#255](https://github.com/nodesource/nsolid/pull/255)
+
 ## 2025-01-13, Version 22.13.0-nsolid-v5.6.0 'Jod'
 
 ### Commits
