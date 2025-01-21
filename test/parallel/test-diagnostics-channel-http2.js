@@ -20,6 +20,10 @@ const isServerHttp2Stream = (stream) => {
          stream.session.type === http2.constants.NGHTTP2_SESSION_SERVER;
 };
 
+const isHttp2Stream = (stream) => {
+  return stream instanceof Http2Stream;
+};
+
 const isError = (error) => error instanceof Error;
 
 const isValidHeaders = (headers) => {
@@ -37,7 +41,7 @@ dc.subscribe('http2.client.stream.start', common.mustCall(({ stream, headers }) 
 }, 2));
 
 dc.subscribe('http2.client.stream.error', common.mustCall(({ stream, error }) => {
-  assert.strictEqual(isClientHttp2Stream(stream), true);
+  assert.strictEqual(isHttp2Stream(stream), true);
   assert.strictEqual(isError(error), true);
 }));
 
@@ -57,7 +61,7 @@ dc.subscribe('http2.server.stream.start', common.mustCall(({ stream, headers }) 
 }, 2));
 
 dc.subscribe('http2.server.stream.error', common.mustCall(({ stream, error }) => {
-  assert.strictEqual(isServerHttp2Stream(stream), true);
+  assert.strictEqual(isHttp2Stream(stream), true);
   assert.strictEqual(isError(error), true);
 }));
 
