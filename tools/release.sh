@@ -17,8 +17,6 @@ customsshkey="" # let ssh and scp use default key
 signversion=""
 # NSolid doesn't upload to CloudFlare
 cloudflare_bucket=""
-cloudflare_endpoint=
-cloudflare_profile=""
 
 while getopts ":i:s:" option; do
     case "${option}" in
@@ -111,6 +109,7 @@ sign() {
     exit 1
   fi
 
+  # /home/dist/${site}/release
   # shellcheck disable=SC2086,SC2029
   shapath=$(ssh ${customsshkey} "${webuser}@${webhost}" $signcmd $1 $project)
 
@@ -143,7 +142,7 @@ sign() {
   echo ""
 
   while true; do
-    printf "Upload files? [y/n] "
+    printf "Upload files to %s and Cloudflare R2? [y/n] " "$webhost"
     yorn=""
     read -r yorn
 
@@ -152,10 +151,26 @@ sign() {
     fi
 
     if [ "X${yorn}" = "Xy" ]; then
+      # Copy SHASUMS256.txt and its signatures to the web host:
       # shellcheck disable=SC2086
       scp ${customsshkey} "${tmpdir}/${shafile}" "${tmpdir}/${shafile}.asc" "${tmpdir}/${shafile}.sig" "${webuser}@${webhost}:${shadir}/"
       # shellcheck disable=SC2086,SC2029
       ssh ${customsshkey} "${webuser}@${webhost}" chmod 644 "${shadir}/${shafile}.asc" "${shadir}/${shafile}.sig"
+
+      # Copy the signatures to Cloudflare R2:
+      # Note: the binaries and SHASUMS256.txt should already be in the bucket
+      # since the promotion script should take care of uploading them.
+
+      # Remove /home/dist/ part
+      r2dir=$(echo "$shadir" | cut -c 12-)
+
+      # Copy SHASUMS256.txt.asc
+      # shellcheck disable=SC2086,SC2029
+      ssh ${customsshkey} "${webuser}@${webhost}" rclone copyto "${shadir}/${shafile}.asc" "${cloudflare_bucket}/${r2dir}/${shafile}.asc"
+
+      # Copy SHASUMS256.txt.sig
+      # shellcheck disable=SC2086,SC2029
+      ssh ${customsshkey} "${webuser}@${webhost}" rclone copyto "${shadir}/${shafile}.sig" "${cloudflare_bucket}/${r2dir}/${shafile}.sig"
       break
     fi
   done
