@@ -1,12 +1,17 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <iostream>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
