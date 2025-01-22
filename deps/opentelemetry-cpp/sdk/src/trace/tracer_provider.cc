@@ -19,7 +19,6 @@
 #include "opentelemetry/sdk/trace/tracer.h"
 #include "opentelemetry/sdk/trace/tracer_context.h"
 #include "opentelemetry/sdk/trace/tracer_provider.h"
-#include "opentelemetry/trace/span_id.h"
 #include "opentelemetry/trace/tracer.h"
 #include "opentelemetry/version.h"
 
@@ -52,10 +51,11 @@ TracerProvider::TracerProvider(std::vector<std::unique_ptr<SpanProcessor>> &&pro
                                const resource::Resource &resource,
                                std::unique_ptr<Sampler> sampler,
                                std::unique_ptr<IdGenerator> id_generator) noexcept
-{
-  context_ = std::make_shared<TracerContext>(std::move(processors), resource, std::move(sampler),
-                                             std::move(id_generator));
-}
+    : context_(std::make_shared<TracerContext>(std::move(processors),
+                                               resource,
+                                               std::move(sampler),
+                                               std::move(id_generator)))
+{}
 
 TracerProvider::~TracerProvider()
 {
@@ -100,7 +100,7 @@ nostd::shared_ptr<trace_api::Tracer> TracerProvider::GetTracer(
   for (auto &tracer : tracers_)
   {
     auto &tracer_scope = tracer->GetInstrumentationScope();
-    if (tracer_scope.equal(name, version, schema_url))
+    if (tracer_scope.equal(name, version, schema_url, attributes))
     {
       return nostd::shared_ptr<trace_api::Tracer>{tracer};
     }
@@ -125,9 +125,9 @@ const resource::Resource &TracerProvider::GetResource() const noexcept
   return context_->GetResource();
 }
 
-bool TracerProvider::Shutdown() noexcept
+bool TracerProvider::Shutdown(std::chrono::microseconds timeout) noexcept
 {
-  return context_->Shutdown();
+  return context_->Shutdown(timeout);
 }
 
 bool TracerProvider::ForceFlush(std::chrono::microseconds timeout) noexcept
