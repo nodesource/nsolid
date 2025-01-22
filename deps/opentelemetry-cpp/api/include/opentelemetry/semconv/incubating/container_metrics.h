@@ -27,7 +27,7 @@ namespace container
  * <p>
  * counter
  */
-static constexpr const char *kMetricContainerCpuTime     = "metric.container.cpu.time";
+static constexpr const char *kMetricContainerCpuTime     = "container.cpu.time";
 static constexpr const char *descrMetricContainerCpuTime = "Total CPU time consumed";
 static constexpr const char *unitMetricContainerCpuTime  = "s";
 
@@ -66,7 +66,7 @@ CreateAsyncDoubleMetricContainerCpuTime(metrics::Meter *meter)
  * <p>
  * gauge
  */
-static constexpr const char *kMetricContainerCpuUsage = "metric.container.cpu.usage";
+static constexpr const char *kMetricContainerCpuUsage = "container.cpu.usage";
 static constexpr const char *descrMetricContainerCpuUsage =
     "Container's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs";
 static constexpr const char *unitMetricContainerCpuUsage = "{cpu}";
@@ -109,7 +109,7 @@ CreateAsyncDoubleMetricContainerCpuUsage(metrics::Meter *meter)
  * <p>
  * counter
  */
-static constexpr const char *kMetricContainerDiskIo     = "metric.container.disk.io";
+static constexpr const char *kMetricContainerDiskIo     = "container.disk.io";
 static constexpr const char *descrMetricContainerDiskIo = "Disk bytes for the container.";
 static constexpr const char *unitMetricContainerDiskIo  = "By";
 
@@ -148,7 +148,7 @@ CreateAsyncDoubleMetricContainerDiskIo(metrics::Meter *meter)
  * <p>
  * counter
  */
-static constexpr const char *kMetricContainerMemoryUsage     = "metric.container.memory.usage";
+static constexpr const char *kMetricContainerMemoryUsage     = "container.memory.usage";
 static constexpr const char *descrMetricContainerMemoryUsage = "Memory usage of the container.";
 static constexpr const char *unitMetricContainerMemoryUsage  = "By";
 
@@ -187,7 +187,7 @@ CreateAsyncDoubleMetricContainerMemoryUsage(metrics::Meter *meter)
  * <p>
  * counter
  */
-static constexpr const char *kMetricContainerNetworkIo     = "metric.container.network.io";
+static constexpr const char *kMetricContainerNetworkIo     = "container.network.io";
 static constexpr const char *descrMetricContainerNetworkIo = "Network bytes for the container.";
 static constexpr const char *unitMetricContainerNetworkIo  = "By";
 
@@ -217,6 +217,48 @@ CreateAsyncDoubleMetricContainerNetworkIo(metrics::Meter *meter)
 {
   return meter->CreateDoubleObservableCounter(
       kMetricContainerNetworkIo, descrMetricContainerNetworkIo, unitMetricContainerNetworkIo);
+}
+
+/**
+ * The time the container has been running
+ * <p>
+ * Instrumentations SHOULD use a gauge with type @code double @endcode and measure uptime in seconds
+ * as a floating point number with the highest precision available. The actual accuracy would depend
+ * on the instrumentation and operating system. <p> gauge
+ */
+static constexpr const char *kMetricContainerUptime     = "container.uptime";
+static constexpr const char *descrMetricContainerUptime = "The time the container has been running";
+static constexpr const char *unitMetricContainerUptime  = "s";
+
+#if OPENTELEMETRY_ABI_VERSION_NO >= 2
+
+static inline nostd::unique_ptr<metrics::Gauge<int64_t>> CreateSyncInt64MetricContainerUptime(
+    metrics::Meter *meter)
+{
+  return meter->CreateInt64Gauge(kMetricContainerUptime, descrMetricContainerUptime,
+                                 unitMetricContainerUptime);
+}
+
+static inline nostd::unique_ptr<metrics::Gauge<double>> CreateSyncDoubleMetricContainerUptime(
+    metrics::Meter *meter)
+{
+  return meter->CreateDoubleGauge(kMetricContainerUptime, descrMetricContainerUptime,
+                                  unitMetricContainerUptime);
+}
+#endif /* OPENTELEMETRY_ABI_VERSION_NO */
+
+static inline nostd::shared_ptr<metrics::ObservableInstrument>
+CreateAsyncInt64MetricContainerUptime(metrics::Meter *meter)
+{
+  return meter->CreateInt64ObservableGauge(kMetricContainerUptime, descrMetricContainerUptime,
+                                           unitMetricContainerUptime);
+}
+
+static inline nostd::shared_ptr<metrics::ObservableInstrument>
+CreateAsyncDoubleMetricContainerUptime(metrics::Meter *meter)
+{
+  return meter->CreateDoubleObservableGauge(kMetricContainerUptime, descrMetricContainerUptime,
+                                            unitMetricContainerUptime);
 }
 
 }  // namespace container
