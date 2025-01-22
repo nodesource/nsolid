@@ -1,34 +1,52 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#include "opentelemetry/common/key_value_iterable_view.h"
-
-#include "opentelemetry/exporters/otlp/otlp_file_client.h"
-#include "opentelemetry/exporters/otlp/otlp_file_exporter_options.h"
-#include "opentelemetry/exporters/otlp/otlp_recordable.h"
-#include "opentelemetry/exporters/otlp/otlp_recordable_utils.h"
-#include "opentelemetry/nostd/unique_ptr.h"
-#include "opentelemetry/nostd/variant.h"
-#include "opentelemetry/sdk/resource/resource.h"
-
-#include "opentelemetry/exporters/otlp/protobuf_include_prefix.h"
-
-#include "opentelemetry/proto/collector/trace/v1/trace_service.pb.h"
-
-#include "opentelemetry/exporters/otlp/protobuf_include_suffix.h"
-
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-
-#include "nlohmann/json.hpp"
-
+#include <gtest/gtest.h>
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+// IWYU pragma: no_include <features.h>
+
+#include "opentelemetry/common/timestamp.h"
+#include "opentelemetry/exporters/otlp/otlp_file_client.h"
+#include "opentelemetry/exporters/otlp/otlp_file_client_options.h"
+#include "opentelemetry/exporters/otlp/otlp_file_client_runtime_options.h"
+#include "opentelemetry/exporters/otlp/otlp_recordable.h"
+#include "opentelemetry/exporters/otlp/otlp_recordable_utils.h"
+#include "opentelemetry/nostd/shared_ptr.h"
+#include "opentelemetry/nostd/span.h"
+#include "opentelemetry/nostd/unique_ptr.h"
+#include "opentelemetry/nostd/variant.h"
+#include "opentelemetry/sdk/common/exporter_utils.h"
+#include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
+#include "opentelemetry/sdk/resource/resource.h"
+#include "opentelemetry/sdk/trace/recordable.h"
+#include "opentelemetry/trace/span_context.h"
+#include "opentelemetry/trace/span_id.h"
+#include "opentelemetry/trace/span_metadata.h"
+#include "opentelemetry/trace/trace_flags.h"
+#include "opentelemetry/trace/trace_id.h"
+#include "opentelemetry/trace/trace_state.h"
+#include "opentelemetry/version.h"
+
+// clang-format off
+#include "opentelemetry/exporters/otlp/protobuf_include_prefix.h" // IWYU pragma: keep
+#include <google/protobuf/message_lite.h>
+#include "opentelemetry/proto/collector/trace/v1/trace_service.pb.h"
+#include "opentelemetry/proto/trace/v1/trace.pb.h"
+#include "opentelemetry/exporters/otlp/protobuf_include_suffix.h" // IWYU pragma: keep
+// clang-format on
 
 using namespace testing;
 
@@ -143,7 +161,8 @@ TEST(OtlpFileClientTest, Shutdown)
   opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest request;
   auto client = std::unique_ptr<opentelemetry::exporter::otlp::OtlpFileClient>(
       new opentelemetry::exporter::otlp::OtlpFileClient(
-          opentelemetry::exporter::otlp::OtlpFileClientOptions()));
+          opentelemetry::exporter::otlp::OtlpFileClientOptions(),
+          opentelemetry::exporter::otlp::OtlpFileClientRuntimeOptions()));
   ASSERT_FALSE(client->IsShutdown());
   ASSERT_TRUE(client->Shutdown());
   ASSERT_TRUE(client->IsShutdown());
@@ -166,10 +185,11 @@ TEST(OtlpFileClientTest, ExportToOstreamTest)
   std::stringstream output_stream;
 
   opentelemetry::exporter::otlp::OtlpFileClientOptions opts;
+  opentelemetry::exporter::otlp::OtlpFileClientRuntimeOptions rt_opts;
   opts.backend_options = std::ref(output_stream);
 
   auto client = std::unique_ptr<opentelemetry::exporter::otlp::OtlpFileClient>(
-      new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts)));
+      new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts), std::move(rt_opts)));
   client->Export(request, 1);
 
   {
@@ -265,10 +285,11 @@ TEST(OtlpFileClientTest, ExportToFileSystemRotateIndexTest)
   backend_opts.rotate_size = 3;
 
   opentelemetry::exporter::otlp::OtlpFileClientOptions opts;
+  opentelemetry::exporter::otlp::OtlpFileClientRuntimeOptions rt_opts;
   opts.backend_options = backend_opts;
 
   auto client = std::unique_ptr<opentelemetry::exporter::otlp::OtlpFileClient>(
-      new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts)));
+      new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts), std::move(rt_opts)));
 
   // Write 5 records with rotatation index 1,2,3,1,2
   for (int i = 0; i < 4; ++i)
@@ -386,10 +407,11 @@ TEST(OtlpFileClientTest, ExportToFileSystemRotateByTimeTest)
   backend_opts.file_size = 1500;
 
   opentelemetry::exporter::otlp::OtlpFileClientOptions opts;
+  opentelemetry::exporter::otlp::OtlpFileClientRuntimeOptions rt_opts;
   opts.backend_options = backend_opts;
 
   auto client = std::unique_ptr<opentelemetry::exporter::otlp::OtlpFileClient>(
-      new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts)));
+      new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts), std::move(rt_opts)));
 
   auto start_time = std::chrono::system_clock::now();
   client->Export(request, 1);
@@ -493,11 +515,12 @@ TEST(OtlpFileClientTest, ConfigTest)
 {
   {
     opentelemetry::exporter::otlp::OtlpFileClientOptions opts;
+    opentelemetry::exporter::otlp::OtlpFileClientRuntimeOptions rt_opts;
     opts.console_debug   = true;
     opts.backend_options = std::ref(std::cout);
 
     auto client = std::unique_ptr<opentelemetry::exporter::otlp::OtlpFileClient>(
-        new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts)));
+        new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts), std::move(rt_opts)));
 
     ASSERT_TRUE(client->GetOptions().console_debug);
     ASSERT_TRUE(opentelemetry::nostd::holds_alternative<std::reference_wrapper<std::ostream>>(
@@ -509,11 +532,12 @@ TEST(OtlpFileClientTest, ConfigTest)
     backend_opts.file_pattern = "test_file_pattern.jsonl";
 
     opentelemetry::exporter::otlp::OtlpFileClientOptions opts;
+    opentelemetry::exporter::otlp::OtlpFileClientRuntimeOptions rt_opts;
     opts.console_debug   = false;
     opts.backend_options = backend_opts;
 
     auto client = std::unique_ptr<opentelemetry::exporter::otlp::OtlpFileClient>(
-        new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts)));
+        new opentelemetry::exporter::otlp::OtlpFileClient(std::move(opts), std::move(rt_opts)));
 
     ASSERT_FALSE(client->GetOptions().console_debug);
     ASSERT_TRUE(opentelemetry::nostd::holds_alternative<

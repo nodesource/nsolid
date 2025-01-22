@@ -4,17 +4,19 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <cstdint>
-#include <memory>
+#include <initializer_list>
 #include <string>
 #include <utility>
 #include <vector>
 #include "common.h"
 
 #include "opentelemetry/common/macros.h"
+#include "opentelemetry/context/context.h"
 #include "opentelemetry/metrics/meter.h"
 #include "opentelemetry/metrics/sync_instruments.h"
+#include "opentelemetry/nostd/function_ref.h"
+#include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/variant.h"
-#include "opentelemetry/sdk/common/exporter_utils.h"
 #include "opentelemetry/sdk/metrics/aggregation/aggregation_config.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/data/point_data.h"
@@ -26,10 +28,6 @@
 #include "opentelemetry/sdk/metrics/view/instrument_selector.h"
 #include "opentelemetry/sdk/metrics/view/meter_selector.h"
 #include "opentelemetry/sdk/metrics/view/view.h"
-
-#if OPENTELEMETRY_HAVE_WORKING_REGEX
-#  include <regex>
-#endif
 
 using namespace opentelemetry;
 using namespace opentelemetry::sdk::instrumentationscope;

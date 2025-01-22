@@ -1,37 +1,51 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#include <gtest/gtest.h>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
-#include <thread>
+#include <functional>
+#include <map>
+#include <nlohmann/json.hpp>
+#include <string>
+#include <utility>
+#include <vector>
+#include "gmock/gmock.h"
 
+#include "opentelemetry/common/timestamp.h"
+#include "opentelemetry/exporters/otlp/otlp_environment.h"
+#include "opentelemetry/exporters/otlp/otlp_http.h"
+#include "opentelemetry/exporters/otlp/otlp_http_client.h"
 #include "opentelemetry/exporters/otlp/otlp_http_metric_exporter.h"
-
-#include "opentelemetry/exporters/otlp/protobuf_include_prefix.h"
-
-#include "opentelemetry/proto/collector/metrics/v1/metrics_service.pb.h"
-
+#include "opentelemetry/exporters/otlp/otlp_http_metric_exporter_options.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
-#include "opentelemetry/exporters/otlp/protobuf_include_suffix.h"
-
-#include "opentelemetry/common/key_value_iterable_view.h"
-#include "opentelemetry/ext/http/client/http_client_factory.h"
-#include "opentelemetry/ext/http/server/http_server.h"
+#include "opentelemetry/exporters/otlp/otlp_preferred_temporality.h"
+#include "opentelemetry/ext/http/client/http_client.h"
+#include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/unique_ptr.h"
+#include "opentelemetry/sdk/common/exporter_utils.h"
+#include "opentelemetry/sdk/common/thread_instrumentation.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
-#include "opentelemetry/sdk/metrics/aggregation/default_aggregation.h"
-#include "opentelemetry/sdk/metrics/aggregation/histogram_aggregation.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
+#include "opentelemetry/sdk/metrics/data/point_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "opentelemetry/sdk/metrics/instruments.h"
+#include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/test_common/ext/http/client/http_client_test_factory.h"
 #include "opentelemetry/test_common/ext/http/client/nosend/http_client_nosend.h"
+#include "opentelemetry/version.h"
 
+// clang-format off
+#include "opentelemetry/exporters/otlp/protobuf_include_prefix.h" // IWYU pragma: keep
+// IWYU pragma: no_include "net/proto2/public/repeated_field.h"
 #include <google/protobuf/message_lite.h>
-#include <gtest/gtest.h>
-#include "gmock/gmock.h"
-
-#include "nlohmann/json.hpp"
+#include "opentelemetry/proto/collector/metrics/v1/metrics_service.pb.h"
+#include "opentelemetry/proto/common/v1/common.pb.h"
+#include "opentelemetry/proto/metrics/v1/metrics.pb.h"
+#include "opentelemetry/exporters/otlp/protobuf_include_suffix.h" // IWYU pragma: keep
+// clang-format on
 
 #if defined(_MSC_VER)
 #  include "opentelemetry/sdk/common/env_variables.h"
@@ -61,22 +75,31 @@ static IntegerType JsonToInteger(nlohmann::json value)
 OtlpHttpClientOptions MakeOtlpHttpClientOptions(HttpRequestContentType content_type,
                                                 bool async_mode)
 {
+  std::shared_ptr<opentelemetry::sdk::common::ThreadInstrumentation> not_instrumented;
   OtlpHttpMetricExporterOptions options;
   options.content_type  = content_type;
   options.console_debug = true;
   options.http_headers.insert(std::make_pair("Custom-Header-Key", "Custom-Header-Value"));
+  options.retry_policy_max_attempts       = 0U;
+  options.retry_policy_initial_backoff    = std::chrono::duration<float>::zero();
+  options.retry_policy_max_backoff        = std::chrono::duration<float>::zero();
+  options.retry_policy_backoff_multiplier = 0.0f;
   OtlpHttpClientOptions otlp_http_client_options(
-      options.url, false,                 /* ssl_insecure_skip_verify */
-      "", /* ssl_ca_cert_path */ "",      /* ssl_ca_cert_string */
-      "",                                 /* ssl_client_key_path */
-      "", /* ssl_client_key_string */ "", /* ssl_client_cert_path */
-      "",                                 /* ssl_client_cert_string */
-      "",                                 /* ssl_min_tls */
-      "",                                 /* ssl_max_tls */
-      "",                                 /* ssl_cipher */
-      "",                                 /* ssl_cipher_suite */
+      options.url, false, /* ssl_insecure_skip_verify */
+      "",                 /* ssl_ca_cert_path */
+      "",                 /* ssl_ca_cert_string */
+      "",                 /* ssl_client_key_path */
+      "",                 /* ssl_client_key_string */
+      "",                 /* ssl_client_cert_path */
+      "",                 /* ssl_client_cert_string */
+      "",                 /* ssl_min_tls */
+      "",                 /* ssl_max_tls */
+      "",                 /* ssl_cipher */
+      "",                 /* ssl_cipher_suite */
       options.content_type, options.json_bytes_mapping, options.compression, options.use_json_name,
-      options.console_debug, options.timeout, options.http_headers);
+      options.console_debug, options.timeout, options.http_headers,
+      options.retry_policy_max_attempts, options.retry_policy_initial_backoff,
+      options.retry_policy_max_backoff, options.retry_policy_backoff_multiplier, not_instrumented);
   if (!async_mode)
   {
     otlp_http_client_options.max_concurrent_requests = 0;
@@ -988,7 +1011,57 @@ TEST_F(OtlpHttpMetricExporterTestPeer, CheckDefaultTemporality)
             exporter->GetAggregationTemporality(
                 opentelemetry::sdk::metrics::InstrumentType::kObservableUpDownCounter));
 }
-#endif
+
+TEST_F(OtlpHttpMetricExporterTestPeer, ConfigRetryDefaultValues)
+{
+  std::unique_ptr<OtlpHttpMetricExporter> exporter(new OtlpHttpMetricExporter());
+  const auto options = GetOptions(exporter);
+  ASSERT_EQ(options.retry_policy_max_attempts, 5);
+  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 1.0);
+  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 5.0);
+  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 1.5);
+}
+
+TEST_F(OtlpHttpMetricExporterTestPeer, ConfigRetryValuesFromEnv)
+{
+  setenv("OTEL_CPP_EXPORTER_OTLP_METRICS_RETRY_MAX_ATTEMPTS", "123", 1);
+  setenv("OTEL_CPP_EXPORTER_OTLP_METRICS_RETRY_INITIAL_BACKOFF", "4.5", 1);
+  setenv("OTEL_CPP_EXPORTER_OTLP_METRICS_RETRY_MAX_BACKOFF", "6.7", 1);
+  setenv("OTEL_CPP_EXPORTER_OTLP_METRICS_RETRY_BACKOFF_MULTIPLIER", "8.9", 1);
+
+  std::unique_ptr<OtlpHttpMetricExporter> exporter(new OtlpHttpMetricExporter());
+  const auto options = GetOptions(exporter);
+  ASSERT_EQ(options.retry_policy_max_attempts, 123);
+  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 4.5);
+  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 6.7);
+  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 8.9);
+
+  unsetenv("OTEL_CPP_EXPORTER_OTLP_METRICS_RETRY_MAX_ATTEMPTS");
+  unsetenv("OTEL_CPP_EXPORTER_OTLP_METRICS_RETRY_INITIAL_BACKOFF");
+  unsetenv("OTEL_CPP_EXPORTER_OTLP_METRICS_RETRY_MAX_BACKOFF");
+  unsetenv("OTEL_CPP_EXPORTER_OTLP_METRICS_RETRY_BACKOFF_MULTIPLIER");
+}
+
+TEST_F(OtlpHttpMetricExporterTestPeer, ConfigRetryGenericValuesFromEnv)
+{
+  setenv("OTEL_CPP_EXPORTER_OTLP_RETRY_MAX_ATTEMPTS", "321", 1);
+  setenv("OTEL_CPP_EXPORTER_OTLP_RETRY_INITIAL_BACKOFF", "5.4", 1);
+  setenv("OTEL_CPP_EXPORTER_OTLP_RETRY_MAX_BACKOFF", "7.6", 1);
+  setenv("OTEL_CPP_EXPORTER_OTLP_RETRY_BACKOFF_MULTIPLIER", "9.8", 1);
+
+  std::unique_ptr<OtlpHttpMetricExporter> exporter(new OtlpHttpMetricExporter());
+  const auto options = GetOptions(exporter);
+  ASSERT_EQ(options.retry_policy_max_attempts, 321);
+  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 5.4);
+  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 7.6);
+  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 9.8);
+
+  unsetenv("OTEL_CPP_EXPORTER_OTLP_RETRY_MAX_ATTEMPTS");
+  unsetenv("OTEL_CPP_EXPORTER_OTLP_RETRY_INITIAL_BACKOFF");
+  unsetenv("OTEL_CPP_EXPORTER_OTLP_RETRY_MAX_BACKOFF");
+  unsetenv("OTEL_CPP_EXPORTER_OTLP_RETRY_BACKOFF_MULTIPLIER");
+}
+#endif  // NO_GETENV
 
 // Test Preferred aggregtion temporality selection
 TEST_F(OtlpHttpMetricExporterTestPeer, PreferredAggergationTemporality)
