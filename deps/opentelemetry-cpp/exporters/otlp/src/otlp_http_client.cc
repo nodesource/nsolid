@@ -13,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <ratio>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -26,12 +27,12 @@
 
 #include "nlohmann/json.hpp"
 #include "opentelemetry/common/timestamp.h"
-#include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/exporters/otlp/otlp_http.h"
 #include "opentelemetry/exporters/otlp/otlp_http_client.h"
 #include "opentelemetry/ext/http/client/http_client.h"
 #include "opentelemetry/ext/http/client/http_client_factory.h"
 #include "opentelemetry/ext/http/common/url_parser.h"
+#include "opentelemetry/nostd/function_ref.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/nostd/variant.h"
 #include "opentelemetry/sdk/common/base64.h"
@@ -665,7 +666,7 @@ void ConvertListFieldToJson(nlohmann::json &value,
 OtlpHttpClient::OtlpHttpClient(OtlpHttpClientOptions &&options)
     : is_shutdown_(false),
       options_(options),
-      http_client_(http_client::HttpClientFactory::Create()),
+      http_client_(http_client::HttpClientFactory::Create(options.thread_instrumentation)),
       start_session_counter_(0),
       finished_session_counter_(0)
 {
@@ -753,13 +754,7 @@ sdk::common::ExportResult OtlpHttpClient::Export(
   auto session = createSession(message, std::move(result_callback));
   if (opentelemetry::nostd::holds_alternative<sdk::common::ExportResult>(session))
   {
-    sdk::common::ExportResult result =
-        opentelemetry::nostd::get<sdk::common::ExportResult>(session);
-    if (result_callback)
-    {
-      result_callback(result);
-    }
-    return result;
+    return opentelemetry::nostd::get<sdk::common::ExportResult>(session);
   }
 
   addSession(std::move(opentelemetry::nostd::get<HttpSessionData>(session)));
@@ -896,7 +891,7 @@ OtlpHttpClient::createSession(
   // Parse uri and store it to cache
   if (http_uri_.empty())
   {
-    auto parse_url = opentelemetry::ext::http::common::UrlParser(std::string(options_.url));
+    const auto parse_url = opentelemetry::ext::http::common::UrlParser(options_.url);
     if (!parse_url.success_)
     {
       std::string error_message = "[OTLP HTTP Client] Export failed, invalid url: " + options_.url;
@@ -904,9 +899,11 @@ OtlpHttpClient::createSession(
       {
         std::cerr << error_message << '\n';
       }
-      OTEL_INTERNAL_LOG_ERROR(error_message.c_str());
+      OTEL_INTERNAL_LOG_ERROR(error_message);
 
-      return opentelemetry::sdk::common::ExportResult::kFailure;
+      const auto result = opentelemetry::sdk::common::ExportResult::kFailure;
+      result_callback(result);
+      return result;
     }
 
     if (!parse_url.path_.empty() && parse_url.path_[0] == '/')
@@ -938,7 +935,10 @@ OtlpHttpClient::createSession(
         OTEL_INTERNAL_LOG_DEBUG("[OTLP HTTP Client] Serialize body failed(Binary):"
                                 << message.InitializationErrorString());
       }
-      return opentelemetry::sdk::common::ExportResult::kFailure;
+
+      const auto result = opentelemetry::sdk::common::ExportResult::kFailure;
+      result_callback(result);
+      return result;
     }
     content_type = kHttpBinaryContentType;
   }
@@ -971,7 +971,9 @@ OtlpHttpClient::createSession(
     }
     OTEL_INTERNAL_LOG_ERROR(error_message);
 
-    return opentelemetry::sdk::common::ExportResult::kFailure;
+    const auto result = opentelemetry::sdk::common::ExportResult::kFailure;
+    result_callback(result);
+    return result;
   }
 
   auto session = http_client_->CreateSession(options_.url);
@@ -990,6 +992,7 @@ OtlpHttpClient::createSession(
   request->ReplaceHeader("Content-Type", content_type);
   request->ReplaceHeader("User-Agent", options_.user_agent);
   request->EnableLogging(options_.console_debug);
+  request->SetRetryPolicy(options_.retry_policy);
 
   if (options_.compression == "gzip")
   {

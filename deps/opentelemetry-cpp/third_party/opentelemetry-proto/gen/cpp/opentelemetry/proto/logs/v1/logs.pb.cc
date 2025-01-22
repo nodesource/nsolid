@@ -73,6 +73,7 @@ PROTOBUF_CONSTEXPR LogRecord::LogRecord(
   , /*decltype(_impl_.severity_text_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.trace_id_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.span_id_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.event_name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.body_)*/nullptr
   , /*decltype(_impl_.time_unix_nano_)*/uint64_t{0u}
   , /*decltype(_impl_.severity_number_)*/0
@@ -139,6 +140,7 @@ const uint32_t TableStruct_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto::off
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::logs::v1::LogRecord, _impl_.flags_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::logs::v1::LogRecord, _impl_.trace_id_),
   PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::logs::v1::LogRecord, _impl_.span_id_),
+  PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::logs::v1::LogRecord, _impl_.event_name_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::opentelemetry::proto::logs::v1::LogsData)},
@@ -169,7 +171,7 @@ const char descriptor_table_protodef_opentelemetry_2fproto_2flogs_2fv1_2flogs_2e
   "ntelemetry.proto.common.v1.Instrumentati"
   "onScope\022;\n\013log_records\030\002 \003(\0132&.opentelem"
   "etry.proto.logs.v1.LogRecord\022\022\n\nschema_u"
-  "rl\030\003 \001(\t\"\357\002\n\tLogRecord\022\026\n\016time_unix_nano"
+  "rl\030\003 \001(\t\"\203\003\n\tLogRecord\022\026\n\016time_unix_nano"
   "\030\001 \001(\006\022\037\n\027observed_time_unix_nano\030\013 \001(\006\022"
   "D\n\017severity_number\030\002 \001(\0162+.opentelemetry"
   ".proto.logs.v1.SeverityNumber\022\025\n\rseverit"
@@ -178,30 +180,31 @@ const char descriptor_table_protodef_opentelemetry_2fproto_2flogs_2fv1_2flogs_2e
   "s\030\006 \003(\0132\'.opentelemetry.proto.common.v1."
   "KeyValue\022 \n\030dropped_attributes_count\030\007 \001"
   "(\r\022\r\n\005flags\030\010 \001(\007\022\020\n\010trace_id\030\t \001(\014\022\017\n\007s"
-  "pan_id\030\n \001(\014J\004\010\004\020\005*\303\005\n\016SeverityNumber\022\037\n"
-  "\033SEVERITY_NUMBER_UNSPECIFIED\020\000\022\031\n\025SEVERI"
-  "TY_NUMBER_TRACE\020\001\022\032\n\026SEVERITY_NUMBER_TRA"
-  "CE2\020\002\022\032\n\026SEVERITY_NUMBER_TRACE3\020\003\022\032\n\026SEV"
-  "ERITY_NUMBER_TRACE4\020\004\022\031\n\025SEVERITY_NUMBER"
-  "_DEBUG\020\005\022\032\n\026SEVERITY_NUMBER_DEBUG2\020\006\022\032\n\026"
-  "SEVERITY_NUMBER_DEBUG3\020\007\022\032\n\026SEVERITY_NUM"
-  "BER_DEBUG4\020\010\022\030\n\024SEVERITY_NUMBER_INFO\020\t\022\031"
-  "\n\025SEVERITY_NUMBER_INFO2\020\n\022\031\n\025SEVERITY_NU"
-  "MBER_INFO3\020\013\022\031\n\025SEVERITY_NUMBER_INFO4\020\014\022"
-  "\030\n\024SEVERITY_NUMBER_WARN\020\r\022\031\n\025SEVERITY_NU"
-  "MBER_WARN2\020\016\022\031\n\025SEVERITY_NUMBER_WARN3\020\017\022"
-  "\031\n\025SEVERITY_NUMBER_WARN4\020\020\022\031\n\025SEVERITY_N"
-  "UMBER_ERROR\020\021\022\032\n\026SEVERITY_NUMBER_ERROR2\020"
-  "\022\022\032\n\026SEVERITY_NUMBER_ERROR3\020\023\022\032\n\026SEVERIT"
-  "Y_NUMBER_ERROR4\020\024\022\031\n\025SEVERITY_NUMBER_FAT"
-  "AL\020\025\022\032\n\026SEVERITY_NUMBER_FATAL2\020\026\022\032\n\026SEVE"
-  "RITY_NUMBER_FATAL3\020\027\022\032\n\026SEVERITY_NUMBER_"
-  "FATAL4\020\030*Y\n\016LogRecordFlags\022\037\n\033LOG_RECORD"
-  "_FLAGS_DO_NOT_USE\020\000\022&\n!LOG_RECORD_FLAGS_"
-  "TRACE_FLAGS_MASK\020\377\001Bs\n\036io.opentelemetry."
-  "proto.logs.v1B\tLogsProtoP\001Z&go.opentelem"
-  "etry.io/proto/otlp/logs/v1\252\002\033OpenTelemet"
-  "ry.Proto.Logs.V1b\006proto3"
+  "pan_id\030\n \001(\014\022\022\n\nevent_name\030\014 \001(\tJ\004\010\004\020\005*\303"
+  "\005\n\016SeverityNumber\022\037\n\033SEVERITY_NUMBER_UNS"
+  "PECIFIED\020\000\022\031\n\025SEVERITY_NUMBER_TRACE\020\001\022\032\n"
+  "\026SEVERITY_NUMBER_TRACE2\020\002\022\032\n\026SEVERITY_NU"
+  "MBER_TRACE3\020\003\022\032\n\026SEVERITY_NUMBER_TRACE4\020"
+  "\004\022\031\n\025SEVERITY_NUMBER_DEBUG\020\005\022\032\n\026SEVERITY"
+  "_NUMBER_DEBUG2\020\006\022\032\n\026SEVERITY_NUMBER_DEBU"
+  "G3\020\007\022\032\n\026SEVERITY_NUMBER_DEBUG4\020\010\022\030\n\024SEVE"
+  "RITY_NUMBER_INFO\020\t\022\031\n\025SEVERITY_NUMBER_IN"
+  "FO2\020\n\022\031\n\025SEVERITY_NUMBER_INFO3\020\013\022\031\n\025SEVE"
+  "RITY_NUMBER_INFO4\020\014\022\030\n\024SEVERITY_NUMBER_W"
+  "ARN\020\r\022\031\n\025SEVERITY_NUMBER_WARN2\020\016\022\031\n\025SEVE"
+  "RITY_NUMBER_WARN3\020\017\022\031\n\025SEVERITY_NUMBER_W"
+  "ARN4\020\020\022\031\n\025SEVERITY_NUMBER_ERROR\020\021\022\032\n\026SEV"
+  "ERITY_NUMBER_ERROR2\020\022\022\032\n\026SEVERITY_NUMBER"
+  "_ERROR3\020\023\022\032\n\026SEVERITY_NUMBER_ERROR4\020\024\022\031\n"
+  "\025SEVERITY_NUMBER_FATAL\020\025\022\032\n\026SEVERITY_NUM"
+  "BER_FATAL2\020\026\022\032\n\026SEVERITY_NUMBER_FATAL3\020\027"
+  "\022\032\n\026SEVERITY_NUMBER_FATAL4\020\030*Y\n\016LogRecor"
+  "dFlags\022\037\n\033LOG_RECORD_FLAGS_DO_NOT_USE\020\000\022"
+  "&\n!LOG_RECORD_FLAGS_TRACE_FLAGS_MASK\020\377\001B"
+  "s\n\036io.opentelemetry.proto.logs.v1B\tLogsP"
+  "rotoP\001Z&go.opentelemetry.io/proto/otlp/l"
+  "ogs/v1\252\002\033OpenTelemetry.Proto.Logs.V1b\006pr"
+  "oto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto_deps[2] = {
   &::descriptor_table_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto,
@@ -209,7 +212,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_opentelemetry_2fpro
 };
 static ::_pbi::once_flag descriptor_table_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto = {
-    false, false, 1864, descriptor_table_protodef_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto,
+    false, false, 1884, descriptor_table_protodef_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto,
     "opentelemetry/proto/logs/v1/logs.proto",
     &descriptor_table_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto_once, descriptor_table_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto_deps, 2, 4,
     schemas, file_default_instances, TableStruct_opentelemetry_2fproto_2flogs_2fv1_2flogs_2eproto::offsets,
@@ -1067,6 +1070,7 @@ LogRecord::LogRecord(const LogRecord& from)
     , decltype(_impl_.severity_text_){}
     , decltype(_impl_.trace_id_){}
     , decltype(_impl_.span_id_){}
+    , decltype(_impl_.event_name_){}
     , decltype(_impl_.body_){nullptr}
     , decltype(_impl_.time_unix_nano_){}
     , decltype(_impl_.severity_number_){}
@@ -1100,6 +1104,14 @@ LogRecord::LogRecord(const LogRecord& from)
     _this->_impl_.span_id_.Set(from._internal_span_id(), 
       _this->GetArenaForAllocation());
   }
+  _impl_.event_name_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.event_name_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_event_name().empty()) {
+    _this->_impl_.event_name_.Set(from._internal_event_name(), 
+      _this->GetArenaForAllocation());
+  }
   if (from._internal_has_body()) {
     _this->_impl_.body_ = new ::opentelemetry::proto::common::v1::AnyValue(*from._impl_.body_);
   }
@@ -1118,6 +1130,7 @@ inline void LogRecord::SharedCtor(
     , decltype(_impl_.severity_text_){}
     , decltype(_impl_.trace_id_){}
     , decltype(_impl_.span_id_){}
+    , decltype(_impl_.event_name_){}
     , decltype(_impl_.body_){nullptr}
     , decltype(_impl_.time_unix_nano_){uint64_t{0u}}
     , decltype(_impl_.severity_number_){0}
@@ -1138,6 +1151,10 @@ inline void LogRecord::SharedCtor(
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.span_id_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.event_name_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.event_name_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 LogRecord::~LogRecord() {
@@ -1155,6 +1172,7 @@ inline void LogRecord::SharedDtor() {
   _impl_.severity_text_.Destroy();
   _impl_.trace_id_.Destroy();
   _impl_.span_id_.Destroy();
+  _impl_.event_name_.Destroy();
   if (this != internal_default_instance()) delete _impl_.body_;
 }
 
@@ -1172,6 +1190,7 @@ void LogRecord::Clear() {
   _impl_.severity_text_.ClearToEmpty();
   _impl_.trace_id_.ClearToEmpty();
   _impl_.span_id_.ClearToEmpty();
+  _impl_.event_name_.ClearToEmpty();
   if (GetArenaForAllocation() == nullptr && _impl_.body_ != nullptr) {
     delete _impl_.body_;
   }
@@ -1278,6 +1297,16 @@ const char* LogRecord::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         } else
           goto handle_unusual;
         continue;
+      // string event_name = 12;
+      case 12:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 98)) {
+          auto str = _internal_mutable_event_name();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "opentelemetry.proto.logs.v1.LogRecord.event_name"));
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -1375,6 +1404,16 @@ uint8_t* LogRecord::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteFixed64ToArray(11, this->_internal_observed_time_unix_nano(), target);
   }
 
+  // string event_name = 12;
+  if (!this->_internal_event_name().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_event_name().data(), static_cast<int>(this->_internal_event_name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "opentelemetry.proto.logs.v1.LogRecord.event_name");
+    target = stream->WriteStringMaybeAliased(
+        12, this->_internal_event_name(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -1417,6 +1456,13 @@ size_t LogRecord::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_span_id());
+  }
+
+  // string event_name = 12;
+  if (!this->_internal_event_name().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_event_name());
   }
 
   // .opentelemetry.proto.common.v1.AnyValue body = 5;
@@ -1480,6 +1526,9 @@ void LogRecord::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
   if (!from._internal_span_id().empty()) {
     _this->_internal_set_span_id(from._internal_span_id());
   }
+  if (!from._internal_event_name().empty()) {
+    _this->_internal_set_event_name(from._internal_event_name());
+  }
   if (from._internal_has_body()) {
     _this->_internal_mutable_body()->::opentelemetry::proto::common::v1::AnyValue::MergeFrom(
         from._internal_body());
@@ -1530,6 +1579,10 @@ void LogRecord::InternalSwap(LogRecord* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.span_id_, lhs_arena,
       &other->_impl_.span_id_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.event_name_, lhs_arena,
+      &other->_impl_.event_name_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(LogRecord, _impl_.flags_)

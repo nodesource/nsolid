@@ -24,7 +24,7 @@ namespace db
  * The number of connections that are currently in state described by the @code state @endcode
  * attribute <p> updowncounter
  */
-static constexpr const char *kMetricDbClientConnectionCount = "metric.db.client.connection.count";
+static constexpr const char *kMetricDbClientConnectionCount = "db.client.connection.count";
 static constexpr const char *descrMetricDbClientConnectionCount =
     "The number of connections that are currently in state described by the `state` attribute";
 static constexpr const char *unitMetricDbClientConnectionCount = "{connection}";
@@ -67,7 +67,7 @@ CreateAsyncDoubleMetricDbClientConnectionCount(metrics::Meter *meter)
  * histogram
  */
 static constexpr const char *kMetricDbClientConnectionCreateTime =
-    "metric.db.client.connection.create_time";
+    "db.client.connection.create_time";
 static constexpr const char *descrMetricDbClientConnectionCreateTime =
     "The time it took to create a new connection";
 static constexpr const char *unitMetricDbClientConnectionCreateTime = "s";
@@ -93,8 +93,7 @@ CreateSyncDoubleMetricDbClientConnectionCreateTime(metrics::Meter *meter)
  * <p>
  * updowncounter
  */
-static constexpr const char *kMetricDbClientConnectionIdleMax =
-    "metric.db.client.connection.idle.max";
+static constexpr const char *kMetricDbClientConnectionIdleMax = "db.client.connection.idle.max";
 static constexpr const char *descrMetricDbClientConnectionIdleMax =
     "The maximum number of idle open connections allowed";
 static constexpr const char *unitMetricDbClientConnectionIdleMax = "{connection}";
@@ -136,8 +135,7 @@ CreateAsyncDoubleMetricDbClientConnectionIdleMax(metrics::Meter *meter)
  * <p>
  * updowncounter
  */
-static constexpr const char *kMetricDbClientConnectionIdleMin =
-    "metric.db.client.connection.idle.min";
+static constexpr const char *kMetricDbClientConnectionIdleMin = "db.client.connection.idle.min";
 static constexpr const char *descrMetricDbClientConnectionIdleMin =
     "The minimum number of idle open connections allowed";
 static constexpr const char *unitMetricDbClientConnectionIdleMin = "{connection}";
@@ -179,7 +177,7 @@ CreateAsyncDoubleMetricDbClientConnectionIdleMin(metrics::Meter *meter)
  * <p>
  * updowncounter
  */
-static constexpr const char *kMetricDbClientConnectionMax = "metric.db.client.connection.max";
+static constexpr const char *kMetricDbClientConnectionMax = "db.client.connection.max";
 static constexpr const char *descrMetricDbClientConnectionMax =
     "The maximum number of open connections allowed";
 static constexpr const char *unitMetricDbClientConnectionMax = "{connection}";
@@ -222,7 +220,7 @@ CreateAsyncDoubleMetricDbClientConnectionMax(metrics::Meter *meter)
  * updowncounter
  */
 static constexpr const char *kMetricDbClientConnectionPendingRequests =
-    "metric.db.client.connection.pending_requests";
+    "db.client.connection.pending_requests";
 static constexpr const char *descrMetricDbClientConnectionPendingRequests =
     "The number of current pending requests for an open connection";
 static constexpr const char *unitMetricDbClientConnectionPendingRequests = "{request}";
@@ -264,8 +262,7 @@ CreateAsyncDoubleMetricDbClientConnectionPendingRequests(metrics::Meter *meter)
  * <p>
  * counter
  */
-static constexpr const char *kMetricDbClientConnectionTimeouts =
-    "metric.db.client.connection.timeouts";
+static constexpr const char *kMetricDbClientConnectionTimeouts = "db.client.connection.timeouts";
 static constexpr const char *descrMetricDbClientConnectionTimeouts =
     "The number of connection timeouts that have occurred trying to obtain a connection from the "
     "pool";
@@ -308,8 +305,7 @@ CreateAsyncDoubleMetricDbClientConnectionTimeouts(metrics::Meter *meter)
  * <p>
  * histogram
  */
-static constexpr const char *kMetricDbClientConnectionUseTime =
-    "metric.db.client.connection.use_time";
+static constexpr const char *kMetricDbClientConnectionUseTime = "db.client.connection.use_time";
 static constexpr const char *descrMetricDbClientConnectionUseTime =
     "The time between borrowing a connection and returning it to the pool";
 static constexpr const char *unitMetricDbClientConnectionUseTime = "s";
@@ -335,8 +331,7 @@ CreateSyncDoubleMetricDbClientConnectionUseTime(metrics::Meter *meter)
  * <p>
  * histogram
  */
-static constexpr const char *kMetricDbClientConnectionWaitTime =
-    "metric.db.client.connection.wait_time";
+static constexpr const char *kMetricDbClientConnectionWaitTime = "db.client.connection.wait_time";
 static constexpr const char *descrMetricDbClientConnectionWaitTime =
     "The time it took to obtain an open connection from the pool";
 static constexpr const char *unitMetricDbClientConnectionWaitTime = "s";
@@ -365,31 +360,31 @@ CreateSyncDoubleMetricDbClientConnectionWaitTime(metrics::Meter *meter)
  * @code ms @endcode to @code s @endcode. <p> histogram
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsCreateTimeDeprecated =
-    "metric.db.client.connections.create_time.deprecated";
+static constexpr const char *kMetricDbClientConnectionsCreateTime =
+    "db.client.connections.create_time";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsCreateTimeDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsCreateTime =
     "Deprecated, use `db.client.connection.create_time` instead. Note: the unit also changed from "
     "`ms` to `s`.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsCreateTimeDeprecated = "ms";
+static constexpr const char *unitMetricDbClientConnectionsCreateTime = "ms";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::Histogram<uint64_t>>
-CreateSyncInt64MetricDbClientConnectionsCreateTimeDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsCreateTime(metrics::Meter *meter)
 {
-  return meter->CreateUInt64Histogram(kMetricDbClientConnectionsCreateTimeDeprecated,
-                                      descrMetricDbClientConnectionsCreateTimeDeprecated,
-                                      unitMetricDbClientConnectionsCreateTimeDeprecated);
+  return meter->CreateUInt64Histogram(kMetricDbClientConnectionsCreateTime,
+                                      descrMetricDbClientConnectionsCreateTime,
+                                      unitMetricDbClientConnectionsCreateTime);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::Histogram<double>>
-CreateSyncDoubleMetricDbClientConnectionsCreateTimeDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsCreateTime(metrics::Meter *meter)
 {
-  return meter->CreateDoubleHistogram(kMetricDbClientConnectionsCreateTimeDeprecated,
-                                      descrMetricDbClientConnectionsCreateTimeDeprecated,
-                                      unitMetricDbClientConnectionsCreateTimeDeprecated);
+  return meter->CreateDoubleHistogram(kMetricDbClientConnectionsCreateTime,
+                                      descrMetricDbClientConnectionsCreateTime,
+                                      unitMetricDbClientConnectionsCreateTime);
 }
 
 /**
@@ -401,48 +396,47 @@ CreateSyncDoubleMetricDbClientConnectionsCreateTimeDeprecated(metrics::Meter *me
  * updowncounter
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsIdleMaxDeprecated =
-    "metric.db.client.connections.idle.max.deprecated";
+static constexpr const char *kMetricDbClientConnectionsIdleMax = "db.client.connections.idle.max";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsIdleMaxDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsIdleMax =
     "Deprecated, use `db.client.connection.idle.max` instead.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsIdleMaxDeprecated = "{connection}";
+static constexpr const char *unitMetricDbClientConnectionsIdleMax = "{connection}";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<int64_t>>
-CreateSyncInt64MetricDbClientConnectionsIdleMaxDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsIdleMax(metrics::Meter *meter)
 {
-  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsIdleMaxDeprecated,
-                                         descrMetricDbClientConnectionsIdleMaxDeprecated,
-                                         unitMetricDbClientConnectionsIdleMaxDeprecated);
+  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsIdleMax,
+                                         descrMetricDbClientConnectionsIdleMax,
+                                         unitMetricDbClientConnectionsIdleMax);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<double>>
-CreateSyncDoubleMetricDbClientConnectionsIdleMaxDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsIdleMax(metrics::Meter *meter)
 {
-  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsIdleMaxDeprecated,
-                                          descrMetricDbClientConnectionsIdleMaxDeprecated,
-                                          unitMetricDbClientConnectionsIdleMaxDeprecated);
+  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsIdleMax,
+                                          descrMetricDbClientConnectionsIdleMax,
+                                          unitMetricDbClientConnectionsIdleMax);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncInt64MetricDbClientConnectionsIdleMaxDeprecated(metrics::Meter *meter)
+CreateAsyncInt64MetricDbClientConnectionsIdleMax(metrics::Meter *meter)
 {
-  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsIdleMaxDeprecated,
-                                                   descrMetricDbClientConnectionsIdleMaxDeprecated,
-                                                   unitMetricDbClientConnectionsIdleMaxDeprecated);
+  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsIdleMax,
+                                                   descrMetricDbClientConnectionsIdleMax,
+                                                   unitMetricDbClientConnectionsIdleMax);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncDoubleMetricDbClientConnectionsIdleMaxDeprecated(metrics::Meter *meter)
+CreateAsyncDoubleMetricDbClientConnectionsIdleMax(metrics::Meter *meter)
 {
-  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsIdleMaxDeprecated,
-                                                    descrMetricDbClientConnectionsIdleMaxDeprecated,
-                                                    unitMetricDbClientConnectionsIdleMaxDeprecated);
+  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsIdleMax,
+                                                    descrMetricDbClientConnectionsIdleMax,
+                                                    unitMetricDbClientConnectionsIdleMax);
 }
 
 /**
@@ -454,48 +448,47 @@ CreateAsyncDoubleMetricDbClientConnectionsIdleMaxDeprecated(metrics::Meter *mete
  * updowncounter
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsIdleMinDeprecated =
-    "metric.db.client.connections.idle.min.deprecated";
+static constexpr const char *kMetricDbClientConnectionsIdleMin = "db.client.connections.idle.min";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsIdleMinDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsIdleMin =
     "Deprecated, use `db.client.connection.idle.min` instead.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsIdleMinDeprecated = "{connection}";
+static constexpr const char *unitMetricDbClientConnectionsIdleMin = "{connection}";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<int64_t>>
-CreateSyncInt64MetricDbClientConnectionsIdleMinDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsIdleMin(metrics::Meter *meter)
 {
-  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsIdleMinDeprecated,
-                                         descrMetricDbClientConnectionsIdleMinDeprecated,
-                                         unitMetricDbClientConnectionsIdleMinDeprecated);
+  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsIdleMin,
+                                         descrMetricDbClientConnectionsIdleMin,
+                                         unitMetricDbClientConnectionsIdleMin);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<double>>
-CreateSyncDoubleMetricDbClientConnectionsIdleMinDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsIdleMin(metrics::Meter *meter)
 {
-  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsIdleMinDeprecated,
-                                          descrMetricDbClientConnectionsIdleMinDeprecated,
-                                          unitMetricDbClientConnectionsIdleMinDeprecated);
+  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsIdleMin,
+                                          descrMetricDbClientConnectionsIdleMin,
+                                          unitMetricDbClientConnectionsIdleMin);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncInt64MetricDbClientConnectionsIdleMinDeprecated(metrics::Meter *meter)
+CreateAsyncInt64MetricDbClientConnectionsIdleMin(metrics::Meter *meter)
 {
-  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsIdleMinDeprecated,
-                                                   descrMetricDbClientConnectionsIdleMinDeprecated,
-                                                   unitMetricDbClientConnectionsIdleMinDeprecated);
+  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsIdleMin,
+                                                   descrMetricDbClientConnectionsIdleMin,
+                                                   unitMetricDbClientConnectionsIdleMin);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncDoubleMetricDbClientConnectionsIdleMinDeprecated(metrics::Meter *meter)
+CreateAsyncDoubleMetricDbClientConnectionsIdleMin(metrics::Meter *meter)
 {
-  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsIdleMinDeprecated,
-                                                    descrMetricDbClientConnectionsIdleMinDeprecated,
-                                                    unitMetricDbClientConnectionsIdleMinDeprecated);
+  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsIdleMin,
+                                                    descrMetricDbClientConnectionsIdleMin,
+                                                    unitMetricDbClientConnectionsIdleMin);
 }
 
 /**
@@ -507,48 +500,47 @@ CreateAsyncDoubleMetricDbClientConnectionsIdleMinDeprecated(metrics::Meter *mete
  * updowncounter
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsMaxDeprecated =
-    "metric.db.client.connections.max.deprecated";
+static constexpr const char *kMetricDbClientConnectionsMax = "db.client.connections.max";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsMaxDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsMax =
     "Deprecated, use `db.client.connection.max` instead.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsMaxDeprecated = "{connection}";
+static constexpr const char *unitMetricDbClientConnectionsMax = "{connection}";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<int64_t>>
-CreateSyncInt64MetricDbClientConnectionsMaxDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsMax(metrics::Meter *meter)
 {
-  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsMaxDeprecated,
-                                         descrMetricDbClientConnectionsMaxDeprecated,
-                                         unitMetricDbClientConnectionsMaxDeprecated);
+  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsMax,
+                                         descrMetricDbClientConnectionsMax,
+                                         unitMetricDbClientConnectionsMax);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<double>>
-CreateSyncDoubleMetricDbClientConnectionsMaxDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsMax(metrics::Meter *meter)
 {
-  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsMaxDeprecated,
-                                          descrMetricDbClientConnectionsMaxDeprecated,
-                                          unitMetricDbClientConnectionsMaxDeprecated);
+  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsMax,
+                                          descrMetricDbClientConnectionsMax,
+                                          unitMetricDbClientConnectionsMax);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncInt64MetricDbClientConnectionsMaxDeprecated(metrics::Meter *meter)
+CreateAsyncInt64MetricDbClientConnectionsMax(metrics::Meter *meter)
 {
-  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsMaxDeprecated,
-                                                   descrMetricDbClientConnectionsMaxDeprecated,
-                                                   unitMetricDbClientConnectionsMaxDeprecated);
+  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsMax,
+                                                   descrMetricDbClientConnectionsMax,
+                                                   unitMetricDbClientConnectionsMax);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncDoubleMetricDbClientConnectionsMaxDeprecated(metrics::Meter *meter)
+CreateAsyncDoubleMetricDbClientConnectionsMax(metrics::Meter *meter)
 {
-  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsMaxDeprecated,
-                                                    descrMetricDbClientConnectionsMaxDeprecated,
-                                                    unitMetricDbClientConnectionsMaxDeprecated);
+  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsMax,
+                                                    descrMetricDbClientConnectionsMax,
+                                                    unitMetricDbClientConnectionsMax);
 }
 
 /**
@@ -560,50 +552,48 @@ CreateAsyncDoubleMetricDbClientConnectionsMaxDeprecated(metrics::Meter *meter)
  * updowncounter
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsPendingRequestsDeprecated =
-    "metric.db.client.connections.pending_requests.deprecated";
+static constexpr const char *kMetricDbClientConnectionsPendingRequests =
+    "db.client.connections.pending_requests";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsPendingRequestsDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsPendingRequests =
     "Deprecated, use `db.client.connection.pending_requests` instead.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsPendingRequestsDeprecated = "{request}";
+static constexpr const char *unitMetricDbClientConnectionsPendingRequests = "{request}";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<int64_t>>
-CreateSyncInt64MetricDbClientConnectionsPendingRequestsDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsPendingRequests(metrics::Meter *meter)
 {
-  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsPendingRequestsDeprecated,
-                                         descrMetricDbClientConnectionsPendingRequestsDeprecated,
-                                         unitMetricDbClientConnectionsPendingRequestsDeprecated);
+  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsPendingRequests,
+                                         descrMetricDbClientConnectionsPendingRequests,
+                                         unitMetricDbClientConnectionsPendingRequests);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<double>>
-CreateSyncDoubleMetricDbClientConnectionsPendingRequestsDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsPendingRequests(metrics::Meter *meter)
 {
-  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsPendingRequestsDeprecated,
-                                          descrMetricDbClientConnectionsPendingRequestsDeprecated,
-                                          unitMetricDbClientConnectionsPendingRequestsDeprecated);
+  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsPendingRequests,
+                                          descrMetricDbClientConnectionsPendingRequests,
+                                          unitMetricDbClientConnectionsPendingRequests);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncInt64MetricDbClientConnectionsPendingRequestsDeprecated(metrics::Meter *meter)
+CreateAsyncInt64MetricDbClientConnectionsPendingRequests(metrics::Meter *meter)
 {
-  return meter->CreateInt64ObservableUpDownCounter(
-      kMetricDbClientConnectionsPendingRequestsDeprecated,
-      descrMetricDbClientConnectionsPendingRequestsDeprecated,
-      unitMetricDbClientConnectionsPendingRequestsDeprecated);
+  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsPendingRequests,
+                                                   descrMetricDbClientConnectionsPendingRequests,
+                                                   unitMetricDbClientConnectionsPendingRequests);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncDoubleMetricDbClientConnectionsPendingRequestsDeprecated(metrics::Meter *meter)
+CreateAsyncDoubleMetricDbClientConnectionsPendingRequests(metrics::Meter *meter)
 {
-  return meter->CreateDoubleObservableUpDownCounter(
-      kMetricDbClientConnectionsPendingRequestsDeprecated,
-      descrMetricDbClientConnectionsPendingRequestsDeprecated,
-      unitMetricDbClientConnectionsPendingRequestsDeprecated);
+  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsPendingRequests,
+                                                    descrMetricDbClientConnectionsPendingRequests,
+                                                    unitMetricDbClientConnectionsPendingRequests);
 }
 
 /**
@@ -615,48 +605,47 @@ CreateAsyncDoubleMetricDbClientConnectionsPendingRequestsDeprecated(metrics::Met
  * counter
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsTimeoutsDeprecated =
-    "metric.db.client.connections.timeouts.deprecated";
+static constexpr const char *kMetricDbClientConnectionsTimeouts = "db.client.connections.timeouts";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsTimeoutsDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsTimeouts =
     "Deprecated, use `db.client.connection.timeouts` instead.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsTimeoutsDeprecated = "{timeout}";
+static constexpr const char *unitMetricDbClientConnectionsTimeouts = "{timeout}";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::Counter<uint64_t>>
-CreateSyncInt64MetricDbClientConnectionsTimeoutsDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsTimeouts(metrics::Meter *meter)
 {
-  return meter->CreateUInt64Counter(kMetricDbClientConnectionsTimeoutsDeprecated,
-                                    descrMetricDbClientConnectionsTimeoutsDeprecated,
-                                    unitMetricDbClientConnectionsTimeoutsDeprecated);
+  return meter->CreateUInt64Counter(kMetricDbClientConnectionsTimeouts,
+                                    descrMetricDbClientConnectionsTimeouts,
+                                    unitMetricDbClientConnectionsTimeouts);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::Counter<double>>
-CreateSyncDoubleMetricDbClientConnectionsTimeoutsDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsTimeouts(metrics::Meter *meter)
 {
-  return meter->CreateDoubleCounter(kMetricDbClientConnectionsTimeoutsDeprecated,
-                                    descrMetricDbClientConnectionsTimeoutsDeprecated,
-                                    unitMetricDbClientConnectionsTimeoutsDeprecated);
+  return meter->CreateDoubleCounter(kMetricDbClientConnectionsTimeouts,
+                                    descrMetricDbClientConnectionsTimeouts,
+                                    unitMetricDbClientConnectionsTimeouts);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncInt64MetricDbClientConnectionsTimeoutsDeprecated(metrics::Meter *meter)
+CreateAsyncInt64MetricDbClientConnectionsTimeouts(metrics::Meter *meter)
 {
-  return meter->CreateInt64ObservableCounter(kMetricDbClientConnectionsTimeoutsDeprecated,
-                                             descrMetricDbClientConnectionsTimeoutsDeprecated,
-                                             unitMetricDbClientConnectionsTimeoutsDeprecated);
+  return meter->CreateInt64ObservableCounter(kMetricDbClientConnectionsTimeouts,
+                                             descrMetricDbClientConnectionsTimeouts,
+                                             unitMetricDbClientConnectionsTimeouts);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncDoubleMetricDbClientConnectionsTimeoutsDeprecated(metrics::Meter *meter)
+CreateAsyncDoubleMetricDbClientConnectionsTimeouts(metrics::Meter *meter)
 {
-  return meter->CreateDoubleObservableCounter(kMetricDbClientConnectionsTimeoutsDeprecated,
-                                              descrMetricDbClientConnectionsTimeoutsDeprecated,
-                                              unitMetricDbClientConnectionsTimeoutsDeprecated);
+  return meter->CreateDoubleObservableCounter(kMetricDbClientConnectionsTimeouts,
+                                              descrMetricDbClientConnectionsTimeouts,
+                                              unitMetricDbClientConnectionsTimeouts);
 }
 
 /**
@@ -668,48 +657,47 @@ CreateAsyncDoubleMetricDbClientConnectionsTimeoutsDeprecated(metrics::Meter *met
  * updowncounter
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsCountDeprecated =
-    "metric.db.client.connections.count.deprecated";
+static constexpr const char *kMetricDbClientConnectionsUsage = "db.client.connections.usage";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsCountDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsUsage =
     "Deprecated, use `db.client.connection.count` instead.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsCountDeprecated = "{connection}";
+static constexpr const char *unitMetricDbClientConnectionsUsage = "{connection}";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<int64_t>>
-CreateSyncInt64MetricDbClientConnectionsCountDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsUsage(metrics::Meter *meter)
 {
-  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsCountDeprecated,
-                                         descrMetricDbClientConnectionsCountDeprecated,
-                                         unitMetricDbClientConnectionsCountDeprecated);
+  return meter->CreateInt64UpDownCounter(kMetricDbClientConnectionsUsage,
+                                         descrMetricDbClientConnectionsUsage,
+                                         unitMetricDbClientConnectionsUsage);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::UpDownCounter<double>>
-CreateSyncDoubleMetricDbClientConnectionsCountDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsUsage(metrics::Meter *meter)
 {
-  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsCountDeprecated,
-                                          descrMetricDbClientConnectionsCountDeprecated,
-                                          unitMetricDbClientConnectionsCountDeprecated);
+  return meter->CreateDoubleUpDownCounter(kMetricDbClientConnectionsUsage,
+                                          descrMetricDbClientConnectionsUsage,
+                                          unitMetricDbClientConnectionsUsage);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncInt64MetricDbClientConnectionsCountDeprecated(metrics::Meter *meter)
+CreateAsyncInt64MetricDbClientConnectionsUsage(metrics::Meter *meter)
 {
-  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsCountDeprecated,
-                                                   descrMetricDbClientConnectionsCountDeprecated,
-                                                   unitMetricDbClientConnectionsCountDeprecated);
+  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientConnectionsUsage,
+                                                   descrMetricDbClientConnectionsUsage,
+                                                   unitMetricDbClientConnectionsUsage);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::shared_ptr<metrics::ObservableInstrument>
-CreateAsyncDoubleMetricDbClientConnectionsCountDeprecated(metrics::Meter *meter)
+CreateAsyncDoubleMetricDbClientConnectionsUsage(metrics::Meter *meter)
 {
-  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsCountDeprecated,
-                                                    descrMetricDbClientConnectionsCountDeprecated,
-                                                    unitMetricDbClientConnectionsCountDeprecated);
+  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientConnectionsUsage,
+                                                    descrMetricDbClientConnectionsUsage,
+                                                    unitMetricDbClientConnectionsUsage);
 }
 
 /**
@@ -720,31 +708,30 @@ CreateAsyncDoubleMetricDbClientConnectionsCountDeprecated(metrics::Meter *meter)
  * ms @endcode to @code s @endcode. <p> histogram
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsUseTimeDeprecated =
-    "metric.db.client.connections.use_time.deprecated";
+static constexpr const char *kMetricDbClientConnectionsUseTime = "db.client.connections.use_time";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsUseTimeDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsUseTime =
     "Deprecated, use `db.client.connection.use_time` instead. Note: the unit also changed from "
     "`ms` to `s`.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsUseTimeDeprecated = "ms";
+static constexpr const char *unitMetricDbClientConnectionsUseTime = "ms";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::Histogram<uint64_t>>
-CreateSyncInt64MetricDbClientConnectionsUseTimeDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsUseTime(metrics::Meter *meter)
 {
-  return meter->CreateUInt64Histogram(kMetricDbClientConnectionsUseTimeDeprecated,
-                                      descrMetricDbClientConnectionsUseTimeDeprecated,
-                                      unitMetricDbClientConnectionsUseTimeDeprecated);
+  return meter->CreateUInt64Histogram(kMetricDbClientConnectionsUseTime,
+                                      descrMetricDbClientConnectionsUseTime,
+                                      unitMetricDbClientConnectionsUseTime);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::Histogram<double>>
-CreateSyncDoubleMetricDbClientConnectionsUseTimeDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsUseTime(metrics::Meter *meter)
 {
-  return meter->CreateDoubleHistogram(kMetricDbClientConnectionsUseTimeDeprecated,
-                                      descrMetricDbClientConnectionsUseTimeDeprecated,
-                                      unitMetricDbClientConnectionsUseTimeDeprecated);
+  return meter->CreateDoubleHistogram(kMetricDbClientConnectionsUseTime,
+                                      descrMetricDbClientConnectionsUseTime,
+                                      unitMetricDbClientConnectionsUseTime);
 }
 
 /**
@@ -755,31 +742,100 @@ CreateSyncDoubleMetricDbClientConnectionsUseTimeDeprecated(metrics::Meter *meter
  * ms @endcode to @code s @endcode. <p> histogram
  */
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *kMetricDbClientConnectionsWaitTimeDeprecated =
-    "metric.db.client.connections.wait_time.deprecated";
+static constexpr const char *kMetricDbClientConnectionsWaitTime = "db.client.connections.wait_time";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *descrMetricDbClientConnectionsWaitTimeDeprecated =
+static constexpr const char *descrMetricDbClientConnectionsWaitTime =
     "Deprecated, use `db.client.connection.wait_time` instead. Note: the unit also changed from "
     "`ms` to `s`.";
 OPENTELEMETRY_DEPRECATED
-static constexpr const char *unitMetricDbClientConnectionsWaitTimeDeprecated = "ms";
+static constexpr const char *unitMetricDbClientConnectionsWaitTime = "ms";
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::Histogram<uint64_t>>
-CreateSyncInt64MetricDbClientConnectionsWaitTimeDeprecated(metrics::Meter *meter)
+CreateSyncInt64MetricDbClientConnectionsWaitTime(metrics::Meter *meter)
 {
-  return meter->CreateUInt64Histogram(kMetricDbClientConnectionsWaitTimeDeprecated,
-                                      descrMetricDbClientConnectionsWaitTimeDeprecated,
-                                      unitMetricDbClientConnectionsWaitTimeDeprecated);
+  return meter->CreateUInt64Histogram(kMetricDbClientConnectionsWaitTime,
+                                      descrMetricDbClientConnectionsWaitTime,
+                                      unitMetricDbClientConnectionsWaitTime);
 }
 
 OPENTELEMETRY_DEPRECATED
 static inline nostd::unique_ptr<metrics::Histogram<double>>
-CreateSyncDoubleMetricDbClientConnectionsWaitTimeDeprecated(metrics::Meter *meter)
+CreateSyncDoubleMetricDbClientConnectionsWaitTime(metrics::Meter *meter)
 {
-  return meter->CreateDoubleHistogram(kMetricDbClientConnectionsWaitTimeDeprecated,
-                                      descrMetricDbClientConnectionsWaitTimeDeprecated,
-                                      unitMetricDbClientConnectionsWaitTimeDeprecated);
+  return meter->CreateDoubleHistogram(kMetricDbClientConnectionsWaitTime,
+                                      descrMetricDbClientConnectionsWaitTime,
+                                      unitMetricDbClientConnectionsWaitTime);
+}
+
+/**
+ * Number of active client instances
+ * <p>
+ * updowncounter
+ */
+static constexpr const char *kMetricDbClientCosmosdbActiveInstanceCount =
+    "db.client.cosmosdb.active_instance.count";
+static constexpr const char *descrMetricDbClientCosmosdbActiveInstanceCount =
+    "Number of active client instances";
+static constexpr const char *unitMetricDbClientCosmosdbActiveInstanceCount = "{instance}";
+
+static inline nostd::unique_ptr<metrics::UpDownCounter<int64_t>>
+CreateSyncInt64MetricDbClientCosmosdbActiveInstanceCount(metrics::Meter *meter)
+{
+  return meter->CreateInt64UpDownCounter(kMetricDbClientCosmosdbActiveInstanceCount,
+                                         descrMetricDbClientCosmosdbActiveInstanceCount,
+                                         unitMetricDbClientCosmosdbActiveInstanceCount);
+}
+
+static inline nostd::unique_ptr<metrics::UpDownCounter<double>>
+CreateSyncDoubleMetricDbClientCosmosdbActiveInstanceCount(metrics::Meter *meter)
+{
+  return meter->CreateDoubleUpDownCounter(kMetricDbClientCosmosdbActiveInstanceCount,
+                                          descrMetricDbClientCosmosdbActiveInstanceCount,
+                                          unitMetricDbClientCosmosdbActiveInstanceCount);
+}
+
+static inline nostd::shared_ptr<metrics::ObservableInstrument>
+CreateAsyncInt64MetricDbClientCosmosdbActiveInstanceCount(metrics::Meter *meter)
+{
+  return meter->CreateInt64ObservableUpDownCounter(kMetricDbClientCosmosdbActiveInstanceCount,
+                                                   descrMetricDbClientCosmosdbActiveInstanceCount,
+                                                   unitMetricDbClientCosmosdbActiveInstanceCount);
+}
+
+static inline nostd::shared_ptr<metrics::ObservableInstrument>
+CreateAsyncDoubleMetricDbClientCosmosdbActiveInstanceCount(metrics::Meter *meter)
+{
+  return meter->CreateDoubleObservableUpDownCounter(kMetricDbClientCosmosdbActiveInstanceCount,
+                                                    descrMetricDbClientCosmosdbActiveInstanceCount,
+                                                    unitMetricDbClientCosmosdbActiveInstanceCount);
+}
+
+/**
+ * <a href="https://learn.microsoft.com/azure/cosmos-db/request-units">Request charge</a> consumed
+ * by the operation <p> histogram
+ */
+static constexpr const char *kMetricDbClientCosmosdbOperationRequestCharge =
+    "db.client.cosmosdb.operation.request_charge";
+static constexpr const char *descrMetricDbClientCosmosdbOperationRequestCharge =
+    "[Request charge](https://learn.microsoft.com/azure/cosmos-db/request-units) consumed by the "
+    "operation";
+static constexpr const char *unitMetricDbClientCosmosdbOperationRequestCharge = "{request_unit}";
+
+static inline nostd::unique_ptr<metrics::Histogram<uint64_t>>
+CreateSyncInt64MetricDbClientCosmosdbOperationRequestCharge(metrics::Meter *meter)
+{
+  return meter->CreateUInt64Histogram(kMetricDbClientCosmosdbOperationRequestCharge,
+                                      descrMetricDbClientCosmosdbOperationRequestCharge,
+                                      unitMetricDbClientCosmosdbOperationRequestCharge);
+}
+
+static inline nostd::unique_ptr<metrics::Histogram<double>>
+CreateSyncDoubleMetricDbClientCosmosdbOperationRequestCharge(metrics::Meter *meter)
+{
+  return meter->CreateDoubleHistogram(kMetricDbClientCosmosdbOperationRequestCharge,
+                                      descrMetricDbClientCosmosdbOperationRequestCharge,
+                                      unitMetricDbClientCosmosdbOperationRequestCharge);
 }
 
 /**
@@ -789,8 +845,7 @@ CreateSyncDoubleMetricDbClientConnectionsWaitTimeDeprecated(metrics::Meter *mete
  * <p>
  * histogram
  */
-static constexpr const char *kMetricDbClientOperationDuration =
-    "metric.db.client.operation.duration";
+static constexpr const char *kMetricDbClientOperationDuration = "db.client.operation.duration";
 static constexpr const char *descrMetricDbClientOperationDuration =
     "Duration of database client operations.";
 static constexpr const char *unitMetricDbClientOperationDuration = "s";
@@ -809,6 +864,33 @@ CreateSyncDoubleMetricDbClientOperationDuration(metrics::Meter *meter)
   return meter->CreateDoubleHistogram(kMetricDbClientOperationDuration,
                                       descrMetricDbClientOperationDuration,
                                       unitMetricDbClientOperationDuration);
+}
+
+/**
+ * The actual number of records returned by the database operation.
+ * <p>
+ * histogram
+ */
+static constexpr const char *kMetricDbClientResponseReturnedRows =
+    "db.client.response.returned_rows";
+static constexpr const char *descrMetricDbClientResponseReturnedRows =
+    "The actual number of records returned by the database operation.";
+static constexpr const char *unitMetricDbClientResponseReturnedRows = "{row}";
+
+static inline nostd::unique_ptr<metrics::Histogram<uint64_t>>
+CreateSyncInt64MetricDbClientResponseReturnedRows(metrics::Meter *meter)
+{
+  return meter->CreateUInt64Histogram(kMetricDbClientResponseReturnedRows,
+                                      descrMetricDbClientResponseReturnedRows,
+                                      unitMetricDbClientResponseReturnedRows);
+}
+
+static inline nostd::unique_ptr<metrics::Histogram<double>>
+CreateSyncDoubleMetricDbClientResponseReturnedRows(metrics::Meter *meter)
+{
+  return meter->CreateDoubleHistogram(kMetricDbClientResponseReturnedRows,
+                                      descrMetricDbClientResponseReturnedRows,
+                                      unitMetricDbClientResponseReturnedRows);
 }
 
 }  // namespace db
