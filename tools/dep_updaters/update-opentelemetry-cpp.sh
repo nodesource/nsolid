@@ -64,6 +64,7 @@ for dir in *; do
      [ "$dir" = "sdk" ] || \
      [ "$dir" = "third_party" ] || \
      [ "$dir" = "LICENSE" ] || \
+     [ "$dir" = "MODULE.bazel" ] || \
      [ "$dir" = "third_party_release" ]; then
     continue
   fi
@@ -85,7 +86,7 @@ curl -sL -o "$PROTOC_ZIP" "https://github.com/protocolbuffers/protobuf/releases/
 unzip -o "$PROTOC_ZIP" -d ./protoc/
 
 echo "Getting opentelemetry-proto files"
-OTEL_PROTO_VERSION=$(grep "opentelemetry-proto" "opentelemetry-cpp/third_party_release" | awk -F"=v" '{print $2}')
+OTEL_PROTO_VERSION=$(grep "opentelemetry-proto" "opentelemetry-cpp/MODULE.bazel" | sed -n 's/.*version = "\([^"]*\)".*/\1/p')
 OTEL_PROTO_TARBALL=v$OTEL_PROTO_VERSION.tar.gz
 
 curl -sL -o "$OTEL_PROTO_TARBALL" "https://github.com/open-telemetry/opentelemetry-proto/archive/refs/tags/$OTEL_PROTO_TARBALL"
