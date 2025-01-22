@@ -821,6 +821,7 @@ class LogRecord final :
     kSeverityTextFieldNumber = 3,
     kTraceIdFieldNumber = 9,
     kSpanIdFieldNumber = 10,
+    kEventNameFieldNumber = 12,
     kBodyFieldNumber = 5,
     kTimeUnixNanoFieldNumber = 1,
     kSeverityNumberFieldNumber = 2,
@@ -886,6 +887,20 @@ class LogRecord final :
   const std::string& _internal_span_id() const;
   inline PROTOBUF_ALWAYS_INLINE void _internal_set_span_id(const std::string& value);
   std::string* _internal_mutable_span_id();
+  public:
+
+  // string event_name = 12;
+  void clear_event_name();
+  const std::string& event_name() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_event_name(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_event_name();
+  PROTOBUF_NODISCARD std::string* release_event_name();
+  void set_allocated_event_name(std::string* event_name);
+  private:
+  const std::string& _internal_event_name() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_event_name(const std::string& value);
+  std::string* _internal_mutable_event_name();
   public:
 
   // .opentelemetry.proto.common.v1.AnyValue body = 5;
@@ -963,6 +978,7 @@ class LogRecord final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr severity_text_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr trace_id_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr span_id_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr event_name_;
     ::opentelemetry::proto::common::v1::AnyValue* body_;
     uint64_t time_unix_nano_;
     int severity_number_;
@@ -1757,6 +1773,56 @@ inline void LogRecord::set_allocated_span_id(std::string* span_id) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.logs.v1.LogRecord.span_id)
+}
+
+// string event_name = 12;
+inline void LogRecord::clear_event_name() {
+  _impl_.event_name_.ClearToEmpty();
+}
+inline const std::string& LogRecord::event_name() const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.logs.v1.LogRecord.event_name)
+  return _internal_event_name();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void LogRecord::set_event_name(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.event_name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.logs.v1.LogRecord.event_name)
+}
+inline std::string* LogRecord::mutable_event_name() {
+  std::string* _s = _internal_mutable_event_name();
+  // @@protoc_insertion_point(field_mutable:opentelemetry.proto.logs.v1.LogRecord.event_name)
+  return _s;
+}
+inline const std::string& LogRecord::_internal_event_name() const {
+  return _impl_.event_name_.Get();
+}
+inline void LogRecord::_internal_set_event_name(const std::string& value) {
+  
+  _impl_.event_name_.Set(value, GetArenaForAllocation());
+}
+inline std::string* LogRecord::_internal_mutable_event_name() {
+  
+  return _impl_.event_name_.Mutable(GetArenaForAllocation());
+}
+inline std::string* LogRecord::release_event_name() {
+  // @@protoc_insertion_point(field_release:opentelemetry.proto.logs.v1.LogRecord.event_name)
+  return _impl_.event_name_.Release();
+}
+inline void LogRecord::set_allocated_event_name(std::string* event_name) {
+  if (event_name != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.event_name_.SetAllocated(event_name, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.event_name_.IsDefault()) {
+    _impl_.event_name_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.logs.v1.LogRecord.event_name)
 }
 
 #ifdef __GNUC__
