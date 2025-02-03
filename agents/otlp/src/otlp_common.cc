@@ -170,7 +170,8 @@ Resource* UpdateResource(ResourceAttributes&& attrs) {
   // value "unknown_service". (See Resource::Create() method in the SDK).
   auto resource = GetResource();
   auto attributes = resource->GetAttributes();
-  if (attributes.find(kServiceName) != attributes.end()) {
+  if (attributes.find(kServiceName) != attributes.end() &&
+      attrs.find(kServiceName) == attrs.end()) {
     attrs.SetAttribute(kServiceName,
                        std::get<std::string>(attributes[kServiceName]));
   }

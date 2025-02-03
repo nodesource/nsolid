@@ -18,6 +18,7 @@ import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 function checkSnapshotData(requestId, options, agentId, data, complete) {
   assert.strictEqual(data.requestId, requestId);
   assert.strictEqual(data.agentId, agentId);
+  assert.strictEqual(data.app, 'untitled application');
   assert.strictEqual(data.command, 'snapshot');
   assert.strictEqual(data.complete, complete);
   assert.strictEqual(data.threadId, options.threadId);

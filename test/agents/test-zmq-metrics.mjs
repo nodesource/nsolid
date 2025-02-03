@@ -223,6 +223,7 @@ function checkMetricsData(metrics, requestId, agentId, threads) {
   console.dir(metrics, { depth: null });
   assert.strictEqual(metrics.requestId, requestId);
   assert.strictEqual(metrics.agentId, agentId);
+  assert.strictEqual(metrics.app, 'untitled application');
   assert.strictEqual(metrics.command, 'metrics');
   // From here check at least that all the fields are present
   assert.ok(metrics.recorded);

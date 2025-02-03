@@ -9,6 +9,7 @@
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter.h"
@@ -33,6 +34,7 @@ using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
+using opentelemetry::sdk::resource::SemanticConventions::kServiceName;
 using opentelemetry::sdk::trace::Recordable;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClient;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientFactory;
@@ -1108,6 +1110,18 @@ int GrpcAgent::config(const json& config) {
 
   if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
     setup_blocked_loop_hooks();
+  }
+
+  if (utils::find_any_fields_in_diff(diff, { "/app" })) {
+    auto it = config_.find("app");
+    if (it != config_.end()) {
+      std::string app_name = it->get<std::string>();
+      ResourceAttributes attrs = {
+        { kServiceName, app_name },
+      };
+
+      USE(otlp::UpdateResource(std::move(attrs)));
+    }
   }
 
   // Configure tracing flags

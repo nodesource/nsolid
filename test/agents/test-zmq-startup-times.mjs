@@ -36,6 +36,7 @@ const {
 function checkStartupTimesData(data, requestId, agentId, additionalTimes = []) {
   assert.strictEqual(data.requestId, requestId);
   assert.strictEqual(data.agentId, agentId);
+  assert.strictEqual(data.app, 'untitled application');
   assert.strictEqual(data.command, 'startup_times');
   // From here check at least that all the fields are present
   validateObject(data.recorded, 'recorded');

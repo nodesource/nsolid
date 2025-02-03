@@ -237,9 +237,10 @@ async function runTest({ getEnv }) {
       };
       const child = new TestClient([], opts);
       const agentId = await child.id();
-      const config = await child.config();
+      const config = await child.config({ app: 'my_app_name', interval: 100 });
       grpcServer.once('metrics', mustCall(async () => {
         const metrics = await child.metrics();
+        assert.strictEqual(config.app, 'my_app_name');
         const { data, requestId } = await grpcServer.metrics(agentId);
         checkMetricsData(data.msg, data.metadata, requestId, agentId, config, metrics);
         await child.shutdown(0);
@@ -257,7 +258,7 @@ const testConfigs = [
         NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
         NSOLID_GRPC_INSECURE: 1,
         NSOLID_GRPC: `localhost:${port}`,
-        NSOLID_INTERVAL: 100,
+        NSOLID_INTERVAL: 10000,
       };
     },
   },
