@@ -61,6 +61,7 @@ import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 function checkInfoData(info, requestId, agentId, nsolidConfig = {}) {
   assert.strictEqual(info.requestId, requestId);
   assert.strictEqual(info.agentId, agentId);
+  assert.strictEqual(info.app, nsolidConfig.appName || 'untitled application');
   assert.strictEqual(info.command, 'info');
   // From here check at least that all the fields are present
   assert.ok(info.recorded);

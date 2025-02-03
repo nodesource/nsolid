@@ -110,6 +110,10 @@ if (isMainThread) {
         workers.get(msg.threadId).postMessage(msg);
       }
     } else if (msg.type === 'config') {
+      if (msg.config) {
+        nsolid.start(msg.config);
+      }
+
       process.send({ type: 'config', config: nsolid.config });
     } else if (msg.type === 'heap_profile') {
       nsolid.heapProfile(msg.duration);

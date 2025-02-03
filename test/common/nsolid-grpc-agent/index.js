@@ -315,15 +315,15 @@ class TestClient {
     });
   }
 
-  async config() {
+  async config(config = null) {
     return new Promise((resolve) => {
       if (this.#child) {
-        this.#child.send({ type: 'config' });
-        this.#child.once('message', common.mustCall((msg) => {
+        this.#child.send({ type: 'config', config });
+        this.#child.on('message', (msg) => {
           if (msg.type === 'config') {
             resolve(msg.config);
           }
-        }));
+        });
       } else {
         resolve(null);
       }

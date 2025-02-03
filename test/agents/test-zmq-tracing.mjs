@@ -69,10 +69,11 @@ const {
 //   timeNS: '1704988827304585184'
 // }
 
-function checkTracingData(tracing, requestId, agentId, threadId) {
+function checkTracingData(tracing, requestId, agentId, threadId, appName) {
   console.dir(tracing, { depth: null });
   assert.strictEqual(tracing.requestId, requestId);
   assert.strictEqual(tracing.agentId, agentId);
+  assert.strictEqual(tracing.app, appName);
   assert.strictEqual(tracing.command, 'tracing');
   // From here check at least that all the fields are present
   validateObject(tracing.recorded, 'recorded');
@@ -175,7 +176,12 @@ tests.push({
     return new Promise((resolve) => {
       let totalSpans = 0;
       const opts = {
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
+        opts: {
+          env: {
+            NSOLID_TRACING_ENABLED: 1,
+            NSOLID_APPNAME: 'myapp',
+          },
+        },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -183,7 +189,7 @@ tests.push({
       }), mustCallAtLeast((eventType, agentId, data) => {
         console.log(`${eventType}, ${agentId}`);
         assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, threadId);
+        checkTracingData(data, null, agentId, threadId, 'myapp');
         const spanTypes = [ 'http_server', 'http_client'];
         for (const span of data.body.spans) {
           validateSpan(span, spanTypes[totalSpans], threadId);
@@ -204,14 +210,19 @@ tests.push({
       let totalSpans = 0;
       const opts = {
         args: [ '-t', 'http' ],
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
+        opts: {
+          env: {
+            NSOLID_TRACING_ENABLED: 1,
+            NSOLID_APPNAME: 'myapp',
+          },
+        },
       };
 
       playground.bootstrap(opts, mustSucceed(() => {
       }), mustCallAtLeast((eventType, agentId, data) => {
         console.log(`${eventType}, ${agentId}`);
         assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, threadId);
+        checkTracingData(data, null, agentId, threadId, 'myapp');
         const spanTypes = [ 'http_server', 'http_client'];
         for (const span of data.body.spans) {
           validateSpan(span, spanTypes[totalSpans], threadId);
@@ -233,7 +244,12 @@ tests.push({
       let totalSpans = 0;
       const opts = {
         args: [ '-w', 1 ],
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
+        opts: {
+          env: {
+            NSOLID_TRACING_ENABLED: 1,
+            NSOLID_APPNAME: 'myapp',
+          },
+        },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -243,7 +259,7 @@ tests.push({
       }), mustCallAtLeast((eventType, agentId, data) => {
         console.log(`${eventType}, ${agentId}`);
         assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, wid);
+        checkTracingData(data, null, agentId, wid, 'myapp');
         const spanTypes = [ 'http_server', 'http_client'];
         for (const span of data.body.spans) {
           validateSpan(span, spanTypes[totalSpans], wid);
@@ -263,7 +279,12 @@ tests.push({
     return new Promise((resolve) => {
       let totalSpans = 0;
       const opts = {
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
+        opts: {
+          env: {
+            NSOLID_TRACING_ENABLED: 1,
+            NSOLID_APPNAME: 'myapp',
+          },
+        },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -271,7 +292,7 @@ tests.push({
       }), mustCallAtLeast((eventType, agentId, data) => {
         console.log(`${eventType}, ${agentId}`);
         assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, threadId);
+        checkTracingData(data, null, agentId, threadId, 'myapp');
         const spanTypes = [ 'dns_lookup', 'dns_lookup_service', 'dns_resolve'];
         for (const span of data.body.spans) {
           validateSpan(span, spanTypes[totalSpans], threadId);
@@ -293,7 +314,12 @@ tests.push({
       let totalSpans = 0;
       const opts = {
         args: [ '-w', 1 ],
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
+        opts: {
+          env: {
+            NSOLID_TRACING_ENABLED: 1,
+            NSOLID_APPNAME: 'myapp',
+          },
+        },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -303,7 +329,7 @@ tests.push({
       }), mustCallAtLeast((eventType, agentId, data) => {
         console.log(`${eventType}, ${agentId}`);
         assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, wid);
+        checkTracingData(data, null, agentId, wid, 'myapp');
         const spanTypes = [ 'dns_lookup', 'dns_lookup_service', 'dns_resolve'];
         for (const span of data.body.spans) {
           validateSpan(span, spanTypes[totalSpans], wid);
@@ -318,19 +344,25 @@ tests.push({
 });
 
 tests.push({
-  name: 'should work for custom traces',
+  name: 'should work for custom traces changing app name',
   test: async (playground) => {
     return new Promise((resolve) => {
       const opts = {
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
+        opts: {
+          env: {
+            NSOLID_TRACING_ENABLED: 1,
+            NSOLID_APPNAME: 'myapp',
+          },
+        },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
+        await playground.client.config({ app: 'myotherapp' });
         await playground.client.tracing('custom', threadId);
       }), mustCall((eventType, agentId, data) => {
         console.log(`${eventType}, ${agentId}`);
         assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, threadId);
+        checkTracingData(data, null, agentId, threadId, 'myotherapp');
         assert.strictEqual(data.body.spans.length, 1);
         validateSpan(data.body.spans[0], 'custom', threadId);
         resolve();
@@ -346,7 +378,12 @@ tests.push({
       let wid;
       const opts = {
         args: [ '-w', 1 ],
-        opts: { env: { NSOLID_TRACING_ENABLED: 1 } },
+        opts: {
+          env: {
+            NSOLID_TRACING_ENABLED: 1,
+            NSOLID_APPNAME: 'myapp',
+          },
+        },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -356,7 +393,7 @@ tests.push({
       }), mustCall((eventType, agentId, data) => {
         console.log(`${eventType}, ${agentId}`);
         assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, wid);
+        checkTracingData(data, null, agentId, wid, 'myapp');
         assert.strictEqual(data.body.spans.length, 1);
         validateSpan(data.body.spans[0], 'custom', wid);
         resolve();

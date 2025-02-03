@@ -75,10 +75,10 @@ class TestClient {
     });
   }
 
-  async config() {
+  async config(config = null) {
     return new Promise((resolve) => {
       if (this.#child) {
-        this.#child.send({ type: 'config' });
+        this.#child.send({ type: 'config', config });
         this.#child.once('message', common.mustCall((msg) => {
           if (msg.type === 'config') {
             resolve(msg.config);
