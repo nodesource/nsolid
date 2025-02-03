@@ -22,6 +22,7 @@ import {
 function checkProfileData(requestId, options, agentId, data, complete, onExit = false) {
   assert.strictEqual(data.requestId, requestId);
   assert.strictEqual(data.agentId, agentId);
+  assert.strictEqual(data.app, 'untitled application');
   assert.strictEqual(data.command, 'profile');
   if (onExit) {
     assert.ok(data.duration < options.duration);

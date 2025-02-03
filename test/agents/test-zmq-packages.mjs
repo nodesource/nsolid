@@ -129,6 +129,7 @@ const expectedPackagesMains = [
 function checkPackagesData(packages, requestId, agentId) {
   assert.strictEqual(packages.requestId, requestId);
   assert.strictEqual(packages.agentId, agentId);
+  assert.strictEqual(packages.app, 'untitled application');
   assert.strictEqual(packages.command, 'packages');
   // From here check at least that all the fields are present
   assert.ok(packages.recorded);

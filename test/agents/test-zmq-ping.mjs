@@ -29,6 +29,7 @@ function checkPingData(data, requestId, agentId) {
   console.dir(data, { depth: null });
   assert.strictEqual(data.requestId, requestId);
   assert.strictEqual(data.agentId, agentId);
+  assert.strictEqual(data.app, 'untitled application');
   assert.strictEqual(data.command, 'ping');
   // From here check at least that all the fields are present
   validateObject(data.recorded, 'recorded');

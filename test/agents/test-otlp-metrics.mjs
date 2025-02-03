@@ -17,6 +17,7 @@ const {
 } = validators;
 
 const __filename = fileURLToPath(import.meta.url);
+const appName = 'my_app_name';
 
 if (process.argv[2] === 'child') {
   // Just to keep the worker alive.
@@ -25,7 +26,8 @@ if (process.argv[2] === 'child') {
 
   if (isMainThread) {
     nsolid.start({
-      tracingEnabled: false
+      tracingEnabled: false,
+      app: appName,
     });
 
     nsolid.setThreadName('main-thread');
@@ -601,6 +603,7 @@ if (process.argv[2] === 'child') {
           if (message.type === 'nsolid') {
             nsolidId = message.id;
             nsolidAppName = message.appName;
+            assert.strictEqual(nsolidAppName, appName);
             nsolidMetrics = message.metrics;
           } else if (message.type === 'workerThreadId') {
             context.threadList.push(message.id);

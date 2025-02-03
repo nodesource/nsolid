@@ -30,6 +30,7 @@ namespace trace = OPENTELEMETRY_NAMESPACE::trace;
 namespace resource = sdk::resource;
 namespace instrumentationscope = sdk::instrumentationscope;
 namespace detail = trace::propagation::detail;
+using resource::ResourceAttributes;
 using resource::SemanticConventions::kServiceName;
 using resource::SemanticConventions::kServiceInstanceId;
 using resource::SemanticConventions::kServiceVersion;
@@ -168,6 +169,18 @@ int OTLPAgent::config(const nlohmann::json& config) {
   config_ = config;
   if (utils::find_any_fields_in_diff(diff, otlp_fields)) {
     config_otlp_agent(config_);
+  }
+
+  if (utils::find_any_fields_in_diff(diff, { "/app" })) {
+    auto it = config_.find("app");
+    if (it != config_.end()) {
+      std::string app_name = it->get<std::string>();
+      ResourceAttributes attrs = {
+        { kServiceName, app_name },
+      };
+
+      USE(otlp::UpdateResource(std::move(attrs)));
+    }
   }
 
   // Configure tracing flags
