@@ -78,6 +78,7 @@ constexpr size_t span_msg_q_min_size = 200;
 
 const char MSG_1[] = "{"
   "\"agentId\":\"%s\""
+  ",\"app\":\"%s\""
   ",\"requestId\": \"%s\""
   ",\"command\":\"%s\""
   ",\"recorded\":{\"seconds\":%" PRIu64",\"nanoseconds\":%" PRIu64"}"
@@ -89,6 +90,7 @@ const char MSG_1[] = "{"
 
 const char MSG_2[] = "{"
   "\"agentId\":\"%s\""
+  ",\"app\":\"%s\""
   ",\"requestId\": null"
   ",\"command\":\"%s\""
   ",\"recorded\":{\"seconds\":%" PRIu64",\"nanoseconds\":%" PRIu64"}"
@@ -100,6 +102,7 @@ const char MSG_2[] = "{"
 
 const char MSG_3[] = "{"
   "\"agentId\":\"%s\""
+  ",\"app\":\"%s\""
   ",\"requestId\": \"%s\""
   ",\"command\":\"%s\""
   ",\"duration\":%" PRIu64
@@ -111,6 +114,7 @@ const char MSG_3[] = "{"
 
 const char MSG_4[] = "{"
   "\"agentId\":\"%s\""
+  ",\"app\":\"%s\""
   ",\"requestId\": \"%s\""
   ",\"command\":\"%s\""
   ",\"recorded\":{\"seconds\":%" PRIu64",\"nanoseconds\":%" PRIu64"}"
@@ -120,6 +124,7 @@ const char MSG_4[] = "{"
 
 const char MSG_5[] = "{"
   "\"agentId\":\"%s\""
+  ",\"app\":\"%s\""
   ",\"recorded\":{\"seconds\":%" PRIu64",\"nanoseconds\":%" PRIu64"}"
   ",\"version\":%d"
   ",\"error\":{\"message\":\"%s\",\"code\":%d}"
@@ -127,6 +132,7 @@ const char MSG_5[] = "{"
 
 const char MSG_6[] = "{"
   "\"agentId\":\"%s\""
+  ",\"app\":\"%s\""
   ",\"command\":\"exit\""
   ",\"exit_code\":%d"
   ",\"version\":%d"
@@ -136,6 +142,7 @@ const char MSG_6[] = "{"
 
 const char MSG_7[] = "{"
   "\"agentId\":\"%s\""
+  ",\"app\":\"%s\""
   ",\"command\":\"exit\""
   ",\"exit_code\":%d"
   ",\"version\":%d"
@@ -1077,6 +1084,7 @@ int ZmqAgent::send_command_message(const char* command,
                  msg_size_,
                  MSG_2,
                  agent_id_.c_str(),
+                 app_name_.c_str(),
                  command,
                  std::get<0>(recorded),
                  std::get<1>(recorded),
@@ -1090,6 +1098,7 @@ int ZmqAgent::send_command_message(const char* command,
                  msg_size_,
                  MSG_1,
                  agent_id_.c_str(),
+                 app_name_.c_str(),
                  request_id,
                  command,
                  std::get<0>(recorded),
@@ -1269,6 +1278,13 @@ int ZmqAgent::config(const json& config) {
 
   if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
     setup_blocked_loop_hooks();
+  }
+
+  if (utils::find_any_fields_in_diff(diff, { "/app" })) {
+    auto it = config_.find("app");
+    if (it != config_.end()) {
+      app_name_ = it->get<std::string>();
+    }
   }
 
   // Don't config other endpoints if command handle is not to be configured
@@ -1555,6 +1571,7 @@ void ZmqAgent::send_error_message(const std::string& msg,
                    msg_size_,
                    MSG_5,
                    agent_id_.c_str(),
+                   app_name_.c_str(),
                    std::get<0>(recorded),
                    std::get<1>(recorded),
                    version_,
@@ -1571,6 +1588,7 @@ void ZmqAgent::send_error_message(const std::string& msg,
                  msg_size_,
                  MSG_5,
                  agent_id_.c_str(),
+                 app_name_.c_str(),
                  std::get<0>(recorded),
                  std::get<1>(recorded),
                  version_,
@@ -1594,6 +1612,7 @@ int ZmqAgent::send_error_command_message(const std::string& req_id,
                    msg_size_,
                    MSG_4,
                    agent_id_.c_str(),
+                   app_name_.c_str(),
                    req_id.c_str(),
                    command.c_str(),
                    std::get<0>(recorded),
@@ -1612,6 +1631,7 @@ int ZmqAgent::send_error_command_message(const std::string& req_id,
                  msg_size_,
                  MSG_4,
                  agent_id_.c_str(),
+                 app_name_.c_str(),
                  req_id.c_str(),
                  command.c_str(),
                  std::get<0>(recorded),
@@ -1664,6 +1684,7 @@ void ZmqAgent::send_exit() {
                  msg_size_,
                  MSG_7,
                  agent_id_.c_str(),
+                 app_name_.c_str(),
                  exit_code,
                  version_,
                  profile);
@@ -1675,6 +1696,7 @@ void ZmqAgent::send_exit() {
                  msg_size_,
                  MSG_6,
                  agent_id_.c_str(),
+                 app_name_.c_str(),
                  exit_code,
                  version_,
                  jmsg.dump().c_str(),
@@ -2064,6 +2086,7 @@ void ZmqAgent::do_got_prof(ProfileType type,
              msg_size_,
              MSG_3,
              agent_id_.c_str(),
+             app_name_.c_str(),
              prof_stor.req_id.c_str(),
              cmd,
              uv_now(&loop_) - prof_stor.timestamp,
