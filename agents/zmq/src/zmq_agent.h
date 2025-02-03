@@ -682,6 +682,7 @@ class ZmqAgent {
   std::atomic<bool> exiting_;
 
   const std::string agent_id_;
+  std::string app_name_;
 
   // For Auth
   std::string auth_url_;

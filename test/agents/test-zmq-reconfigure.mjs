@@ -44,6 +44,7 @@ const {
 function checkReconfigureData(reconfigure, requestId, agentId, nsolidConfig) {
   assert.strictEqual(reconfigure.requestId, requestId);
   assert.strictEqual(reconfigure.agentId, agentId);
+  assert.strictEqual(reconfigure.app, 'untitled application');
   assert.strictEqual(reconfigure.command, 'reconfigure');
   // From here check at least that all the fields are present
   validateObject(reconfigure.recorded, 'recorded');
