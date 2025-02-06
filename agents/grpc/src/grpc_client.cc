@@ -56,6 +56,7 @@ std::shared_ptr<Channel>
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, 20 * 1000 /*20 sec*/);
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 10 * 1000 /*10 sec*/);
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
+  grpc_arguments.SetInt(GRPC_ARG_HTTP2_MAX_PINGS_WITHOUT_DATA, 0);
   if (!options.use_ssl_credentials) {
     channel = CreateCustomChannel(options.endpoint,
                                   InsecureChannelCredentials(),
