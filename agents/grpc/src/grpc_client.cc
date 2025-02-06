@@ -51,11 +51,14 @@ std::shared_ptr<Channel>
   std::shared_ptr<Channel> channel;
   ChannelArguments grpc_arguments;
   // Configure the keepalive of the Client Channel. The keepalive time period is
-  // set to 20 seconds, with a timeout of 10 seconds. Additionally, pings will
-  // be sent even if there are no calls in flight on an active connection.
-  grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, 20 * 1000 /*20 sec*/);
-  grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 10 * 1000 /*10 sec*/);
+  // set to 30 seconds, with a timeout of 15 seconds. Additionally, pings will
+  // be sent even if there are no calls nor headers/data in flight on an active
+  // connection. Important: these settings should match the ones configured
+  // server-side.
+  grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, 30 * 1000 /* 30 sec*/);
+  grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 15 * 1000 /* 15 sec*/);
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
+  grpc_arguments.SetInt(GRPC_ARG_HTTP2_MAX_PINGS_WITHOUT_DATA, 0);
   if (!options.use_ssl_credentials) {
     channel = CreateCustomChannel(options.endpoint,
                                   InsecureChannelCredentials(),
