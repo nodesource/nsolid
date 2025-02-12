@@ -26,7 +26,6 @@
 * \[[`366fab076f`](https://github.com/nsolid/node/commit/366fab076f)] - **test**: fix flaky nsolid-metrics test (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
 * \[[`67d4f32c36`](https://github.com/nsolid/node/commit/67d4f32c36)] - **test**: get opentelemetry version from process (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
 
-
 ## 2024-11-22, Version 20.18.1-nsolid-v5.5.0 'Iron'
 
 ### Commits
