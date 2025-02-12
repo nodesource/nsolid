@@ -2,6 +2,79 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-01-13, Version 20.18.1-nsolid-v5.6.0 'Iron'
+
+### Commits
+
+* \[[`477e2012cf`](https://github.com/nsolid/node/commit/477e2012cf)] - **agents**: fix grpc insecure opt initialization (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`606c97bc99`](https://github.com/nsolid/node/commit/606c97bc99)] - **agents**: don't send exit if grpc agent unconfigured (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`8eff90d786`](https://github.com/nsolid/node/commit/8eff90d786)] - **agents**: improve SaaS token handling (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`2d7ccc1f45`](https://github.com/nsolid/node/commit/2d7ccc1f45)] - **agents**: share channel between OTLP exporters (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`db014ab412`](https://github.com/nsolid/node/commit/db014ab412)] - **deps**: update libcurl to 8.11.1 (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`357e61013b`](https://github.com/nsolid/node/commit/357e61013b)] - **deps**: update opentelemetry-cpp to 1.18.0 (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`4c5a01913f`](https://github.com/nsolid/node/commit/4c5a01913f)] - **deps**: avoid using unset values in cpu profiler (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`b40869a4fd`](https://github.com/nsolid/node/commit/b40869a4fd)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`4ec5ae8396`](https://github.com/nsolid/node/commit/4ec5ae8396)] - **deps**: update opentelemetry-cpp to 1.17.0 (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`ab0eea8f69`](https://github.com/nsolid/node/commit/ab0eea8f69)] - **deps**: update undici adding code from <https://github.com/nodejs/undici/pull/2701> (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`0b0560fe7f`](https://github.com/nsolid/node/commit/0b0560fe7f)] - **lib**: fix crash if invalid SaaS token (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`41edf02151`](https://github.com/nsolid/node/commit/41edf02151)] - **lib**: add tracing support for fetch(undici) (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`9085399d72`](https://github.com/nsolid/node/commit/9085399d72)] - **lib**: add nsolidTracer EventEmitter (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`b962a0b007`](https://github.com/nsolid/node/commit/b962a0b007)] - **lib,src**: fix a couple of linting issues (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`96f92ed142`](https://github.com/nsolid/node/commit/96f92ed142)] - **src**: add scriptId to stack\@blocked\_loop event (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`70f068c373`](https://github.com/nsolid/node/commit/70f068c373)] - **src,agents**: add support for source code collection (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`eb2932ce12`](https://github.com/nsolid/node/commit/eb2932ce12)] - **test**: unflake nsolid-env-metrics test (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`366fab076f`](https://github.com/nsolid/node/commit/366fab076f)] - **test**: fix flaky nsolid-metrics test (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+* \[[`67d4f32c36`](https://github.com/nsolid/node/commit/67d4f32c36)] - **test**: get opentelemetry version from process (Santiago Gimeno) [nodesource/nsolid#245](https://github.com/nodesource/nsolid/pull/245)
+
+## 2024-11-22, Version 20.18.1-nsolid-v5.5.0 'Iron'
+
+### Commits
+
+* \[[`baed8d4021`](https://github.com/nodesource/nsolid/commit/baed8d4021)] - **deps**: avoid overflow when calculating timeDeltas (Santiago Gimeno) [nodesource/nsolid#229](https://github.com/nodesource/nsolid/pull/229)
+* \[[`6fafa1d38c`](https://github.com/nodesource/nsolid/commit/6fafa1d38c)] - **src**: close EnvInst handles after v20.18.1 merge
+* \[[`e95835387c`](https://github.com/nodesource/nsolid/commit/e95835387c)] - **agents**: fix synchronized code in GrpcAgent (Santiago Gimeno) [nodesource/nsolid#222](https://github.com/nodesource/nsolid/pull/222)
+* \[[`39a6fb92d8`](https://github.com/nodesource/nsolid/commit/39a6fb92d8)] - **agents**: fix ExitEvent condition handling (Santiago Gimeno) [nodesource/nsolid#222](https://github.com/nodesource/nsolid/pull/222)
+* \[[`9a844ef45e`](https://github.com/nodesource/nsolid/commit/9a844ef45e)] - **deps**: escape funtionName in CPU Profiles (Santiago Gimeno) [nodesource/nsolid#179](https://github.com/nodesource/nsolid/pull/179)
+* \[[`04a1aa08f4`](https://github.com/nodesource/nsolid/commit/04a1aa08f4)] - **deps**: fix Windows 11 SDK compilation (Santiago Gimeno) [nodesource/nsolid#222](https://github.com/nodesource/nsolid/pull/222)
+* \[[`fef5776e1b`](https://github.com/nodesource/nsolid/commit/fef5776e1b)] - **deps**: update grpc to 1.67.1 (Santiago Gimeno) [nodesource/nsolid#220](https://github.com/nodesource/nsolid/pull/220)
+* \[[`1eb24c02fb`](https://github.com/nodesource/nsolid/commit/1eb24c02fb)] - **deps**: update libsodium to 1.0.20 (Santiago Gimeno) [nodesource/nsolid#219](https://github.com/nodesource/nsolid/pull/219)
+* \[[`693bb4f31e`](https://github.com/nodesource/nsolid/commit/693bb4f31e)] - **deps**: update to libcurl 8.11.0 (Santiago Gimeno) [nodesource/nsolid#217](https://github.com/nodesource/nsolid/pull/217)
+* \[[`a7a6f2aa16`](https://github.com/nodesource/nsolid/commit/a7a6f2aa16)] - **deps,tools**: add missing grpc compiler folder (Santiago Gimeno) [nodesource/nsolid#223](https://github.com/nodesource/nsolid/pull/223)
+* \[[`6fafa1d38c`](https://github.com/nodesource/nsolid/commit/6fafa1d38c)] - **src**: close EnvInst handles after v20.18.1 merge (Santiago Gimeno)
+* \[[`e78ded9d9d`](https://github.com/nodesource/nsolid/commit/e78ded9d9d)] - **test**: unflake test-nsolid asset tests (Santiago Gimeno) [nodesource/nsolid#222](https://github.com/nodesource/nsolid/pull/222)
+* \[[`52fbfb15b9`](https://github.com/nodesource/nsolid/commit/52fbfb15b9)] - **tools**: fix CURRENT\_VERSION calculation (Santiago Gimeno) [nodesource/nsolid#218](https://github.com/nodesource/nsolid/pull/218)
+
+## 2024-11-01, Version 20.18.0-nsolid-v5.4.0 'Iron'
+
+### Commits
+
+* \[[`6225306a7c`](https://github.com/nodesource/nsolid/commit/6225306a7c)] - **agents**: fix deadlock on CommandStream destruction (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`ecd8d00fe8`](https://github.com/nodesource/nsolid/commit/ecd8d00fe8)] - **lib**: validate NSOLID\_GRPC value (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`fd217c9ef2`](https://github.com/nodesource/nsolid/commit/fd217c9ef2)] - **test**: add gRPC agent tests (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`a847585bfe`](https://github.com/nodesource/nsolid/commit/a847585bfe)] - **lib,src**: gRPCAgent integration in N|Solid (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`93db684abd`](https://github.com/nodesource/nsolid/commit/93db684abd)] - **agents**: implement JS bindings to the gRPC Agent (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`1d58b79149`](https://github.com/nodesource/nsolid/commit/1d58b79149)] - **agents**: GrpcAgent initial implementation (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`424872fdf3`](https://github.com/nodesource/nsolid/commit/424872fdf3)] - **agents**: implement AssetStream class (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`b79626d402`](https://github.com/nodesource/nsolid/commit/b79626d402)] - **agents**: implement CommandStream class (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`9c3b35790d`](https://github.com/nodesource/nsolid/commit/9c3b35790d)] - **agents**: add GrpcClient implementation (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`e20272fd35`](https://github.com/nodesource/nsolid/commit/e20272fd35)] - **agents**: add protofiles for GRPCAgent service (Santiago Gimeno) [nodesource/nsolid#203](https://github.com/nodesource/nsolid/pull/203)
+* \[[`3d2da9eb0b`](https://github.com/nodesource/nsolid/commit/3d2da9eb0b)] - **lib**: add counter support for undici fetch() (Santiago Gimeno) [nodesource/nsolid#204](https://github.com/nodesource/nsolid/pull/204)
+* \[[`59d5b5f73b`](https://github.com/nodesource/nsolid/commit/59d5b5f73b)] - **agents**: remove debug log leftover (Santiago Gimeno) [nodesource/nsolid#206](https://github.com/nodesource/nsolid/pull/206)
+* \[[`481f2340ca`](https://github.com/nodesource/nsolid/commit/481f2340ca)] - **src**: remove timeOriginTimestamp from startupTimes (Santiago Gimeno) [nodesource/nsolid#202](https://github.com/nodesource/nsolid/pull/202)
+* \[[`d5553c126e`](https://github.com/nodesource/nsolid/commit/d5553c126e)] - **src**: change internal GetStartupTimes() signature (Santiago Gimeno) [nodesource/nsolid#202](https://github.com/nodesource/nsolid/pull/202)
+* \[[`be8ef41245`](https://github.com/nodesource/nsolid/commit/be8ef41245)] - **agents**: use correct unit (ns) for log timestamp (Santiago Gimeno) [nodesource/nsolid#201](https://github.com/nodesource/nsolid/pull/201)
+* \[[`d90d6a4221`](https://github.com/nodesource/nsolid/commit/d90d6a4221)] - **lib**: move assets JS API interface to lib/internal (Santiago Gimeno) [nodesource/nsolid#200](https://github.com/nodesource/nsolid/pull/200)
+* \[[`100c1281e1`](https://github.com/nodesource/nsolid/commit/100c1281e1)] - **deps**: fix grpc\_cpp\_plugin build (Santiago Gimeno) [nodesource/nsolid#199](https://github.com/nodesource/nsolid/pull/199)
+* \[[`c140428489`](https://github.com/nodesource/nsolid/commit/c140428489)] - **deps**: update json to 3.11.3 (Santiago Gimeno) [nodesource/nsolid#165](https://github.com/nodesource/nsolid/pull/165)
+* \[[`831810c3e6`](https://github.com/nodesource/nsolid/commit/831810c3e6)] - **doc**: fix linting issue (Santiago Gimeno) [nodesource/nsolid#198](https://github.com/nodesource/nsolid/pull/198)
+* \[[`420bf1b053`](https://github.com/nodesource/nsolid/commit/420bf1b053)] - **agents**: add nsolid.span\_kind attribute to Spans (Santiago Gimeno) [nodesource/nsolid#198](https://github.com/nodesource/nsolid/pull/198)
+* \[[`d8dfdbbdd3`](https://github.com/nodesource/nsolid/commit/d8dfdbbdd3)] - **agents**: make metrics name format configure (Santiago Gimeno) [nodesource/nsolid#198](https://github.com/nodesource/nsolid/pull/198)
+* \[[`69b16ce6eb`](https://github.com/nodesource/nsolid/commit/69b16ce6eb)] - **agents**: move text metrics calculation to common (Santiago Gimeno) [nodesource/nsolid#198](https://github.com/nodesource/nsolid/pull/198)
+* \[[`1c2215d1f7`](https://github.com/nodesource/nsolid/commit/1c2215d1f7)] - **agents**: fix linting issue (Santiago Gimeno) [nodesource/nsolid#196](https://github.com/nodesource/nsolid/pull/196)
+* \[[`b133538db1`](https://github.com/nodesource/nsolid/commit/b133538db1)] - **agents**: fix otlp endpoint calculation (Santiago Gimeno) [nodesource/nsolid#194](https://github.com/nodesource/nsolid/pull/194)
+* \[[`6fdd1b718f`](https://github.com/nodesource/nsolid/commit/6fdd1b718f)] - **agents**: add missing text metrics (Santiago Gimeno) [nodesource/nsolid#193](https://github.com/nodesource/nsolid/pull/193)
+* \[[`fb29b0d234`](https://github.com/nodesource/nsolid/commit/fb29b0d234)] - **agents**: fix ZmqAgent asset JS API (Santiago Gimeno) [nodesource/nsolid#192](https://github.com/nodesource/nsolid/pull/192)
+
 ## 2024-10-04, Version 20.18.0-nsolid-v5.3.4 'Iron'
 
 ### Commits
