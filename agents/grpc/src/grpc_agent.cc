@@ -294,21 +294,20 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
     return;
   }
 
-  DebugJSON("Packages Info: \n%s\n", packages);
-
   // Fill in the fields of the InfoResponse.
   PopulateCommon(packages_event->mutable_common(), "packages", req_id);
 
   grpcagent::PackagesBody* body = packages_event->mutable_body();
   for (const auto& package : packages) {
+    DebugJSON("Populating Package: \n%s\n", package);
     grpcagent::Package* proto_package = body->add_packages();
-    if (package.contains("path")) {
+    if (package.contains("path") && package["path"].is_string()) {
       proto_package->set_path(package["path"].get<std::string>());
     }
-    if (package.contains("name")) {
+    if (package.contains("name") && package["name"].is_string()) {
       proto_package->set_name(package["name"].get<std::string>());
     }
-    if (package.contains("version")) {
+    if (package.contains("version") && package["version"].is_string()) {
       proto_package->set_version(package["version"].get<std::string>());
     }
     if (package.contains("main") && package["main"].is_string()) {
@@ -318,11 +317,13 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
     if (package.contains("dependencies") &&
         package["dependencies"].is_array()) {
       for (const auto& dep : package["dependencies"]) {
-        proto_package->add_dependencies(dep.get<std::string>());
+        if (dep.is_string()) {
+          proto_package->add_dependencies(dep.get<std::string>());
+        }
       }
     }
 
-    if (package.contains("required")) {
+    if (package.contains("required") && package["required"].is_boolean()) {
       proto_package->set_required(package["required"].get<bool>());
     }
   }
