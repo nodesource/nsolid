@@ -2,6 +2,25 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-02-14, Version 20.18.2-nsolid-v5.7.0 'Iron'
+
+### Commits
+
+* \[[`92a53e74e8`](https://github.com/nodesource/nsolid/commit/92a53e74e8)] - 2025-02-14, Version 20.18.2-nsolid-v5.7.0 'Iron' (Juan José Arboleda)
+* \[[`651bc37326`](https://github.com/nodesource/nsolid/commit/651bc37326)] - **agents**: avoid crashing when populating packages (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`b831988f79`](https://github.com/nodesource/nsolid/commit/b831988f79)] - **doc**: fix linting in NSolid changelog (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`3769fbf642`](https://github.com/nodesource/nsolid/commit/3769fbf642)] - **lib**: add tracing support for http2 (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`13540efc24`](https://github.com/nodesource/nsolid/commit/13540efc24)] - **lib**: add tracing channels for http2 streams (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`309ac7768e`](https://github.com/nodesource/nsolid/commit/309ac7768e)] - **tools**: opentelemetry-cpp updater fix (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`ea03c10c52`](https://github.com/nodesource/nsolid/commit/ea03c10c52)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`01dc768eff`](https://github.com/nodesource/nsolid/commit/01dc768eff)] - **deps**: update opentelemetry-cpp to 1.19.0 (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`96edafaf45`](https://github.com/nodesource/nsolid/commit/96edafaf45)] - **lib**: add metrics support for http2 (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`d73b8f0c37`](https://github.com/nodesource/nsolid/commit/d73b8f0c37)] - **lib**: add diagnostic channels to http2 (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`7b27a41eef`](https://github.com/nodesource/nsolid/commit/7b27a41eef)] - **agents**: fix grpc keepalive configuration (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`f9a4d933fc`](https://github.com/nodesource/nsolid/commit/f9a4d933fc)] - **agents**: improve appName support (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`34b91621bf`](https://github.com/nodesource/nsolid/commit/34b91621bf)] - **deps**: timeDeltas in cpu profiles are signed (Santiago Gimeno) [#268](https://github.com/nodesource/nsolid/pull/268)
+* \[[`7a040f69bc`](https://github.com/nodesource/nsolid/commit/7a040f69bc)] - Working on v5.6.2 Iron (Santiago Gimeno)
+
 ## 2025-01-13, Version 20.18.1-nsolid-v5.6.0 'Iron'
 
 ### Commits
