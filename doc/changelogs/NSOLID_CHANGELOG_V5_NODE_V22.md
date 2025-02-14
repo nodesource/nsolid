@@ -2,6 +2,21 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-02-14, Version 22.13.1-nsolid-v5.7.0 'Jod'
+
+* \[[`61010483da`](https://github.com/nodesource/nsolid/commit/61010483da)] - **agents**: avoid crashing when populating packages (Santiago Gimeno) [#267](https://github.com/nodesource/nsolid/pull/267)
+* \[[`ed8c4f953e`](https://github.com/nodesource/nsolid/commit/ed8c4f953e)] - **lib**: add tracing support for http2 (Santiago Gimeno) [#266](https://github.com/nodesource/nsolid/pull/266)
+* \[[`63a9b6f86d`](https://github.com/nodesource/nsolid/commit/63a9b6f86d)] - **lib**: add tracing channels for http2 streams (Santiago Gimeno) [#266](https://github.com/nodesource/nsolid/pull/266)
+* \[[`65430e7aaa`](https://github.com/nodesource/nsolid/commit/65430e7aaa)] - **tools**: opentelemetry-cpp updater fix (Santiago Gimeno) [#260](https://github.com/nodesource/nsolid/pull/260)
+* \[[`887bd98ed5`](https://github.com/nodesource/nsolid/commit/887bd98ed5)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#260](https://github.com/nodesource/nsolid/pull/260)
+* \[[`2159f27db0`](https://github.com/nodesource/nsolid/commit/2159f27db0)] - **deps**: update opentelemetry-cpp to 1.19.0 (Santiago Gimeno) [#260](https://github.com/nodesource/nsolid/pull/260)
+* \[[`4ded43b66a`](https://github.com/nodesource/nsolid/commit/4ded43b66a)] - **lib**: add metrics support for http2 (Santiago Gimeno) [#256](https://github.com/nodesource/nsolid/pull/256)
+* \[[`6350b9589b`](https://github.com/nodesource/nsolid/commit/6350b9589b)] - **lib**: add diagnostic channels to http2 (Santiago Gimeno) [#256](https://github.com/nodesource/nsolid/pull/256)
+* \[[`30f54e6aae`](https://github.com/nodesource/nsolid/commit/30f54e6aae)] - **agents**: fix grpc keepalive configuration (Santiago Gimeno) [#265](https://github.com/nodesource/nsolid/pull/265)
+* \[[`43ed2a4403`](https://github.com/nodesource/nsolid/commit/43ed2a4403)] - **agents**: improve appName support (Santiago Gimeno) [#264](https://github.com/nodesource/nsolid/pull/264)
+* \[[`0246f46386`](https://github.com/nodesource/nsolid/commit/0246f46386)] - **deps**: timeDeltas in cpu profiles are signed (Santiago Gimeno) [#254](https://github.com/nodesource/nsolid/pull/254)
+* \[[`6aa537faa8`](https://github.com/nodesource/nsolid/commit/6aa537faa8)] - Working on v5.6.2 Jod (Santiago Gimeno)
+
 ## 2025-01-21, Version 22.13.1-nsolid-v5.6.1 'Jod'
 
 ### Commits
