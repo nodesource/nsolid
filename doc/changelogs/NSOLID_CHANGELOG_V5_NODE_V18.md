@@ -2,6 +2,26 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-02-14, Version 18.20.6-nsolid-v5.7.0 'Hydrogen'
+
+### Commits
+
+* \[[`d2ee311dfb`](https://github.com/nodesource/nsolid/commit/d2ee311dfb)] - **agents**: avoid crashing when populating packages (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`bbaea0060c`](https://github.com/nodesource/nsolid/commit/bbaea0060c)] - **doc**: fix linting in NSolid changelog (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`a7e64b1ec8`](https://github.com/nodesource/nsolid/commit/a7e64b1ec8)] - **lib**: add tracing support for http2 (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`6ece3efa10`](https://github.com/nodesource/nsolid/commit/6ece3efa10)] - **lib**: add nsolidTracer EventEmitter (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`4b34ba8b3d`](https://github.com/nodesource/nsolid/commit/4b34ba8b3d)] - **lib**: add \_getALS() method to AsyncLocalStorageContextManager (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`0654ca0ac4`](https://github.com/nodesource/nsolid/commit/0654ca0ac4)] - **lib**: add tracing channels for http2 streams (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`df41e66ca4`](https://github.com/nodesource/nsolid/commit/df41e66ca4)] - **tools**: opentelemetry-cpp updater fix (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`415d6f485d`](https://github.com/nodesource/nsolid/commit/415d6f485d)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`76afe5c888`](https://github.com/nodesource/nsolid/commit/76afe5c888)] - **deps**: update opentelemetry-cpp to 1.19.0 (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`5208d16537`](https://github.com/nodesource/nsolid/commit/5208d16537)] - **lib**: add metrics support for http2 (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`a61dc8ba74`](https://github.com/nodesource/nsolid/commit/a61dc8ba74)] - **lib**: add diagnostic channels to http2 (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`9b0356899b`](https://github.com/nodesource/nsolid/commit/9b0356899b)] - **agents**: fix grpc keepalive configuration (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`91dac238bd`](https://github.com/nodesource/nsolid/commit/91dac238bd)] - **agents**: improve appName support (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`eabdde8369`](https://github.com/nodesource/nsolid/commit/eabdde8369)] - **deps**: timeDeltas in cpu profiles are signed (Santiago Gimeno) [#269](https://github.com/nodesource/nsolid/pull/269)
+* \[[`c733e9ceb1`](https://github.com/nodesource/nsolid/commit/c733e9ceb1)] - Working on v5.6.2 Hydrogen (Santiago Gimeno)
+
 ## 2025-01-13, Version 18.20.5-nsolid-v5.6.0 'Hydrogen'
 
 ### Commits
