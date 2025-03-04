@@ -36,6 +36,7 @@ setupNSolid(common.mustCall(() => {
           'http.status_code': 200,
           'http.status_text': 'OK',
           'http.url': 'http://127.0.0.1/',
+          'network.protocol.version': '1.1',
         },
         end_reason: binding.kSpanEndOk,
         name: 'HTTP GET',
@@ -55,6 +56,7 @@ setupNSolid(common.mustCall(() => {
         attributes: {
           'http.method': 'GET',
           'http.url': 'http://127.0.0.1/',
+          'network.protocol.version': '1.1',
         },
         end_reason: binding.kSpanEndError,
         name: 'HTTP GET',

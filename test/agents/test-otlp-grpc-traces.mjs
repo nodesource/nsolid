@@ -160,7 +160,7 @@ if (process.argv[2] === 'child') {
     const endTimeUnixNano = BigInt(serverSpan.endTimeUnixNano);
     assert.ok(endTimeUnixNano);
     validateArray(serverSpan.attributes, 'serverSpan.attributes');
-    assert.strictEqual(serverSpan.attributes.length, 6);
+    assert.strictEqual(serverSpan.attributes.length, 7);
     assert.strictEqual(serverSpan.attributes[0].key, 'http.method');
     assert.strictEqual(serverSpan.attributes[0].value.stringValue, 'GET');
     assert.strictEqual(serverSpan.attributes[1].key, 'http.status_code');
@@ -170,10 +170,12 @@ if (process.argv[2] === 'child') {
     assert.strictEqual(serverSpan.attributes[3].key, 'http.url');
     assert.strictEqual(serverSpan.attributes[3].value.stringValue,
                        `http://127.0.0.1:${port}/`);
-    assert.strictEqual(serverSpan.attributes[4].key, 'thread.id');
-    assert.strictEqual(serverSpan.attributes[4].value.intValue, `${threadId}`);
-    assert.strictEqual(serverSpan.attributes[5].key, 'nsolid.span_type');
-    assert.strictEqual(serverSpan.attributes[5].value.intValue, '8');
+    assert.strictEqual(serverSpan.attributes[4].key, 'network.protocol.version');
+    assert.strictEqual(serverSpan.attributes[4].value.stringValue, '1.1');
+    assert.strictEqual(serverSpan.attributes[5].key, 'thread.id');
+    assert.strictEqual(serverSpan.attributes[5].value.intValue, `${threadId}`);
+    assert.strictEqual(serverSpan.attributes[6].key, 'nsolid.span_type');
+    assert.strictEqual(serverSpan.attributes[6].value.intValue, '8');
 
     const clientSpan = spans[1];
     validateId(serverSpan.traceId, 16);
@@ -185,7 +187,7 @@ if (process.argv[2] === 'child') {
     const endTimeUnixNano2 = BigInt(clientSpan.endTimeUnixNano);
     assert.ok(endTimeUnixNano2);
     validateArray(clientSpan.attributes, 'clientSpan.attributes');
-    assert.strictEqual(clientSpan.attributes.length, 6);
+    assert.strictEqual(clientSpan.attributes.length, 7);
     assert.strictEqual(clientSpan.attributes[0].key, 'http.method');
     assert.strictEqual(clientSpan.attributes[0].value.stringValue, 'GET');
     assert.strictEqual(clientSpan.attributes[1].key, 'http.status_code');
@@ -195,10 +197,12 @@ if (process.argv[2] === 'child') {
     assert.strictEqual(clientSpan.attributes[3].key, 'http.url');
     assert.strictEqual(clientSpan.attributes[3].value.stringValue,
                        `http://127.0.0.1:${port}/`);
-    assert.strictEqual(clientSpan.attributes[4].key, 'thread.id');
-    assert.strictEqual(clientSpan.attributes[4].value.intValue, `${threadId}`);
-    assert.strictEqual(clientSpan.attributes[5].key, 'nsolid.span_type');
-    assert.strictEqual(clientSpan.attributes[5].value.intValue, '4');
+    assert.strictEqual(serverSpan.attributes[4].key, 'network.protocol.version');
+    assert.strictEqual(serverSpan.attributes[4].value.stringValue, '1.1');
+    assert.strictEqual(clientSpan.attributes[5].key, 'thread.id');
+    assert.strictEqual(clientSpan.attributes[5].value.intValue, `${threadId}`);
+    assert.strictEqual(clientSpan.attributes[6].key, 'nsolid.span_type');
+    assert.strictEqual(clientSpan.attributes[6].value.intValue, '4');
   }
 
   function mergeResourceSpans(data, result) {

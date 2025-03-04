@@ -13,6 +13,7 @@ function setupTracesCheck(port) {
       attributes: {
         'http.method': 'GET',
         'http.url': `http://127.0.0.1:${port}/`,
+        'network.protocol.version': '1.1',
       },
       end_reason: binding.kSpanEndError,
       name: 'HTTP GET',

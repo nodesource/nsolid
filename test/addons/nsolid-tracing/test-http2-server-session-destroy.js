@@ -15,6 +15,7 @@ function setupTracesCheck(port, addresses) {
       attributes: {
         'http.method': 'POST',
         'http.url': `http://localhost:${port}/`,
+        'network.protocol.version': '2',
       },
       end_reason: binding.kSpanEndOk,
       name: 'HTTP POST',
@@ -27,6 +28,7 @@ function setupTracesCheck(port, addresses) {
           attributes: {
             'http.method': 'POST',
             'http.url': `http://localhost:${port}/`,
+            'network.protocol.version': '2',
           },
           end_reason: binding.kSpanEndOk,
           name: 'HTTP POST',
