@@ -14,6 +14,7 @@ function setupTracesCheck(port, addresses) {
       attributes: {
         'http.method': 'GET',
         'http.url': `http://localhost:${port}/`,
+        'network.protocol.version': '1.1',
       },
       end_reason: binding.kSpanEndOk,
       name: 'HTTP GET',
@@ -52,6 +53,7 @@ function setupTracesCheck(port, addresses) {
           attributes: {
             'http.method': 'GET',
             'http.url': `http://localhost:${port}/`,
+            'network.protocol.version': '1.1',
           },
           end_reason: binding.kSpanEndError,
           name: 'HTTP GET',

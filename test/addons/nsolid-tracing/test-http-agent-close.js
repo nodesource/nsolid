@@ -18,6 +18,7 @@ const expectedTraces = [
       'http.error_name': 'Error',
       'http.method': 'GET',
       'http.url': 'http://localhost/',
+      'network.protocol.version': '1.1',
     },
     events: [
       {
