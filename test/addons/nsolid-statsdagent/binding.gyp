@@ -20,7 +20,7 @@
     'configurations': {
       'Debug': {
         'defines': [ 'DEBUG', '_DEBUG' ],
-        'cflags_cc': [ '-std=c++20', '-g', '-O0', '-fstandalone-debug' ],
+        'cflags_cc': [ '-std=c++20', '-g', '-O0' ],
       },
       'Release': {
         'cflags_cc': [ '-std=c++20' ],
