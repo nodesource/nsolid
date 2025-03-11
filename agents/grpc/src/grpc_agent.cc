@@ -1036,7 +1036,6 @@ int GrpcAgent::config(const json& config) {
       Debug("GrpcAgent configured. Endpoint: %s. Insecure: %d\n",
             endpoint.c_str(), static_cast<unsigned>(insecure));
 
-
       OtlpGrpcClientOptions opts;
       opts.endpoint = endpoint;
       opts.metadata = {{"nsolid-agent-id", agent_id_},
@@ -1050,9 +1049,13 @@ int GrpcAgent::config(const json& config) {
         }
       }
 
+      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(opts);
+      // CommandStream needs to be created before the OTLP client to avoid
+      // a race condition with abseil mutexes.
+      reset_command_stream();
+
       std::shared_ptr<OtlpGrpcClient> client =
           OtlpGrpcClientFactory::Create(opts);
-      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(opts);
 
       {
         OtlpGrpcExporterOptions options;
@@ -1104,8 +1107,6 @@ int GrpcAgent::config(const json& config) {
         log_exporter_ =
           std::make_unique<OtlpGrpcLogRecordExporter>(options, client);
       }
-
-      reset_command_stream();
     }
   }
 
