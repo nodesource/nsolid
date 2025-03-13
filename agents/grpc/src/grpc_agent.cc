@@ -1025,6 +1025,9 @@ int GrpcAgent::config(const json& config) {
       opts.endpoint = endpoint;
       opts.metadata = {{"nsolid-agent-id", agent_id_},
                        {"nsolid-saas", saas()}};
+      // Make sure the client is initialized. We set it to the same
+      // default value as ax_concurrent_requests as the exporters.
+      opts.max_concurrent_requests = 64;
       opts.use_ssl_credentials = !insecure;
       if (!insecure) {
         if (!custom_certs_.empty()) {
