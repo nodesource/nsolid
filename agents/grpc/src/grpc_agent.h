@@ -2,6 +2,7 @@
 #define AGENTS_GRPC_SRC_GRPC_AGENT_H_
 
 #include <nsolid.h>
+#include <nsolid/async_ts_queue.h>
 #include <nsolid/thread_safe.h>
 #include "nlohmann/json.hpp"
 #include <memory>
@@ -157,8 +158,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   static void at_exit_cb_(bool on_signal, bool profile_stopped, WeakGrpcAgent);
 
-  static void blocked_loop_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
-
   static void command_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
   static void command_stream_done_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
@@ -239,7 +238,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void got_asset_done_msg();
 
-  void got_blocked_loop_msgs();
+  void got_blocked_loop(BlockedLoopStor&& stor);
 
   void got_logs();
 
@@ -305,8 +304,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   TSQueue<std::tuple<SharedEnvInst, bool>> env_msg_q_;
 
   // Blocked Loop
-  nsuv::ns_async blocked_loop_msg_;
-  TSQueue<BlockedLoopStor> blocked_loop_msg_q_;
+  std::shared_ptr<AsyncTSQueue<BlockedLoopStor>> blocked_loop_queue_;
 
   // For the Tracing API
   uint32_t trace_flags_;
