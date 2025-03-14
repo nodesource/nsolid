@@ -727,16 +727,6 @@ int GrpcAgent::start_heap_snapshot_from_js(
   agent->stop(profile_stopped);
 }
 
-/*static*/ void GrpcAgent::blocked_loop_msg_cb_(nsuv::ns_async*,
-                                                WeakGrpcAgent agent_wp) {
-  SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
-    return;
-  }
-
-  agent->got_blocked_loop_msgs();
-}
-
 /*static*/ void GrpcAgent::shutdown_cb_(nsuv::ns_async*,
                                         WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
@@ -890,11 +880,9 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->blocked_loop_msg_q_.enqueue({ true,
-                                           body,
-                                           GetThreadId(envinst) }) == 1) {
-    ASSERT_EQ(0, agent->blocked_loop_msg_.send());
-  }
+  agent->blocked_loop_queue_->enqueue({ true,
+                                        body,
+                                        GetThreadId(envinst) });
 }
 
 /*static*/void GrpcAgent::loop_unblocked_(SharedEnvInst envinst,
@@ -905,11 +893,9 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->blocked_loop_msg_q_.enqueue({ false,
-                                           body,
-                                           GetThreadId(envinst) }) == 1) {
-    ASSERT_EQ(0, agent->blocked_loop_msg_.send());
-  }
+  agent->blocked_loop_queue_->enqueue({ false,
+                                        body,
+                                        GetThreadId(envinst) });
 }
 
 /*static*/void GrpcAgent::metrics_msg_cb_(nsuv::ns_async*,
@@ -1190,10 +1176,6 @@ void GrpcAgent::do_start() {
                                     asset_done_msg_cb_,
                                     weak_from_this()));
 
-  ASSERT_EQ(0, blocked_loop_msg_.init(&loop_,
-                                      blocked_loop_msg_cb_,
-                                      weak_from_this()));
-
   ASSERT_EQ(0, config_msg_.init(&loop_, config_msg_cb_, weak_from_this()));
 
   ASSERT_EQ(0, command_msg_.init(&loop_, command_msg_cb_, weak_from_this()));
@@ -1213,6 +1195,18 @@ void GrpcAgent::do_start() {
   ASSERT_EQ(0, start_profiling_msg_.init(&loop_,
                                          start_profiling_msg_cb,
                                          weak_from_this()));
+
+  blocked_loop_queue_ = AsyncTSQueue<BlockedLoopStor>::create(
+    &loop_,
+    +[](BlockedLoopStor&& stor, WeakGrpcAgent agent_wp) {
+      SharedGrpcAgent agent = agent_wp.lock();
+      if (agent == nullptr) {
+        return;
+      }
+
+      agent->got_blocked_loop(std::move(stor));
+    },
+    weak_from_this());
 
   profile_collector_ = std::make_shared<ProfileCollector>(
     &loop_,
@@ -1255,6 +1249,7 @@ void GrpcAgent::do_stop() {
   ready_ = false;
   span_collector_.reset();
   profile_collector_.reset();
+  blocked_loop_queue_.reset();
   asset_done_msg_.close();
   command_msg_.close();
   command_stream_done_msg_.close();
@@ -1263,7 +1258,6 @@ void GrpcAgent::do_stop() {
   config_msg_.close();
   metrics_timer_.close();
   metrics_msg_.close();
-  blocked_loop_msg_.close();
   env_msg_.close();
   shutdown_.close();
   start_profiling_msg_.close();
@@ -1304,14 +1298,11 @@ void GrpcAgent::got_asset_done_msg() {
 }
 
 
-void GrpcAgent::got_blocked_loop_msgs() {
-  BlockedLoopStor stor;
-  while (blocked_loop_msg_q_.dequeue(stor)) {
-    if (stor.blocked) {
-      send_blocked_loop_event(std::move(stor));
-    } else {
-      send_unblocked_loop_event(std::move(stor));
-    }
+void GrpcAgent::got_blocked_loop(BlockedLoopStor&& stor) {
+  if (stor.blocked) {
+    send_blocked_loop_event(std::move(stor));
+  } else {
+    send_unblocked_loop_event(std::move(stor));
   }
 }
 
