@@ -1408,6 +1408,7 @@
         'test/cctest/http_server_fixture.cc',
         'test/cctest/http_server_fixture.h',
         'test/cctest/test_agents_zmq_http_client.cc',
+        'test/cctest/test_nsolid_async_ts_queue.cc',
       ],
 
       'conditions': [
