@@ -2,6 +2,7 @@
 #define AGENTS_SRC_PROFILE_COLLECTOR_H_
 
 #include <nsolid.h>
+#include <nsolid/async_ts_queue.h>
 #include <nsolid/thread_safe.h>
 #include "google/protobuf/struct.pb.h"
 #include "nlohmann/json.hpp"
@@ -72,17 +73,14 @@ class ProfileCollector: public std::enable_shared_from_this<ProfileCollector> {
   };
 
   template <typename Cb, typename... Data>
-  explicit ProfileCollector(uv_loop_t* loop, Cb&& cb, Data&&... data):
-      loop_(loop),
-      profile_msg_(new nsuv::ns_async()) {
-    // Store the callback and data
-    callback_ = std::bind(std::forward<Cb>(cb),
-                          std::placeholders::_1,
-                          std::forward<Data>(data)...);
+  explicit ProfileCollector(uv_loop_t* loop, Cb&& cb, Data&&... data) {
+    // Create the AsyncTSQueue for profile messages
+    profile_queue_ = AsyncTSQueue<ProfileQStor>::create(
+        loop,
+        std::forward<Cb>(cb),
+        std::forward<Data>(data)...);
   }
   ~ProfileCollector();
-
-  void initialize();
 
   int StartCPUProfile(const CPUProfileOptions& options);
   int StartHeapProfile(const HeapProfileOptions& options);
@@ -95,13 +93,8 @@ class ProfileCollector: public std::enable_shared_from_this<ProfileCollector> {
                          ProfileType type,
                          ProfileOptions options,
                          WeakProfileCollector collector_wp);
-  void do_setup();
-  void process_profiles();
 
-  uv_loop_t* loop_;
-  nsuv::ns_async* profile_msg_;
-  TSQueue<ProfileQStor> profile_msg_q_;
-  std::function<void(ProfileQStor&&)> callback_ = nullptr;
+  std::shared_ptr<AsyncTSQueue<ProfileQStor>> profile_queue_;
 };
 
 }  // namespace nsolid
