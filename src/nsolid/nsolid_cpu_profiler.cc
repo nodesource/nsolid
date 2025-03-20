@@ -69,6 +69,10 @@ int NSolidCpuProfiler::TakeCpuProfile(SharedEnvInst envinst,
                                       void* data,
                                       CpuProfiler::cpu_profiler_proxy_sig cb,
                                       internal::deleter_sig deleter) {
+  if (!is_running) {
+    return UV_EPERM;
+  }
+
   uint64_t thread_id = envinst->thread_id();
 
   nsuv::ns_mutex::scoped_lock lock(&blocked_cpu_profilers_);
@@ -102,6 +106,10 @@ int NSolidCpuProfiler::TakeCpuProfile(SharedEnvInst envinst,
 
 
 int NSolidCpuProfiler::StopProfiling(SharedEnvInst envinst) {
+  if (!is_running) {
+    return UV_EPERM;
+  }
+
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(blocked_cpu_profilers_);
   auto it = cpu_profiler_map_.find(thread_id);
@@ -134,6 +142,10 @@ int NSolidCpuProfiler::StopProfiling(SharedEnvInst envinst) {
 // stopping and retrieving synchronously a running CPU before the nsolid process
 // exits or while using the JS API
 int NSolidCpuProfiler::StopProfilingSync(SharedEnvInst envinst) {
+  if (!is_running) {
+    return UV_EPERM;
+  }
+
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&blocked_cpu_profilers_);
   auto it = cpu_profiler_map_.find(thread_id);
@@ -179,6 +191,11 @@ int NSolidCpuProfiler::StopProfilingSync(SharedEnvInst envinst) {
 
 
 void NSolidCpuProfiler::run_cpuprofiler_(SharedEnvInst envinst_sp) {
+  // Check if the profiler is already deleted
+  if (!is_running) {
+    return;
+  }
+
   v8::Isolate* isolate = envinst_sp->isolate();
   v8::HandleScope handle_scope(isolate);
 
@@ -250,6 +267,12 @@ void NSolidCpuProfiler::stop_cpuprofiler_(uint64_t thread_id) {
 
 
 void NSolidCpuProfiler::stop_cb_cpuprofiler_(SharedEnvInst envinst_sp) {
+  // Check if the profiler is already deleted
+  if (!is_running) {
+    return;
+  }
+
+
   NSolidCpuProfiler* nsprofiler = NSolidCpuProfiler::Inst();
   uint64_t thread_id = envinst_sp->thread_id();
 
