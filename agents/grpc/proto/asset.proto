@@ -11,5 +11,7 @@ message Asset {
   google.protobuf.Struct metadata = 3;
   string data = 4;
   bool complete = 5;
-  uint64 duration = 6;
+  uint64 duration = 6;  // Duration of the profile in milliseconds
+  double start_ts = 7;  // Timestamp when the profile was taken in milliseconds from epoch
+  double end_ts = 8;    // Timestamp when the profile was completed in milliseconds from epoch
 }
