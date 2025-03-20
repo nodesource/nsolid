@@ -20,14 +20,22 @@ AssetStream::AssetStream(
     AssetStor&& stor,
     std::weak_ptr<AssetStreamObserver> observer,
     const std::string& agent_id,
-    const std::string& saas): observer_(observer),
-                              stor_(std::move(stor)) {
+    const std::string& saas,
+    AssetStreamRpcType rpc_type): observer_(observer),
+                                  stor_(std::move(stor)) {
   ASSERT_EQ(0, lock_.init(true));
   context_.AddMetadata("nsolid-agent-id", agent_id);
   if (!saas.empty()) {
     context_.AddMetadata("nsolid-saas-token", saas);
   }
-  stub->async()->ExportAsset(&context_, &event_response_, this);
+
+  // Call the appropriate RPC method based on the rpc_type parameter
+  if (rpc_type == EXPORT_CONTINUOUS_PROFILE) {
+    stub->async()->ExportContinuousProfile(&context_, &event_response_, this);
+  } else {
+    stub->async()->ExportAsset(&context_, &event_response_, this);
+  }
+
   AddHold();
   StartCall();
 }
@@ -86,6 +94,7 @@ void AssetStream::Write(grpcagent::Asset&& asset) {
 
 void AssetStream::WritesDone(bool) {
   nsuv::ns_mutex::scoped_lock lock(lock_);
+  ASSERT(write_state_.write_done_called == false);
   write_state_.write_done_called = true;
   NextWrite();
 }
