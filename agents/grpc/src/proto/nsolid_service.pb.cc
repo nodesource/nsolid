@@ -62,28 +62,30 @@ const char descriptor_table_protodef_nsolid_5fservice_2eproto[] PROTOBUF_SECTION
   "o\032\nexit.proto\032\ninfo.proto\032\rmetrics.proto"
   "\032\016packages.proto\032\021reconfigure.proto\032\021sou"
   "rce_code.proto\032\023startup_times.proto\"&\n\rE"
-  "ventResponse\022\025\n\rerror_message\030\001 \001(\t2\256\006\n\r"
+  "ventResponse\022\025\n\rerror_message\030\001 \001(\t2\371\006\n\r"
   "NSolidService\022F\n\007Command\022\032.grpcagent.Com"
   "mandResponse\032\031.grpcagent.CommandRequest\""
   "\000(\0010\001\022=\n\013ExportAsset\022\020.grpcagent.Asset\032\030"
-  ".grpcagent.EventResponse\"\000(\001\022>\n\nExportEx"
-  "it\022\024.grpcagent.ExitEvent\032\030.grpcagent.Eve"
-  "ntResponse\"\000\022>\n\nExportInfo\022\024.grpcagent.I"
-  "nfoEvent\032\030.grpcagent.EventResponse\"\000\022D\n\r"
-  "ExportMetrics\022\027.grpcagent.MetricsEvent\032\030"
-  ".grpcagent.EventResponse\"\000\022F\n\016ExportPack"
-  "ages\022\030.grpcagent.PackagesEvent\032\030.grpcage"
-  "nt.EventResponse\"\000\022L\n\021ExportBlockedLoop\022"
-  "\033.grpcagent.BlockedLoopEvent\032\030.grpcagent"
-  ".EventResponse\"\000\022P\n\023ExportUnblockedLoop\022"
-  "\035.grpcagent.UnblockedLoopEvent\032\030.grpcage"
-  "nt.EventResponse\"\000\022L\n\021ExportReconfigure\022"
-  "\033.grpcagent.ReconfigureEvent\032\030.grpcagent"
-  ".EventResponse\"\000\022J\n\020ExportSourceCode\022\032.g"
-  "rpcagent.SourceCodeEvent\032\030.grpcagent.Eve"
-  "ntResponse\"\000\022N\n\022ExportStartupTimes\022\034.grp"
-  "cagent.StartupTimesEvent\032\030.grpcagent.Eve"
-  "ntResponse\"\000b\006proto3"
+  ".grpcagent.EventResponse\"\000(\001\022I\n\027ExportCo"
+  "ntinuousProfile\022\020.grpcagent.Asset\032\030.grpc"
+  "agent.EventResponse\"\000(\001\022>\n\nExportExit\022\024."
+  "grpcagent.ExitEvent\032\030.grpcagent.EventRes"
+  "ponse\"\000\022>\n\nExportInfo\022\024.grpcagent.InfoEv"
+  "ent\032\030.grpcagent.EventResponse\"\000\022D\n\rExpor"
+  "tMetrics\022\027.grpcagent.MetricsEvent\032\030.grpc"
+  "agent.EventResponse\"\000\022F\n\016ExportPackages\022"
+  "\030.grpcagent.PackagesEvent\032\030.grpcagent.Ev"
+  "entResponse\"\000\022L\n\021ExportBlockedLoop\022\033.grp"
+  "cagent.BlockedLoopEvent\032\030.grpcagent.Even"
+  "tResponse\"\000\022P\n\023ExportUnblockedLoop\022\035.grp"
+  "cagent.UnblockedLoopEvent\032\030.grpcagent.Ev"
+  "entResponse\"\000\022L\n\021ExportReconfigure\022\033.grp"
+  "cagent.ReconfigureEvent\032\030.grpcagent.Even"
+  "tResponse\"\000\022J\n\020ExportSourceCode\022\032.grpcag"
+  "ent.SourceCodeEvent\032\030.grpcagent.EventRes"
+  "ponse\"\000\022N\n\022ExportStartupTimes\022\034.grpcagen"
+  "t.StartupTimesEvent\032\030.grpcagent.EventRes"
+  "ponse\"\000b\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_nsolid_5fservice_2eproto_deps[10] = {
   &::descriptor_table_asset_2eproto,
@@ -99,7 +101,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_nsolid_5fservice_2e
 };
 static ::_pbi::once_flag descriptor_table_nsolid_5fservice_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_nsolid_5fservice_2eproto = {
-    false, false, 1060, descriptor_table_protodef_nsolid_5fservice_2eproto,
+    false, false, 1135, descriptor_table_protodef_nsolid_5fservice_2eproto,
     "nsolid_service.proto",
     &descriptor_table_nsolid_5fservice_2eproto_once, descriptor_table_nsolid_5fservice_2eproto_deps, 10, 1,
     schemas, file_default_instances, TableStruct_nsolid_5fservice_2eproto::offsets,
