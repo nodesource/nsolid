@@ -118,7 +118,6 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   struct ProfileStor {
     std::string req_id;
-    uint64_t timestamp;
     AssetStream* stream;
     ProfileOptions options;
     bool done = false;
@@ -165,6 +164,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   static void config_agent_cb_(std::string, WeakGrpcAgent);
 
   static void config_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
+
+  static void cont_profiler_cb(const ProfileCollector::ProfileQStor&,
+                               WeakGrpcAgent);
 
   static void env_creation_cb_(SharedEnvInst, WeakGrpcAgent);
 
@@ -245,6 +247,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   void got_proc_metrics();
 
   void got_profile(const ProfileCollector::ProfileQStor& stor);
+
+  void got_continuous_profile(const ProfileCollector::ProfileQStor& stor);
 
   void got_spans(const UniqRecordables& spans);
 
@@ -350,6 +354,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   std::shared_ptr<ProfileCollector> profile_collector_;
   nsuv::ns_async start_profiling_msg_;
   TSQueue<StartProfStor> start_profiling_msg_q_;
+
+  // Continuous Profiling
+  ProfileStorMap cont_profile_stor_map_;
+  std::shared_ptr<AsyncTSQueue<ProfileCollector::ProfileQStor>>
+    cont_profile_queue_;
 
   // For the grpc client
   std::unique_ptr<grpcagent::NSolidService::StubInterface> nsolid_service_stub_;
