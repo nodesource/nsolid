@@ -736,7 +736,6 @@ void ZmqAgent::do_start() {
       agent->got_profile(std::move(stor));
     },
     this);
-  profile_collector_->initialize();
 
   status(Initializing);
   uv_cond_signal(&start_cond_);

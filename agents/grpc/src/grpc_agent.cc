@@ -1222,7 +1222,6 @@ void GrpcAgent::do_start() {
       agent->got_profile(std::move(stor));
     },
     weak_from_this());
-  profile_collector_->initialize();
 
   ready_ = true;
 
