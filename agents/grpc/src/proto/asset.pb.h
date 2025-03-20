@@ -184,6 +184,8 @@ class Asset final :
     kMetadataFieldNumber = 3,
     kThreadIdFieldNumber = 2,
     kDurationFieldNumber = 6,
+    kStartTsFieldNumber = 7,
+    kEndTsFieldNumber = 8,
     kCompleteFieldNumber = 5,
   };
   // string data = 4;
@@ -254,6 +256,24 @@ class Asset final :
   void _internal_set_duration(uint64_t value);
   public:
 
+  // double start_ts = 7;
+  void clear_start_ts();
+  double start_ts() const;
+  void set_start_ts(double value);
+  private:
+  double _internal_start_ts() const;
+  void _internal_set_start_ts(double value);
+  public:
+
+  // double end_ts = 8;
+  void clear_end_ts();
+  double end_ts() const;
+  void set_end_ts(double value);
+  private:
+  double _internal_end_ts() const;
+  void _internal_set_end_ts(double value);
+  public:
+
   // bool complete = 5;
   void clear_complete();
   bool complete() const;
@@ -276,6 +296,8 @@ class Asset final :
     ::PROTOBUF_NAMESPACE_ID::Struct* metadata_;
     uint64_t thread_id_;
     uint64_t duration_;
+    double start_ts_;
+    double end_ts_;
     bool complete_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -571,6 +593,46 @@ inline void Asset::_internal_set_duration(uint64_t value) {
 inline void Asset::set_duration(uint64_t value) {
   _internal_set_duration(value);
   // @@protoc_insertion_point(field_set:grpcagent.Asset.duration)
+}
+
+// double start_ts = 7;
+inline void Asset::clear_start_ts() {
+  _impl_.start_ts_ = 0;
+}
+inline double Asset::_internal_start_ts() const {
+  return _impl_.start_ts_;
+}
+inline double Asset::start_ts() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Asset.start_ts)
+  return _internal_start_ts();
+}
+inline void Asset::_internal_set_start_ts(double value) {
+  
+  _impl_.start_ts_ = value;
+}
+inline void Asset::set_start_ts(double value) {
+  _internal_set_start_ts(value);
+  // @@protoc_insertion_point(field_set:grpcagent.Asset.start_ts)
+}
+
+// double end_ts = 8;
+inline void Asset::clear_end_ts() {
+  _impl_.end_ts_ = 0;
+}
+inline double Asset::_internal_end_ts() const {
+  return _impl_.end_ts_;
+}
+inline double Asset::end_ts() const {
+  // @@protoc_insertion_point(field_get:grpcagent.Asset.end_ts)
+  return _internal_end_ts();
+}
+inline void Asset::_internal_set_end_ts(double value) {
+  
+  _impl_.end_ts_ = value;
+}
+inline void Asset::set_end_ts(double value) {
+  _internal_set_end_ts(value);
+  // @@protoc_insertion_point(field_set:grpcagent.Asset.end_ts)
 }
 
 #ifdef __GNUC__
