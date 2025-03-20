@@ -3,6 +3,7 @@
 #include "nsolid_bindings.h"
 #include "node_buffer.h"
 #include "nsolid_cpu_profiler.h"
+#include "nsolid/continuous_profiler.h"
 #include "grpc/src/grpc_agent.h"
 #include "otlp/src/otlp_agent.h"
 #include "statsd/src/statsd_agent.h"
@@ -852,6 +853,7 @@ EnvList::EnvList(): info_(nlohmann::json()) {
   CHECK_EQ(er, 0);
   er = thread_.create(env_list_routine_, this);
   CHECK_EQ(er, 0);
+  continuous_profiler_ = std::make_shared<ContinuousProfiler>(&thread_loop_);
 }
 
 
@@ -1129,13 +1131,34 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     curr = current_config_;
   }
 
+  auto diff = nlohmann::json::diff(old, curr);
   // If the actual configuration hasn't changed, don't call the hook
-  if (!nlohmann::json::diff(old, curr).empty()) {
+  if (!diff.empty()) {
     current_config_version_++;
     auto it = config.find("promiseTracking");
     if (it != config.end()) {
       bool tracking = *it;
       PromiseTracking(tracking);
+    }
+
+    if (old.empty() ||
+        utils::find_any_fields_in_diff(diff, { "/contCpuProfile",
+                                               "/contCpuProfileInterval" })) {
+      bool contCpuProfile = false;
+      uint64_t contCpuProfileInterval = 60000;  // Default: 1 minute
+
+      it = curr.find("contCpuProfile");
+      if (it != curr.end() && !it->is_null()) {
+        contCpuProfile = it->get<bool>();
+      }
+
+      it = curr.find("contCpuProfileInterval");
+      if (it != curr.end() && !it->is_null()) {
+        contCpuProfileInterval = it->get<uint64_t>();
+      }
+
+      // Update the continuous profiler with the new configuration
+      update_continuous_profiler(contCpuProfile, contCpuProfileInterval);
     }
 
     it = config.find("otlp");
@@ -1328,6 +1351,14 @@ void EnvList::UpdateTracingFlags(uint32_t flags) {
     if (er) {
       // Nothing to do here, really.
     }
+  }
+}
+
+void EnvList::update_continuous_profiler(bool enabled, uint64_t interval) {
+  if (enabled) {
+    continuous_profiler_->Enable(interval);
+  } else {
+    continuous_profiler_->Disable();
   }
 }
 
@@ -1571,6 +1602,9 @@ void EnvList::log_written_cb_(ns_async*, EnvList* envlist) {
 // registered users will need to receive their last set of metrics and a
 // notification that it'll be their last.
 void EnvList::removed_env_cb_(ns_async*, EnvList* envlist) {
+  if (envlist->continuous_profiler_) {
+    envlist->continuous_profiler_.reset();
+  }
   envlist->removed_env_msg_.close();
   envlist->process_callbacks_msg_.close();
   envlist->log_written_msg_.close();
@@ -1607,6 +1641,7 @@ void EnvList::env_list_routine_(ns_thread*, EnvList* envlist) {
     CHECK_EQ(er, 0);
   });
   CHECK_EQ(er, 0);
+  envlist->continuous_profiler_->Initialize();
   er = uv_run(&envlist->thread_loop_, UV_RUN_DEFAULT);
   CHECK_EQ(er, 0);
 }
