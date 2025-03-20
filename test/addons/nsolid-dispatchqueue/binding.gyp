@@ -7,6 +7,7 @@
       'defines': [ 'NODE_WANT_INTERNALS=1' ],
       'include_dirs': [
         '../../../deps/nsuv/include',
+        '../../../deps/protobuf/src',
         '../../../src/',
       ],
       'cflags_cc': [ '-std=c++20' ],
