@@ -7,6 +7,7 @@
     'include_dirs': [
       '../../../src/',
       '../../../deps/nsuv/include/',
+      '../../../deps/protobuf/src',
       '../../../agents/statsd/src/',
     ],
     'target_defaults': {
