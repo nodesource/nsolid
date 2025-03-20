@@ -118,6 +118,36 @@ async function startServer(cb) {
       console.dir(call.metadata, { depth: null });
       callback(null, {});
     },
+    ExportContinuousProfile: async (call) => {
+      console.log('ExportContinuousProfile');
+      console.dir(call.metadata, { depth: null });
+      const asset = {
+        common: null,
+        threadId: null,
+        metadata: null,
+        data: '',
+        duration: null,
+      };
+      call._my_data = '';
+      call.on('data', (data) => {
+        console.log('[ExportContinuousProfile] data', data.data.length);
+        asset.common = data.common;
+        asset.threadId = data.threadId;
+        asset.metadata = data.metadata;
+        asset.data += data.data;
+        if (data.complete) {
+          asset.duration = data.duration;
+        }
+      });
+      call.on('error', (err) => {
+        console.error('[ExportContinuousProfile] error', err);
+      });
+      call.on('end', () => {
+        call.end();
+        process.send({ type: asset.common.command,
+                       data: { msg: asset, metadata: call.metadata, continuous: true } });
+      });
+    },
     ExportExit: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
