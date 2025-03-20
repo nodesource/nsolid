@@ -16,6 +16,7 @@ package grpcagent;
 service NSolidService {
   rpc Command (stream CommandResponse) returns (stream CommandRequest) {}
   rpc ExportAsset (stream Asset) returns (EventResponse) {}
+  rpc ExportContinuousProfile (stream Asset) returns (EventResponse) {}
   rpc ExportExit (ExitEvent) returns (EventResponse) {}
   rpc ExportInfo (InfoEvent) returns (EventResponse) {}
   rpc ExportMetrics (MetricsEvent) returns (EventResponse) {}
