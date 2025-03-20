@@ -32,6 +32,7 @@ extern const char* ProfileTypeStopStr[kNumberOfProfileTypes];
 struct ProfileOptionsBase {
   uint64_t thread_id;
   uint64_t duration;
+  uint64_t start_timestamp;
   nlohmann::json metadata;
   google::protobuf::Struct metadata_pb;
 };
