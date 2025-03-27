@@ -49,6 +49,19 @@ using CFunctionWithInt64Fallback = void (*)(v8::Local<v8::Value>,
                                             v8::FastApiCallbackOptions&);
 using CFunctionWithBool = void (*)(v8::Local<v8::Value>, bool);
 
+using CFunctionPushSpanDataString =
+    void (*)(v8::Local<v8::Object> receiver,
+             uint32_t trace_id,
+             uint32_t type,
+             const v8::FastOneByteString& val);
+using CFunctionPushSpanDataString3 =
+    void (*)(v8::Local<v8::Object> receiver,
+             uint32_t trace_id,
+             uint32_t type,
+             const v8::FastOneByteString& val1,
+             const v8::FastOneByteString& val2,
+             const v8::FastOneByteString& val3);
+
 // This class manages the external references from the V8 heap
 // to the C++ addresses in Node.js.
 class ExternalReferenceRegistry {
@@ -72,6 +85,8 @@ class ExternalReferenceRegistry {
   V(CFunctionWithDoubleReturnDouble)                                           \
   V(CFunctionWithInt64Fallback)                                                \
   V(CFunctionWithBool)                                                         \
+  V(CFunctionPushSpanDataString)                                               \
+  V(CFunctionPushSpanDataString3)                                              \
   V(const v8::CFunctionInfo*)                                                  \
   V(v8::FunctionCallback)                                                      \
   V(v8::AccessorGetterCallback)                                                \
