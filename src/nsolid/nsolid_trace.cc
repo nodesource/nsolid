@@ -49,16 +49,19 @@ void Span::add_prop(const SpanPropBase& prop) {
       stor_.start = performance_process_start_timestamp + prop.val<double>();
     }
     break;
-    case Span::kSpanOtelIds:
+    case Span::kSpanTraceId:
     {
-      auto res = utils::split(prop.val<std::string>(), ':', 3);
-      size_t size = res.size();
-      DCHECK(size == 2 || size == 3);
-      stor_.trace_id = res[0];
-      stor_.span_id = res[1];
-      if (size == 3) {
-        stor_.parent_id = res[2];
-      }
+      stor_.trace_id = prop.val<std::string>();
+    }
+    break;
+    case Span::kSpanSpanId:
+    {
+      stor_.span_id = prop.val<std::string>();
+    }
+    break;
+    case Span::kSpanParentSpanId:
+    {
+      stor_.parent_id = prop.val<std::string>();
     }
     break;
     case Span::kSpanEnd:

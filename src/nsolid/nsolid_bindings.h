@@ -4,6 +4,7 @@
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #include "node_snapshotable.h"
+#include "v8-fast-api-calls.h"
 
 namespace node {
 namespace nsolid {
@@ -58,6 +59,31 @@ class BindingData : public SnapshotableObject {
                                      uint32_t type,
                                      uint64_t val);
 
+  static void SlowPushSpanDataString(
+      const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void FastPushSpanDataString(v8::Local<v8::Object> receiver,
+                                     uint32_t trace_id,
+                                     uint32_t type,
+                                     const v8::FastOneByteString& val);
+  static void PushSpanDataStringImpl(BindingData* data,
+                                     uint32_t trace_id,
+                                     uint32_t type,
+                                     const std::string& val);
+  static void SlowPushSpanDataString3(
+      const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void FastPushSpanDataString3(v8::Local<v8::Object> receiver,
+                                      uint32_t trace_id,
+                                      uint32_t type,
+                                      const v8::FastOneByteString& val1,
+                                      const v8::FastOneByteString& val2,
+                                      const v8::FastOneByteString& val3);
+  static void PushSpanDataStringImpl3(BindingData* data,
+                                     uint32_t trace_id,
+                                     uint32_t type,
+                                     const std::string& val1,
+                                     const std::string& val2,
+                                     const std::string& val3);
+
   static void Initialize(v8::Local<v8::Object> target,
                          v8::Local<v8::Value> unused,
                          v8::Local<v8::Context> context,
@@ -71,6 +97,8 @@ class BindingData : public SnapshotableObject {
   static v8::CFunction fast_push_server_bucket_;
   static v8::CFunction fast_push_span_data_double_;
   static v8::CFunction fast_push_span_data_uint64_;
+  static v8::CFunction fast_push_span_data_string_;
+  static v8::CFunction fast_push_span_data_string3_;
 };
 
 }  // namespace nsolid

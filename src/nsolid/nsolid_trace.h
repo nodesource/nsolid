@@ -29,10 +29,11 @@ namespace tracing {
 #define NSOLID_SPAN_PROP_TYPES_STRINGS(V)                                      \
   V(kSpanCustomAttrs)                                                          \
   V(kSpanEvent)                                                                \
-  V(kSpanOtelIds)                                                              \
   V(kSpanName)                                                                 \
-  V(kSpanStatusMsg)
-
+  V(kSpanParentSpanId)                                                         \
+  V(kSpanSpanId)                                                               \
+  V(kSpanStatusMsg)                                                            \
+  V(kSpanTraceId)
 #define NSOLID_SPAN_PROP_TYPES_NUMBERS(V)                                      \
   V(kSpanStart)                                                                \
   V(kSpanEnd)                                                                  \

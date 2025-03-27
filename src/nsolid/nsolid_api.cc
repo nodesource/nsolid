@@ -35,11 +35,11 @@ using nsuv::ns_timer;
 
 using tracing::Span;
 using tracing::SpanItem;
-using tracing::SpanPropBase;
 
 using v8::ArrayBuffer;
 using v8::BackingStore;
 using v8::Context;
+using v8::FastOneByteString;
 using v8::Float64Array;
 using v8::Function;
 using v8::FunctionCallbackInfo;
@@ -2319,34 +2319,94 @@ void BindingData::PushSpanDataUint64Impl(BindingData* data,
       SpanItem{ trace_id, envinst->thread_id(), std::move(prop) });
 }
 
-
-static void PushSpanDataString(const FunctionCallbackInfo<Value>& args) {
+void BindingData::SlowPushSpanDataString(
+    const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
-  EnvInst* envinst = EnvInst::GetEnvLocalInst(isolate);
-  DCHECK_NE(envinst, nullptr);
   DCHECK_EQ(args.Length(), 3);
   DCHECK(args[0]->IsUint32());
   DCHECK(args[1]->IsUint32());
   DCHECK(args[2]->IsString());
   uint32_t trace_id = args[0].As<Uint32>()->Value();
-  Span::PropType prop_type =
-    static_cast<Span::PropType>(args[1].As<Uint32>()->Value());
-  std::unique_ptr<SpanPropBase> prop;
+  uint32_t type = args[1].As<Uint32>()->Value();
   Local<String> value_s = args[2].As<String>();
-  if (prop_type == Span::kSpanOtelIds && value_s->IsOneByte()) {
-    char ids[67];
-    int len = value_s->WriteOneByte(isolate, reinterpret_cast<uint8_t*>(ids));
-    ids[len] = '\0';
-    prop = Span::createSpanProp<std::string>(prop_type, ids);
-  } else {
-    String::Utf8Value value_str(isolate, value_s);
-    prop = Span::createSpanProp<std::string>(prop_type, *value_str);
-  }
+  BindingData* data = FromJSObject<BindingData>(args.This());
+  const std::string val = *String::Utf8Value(isolate, value_s);
+  PushSpanDataStringImpl(data, trace_id, type, val);
+}
 
-  SpanItem item = { trace_id,
-                    envinst->thread_id(),
-                    std::move(prop) };
-  EnvList::Inst()->GetTracer()->pushSpanData(std::move(item));
+
+void BindingData::FastPushSpanDataString(v8::Local<v8::Object> receiver,
+                                         uint32_t trace_id,
+                                         uint32_t type,
+                                         const FastOneByteString& val) {
+  PushSpanDataStringImpl(FromJSObject<BindingData>(receiver),
+                         trace_id,
+                         type,
+                         std::string(val.data, val.length));
+}
+
+
+void BindingData::PushSpanDataStringImpl(BindingData* data,
+                                         uint32_t trace_id,
+                                         uint32_t type,
+                                         const std::string& val) {
+  Span::PropType prop_type = static_cast<Span::PropType>(type);
+  auto prop = Span::createSpanProp<std::string>(prop_type, val);
+  EnvInst* envinst = data->env()->envinst_.get();
+  EnvList::Inst()->GetTracer()->pushSpanData(
+      SpanItem{ trace_id, envinst->thread_id(), std::move(prop) });
+}
+
+
+void BindingData::SlowPushSpanDataString3(
+    const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  DCHECK_EQ(args.Length(), 5);
+  DCHECK(args[0]->IsUint32());
+  DCHECK(args[1]->IsUint32());
+  DCHECK(args[2]->IsString());
+  DCHECK(args[3]->IsString());
+  DCHECK(args[4]->IsString());
+  uint32_t trace_id = args[0].As<Uint32>()->Value();
+  uint32_t type = args[1].As<Uint32>()->Value();
+  Local<String> value_s1 = args[2].As<String>();
+  Local<String> value_s2 = args[3].As<String>();
+  Local<String> value_s3 = args[4].As<String>();
+  BindingData* data = FromJSObject<BindingData>(args.This());
+  const std::string val1 = *String::Utf8Value(isolate, value_s1);
+  const std::string val2 = *String::Utf8Value(isolate, value_s2);
+  const std::string val3 = *String::Utf8Value(isolate, value_s3);
+  PushSpanDataStringImpl3(data, trace_id, type, val1, val2, val3);
+}
+
+
+void BindingData::FastPushSpanDataString3(v8::Local<v8::Object> receiver,
+                                          uint32_t trace_id,
+                                          uint32_t type,
+                                          const FastOneByteString& val1,
+                                          const FastOneByteString& val2,
+                                          const FastOneByteString& val3) {
+  PushSpanDataStringImpl3(FromJSObject<BindingData>(receiver),
+                         trace_id,
+                         type,
+                         std::string(val1.data, val1.length),
+                         std::string(val2.data, val2.length),
+                         std::string(val3.data, val3.length));
+}
+
+void BindingData::PushSpanDataStringImpl3(BindingData* data,
+                                          uint32_t trace_id,
+                                          uint32_t type,
+                                          const std::string& val1,
+                                          const std::string& val2,
+                                          const std::string& val3) {
+  Span::PropType prop_type = static_cast<Span::PropType>(type);
+  ASSERT_EQ(prop_type, Span::kSpanHttpReqUrl);
+  auto prop =
+      Span::createSpanProp<std::string>(prop_type, val1 + "//" + val2 + val3);
+  EnvInst* envinst = data->env()->envinst_.get();
+  EnvList::Inst()->GetTracer()->pushSpanData(
+      SpanItem{ trace_id, envinst->thread_id(), std::move(prop) });
 }
 
 
@@ -2900,6 +2960,10 @@ v8::CFunction BindingData::fast_push_span_data_double_(
     v8::CFunction::Make(FastPushSpanDataDouble));
 v8::CFunction BindingData::fast_push_span_data_uint64_(
     v8::CFunction::Make(FastPushSpanDataUint64));
+v8::CFunction BindingData::fast_push_span_data_string_(
+    v8::CFunction::Make(FastPushSpanDataString));
+v8::CFunction BindingData::fast_push_span_data_string3_(
+    v8::CFunction::Make(FastPushSpanDataString3));
 
 
 void BindingData::Initialize(Local<Object> target,
@@ -2939,10 +3003,19 @@ void BindingData::Initialize(Local<Object> target,
                 "pushSpanDataUint64",
                 SlowPushSpanDataUint64,
                 &fast_push_span_data_uint64_);
+  SetFastMethod(context,
+                target,
+                "pushSpanDataString",
+                SlowPushSpanDataString,
+                &fast_push_span_data_string_);
+  SetFastMethod(context,
+                target,
+                "pushSpanDataString3",
+                SlowPushSpanDataString3,
+                &fast_push_span_data_string3_);
 
   SetMethod(context, target, "agentId", AgentId);
   SetMethod(context, target, "writeLog", WriteLog);
-  SetMethod(context, target, "pushSpanDataString", PushSpanDataString);
   SetMethod(context, target, "getEnvMetrics", GetEnvMetrics);
   SetMethod(context, target, "getProcessMetrics", GetProcessMetrics);
   SetMethod(context, target, "getProcessInfo", GetProcessInfo);
@@ -3072,9 +3145,16 @@ void BindingData::RegisterExternalReferences(
   registry->Register(FastPushSpanDataUint64);
   registry->Register(fast_push_span_data_uint64_.GetTypeInfo());
 
+  registry->Register(SlowPushSpanDataString);
+  registry->Register(FastPushSpanDataString);
+  registry->Register(fast_push_span_data_string_.GetTypeInfo());
+
+  registry->Register(SlowPushSpanDataString3);
+  registry->Register(FastPushSpanDataString3);
+  registry->Register(fast_push_span_data_string3_.GetTypeInfo());
+
   registry->Register(AgentId);
   registry->Register(WriteLog);
-  registry->Register(PushSpanDataString);
   registry->Register(GetEnvMetrics);
   registry->Register(GetProcessMetrics);
   registry->Register(GetProcessInfo);
