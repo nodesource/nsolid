@@ -84,6 +84,14 @@ class BindingData : public SnapshotableObject {
                                      const std::string& val2,
                                      const std::string& val3);
 
+  // Fast API versions for GetSpanId and GetTraceId
+  static void SlowGetSpanId(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void SlowGetTraceId(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void FastGetSpanId(v8::Local<v8::Value> receiver,
+                            const v8::FastApiTypedArray<uint8_t>& output);
+  static void FastGetTraceId(v8::Local<v8::Value> receiver,
+                             const v8::FastApiTypedArray<uint8_t>& output);
+
   static void Initialize(v8::Local<v8::Object> target,
                          v8::Local<v8::Value> unused,
                          v8::Local<v8::Context> context,
@@ -99,6 +107,8 @@ class BindingData : public SnapshotableObject {
   static v8::CFunction fast_push_span_data_uint64_;
   static v8::CFunction fast_push_span_data_string_;
   static v8::CFunction fast_push_span_data_string3_;
+  static v8::CFunction fast_get_span_id_;
+  static v8::CFunction fast_get_trace_id_;
 };
 
 }  // namespace nsolid

@@ -569,9 +569,11 @@ class EnvList {
 
   void WriteLogLine(SharedEnvInst, LogWriteInfo);
 
-  void popSpanId(std::string&);
-
-  void popTraceId(std::string&);
+  // Updated to use raw binary data instead of strings
+  // NOLINTNEXTLINE(runtime/references)
+  void popSpanId(std::array<uint8_t, 8>& span_id);
+  // NOLINTNEXTLINE(runtime/references)
+  void popTraceId(std::array<uint8_t, 16>& trace_id);
 
   void UpdateHasMetricsStreamHooks(bool has_metrics);
 
@@ -721,8 +723,9 @@ class EnvList {
   TSList<MetricsStreamHookStor> metrics_stream_hook_list_;
 
   nsuv::ns_async fill_tracing_ids_msg_;
-  TSQueue<std::string> span_id_q_;
-  TSQueue<std::string> trace_id_q_;
+  // Use arrays of bytes instead of hex strings to avoid conversions
+  TSQueue<std::array<uint8_t, 8>> span_id_q_;
+  TSQueue<std::array<uint8_t, 16>> trace_id_q_;
   tracing::TracerImpl tracer_;
   DispatchQueue<tracing::SpanItem> span_item_q_;
 
