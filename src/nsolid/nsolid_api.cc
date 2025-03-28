@@ -70,6 +70,7 @@ using v8::String;
 using v8::Symbol;
 using v8::Uint32;
 using v8::Uint32Array;
+using v8::Uint8Array;
 using v8::Value;
 using v8::WeakCallbackInfo;
 using v8::WeakCallbackType;
@@ -1819,14 +1820,12 @@ void EnvList::q_cb_timeout_cb_(nsuv::ns_timer* handle, QCbTimeoutStor* ptr) {
 }
 
 
-void EnvList::popSpanId(std::string& span_id) {
+void EnvList::popSpanId(std::array<uint8_t, 8>& span_id) {
   int er;
   size_t s;
   if (!span_id_q_.dequeue(span_id, s)) {
     // Generate the buffer synchronously
-    unsigned char buf[8];
-    utils::generate_random_buf(buf, sizeof(buf));
-    span_id = utils::buffer_to_hex(buf, sizeof(buf));
+    utils::generate_random_buf(span_id.data(), span_id.size());
     // Notify the nsolid thread to fill the q
     er = fill_tracing_ids_msg_.send();
     CHECK_EQ(er, 0);
@@ -1841,14 +1840,12 @@ void EnvList::popSpanId(std::string& span_id) {
 }
 
 
-void EnvList::popTraceId(std::string& trace_id) {
+void EnvList::popTraceId(std::array<uint8_t, 16>& trace_id) {
   int er;
   size_t s;
   if (!trace_id_q_.dequeue(trace_id, s)) {
     // Generate the buffer synchronously
-    unsigned char buf[16];
-    utils::generate_random_buf(buf, sizeof(buf));
-    trace_id = utils::buffer_to_hex(buf, sizeof(buf));
+    utils::generate_random_buf(trace_id.data(), trace_id.size());
     // Notify the nsolid thread to fill the q
     er = fill_tracing_ids_msg_.send();
     CHECK_EQ(er, 0);
@@ -1864,19 +1861,19 @@ void EnvList::popTraceId(std::string& trace_id) {
 
 
 void EnvList::fill_span_id_q() {
-  unsigned char buf[SPAN_ID_Q_REFILL_ITEMS*8];
-  utils::generate_random_buf(buf, sizeof(buf));
   for (unsigned int i = 0; i < SPAN_ID_Q_REFILL_ITEMS; ++i) {
-    span_id_q_.enqueue(utils::buffer_to_hex(buf + i*8, 8));
+    std::array<uint8_t, 8> span_id;
+    utils::generate_random_buf(span_id.data(), span_id.size());
+    span_id_q_.enqueue(span_id);
   }
 }
 
 
 void EnvList::fill_trace_id_q() {
-  unsigned char buf[TRACE_ID_Q_REFILL_ITEMS*16];
-  utils::generate_random_buf(buf, sizeof(buf));
   for (unsigned int i = 0; i < TRACE_ID_Q_REFILL_ITEMS; ++i) {
-    trace_id_q_.enqueue(utils::buffer_to_hex(buf + i*16, 16));
+    std::array<uint8_t, 16> trace_id;
+    utils::generate_random_buf(trace_id.data(), trace_id.size());
+    trace_id_q_.enqueue(trace_id);
   }
 }
 
@@ -2450,6 +2447,80 @@ void BindingData::PushSpanDataStringImpl3(BindingData* data,
 }
 
 
+void BindingData::SlowGetSpanId(const FunctionCallbackInfo<Value>& args) {
+  CHECK(args[0]->IsUint8Array());
+  Local<Uint8Array> output = args[0].As<Uint8Array>();
+
+  DCHECK_EQ(output->Length(), 8);
+
+  std::array<uint8_t, 8> span_id;
+  EnvList* envlist = EnvList::Inst();
+  envlist->popSpanId(span_id);
+
+  // Copy binary data to the TypedArray
+  uint8_t* buffer =
+    static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
+  for (size_t i = 0; i < span_id.size(); i++) {
+    buffer[i] = span_id[i];
+  }
+}
+
+
+void BindingData::FastGetSpanId(v8::Local<v8::Value> receiver,
+                                const v8::FastApiTypedArray<uint8_t>& output) {
+  std::array<uint8_t, 8> span_id;
+  EnvList* envlist = EnvList::Inst();
+  envlist->popSpanId(span_id);
+
+  DCHECK_EQ(output.length(), span_id.size());
+
+  uint8_t* dst_data;
+  CHECK(output.getStorageIfAligned(&dst_data));
+
+  // Copy binary data directly to the output buffer
+  for (size_t i = 0; i < span_id.size(); i++) {
+    dst_data[i] = span_id[i];
+  }
+}
+
+
+void BindingData::SlowGetTraceId(const FunctionCallbackInfo<Value>& args) {
+  CHECK(args[0]->IsUint8Array());
+  Local<Uint8Array> output = args[0].As<Uint8Array>();
+
+  DCHECK_EQ(output->Length(), 16);
+
+  std::array<uint8_t, 16> trace_id;
+  EnvList* envlist = EnvList::Inst();
+  envlist->popTraceId(trace_id);
+
+  // Copy binary data to the TypedArray
+  uint8_t* buffer =
+    static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
+  for (size_t i = 0; i < trace_id.size(); i++) {
+    buffer[i] = trace_id[i];
+  }
+}
+
+
+void BindingData::FastGetTraceId(v8::Local<v8::Value> receiver,
+                                 const v8::FastApiTypedArray<uint8_t>& output) {
+  std::array<uint8_t, 16> trace_id;
+  EnvList* envlist = EnvList::Inst();
+  envlist->popTraceId(trace_id);
+
+  DCHECK_EQ(output.length(), trace_id.size());
+
+  uint8_t* dst_data;
+  CHECK(output.getStorageIfAligned(&dst_data));
+
+  // Copy binary data directly to the output buffer
+  for (size_t i = 0; i < trace_id.size(); i++) {
+    dst_data[i] = trace_id[i];
+  }
+}
+
+
 static void GetEnvMetrics(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   EnvInst* envinst = EnvInst::GetEnvLocalInst(isolate);
@@ -2800,22 +2871,6 @@ static void SetTrackPromisesFn(const FunctionCallbackInfo<Value>& args) {
 }
 
 
-static void GetSpanId(const FunctionCallbackInfo<Value>& args) {
-  std::string span_id;
-  EnvList* envlist = EnvList::Inst();
-  envlist->popSpanId(span_id);
-  args.GetReturnValue().Set(OneByteString(args.GetIsolate(), span_id.c_str()));
-}
-
-
-static void GetTraceId(const FunctionCallbackInfo<Value>& args) {
-  std::string trace_id;
-  EnvList* envlist = EnvList::Inst();
-  envlist->popTraceId(trace_id);
-  args.GetReturnValue().Set(OneByteString(args.GetIsolate(), trace_id.c_str()));
-}
-
-
 static void heapprofile_js_cb(SharedEnvInst envinst_sp,
                               int status,
                               std::string profile,
@@ -3100,6 +3155,10 @@ v8::CFunction BindingData::fast_push_span_data_string_(
     v8::CFunction::Make(FastPushSpanDataString));
 v8::CFunction BindingData::fast_push_span_data_string3_(
     v8::CFunction::Make(FastPushSpanDataString3));
+v8::CFunction BindingData::fast_get_span_id_(
+    v8::CFunction::Make(FastGetSpanId));
+v8::CFunction BindingData::fast_get_trace_id_(
+    v8::CFunction::Make(FastGetTraceId));
 
 
 void BindingData::Initialize(Local<Object> target,
@@ -3149,6 +3208,16 @@ void BindingData::Initialize(Local<Object> target,
                 "pushSpanDataString3",
                 SlowPushSpanDataString3,
                 &fast_push_span_data_string3_);
+  SetFastMethod(context,
+                target,
+                "getSpanId",
+                SlowGetSpanId,
+                &fast_get_span_id_);
+  SetFastMethod(context,
+                target,
+                "getTraceId",
+                SlowGetTraceId,
+                &fast_get_trace_id_);
 
   SetMethod(context, target, "agentId", AgentId);
   SetMethod(context, target, "writeLog", WriteLog);
@@ -3179,8 +3248,6 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "setThreadName", setThreadName);
   SetMethod(context, target, "setToggleTracingFn", SetToggleTracingFn);
   SetMethod(context, target, "setTrackPromisesFn", SetTrackPromisesFn);
-  SetMethod(context, target, "getSpanId", GetSpanId);
-  SetMethod(context, target, "getTraceId", GetTraceId);
   SetMethod(context, target, "heapProfile", HeapProfile);
   SetMethod(context, target, "heapProfileEnd", HeapProfileEnd);
   SetMethod(context, target, "heapSampling", HeapSampling);
@@ -3290,6 +3357,14 @@ void BindingData::RegisterExternalReferences(
   registry->Register(FastPushSpanDataString3);
   registry->Register(fast_push_span_data_string3_.GetTypeInfo());
 
+  registry->Register(SlowGetSpanId);
+  registry->Register(FastGetSpanId);
+  registry->Register(fast_get_span_id_.GetTypeInfo());
+
+  registry->Register(SlowGetTraceId);
+  registry->Register(FastGetTraceId);
+  registry->Register(fast_get_trace_id_.GetTypeInfo());
+
   registry->Register(AgentId);
   registry->Register(WriteLog);
   registry->Register(GetEnvMetrics);
@@ -3316,8 +3391,6 @@ void BindingData::RegisterExternalReferences(
   registry->Register(setThreadName);
   registry->Register(SetToggleTracingFn);
   registry->Register(SetTrackPromisesFn);
-  registry->Register(GetSpanId);
-  registry->Register(GetTraceId);
   registry->Register(HeapProfile);
   registry->Register(HeapProfileEnd);
   registry->Register(HeapSampling);
