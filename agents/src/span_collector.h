@@ -83,6 +83,7 @@ class SpanCollector: public std::enable_shared_from_this<SpanCollector> {
   nsuv::ns_timer* span_timer_;
   std::function<void(const SpanVector&)> callback_ = nullptr;
   std::function<void(const SpanVector&)> transform_callback_ = nullptr;
+  bool sent_ = false;
 };
 
 }  // namespace nsolid

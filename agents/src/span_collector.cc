@@ -34,7 +34,12 @@ void SpanCollector::do_collect() {
       // Only notify the loop_ thread if the queue reaches min_span_count_to
       // avoid too many uv_async_t::send() calls.
       if (collector->span_msg_q_.enqueue(span) > collector->min_span_count_) {
-        ASSERT_EQ(0, collector->span_msg_->send());
+        if (!collector->sent_) {
+          ASSERT_EQ(0, collector->span_msg_->send());
+          collector->sent_ = true;
+        }
+      } else if (collector->sent_) {
+        collector->sent_ = false;
       }
     },
     weak_from_this());
