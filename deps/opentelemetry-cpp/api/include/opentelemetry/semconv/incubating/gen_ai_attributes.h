@@ -20,24 +20,45 @@ namespace gen_ai
 {
 
 /**
- * Deprecated, use Event API to report completions contents.
- * <p>
- * @deprecated
- * Removed, no replacement at this time.
+ * Free-form description of the GenAI agent provided by the application.
  */
-OPENTELEMETRY_DEPRECATED
-static constexpr const char *kGenAiCompletion = "gen_ai.completion";
+static constexpr const char *kGenAiAgentDescription = "gen_ai.agent.description";
 
 /**
- * The response format that is requested.
+ * The unique identifier of the GenAI agent.
  */
-static constexpr const char *kGenAiOpenaiRequestResponseFormat =
+static constexpr const char *kGenAiAgentId = "gen_ai.agent.id";
+
+/**
+ * Human-readable name of the GenAI agent provided by the application.
+ */
+static constexpr const char *kGenAiAgentName = "gen_ai.agent.name";
+
+/**
+ * Deprecated, use Event API to report completions contents.
+ *
+ * @deprecated
+ * {"note": "Removed, no replacement at this time.", "reason": "uncategorized"}
+ */
+OPENTELEMETRY_DEPRECATED static constexpr const char *kGenAiCompletion = "gen_ai.completion";
+
+/**
+ * Deprecated, use @code gen_ai.output.type @endcode.
+ *
+ * @deprecated
+ * {"note": "Replaced by @code gen_ai.output.type @endcode.", "reason": "uncategorized"}
+ */
+OPENTELEMETRY_DEPRECATED static constexpr const char *kGenAiOpenaiRequestResponseFormat =
     "gen_ai.openai.request.response_format";
 
 /**
- * Requests with same seed value more likely to return same result.
+ * Deprecated, use @code gen_ai.request.seed @endcode.
+ *
+ * @deprecated
+ * {"note": "Replaced by @code gen_ai.request.seed @endcode attribute.", "reason": "uncategorized"}
  */
-static constexpr const char *kGenAiOpenaiRequestSeed = "gen_ai.openai.request.seed";
+OPENTELEMETRY_DEPRECATED static constexpr const char *kGenAiOpenaiRequestSeed =
+    "gen_ai.openai.request.seed";
 
 /**
  * The service tier requested. May be a specific tier, default, or auto.
@@ -67,13 +88,28 @@ static constexpr const char *kGenAiOpenaiResponseSystemFingerprint =
 static constexpr const char *kGenAiOperationName = "gen_ai.operation.name";
 
 /**
- * Deprecated, use Event API to report prompt contents.
+ * Represents the content type requested by the client.
  * <p>
- * @deprecated
- * Removed, no replacement at this time.
+ * This attribute SHOULD be used when the client requests output of a specific type. The model may
+ * return zero or more outputs of this type. This attribute specifies the output modality and not
+ * the actual output format. For example, if an image is requested, the actual output could be a URL
+ * pointing to an image file. Additional output format details may be recorded in the future in the
+ * @code gen_ai.output.{type}.* @endcode attributes.
  */
-OPENTELEMETRY_DEPRECATED
-static constexpr const char *kGenAiPrompt = "gen_ai.prompt";
+static constexpr const char *kGenAiOutputType = "gen_ai.output.type";
+
+/**
+ * Deprecated, use Event API to report prompt contents.
+ *
+ * @deprecated
+ * {"note": "Removed, no replacement at this time.", "reason": "uncategorized"}
+ */
+OPENTELEMETRY_DEPRECATED static constexpr const char *kGenAiPrompt = "gen_ai.prompt";
+
+/**
+ * The target number of candidate completions to return.
+ */
+static constexpr const char *kGenAiRequestChoiceCount = "gen_ai.request.choice.count";
 
 /**
  * The encoding formats requested in an embeddings operation, if specified.
@@ -102,6 +138,11 @@ static constexpr const char *kGenAiRequestModel = "gen_ai.request.model";
  * The presence penalty setting for the GenAI request.
  */
 static constexpr const char *kGenAiRequestPresencePenalty = "gen_ai.request.presence_penalty";
+
+/**
+ * Requests with same seed value more likely to return same result.
+ */
+static constexpr const char *kGenAiRequestSeed = "gen_ai.request.seed";
 
 /**
  * List of sequences that the model will use to stop generating further tokens.
@@ -143,9 +184,11 @@ static constexpr const char *kGenAiResponseModel = "gen_ai.response.model";
  * <p>
  * The @code gen_ai.system @endcode describes a family of GenAI models with specific model
  * identified by @code gen_ai.request.model @endcode and @code gen_ai.response.model @endcode
- * attributes. <p> The actual GenAI product may differ from the one identified by the client. For
- * example, when using OpenAI client libraries to communicate with Mistral, the @code gen_ai.system
- * @endcode is set to @code openai @endcode based on the instrumentation's best knowledge. <p> For
+ * attributes. <p> The actual GenAI product may differ from the one identified by the client.
+ * Multiple systems, including Azure OpenAI and Gemini, are accessible by OpenAI client
+ * libraries. In such cases, the @code gen_ai.system @endcode is set to @code openai @endcode based
+ * on the instrumentation's best knowledge, instead of the actual system. The @code server.address
+ * @endcode attribute may help identify the actual system in use for @code openai @endcode. <p> For
  * custom model, a custom friendly name SHOULD be used. If none of these options apply, the @code
  * gen_ai.system @endcode SHOULD be set to @code _OTHER @endcode.
  */
@@ -157,13 +200,37 @@ static constexpr const char *kGenAiSystem = "gen_ai.system";
 static constexpr const char *kGenAiTokenType = "gen_ai.token.type";
 
 /**
- * Deprecated, use @code gen_ai.usage.output_tokens @endcode instead.
- * <p>
- * @deprecated
- * Replaced by @code gen_ai.usage.output_tokens @endcode attribute.
+ * The tool call identifier.
  */
-OPENTELEMETRY_DEPRECATED
-static constexpr const char *kGenAiUsageCompletionTokens = "gen_ai.usage.completion_tokens";
+static constexpr const char *kGenAiToolCallId = "gen_ai.tool.call.id";
+
+/**
+ * Name of the tool utilized by the agent.
+ */
+static constexpr const char *kGenAiToolName = "gen_ai.tool.name";
+
+/**
+ * Type of the tool utilized by the agent
+ * <p>
+ * Extension: A tool executed on the agent-side to directly call external APIs, bridging the gap
+ * between the agent and real-world systems. Agent-side operations involve actions that are
+ * performed by the agent on the server or within the agent's controlled environment. Function: A
+ * tool executed on the client-side, where the agent generates parameters for a predefined function,
+ * and the client executes the logic. Client-side operations are actions taken on the user's end or
+ * within the client application. Datastore: A tool used by the agent to access and query structured
+ * or unstructured external data for retrieval-augmented tasks or knowledge updates.
+ */
+static constexpr const char *kGenAiToolType = "gen_ai.tool.type";
+
+/**
+ * Deprecated, use @code gen_ai.usage.output_tokens @endcode instead.
+ *
+ * @deprecated
+ * {"note": "Replaced by @code gen_ai.usage.output_tokens @endcode attribute.", "reason":
+ * "uncategorized"}
+ */
+OPENTELEMETRY_DEPRECATED static constexpr const char *kGenAiUsageCompletionTokens =
+    "gen_ai.usage.completion_tokens";
 
 /**
  * The number of tokens used in the GenAI input (prompt).
@@ -177,12 +244,13 @@ static constexpr const char *kGenAiUsageOutputTokens = "gen_ai.usage.output_toke
 
 /**
  * Deprecated, use @code gen_ai.usage.input_tokens @endcode instead.
- * <p>
+ *
  * @deprecated
- * Replaced by @code gen_ai.usage.input_tokens @endcode attribute.
+ * {"note": "Replaced by @code gen_ai.usage.input_tokens @endcode attribute.", "reason":
+ * "uncategorized"}
  */
-OPENTELEMETRY_DEPRECATED
-static constexpr const char *kGenAiUsagePromptTokens = "gen_ai.usage.prompt_tokens";
+OPENTELEMETRY_DEPRECATED static constexpr const char *kGenAiUsagePromptTokens =
+    "gen_ai.usage.prompt_tokens";
 
 namespace GenAiOpenaiRequestResponseFormatValues
 {
@@ -239,7 +307,41 @@ static constexpr const char *kTextCompletion = "text_completion";
  */
 static constexpr const char *kEmbeddings = "embeddings";
 
+/**
+ * Create GenAI agent
+ */
+static constexpr const char *kCreateAgent = "create_agent";
+
+/**
+ * Execute a tool
+ */
+static constexpr const char *kExecuteTool = "execute_tool";
+
 }  // namespace GenAiOperationNameValues
+
+namespace GenAiOutputTypeValues
+{
+/**
+ * Plain text
+ */
+static constexpr const char *kText = "text";
+
+/**
+ * JSON object with known or unknown schema
+ */
+static constexpr const char *kJson = "json";
+
+/**
+ * Image
+ */
+static constexpr const char *kImage = "image";
+
+/**
+ * Speech
+ */
+static constexpr const char *kSpeech = "speech";
+
+}  // namespace GenAiOutputTypeValues
 
 namespace GenAiSystemValues
 {
@@ -252,6 +354,11 @@ static constexpr const char *kOpenai = "openai";
  * Vertex AI
  */
 static constexpr const char *kVertexAi = "vertex_ai";
+
+/**
+ * Gemini
+ */
+static constexpr const char *kGemini = "gemini";
 
 /**
  * Anthropic
@@ -269,6 +376,11 @@ static constexpr const char *kCohere = "cohere";
 static constexpr const char *kAzAiInference = "az.ai.inference";
 
 /**
+ * Azure OpenAI
+ */
+static constexpr const char *kAzAiOpenai = "az.ai.openai";
+
+/**
  * IBM Watsonx AI
  */
 static constexpr const char *kIbmWatsonxAi = "ibm.watsonx.ai";
@@ -277,6 +389,31 @@ static constexpr const char *kIbmWatsonxAi = "ibm.watsonx.ai";
  * AWS Bedrock
  */
 static constexpr const char *kAwsBedrock = "aws.bedrock";
+
+/**
+ * Perplexity
+ */
+static constexpr const char *kPerplexity = "perplexity";
+
+/**
+ * xAI
+ */
+static constexpr const char *kXai = "xai";
+
+/**
+ * DeepSeek
+ */
+static constexpr const char *kDeepseek = "deepseek";
+
+/**
+ * Groq
+ */
+static constexpr const char *kGroq = "groq";
+
+/**
+ * Mistral AI
+ */
+static constexpr const char *kMistralAi = "mistral_ai";
 
 }  // namespace GenAiSystemValues
 
@@ -291,6 +428,11 @@ static constexpr const char *kInput = "input";
  * Output tokens (completion, response, etc.)
  */
 static constexpr const char *kCompletion = "output";
+
+/**
+ * Output tokens (completion, response, etc.)
+ */
+static constexpr const char *kOutput = "output";
 
 }  // namespace GenAiTokenTypeValues
 

@@ -37,6 +37,7 @@
 
 #  include <grpcpp/grpcpp.h>
 #  include <gtest/gtest.h>
+#  include <future>
 
 #  if defined(_MSC_VER)
 #    include "opentelemetry/sdk/common/env_variables.h"
@@ -359,9 +360,9 @@ TEST_F(OtlpGrpcExporterTestPeer, ConfigRetryDefaultValues)
   std::unique_ptr<OtlpGrpcExporter> exporter(new OtlpGrpcExporter());
   const auto options = GetOptions(exporter);
   ASSERT_EQ(options.retry_policy_max_attempts, 5);
-  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 1.0);
-  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 5.0);
-  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 1.5);
+  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 1.0f);
+  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 5.0f);
+  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 1.5f);
 }
 
 TEST_F(OtlpGrpcExporterTestPeer, ConfigRetryValuesFromEnv)
@@ -374,9 +375,9 @@ TEST_F(OtlpGrpcExporterTestPeer, ConfigRetryValuesFromEnv)
   std::unique_ptr<OtlpGrpcExporter> exporter(new OtlpGrpcExporter());
   const auto options = GetOptions(exporter);
   ASSERT_EQ(options.retry_policy_max_attempts, 123);
-  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 4.5);
-  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 6.7);
-  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 8.9);
+  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 4.5f);
+  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 6.7f);
+  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 8.9f);
 
   unsetenv("OTEL_CPP_EXPORTER_OTLP_TRACES_RETRY_MAX_ATTEMPTS");
   unsetenv("OTEL_CPP_EXPORTER_OTLP_TRACES_RETRY_INITIAL_BACKOFF");
@@ -394,9 +395,9 @@ TEST_F(OtlpGrpcExporterTestPeer, ConfigRetryGenericValuesFromEnv)
   std::unique_ptr<OtlpGrpcExporter> exporter(new OtlpGrpcExporter());
   const auto options = GetOptions(exporter);
   ASSERT_EQ(options.retry_policy_max_attempts, 321);
-  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 5.4);
-  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 7.6);
-  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 9.8);
+  ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 5.4f);
+  ASSERT_FLOAT_EQ(options.retry_policy_max_backoff.count(), 7.6f);
+  ASSERT_FLOAT_EQ(options.retry_policy_backoff_multiplier, 9.8f);
 
   unsetenv("OTEL_CPP_EXPORTER_OTLP_RETRY_MAX_ATTEMPTS");
   unsetenv("OTEL_CPP_EXPORTER_OTLP_RETRY_INITIAL_BACKOFF");
@@ -510,14 +511,20 @@ TEST_P(OtlpGrpcExporterRetryIntegrationTests, StatusCodes)
   TestTraceService service(status_codes);
   std::unique_ptr<grpc::Server> server;
 
-  std::thread server_thread([&server, &service]() {
+  std::promise<void> server_ready;
+  auto server_ready_future = server_ready.get_future();
+
+  std::thread server_thread([&server, &service, &server_ready]() {
     std::string address("localhost:4317");
     grpc::ServerBuilder builder;
     builder.RegisterService(&service);
     builder.AddListeningPort(address, grpc::InsecureServerCredentials());
     server = builder.BuildAndStart();
+    server_ready.set_value();
     server->Wait();
   });
+
+  server_ready_future.wait();
 
   otlp::OtlpGrpcExporterOptions opts{};
 
