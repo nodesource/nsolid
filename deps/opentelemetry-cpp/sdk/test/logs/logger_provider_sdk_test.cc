@@ -25,6 +25,7 @@
 #include "opentelemetry/sdk/logs/logger_context.h"
 #include "opentelemetry/sdk/logs/logger_provider.h"
 #include "opentelemetry/sdk/logs/processor.h"
+#include "opentelemetry/sdk/logs/provider.h"
 #include "opentelemetry/sdk/logs/recordable.h"
 #include "opentelemetry/sdk/logs/simple_log_record_processor.h"
 #include "opentelemetry/sdk/resource/resource.h"
@@ -34,13 +35,14 @@
 
 using namespace opentelemetry::sdk::logs;
 namespace logs_api = opentelemetry::logs;
+namespace logs_sdk = opentelemetry::sdk::logs;
 namespace nostd    = opentelemetry::nostd;
 
 TEST(LoggerProviderSDK, PushToAPI)
 {
   auto lp =
       nostd::shared_ptr<logs_api::LoggerProvider>(new opentelemetry::sdk::logs::LoggerProvider());
-  logs_api::Provider::SetLoggerProvider(lp);
+  logs_sdk::Provider::SetLoggerProvider(lp);
 
   // Check that the loggerprovider was correctly pushed into the API
   ASSERT_EQ(lp, logs_api::Provider::GetLoggerProvider());
@@ -116,6 +118,7 @@ TEST(LoggerProviderSDK, LoggerProviderLoggerArguments)
   }
 }
 
+#if OPENTELEMETRY_ABI_VERSION_NO < 2
 TEST(LoggerProviderSDK, EventLoggerProviderFactory)
 {
   auto elp = opentelemetry::sdk::logs::EventLoggerProviderFactory::Create();
@@ -126,6 +129,7 @@ TEST(LoggerProviderSDK, EventLoggerProviderFactory)
 
   auto event_logger = elp->CreateEventLogger(logger1, "otel-cpp.test");
 }
+#endif
 
 TEST(LoggerProviderSDK, LoggerEqualityCheck)
 {

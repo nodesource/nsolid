@@ -59,13 +59,12 @@ static constexpr const char *kCloudRegion = "cloud.region";
  * Cloud provider-specific native identifier of the monitored cloud resource (e.g. an <a
  * href="https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html">ARN</a> on AWS,
  * a <a href="https://learn.microsoft.com/rest/api/resources/resources/get-by-id">fully qualified
- * resource ID</a> on Azure, a <a
- * href="https://cloud.google.com/apis/design/resource_names#full_resource_name">full resource
- * name</a> on GCP) <p> On some cloud providers, it may not be possible to determine the full ID at
- * startup, so it may be necessary to set @code cloud.resource_id @endcode as a span attribute
- * instead. <p> The exact value to use for @code cloud.resource_id @endcode depends on the cloud
- * provider. The following well-known definitions MUST be used if you set this attribute and they
- * apply: <ul> <li><strong>AWS Lambda:</strong> The function <a
+ * resource ID</a> on Azure, a <a href="https://google.aip.dev/122#full-resource-names">full
+ * resource name</a> on GCP) <p> On some cloud providers, it may not be possible to determine the
+ * full ID at startup, so it may be necessary to set @code cloud.resource_id @endcode as a span
+ * attribute instead. <p> The exact value to use for @code cloud.resource_id @endcode depends on the
+ * cloud provider. The following well-known definitions MUST be used if you set this attribute and
+ * they apply: <ul> <li><strong>AWS Lambda:</strong> The function <a
  * href="https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html">ARN</a>. Take
  * care not to use the "invoked ARN" directly but replace any <a
  * href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-aliases.html">alias suffix</a>
@@ -212,6 +211,16 @@ static constexpr const char *kGcpOpenshift = "gcp_openshift";
 static constexpr const char *kIbmCloudOpenshift = "ibm_cloud_openshift";
 
 /**
+ * Compute on Oracle Cloud Infrastructure (OCI)
+ */
+static constexpr const char *kOracleCloudCompute = "oracle_cloud_compute";
+
+/**
+ * Kubernetes Engine (OKE) on Oracle Cloud Infrastructure (OCI)
+ */
+static constexpr const char *kOracleCloudOke = "oracle_cloud_oke";
+
+/**
  * Tencent Cloud Cloud Virtual Machine (CVM)
  */
 static constexpr const char *kTencentCloudCvm = "tencent_cloud_cvm";
@@ -259,6 +268,11 @@ static constexpr const char *kHeroku = "heroku";
  * IBM Cloud
  */
 static constexpr const char *kIbmCloud = "ibm_cloud";
+
+/**
+ * Oracle Cloud Infrastructure (OCI)
+ */
+static constexpr const char *kOracleCloud = "oracle_cloud";
 
 /**
  * Tencent Cloud
