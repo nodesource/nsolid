@@ -17,6 +17,10 @@
 
 #include <cmath>
 
+#if defined(__linux__)
+#include <sys/utsname.h>
+#endif
+
 #define MICROS_PER_SEC 1000000
 #define NANOS_PER_SEC 1000000000
 
@@ -2538,6 +2542,92 @@ static void GetConfigVersion(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(EnvList::Inst()->current_config_version());
 }
 
+#ifdef __linux__
+
+uint32_t calculateKernelVersion() {
+  struct utsname u;
+  static uint32_t version = 0;
+  uint32_t major;
+  uint32_t minor;
+  uint32_t patch;
+  std::string v_sig;
+  char* needle;
+
+  if (version != 0) return version;
+
+  /* Check /proc/version_signature first as it's the way to get the mainline
+   * kernel version in Ubuntu. The format is:
+   *   Ubuntu ubuntu_kernel_version mainline_kernel_version
+   * For example:
+   *   Ubuntu 5.15.0-79.86-generic 5.15.111
+   */
+
+  if (0 == ReadFileSync(&v_sig, "/proc/version_signature"))
+    if (3 ==
+        sscanf(v_sig.c_str(), "Ubuntu %*s %u.%u.%u", &major, &minor, &patch))
+      goto calculate_version;
+
+  if (-1 == uname(&u)) return 0;
+
+  /* In Debian we need to check `version` instead of `release` to extract the
+   * mainline kernel version. This is an example of how it looks like:
+   *  #1 SMP Debian 5.10.46-4 (2021-08-03)
+   */
+  needle = strstr(u.version, "Debian ");
+  if (needle != nullptr)
+    if (3 == sscanf(needle, "Debian %u.%u.%u", &major, &minor, &patch))
+      goto calculate_version;
+
+  if (3 != sscanf(u.release, "%u.%u.%u", &major, &minor, &patch)) return 0;
+
+  /* Handle it when the process runs under the UNAME26 personality:
+   *
+   * - kernels >= 3.x identify as 2.6.40+x
+   * - kernels >= 4.x identify as 2.6.60+x
+   *
+   * UNAME26 is a poorly conceived hack that doesn't let us distinguish
+   * between 4.x kernels and 5.x/6.x kernels so we conservatively assume
+   * that 2.6.60+x means 4.x.
+   *
+   * Fun fact of the day: it's technically possible to observe the actual
+   * kernel version for a brief moment because uname() first copies out the
+   * real release string before overwriting it with the backcompat string.
+   */
+  if (major == 2 && minor == 6) {
+    if (patch >= 60) {
+      major = 4;
+      minor = patch - 60;
+      patch = 0;
+    } else if (patch >= 40) {
+      major = 3;
+      minor = patch - 40;
+      patch = 0;
+    }
+  }
+
+calculate_version:
+  version = major * 65536 + minor * 256 + patch;
+
+  return version;
+}
+#endif
+
+static void GetKernelVersion(const FunctionCallbackInfo<Value>& args) {
+  static uint32_t kernel_version = 0;
+
+#ifdef __linux__
+  if (kernel_version != 0) {
+    args.GetReturnValue().Set(kernel_version);
+    return;
+  }
+
+  // Retrieve the kernel version only on Linux
+  // as we are going to use it to collect eBPF information
+  kernel_version = calculateKernelVersion();
+#endif
+
+  args.GetReturnValue().Set(kernel_version);
+}
 
 static void PauseMetrics(const FunctionCallbackInfo<Value>& args) {
   EnvInst* envinst = EnvInst::GetEnvLocalInst(args.GetIsolate());
@@ -2961,6 +3051,7 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "getStartupTimes", GetStartupTimes);
   SetMethod(context, target, "getConfig", GetConfig);
   SetMethod(context, target, "getConfigVersion", GetConfigVersion);
+  SetMethod(context, target, "getKernelVersion", GetKernelVersion);
   SetMethod(context, target, "pauseMetrics", PauseMetrics);
   SetMethod(context, target, "resumeMetrics", ResumeMetrics);
   SetMethod(context, target, "setMetricsInterval", SetMetricsInterval);
@@ -3093,6 +3184,7 @@ void BindingData::RegisterExternalReferences(
   registry->Register(GetStartupTimes);
   registry->Register(GetConfig);
   registry->Register(GetConfigVersion);
+  registry->Register(GetKernelVersion);
   registry->Register(PauseMetrics);
   registry->Register(ResumeMetrics);
   registry->Register(SetMetricsInterval);

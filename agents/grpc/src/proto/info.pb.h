@@ -235,6 +235,7 @@ class InfoBody final :
     kPidFieldNumber = 10,
     kProcessStartFieldNumber = 12,
     kTotalMemFieldNumber = 14,
+    kKernelVersionFieldNumber = 16,
   };
   // repeated string tags = 13;
   int tags_size() const;
@@ -439,6 +440,15 @@ class InfoBody final :
   void _internal_set_totalmem(uint64_t value);
   public:
 
+  // uint32 kernelVersion = 16;
+  void clear_kernelversion();
+  uint32_t kernelversion() const;
+  void set_kernelversion(uint32_t value);
+  private:
+  uint32_t _internal_kernelversion() const;
+  void _internal_set_kernelversion(uint32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:grpcagent.InfoBody)
  private:
   class _Internal;
@@ -466,6 +476,7 @@ class InfoBody final :
     uint32_t pid_;
     uint64_t processstart_;
     uint64_t totalmem_;
+    uint32_t kernelversion_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1293,6 +1304,26 @@ inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, std::string >*
 InfoBody::mutable_versions() {
   // @@protoc_insertion_point(field_mutable_map:grpcagent.InfoBody.versions)
   return _internal_mutable_versions();
+}
+
+// uint32 kernelVersion = 16;
+inline void InfoBody::clear_kernelversion() {
+  _impl_.kernelversion_ = 0u;
+}
+inline uint32_t InfoBody::_internal_kernelversion() const {
+  return _impl_.kernelversion_;
+}
+inline uint32_t InfoBody::kernelversion() const {
+  // @@protoc_insertion_point(field_get:grpcagent.InfoBody.kernelVersion)
+  return _internal_kernelversion();
+}
+inline void InfoBody::_internal_set_kernelversion(uint32_t value) {
+  
+  _impl_.kernelversion_ = value;
+}
+inline void InfoBody::set_kernelversion(uint32_t value) {
+  _internal_set_kernelversion(value);
+  // @@protoc_insertion_point(field_set:grpcagent.InfoBody.kernelVersion)
 }
 
 // -------------------------------------------------------------------
