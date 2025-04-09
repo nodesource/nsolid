@@ -231,6 +231,7 @@ class InfoBody final :
     kMainFieldNumber = 8,
     kNodeEnvFieldNumber = 9,
     kPlatformFieldNumber = 11,
+    kKernelVersionFieldNumber = 16,
     kCpuCoresFieldNumber = 3,
     kPidFieldNumber = 10,
     kProcessStartFieldNumber = 12,
@@ -403,6 +404,20 @@ class InfoBody final :
   std::string* _internal_mutable_platform();
   public:
 
+  // string kernelVersion = 16;
+  void clear_kernelversion();
+  const std::string& kernelversion() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_kernelversion(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_kernelversion();
+  PROTOBUF_NODISCARD std::string* release_kernelversion();
+  void set_allocated_kernelversion(std::string* kernelversion);
+  private:
+  const std::string& _internal_kernelversion() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_kernelversion(const std::string& value);
+  std::string* _internal_mutable_kernelversion();
+  public:
+
   // uint32 cpuCores = 3;
   void clear_cpucores();
   uint32_t cpucores() const;
@@ -462,6 +477,7 @@ class InfoBody final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr main_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr nodeenv_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr platform_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr kernelversion_;
     uint32_t cpucores_;
     uint32_t pid_;
     uint64_t processstart_;
@@ -1293,6 +1309,56 @@ inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, std::string >*
 InfoBody::mutable_versions() {
   // @@protoc_insertion_point(field_mutable_map:grpcagent.InfoBody.versions)
   return _internal_mutable_versions();
+}
+
+// string kernelVersion = 16;
+inline void InfoBody::clear_kernelversion() {
+  _impl_.kernelversion_.ClearToEmpty();
+}
+inline const std::string& InfoBody::kernelversion() const {
+  // @@protoc_insertion_point(field_get:grpcagent.InfoBody.kernelVersion)
+  return _internal_kernelversion();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void InfoBody::set_kernelversion(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.kernelversion_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:grpcagent.InfoBody.kernelVersion)
+}
+inline std::string* InfoBody::mutable_kernelversion() {
+  std::string* _s = _internal_mutable_kernelversion();
+  // @@protoc_insertion_point(field_mutable:grpcagent.InfoBody.kernelVersion)
+  return _s;
+}
+inline const std::string& InfoBody::_internal_kernelversion() const {
+  return _impl_.kernelversion_.Get();
+}
+inline void InfoBody::_internal_set_kernelversion(const std::string& value) {
+  
+  _impl_.kernelversion_.Set(value, GetArenaForAllocation());
+}
+inline std::string* InfoBody::_internal_mutable_kernelversion() {
+  
+  return _impl_.kernelversion_.Mutable(GetArenaForAllocation());
+}
+inline std::string* InfoBody::release_kernelversion() {
+  // @@protoc_insertion_point(field_release:grpcagent.InfoBody.kernelVersion)
+  return _impl_.kernelversion_.Release();
+}
+inline void InfoBody::set_allocated_kernelversion(std::string* kernelversion) {
+  if (kernelversion != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.kernelversion_.SetAllocated(kernelversion, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.kernelversion_.IsDefault()) {
+    _impl_.kernelversion_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.InfoBody.kernelVersion)
 }
 
 // -------------------------------------------------------------------

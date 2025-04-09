@@ -17,6 +17,10 @@
 
 #include <cmath>
 
+#if defined(__linux__)
+#include <sys/utsname.h>
+#endif
+
 #define MICROS_PER_SEC 1000000
 #define NANOS_PER_SEC 1000000000
 
@@ -2533,6 +2537,23 @@ static void GetConfigVersion(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(EnvList::Inst()->current_config_version());
 }
 
+static void GetKernelVersion(const FunctionCallbackInfo<Value>& args) {
+  std::string kernel_version = "";
+
+#ifdef __linux__
+  // Retrieve the kernel version only on Linux
+  // as we are going to use it to collect eBPF information
+  struct utsname info;
+  if (uname(&info) == 0) {
+    kernel_version = info.release;
+  }
+#endif
+
+  // Return the kernel version, or empty string if not supported/failed
+  args.GetReturnValue().Set(
+      String::NewFromUtf8(args.GetIsolate(), kernel_version.c_str())
+          .ToLocalChecked());
+}
 
 static void PauseMetrics(const FunctionCallbackInfo<Value>& args) {
   EnvInst* envinst = EnvInst::GetEnvLocalInst(args.GetIsolate());
@@ -2956,6 +2977,7 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "getStartupTimes", GetStartupTimes);
   SetMethod(context, target, "getConfig", GetConfig);
   SetMethod(context, target, "getConfigVersion", GetConfigVersion);
+  SetMethod(context, target, "getKernelVersion", GetKernelVersion);
   SetMethod(context, target, "pauseMetrics", PauseMetrics);
   SetMethod(context, target, "resumeMetrics", ResumeMetrics);
   SetMethod(context, target, "setMetricsInterval", SetMetricsInterval);
@@ -3088,6 +3110,7 @@ void BindingData::RegisterExternalReferences(
   registry->Register(GetStartupTimes);
   registry->Register(GetConfig);
   registry->Register(GetConfigVersion);
+  registry->Register(GetKernelVersion);
   registry->Register(PauseMetrics);
   registry->Register(ResumeMetrics);
   registry->Register(SetMetricsInterval);

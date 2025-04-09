@@ -20,6 +20,7 @@ message InfoBody {
   repeated string tags = 13;
   uint64 totalMem = 14;
   map<string, string> versions = 15;
+  string kernelVersion = 16;
 }
 
 message InfoEvent {

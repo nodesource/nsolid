@@ -72,6 +72,7 @@ const expectedInfoFormat = {
   },
   cpuCores: [ isNumber ],
   cpuModel: [ isString ],
+  kernelVersion: [ isString ],
 };
 
 const infoProps = Object.keys(info);
