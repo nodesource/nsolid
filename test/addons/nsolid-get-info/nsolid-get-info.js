@@ -72,6 +72,7 @@ const expectedInfoFormat = {
   },
   cpuCores: [ isNumber ],
   cpuModel: [ isString ],
+  kernelVersion: [ isNumber ],
 };
 
 const infoProps = Object.keys(info);
@@ -80,6 +81,12 @@ const expectedInfoProps = Object.keys(expectedInfoFormat);
 // causes its removal.
 assert.ok(infoProps.length === expectedInfoProps.length ||
           infoProps.length + 1 === expectedInfoProps.length);
+
+if (process.platform === 'linux') {
+  assert.ok(info.kernelVersion !== 0, 'Linux kernel version should not be 0');
+} else {
+  assert.ok(info.kernelVersion === 0, `Kernel version should be 0 on ${process.platform}`);
+}
 
 function checkPropsInObject(obj, expected) {
   Object.keys(expected).forEach((k) => {
