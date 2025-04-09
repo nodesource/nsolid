@@ -60,6 +60,7 @@ if (process.argv[2] === 'child') {
     assert.strictEqual(info.body.tags.length, nsolidConfig.tags ? nsolidConfig.tags.length : 0);
     assert.ok(info.body.totalMem);
     assert.deepStrictEqual(info.body.versions, process.versions);
+    assert.strictEqual(typeof info.body.kernelVersion, 'number');
     assert.ok(metadata['user-agent']);
     assert.ok(metadata['nsolid-agent-id']);
     assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
