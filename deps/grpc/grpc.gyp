@@ -1124,7 +1124,8 @@
         'GRPC_CUSTOM_CSHARP_GETCLASSNAME',
       ],
       'dependencies': [
-        '../protobuf/protobuf.gyp:protobuf'
+        '../protobuf/protobuf.gyp:protobuf',
+	'abseil',
       ],
       'include_dirs': [
         './',
