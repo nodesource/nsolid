@@ -56,21 +56,22 @@ function execDnsTransaction() {
 }
 
 function execCustomTrace() {
-  console.log('execCustomTrace');
-  const api = require(require.resolve('@opentelemetry/api',
-                                      { paths: [fixturesDir] }));
-  console.log(nsolid.otel.register(api));
-  const tracer = api.trace.getTracer('test');
-  const span = tracer.startSpan('initial_name', { attributes: { a: 1, b: 2 },
-                                                  kind: api.SpanKind.CLIENT });
-  span.setAttributes({ c: 3, d: 4 })
-      .setAttribute('e', 5)
-      .addEvent('my_event 1', Date.now())
-      .addEvent('my_event 2', { attr1: 'val1', attr2: 'val2' }, Date.now());
-  span.recordException(new Error('my_exception'));
-  span.setStatus({ code: api.SpanStatusCode.ERROR, message: 'my_message' });
-  span.end();
-  setTimeout(() => {}, 1000);
+  // Just to make sure the trace is recorded.
+  setTimeout(() => {
+    const api = require(require.resolve('@opentelemetry/api',
+                                        { paths: [fixturesDir] }));
+    nsolid.otel.register(api);
+    const tracer = api.trace.getTracer('test');
+    const span = tracer.startSpan('initial_name', { attributes: { a: 1, b: 2 },
+                                                    kind: api.SpanKind.CLIENT });
+    span.setAttributes({ c: 3, d: 4 })
+        .setAttribute('e', [ 'abAD', 'cdCF'])
+        .addEvent('my_event 1', Date.now())
+        .addEvent('my_event 2', { attr1: 'val1', attr2: 'val2' }, Date.now());
+    span.recordException(new Error('my_exception'));
+    span.setStatus({ code: api.SpanStatusCode.ERROR, message: 'my_message' });
+    span.end();
+  }, 1000);
 }
 
 function blockFor(duration) {
