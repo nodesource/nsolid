@@ -398,6 +398,13 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
 
   json attrs = json::parse(s.attrs);
   ASSERT(!attrs.is_discarded());
+  for (const std::string& a : s.extra_attrs) {
+    json attr = json::parse(a, nullptr, false);
+    // a must always be a valid JSON
+    ASSERT(!attr.is_discarded());
+    attrs.merge_patch(attr);
+  }
+
   for (const auto& attr : attrs.items()) {
     const json val = attr.value();
     if (val.is_boolean())
@@ -410,6 +417,88 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
       recordable->SetAttribute(attr.key(), attr.value().get<double>());
     else if (val.is_string())
       recordable->SetAttribute(attr.key(), attr.value().get<std::string>());
+    else if (val.is_array()) {
+      // Handle arrays of primitive types according to OpenTelemetry spec.
+      if (val.empty()) {
+        // Skip empty arrays
+        continue;
+      }
+
+      // Check the type of the first element to determine array type
+      const auto& first = val[0];
+      if (first.is_boolean()) {
+        // Array of booleans - use vector<uint8_t> for contiguous storage which
+        // is required by span.
+        // See https://en.cppreference.com/w/cpp/container/vector_bool
+        std::vector<uint8_t> bool_vec;
+        bool_vec.reserve(val.size());
+        for (const auto& item : val) {
+          if (!item.is_boolean()) {
+            // Skip non-homogeneous arrays
+            goto skip_array;
+          }
+          bool_vec.push_back(item.get<bool>() ? 1 : 0);
+        }
+
+        // Create a span from the vector and cast to bool*
+        // This is safe because we're just reinterpreting the bits
+        const auto bool_span = opentelemetry::v1::nostd::span<const bool>(
+            reinterpret_cast<const bool*>(bool_vec.data()), bool_vec.size());
+        recordable->SetAttribute(attr.key(), bool_span);
+      } else if (first.is_number_integer()) {
+        // Array of integers - use int64_t for all integer arrays
+        std::vector<int64_t> ints;
+        ints.reserve(val.size());
+        for (const auto& item : val) {
+          if (!item.is_number_integer()) {
+            // Skip non-homogeneous arrays
+            goto skip_array;
+          }
+          ints.push_back(item.get<int64_t>());
+        }
+        recordable->SetAttribute(attr.key(), ints);
+      } else if (first.is_number_unsigned()) {
+        // Array of unsigned integers - use uint64_t for all unsigned integer
+        // arrays.
+        std::vector<uint64_t> uints;
+        uints.reserve(val.size());
+        for (const auto& item : val) {
+          if (!item.is_number_unsigned()) {
+            // Skip non-homogeneous arrays
+            goto skip_array;
+          }
+          uints.push_back(item.get<uint64_t>());
+        }
+        recordable->SetAttribute(attr.key(), uints);
+      } else if (first.is_number_float()) {
+        // Array of doubles
+        std::vector<double> doubles;
+        doubles.reserve(val.size());
+        for (const auto& item : val) {
+          if (!item.is_number_float()) {
+            // Skip non-homogeneous arrays
+            goto skip_array;
+          }
+          doubles.push_back(item.get<double>());
+        }
+        recordable->SetAttribute(attr.key(), doubles);
+      } else if (first.is_string()) {
+        // Array of strings
+        std::vector<opentelemetry::v1::nostd::string_view> string_views;
+        string_views.reserve(val.size());
+        for (const auto& item : val) {
+          if (!item.is_string()) {
+            // Skip non-homogeneous arrays
+            goto skip_array;
+          }
+
+          string_views.push_back(item.get_ref<const std::string&>());
+        }
+
+        recordable->SetAttribute(attr.key(), string_views);
+      }
+      skip_array: {};
+    }
   }
 
   recordable->SetAttribute("thread.id", s.thread_id);
