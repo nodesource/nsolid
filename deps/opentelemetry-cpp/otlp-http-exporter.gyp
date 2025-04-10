@@ -62,6 +62,7 @@
       'defines': [
         'BUILDING_LIBCURL',
         'ENABLE_ASYNC_EXPORT',
+        'OPENTELEMETRY_STL_VERSION=2020',
       ],
       'dependencies': [
         '../protobuf/protobuf.gyp:protobuf',
@@ -73,6 +74,7 @@
       'direct_dependent_settings': {
         'defines': [
           'ENABLE_ASYNC_EXPORT',
+          'OPENTELEMETRY_STL_VERSION=2020',
         ],
         'include_dirs': [
           'api/include',
@@ -91,7 +93,7 @@
         '-fexceptions',
         '-fvisibility=hidden',
         '-pedantic',
-        '--std=c++17',
+        '--std=c++20',
         '-Wno-error',
         '-Wno-c++98-compat-extra-semi'
       ],
