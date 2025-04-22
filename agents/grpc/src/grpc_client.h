@@ -1,6 +1,7 @@
 #ifndef AGENTS_GRPC_SRC_GRPC_CLIENT_H_
 #define AGENTS_GRPC_SRC_GRPC_CLIENT_H_
 
+#include "asserts-cpp/asserts.h"
 #include "../../src/profile_collector.h"
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "grpcpp/grpcpp.h"
@@ -14,11 +15,39 @@ struct OtlpGrpcClientOptions;
 }
 OPENTELEMETRY_END_NAMESPACE
 
+using google::protobuf::Arena;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 
 namespace node {
 namespace nsolid {
 namespace grpc {
+
+// Template class for managing async call data for DelegateAsyncExport
+// Moved from grpc_client.cc so it is visible to all template instantiations
+
+template <class EventType>
+class GrpcAsyncCallData {
+ public:
+  std::unique_ptr<google::protobuf::Arena> arena;
+  ::grpc::Status grpc_status;
+  std::unique_ptr<::grpc::ClientContext> grpc_context;
+
+  std::function<bool(::grpc::Status,
+                     std::unique_ptr<google::protobuf::Arena>&&,
+                     const EventType&,
+                     grpcagent::EventResponse*)> result_callback;
+
+  EventType* event = nullptr;
+  grpcagent::EventResponse* event_response = nullptr;
+
+  GrpcAsyncCallData() = default;
+  ~GrpcAsyncCallData() = default;
+
+  GrpcAsyncCallData(const GrpcAsyncCallData&)            = delete;
+  GrpcAsyncCallData& operator=(const GrpcAsyncCallData&) = delete;
+  GrpcAsyncCallData(GrpcAsyncCallData&&)                 = delete;
+  GrpcAsyncCallData& operator=(GrpcAsyncCallData&&)      = delete;
+};
 
 class GrpcClient {
  public:
@@ -40,98 +69,60 @@ class GrpcClient {
   static std::unique_ptr<grpcagent::NSolidService::StubInterface>
     MakeNSolidServiceStub(const OtlpGrpcClientOptions& options);
 
+  /**
+   * Generic DelegateAsyncExport for any event type.
+   * Usage example:
+   *   GrpcClient::DelegateAsyncExport<EventType>(
+   *     stub,
+   *     &grpcagent::NSolidService::StubInterface::async_interface::ExportEventType,
+   *     std::move(context),
+   *     std::move(arena),
+   *     std::move(event),
+   *     std::move(callback));
+   */
+  template <typename EventT>
   static int DelegateAsyncExport(
     grpcagent::NSolidService::StubInterface* stub,
+    void(grpcagent::NSolidService::StubInterface::async_interface::*exportFunc)(
+        ::grpc::ClientContext*,
+        const EventT*,
+        ::grpcagent::EventResponse*,
+        std::function<void(::grpc::Status)>),
     std::unique_ptr<::grpc::ClientContext>&& context,
     std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::BlockedLoopEvent&& event,
+    EventT&& event,
     std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::BlockedLoopEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
+                      std::unique_ptr<google::protobuf::Arena>&&,
+                      const EventT&,
+                      grpcagent::EventResponse*)>&& result_callback) {
+    ASSERT_NOT_NULL(stub);
+    auto call_data = std::make_shared<GrpcAsyncCallData<EventT>>();
+    call_data->arena.swap(arena);
+    call_data->result_callback.swap(result_callback);
+    call_data->event = Arena::Create<EventT>(call_data->arena.get(),
+                                             std::move(event));
+    call_data->event_response =
+      Arena::Create<grpcagent::EventResponse>(call_data->arena.get());
+    if (call_data->event == nullptr || call_data->event_response == nullptr) {
+      return -1;
+    }
 
+    call_data->grpc_context.swap(context);
 
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::UnblockedLoopEvent&& event,
-    std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::UnblockedLoopEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
+    // Call the correct async export method on the stub
+    (stub->async()->*exportFunc)(call_data->grpc_context.get(),
+                                 call_data->event,
+                                 call_data->event_response,
+                                 [call_data](::grpc::Status status) {
+        call_data->grpc_status = status;
+        call_data->result_callback(call_data->grpc_status,
+                                   std::move(call_data->arena),
+                                   *call_data->event,
+                                   call_data->event_response);
+      });
 
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::ExitEvent&& event,
-    std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::ExitEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
-
-
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::InfoEvent&& event,
-    std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::InfoEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
-
-
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::MetricsEvent&& event,
-    std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::MetricsEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
-
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::PackagesEvent&& event,
-    std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::PackagesEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
-
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::ReconfigureEvent&& event,
-    std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::ReconfigureEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
-
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::SourceCodeEvent&& event,
-    std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::SourceCodeEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
-
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    std::unique_ptr<::grpc::ClientContext>&& context,
-    std::unique_ptr<google::protobuf::Arena>&& arena,
-    grpcagent::StartupTimesEvent&& event,
-    std::function<bool(::grpc::Status,
-                        std::unique_ptr<google::protobuf::Arena> &&,
-                        const grpcagent::StartupTimesEvent&,
-                        grpcagent::EventResponse*)>&& result_callback) noexcept;
+    return 0;
+  }
 };
 
 }  // namespace grpc
