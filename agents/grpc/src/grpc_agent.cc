@@ -50,6 +50,8 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
 using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
+using nsolid_grpc_async =
+  grpcagent::NSolidService::StubInterface::async_interface;
 
 namespace node {
 namespace nsolid {
@@ -1750,9 +1752,10 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*event),
+  GrpcClient::DelegateAsyncExport<grpcagent::BlockedLoopEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportBlockedLoop,
+    std::move(context), std::move(arena), std::move(*event),
     [](::grpc::Status,
         std::unique_ptr<Arena> &&,
         const grpcagent::BlockedLoopEvent& event,
@@ -1791,9 +1794,10 @@ void GrpcAgent::send_exit() {
 
   uv_mutex_init(&lock);
   uv_cond_init(&cond);
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*exit_event),
+  GrpcClient::DelegateAsyncExport<grpcagent::ExitEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportExit,
+    std::move(context), std::move(arena), std::move(*exit_event),
     [&lock, &cond, &signaled](::grpc::Status,
         std::unique_ptr<Arena> &&,
         const grpcagent::ExitEvent& event,
@@ -1835,9 +1839,10 @@ void GrpcAgent::send_info_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*info_event),
+  GrpcClient::DelegateAsyncExport<grpcagent::InfoEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportInfo,
+    std::move(context), std::move(arena), std::move(*info_event),
     [](::grpc::Status,
         std::unique_ptr<Arena>&&,
         const grpcagent::InfoEvent& info_event,
@@ -1862,9 +1867,10 @@ void GrpcAgent::send_metrics_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*metrics_event),
+  GrpcClient::DelegateAsyncExport<grpcagent::MetricsEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportMetrics,
+    std::move(context), std::move(arena), std::move(*metrics_event),
     [](::grpc::Status,
         std::unique_ptr<Arena>&&,
         const grpcagent::MetricsEvent& metrics_event,
@@ -1884,9 +1890,10 @@ void GrpcAgent::send_packages_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*packages_event),
+  GrpcClient::DelegateAsyncExport<grpcagent::PackagesEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportPackages,
+    std::move(context), std::move(arena), std::move(*packages_event),
     [](::grpc::Status,
         std::unique_ptr<Arena>&&,
         const grpcagent::PackagesEvent& info_event,
@@ -1907,9 +1914,10 @@ void GrpcAgent::send_reconfigure_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*reconfigure_event),
+  GrpcClient::DelegateAsyncExport<grpcagent::ReconfigureEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportReconfigure,
+    std::move(context), std::move(arena), std::move(*reconfigure_event),
     [](::grpc::Status,
         std::unique_ptr<Arena>&&,
         const grpcagent::ReconfigureEvent& info_event,
@@ -1957,9 +1965,10 @@ void GrpcAgent::send_source_code_event(const grpcagent::CommandRequest& req) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*source_code_event),
+  GrpcClient::DelegateAsyncExport<grpcagent::SourceCodeEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportSourceCode,
+    std::move(context), std::move(arena), std::move(*source_code_event),
     [](::grpc::Status,
         std::unique_ptr<Arena>&&,
         const grpcagent::SourceCodeEvent& info_event,
@@ -1979,9 +1988,10 @@ void GrpcAgent::send_startup_times_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*st_event),
+  GrpcClient::DelegateAsyncExport<grpcagent::StartupTimesEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportStartupTimes,
+    std::move(context), std::move(arena), std::move(*st_event),
     [](::grpc::Status status,
         std::unique_ptr<Arena>&&,
         const grpcagent::StartupTimesEvent& info_event,
@@ -2003,9 +2013,10 @@ void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport(
-    nsolid_service_stub_.get(), std::move(context), std::move(arena),
-    std::move(*event),
+  GrpcClient::DelegateAsyncExport<grpcagent::UnblockedLoopEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportUnblockedLoop,
+    std::move(context), std::move(arena), std::move(*event),
     [](::grpc::Status,
         std::unique_ptr<Arena> &&,
         const grpcagent::UnblockedLoopEvent& event,
