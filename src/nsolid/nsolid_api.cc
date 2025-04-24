@@ -2391,7 +2391,10 @@ static void GetEnvMetrics(const FunctionCallbackInfo<Value>& args) {
   if (er)
     return args.GetReturnValue().Set(er);
 
-  args.GetReturnValue().Set(OneByteString(isolate, tmetrics->toJSON().c_str()));
+  args.GetReturnValue().Set(
+    String::NewFromUtf8(isolate,
+                        tmetrics->toJSON().c_str(),
+                        NewStringType::kNormal).ToLocalChecked());
 }
 
 
@@ -2404,7 +2407,10 @@ static void GetProcessMetrics(const FunctionCallbackInfo<Value>& args) {
   int er = pmetrics->Update();
   if (er)
     return args.GetReturnValue().Set(er);
-  args.GetReturnValue().Set(OneByteString(isolate, pmetrics->toJSON().c_str()));
+  args.GetReturnValue().Set(
+    String::NewFromUtf8(isolate,
+                        pmetrics->toJSON().c_str(),
+                        NewStringType::kNormal).ToLocalChecked());
 }
 
 
@@ -2424,12 +2430,14 @@ static void GetProcessInfo(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   Local<Context> context = isolate->GetCurrentContext();
   Local<Value> parsed;
-  if (!JSON::Parse(context,
-        OneByteString(isolate,
-                      EnvList::Inst()->GetInfo().c_str())).ToLocal(&parsed) ||
-      !parsed->IsObject()) {
+  Local<String> info =
+    String::NewFromUtf8(isolate,
+                        EnvList::Inst()->GetInfo().c_str(),
+                        NewStringType::kNormal).ToLocalChecked();
+  if (!JSON::Parse(context, info).ToLocal(&parsed) || !parsed->IsObject()) {
     return args.GetReturnValue().SetNull();
   }
+
   args.GetReturnValue().Set(parsed);
 }
 
@@ -2549,12 +2557,14 @@ static void GetConfig(const FunctionCallbackInfo<Value>& args) {
   Local<Context> context = isolate->GetCurrentContext();
   Local<Value> parsed;
   nlohmann::json config = envlist->current_config();
-  if (!JSON::Parse(context,
-        OneByteString(isolate,
-                      config.dump().c_str())).ToLocal(&parsed) ||
-      !parsed->IsObject()) {
+  Local<String> conf =
+    String::NewFromUtf8(isolate,
+                        config.dump().c_str(),
+                        NewStringType::kNormal).ToLocalChecked();
+  if (!JSON::Parse(context, conf).ToLocal(&parsed) || !parsed->IsObject()) {
     return args.GetReturnValue().SetNull();
   }
+
   args.GetReturnValue().Set(parsed);
 }
 
