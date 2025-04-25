@@ -14,6 +14,7 @@
 #include "node_external_reference.h"
 #include "memory_tracker-inl.h"
 #include "node_perf.h"
+#include "node_url.h"
 #include "v8-fast-api-calls.h"
 
 #include <cmath>
@@ -789,7 +790,14 @@ int EnvInst::GetSourceCode(int script_id,
 
   std::string real_path;
   if (info.is_esm && path.find("file://") == 0) {
-    real_path = path.substr(7);
+    std::optional<std::string> p;
+    auto file_url = ada::parse(path);
+    CHECK(file_url);
+    p = node::url::FileURLToPath(env_, *file_url);
+    if (!p.has_value()) {
+      return UV_ENOENT;
+    }
+    real_path = p.value();
   } else {
     real_path = path;
   }
@@ -806,8 +814,6 @@ void EnvInst::StoreSourceCode(int script_id,
     return;
   }
 
-  // fprintf(stderr, "[%d][%ld] StoreSourceCode: %s\n", script_id, thread_id_,
-  // *Utf8Value(isolate_, url));
   ns_mutex::scoped_lock lock(source_files_lock_);
   auto pair = source_files_.try_emplace(script_id, SourceCodeInfo{});
   if (!pair.second) {

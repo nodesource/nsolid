@@ -4,6 +4,7 @@ import { fixturesDir } from '../common/fixtures.mjs';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import validators from 'internal/validators';
 import {
   GRPCServer,
@@ -36,7 +37,7 @@ function checkSourceCodeData(sourceCode, metadata, requestId, agentId, options) 
   assert.strictEqual(sourceCode.path, options.path);
   let realPath = options.path;
   if (realPath.startsWith('file://')) {
-    realPath = realPath.substring(7);
+    realPath = fileURLToPath(realPath);
   }
 
   if (realPath.startsWith('data:text/javascript,')) {
@@ -80,6 +81,8 @@ tests.push({
       const importPath = path.join(fixturesDir, 'nsolid-source-code', 'index.mjs');
       const esmPath = path.join(fixturesDir, 'nsolid-source-code', 'esm.mjs');
       const commonPath = path.join(fixturesDir, 'nsolid-source-code', 'common.js');
+      const importPathUrl = pathToFileURL(importPath).toString();
+      const esmPathUrl = pathToFileURL(esmPath).toString();
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('loop_blocked', mustCall(async (data) => {
@@ -87,8 +90,8 @@ tests.push({
           const scripts = [];
           for (const frame of data.msg.body.stack) {
             if (frame.scriptName.includes('client.js') ||
-                frame.scriptName.includes(importPath) ||
-                frame.scriptName.includes(esmPath) ||
+                frame.scriptName.includes(importPathUrl) ||
+                frame.scriptName.includes(esmPathUrl) ||
                 frame.scriptName.includes(commonPath)) {
               scripts.push({
                 scriptId: frame.scriptId,
@@ -190,6 +193,8 @@ tests.push({
       const importPath = path.join(fixturesDir, 'nsolid-source-code', 'index.mjs');
       const esmPath = path.join(fixturesDir, 'nsolid-source-code', 'esm.mjs');
       const commonPath = path.join(fixturesDir, 'nsolid-source-code', 'common.js');
+      const importPathUrl = pathToFileURL(importPath).toString();
+      const esmPathUrl = pathToFileURL(esmPath).toString();
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('loop_blocked', mustCall(async (data) => {
@@ -197,8 +202,8 @@ tests.push({
           const scripts = [];
           for (const frame of data.msg.body.stack) {
             if (frame.scriptName.includes('client.js') ||
-                frame.scriptName.includes(importPath) ||
-                frame.scriptName.includes(esmPath) ||
+                frame.scriptName.includes(importPathUrl) ||
+                frame.scriptName.includes(esmPathUrl) ||
                 frame.scriptName.includes(commonPath)) {
               scripts.push({
                 scriptId: frame.scriptId,
@@ -283,13 +288,14 @@ tests.push({
   test: async () => {
     return new Promise((resolve) => {
       const importPath = path.join(fixturesDir, 'nsolid-source-code', 'data.mjs');
+      const importPathUrl = pathToFileURL(importPath).toString();
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('loop_blocked', mustCall(async (data) => {
           console.dir(data.msg, { depth: null });
           const scripts = [];
           for (const frame of data.msg.body.stack) {
-            if (frame.scriptName.includes(importPath) ||
+            if (frame.scriptName.includes(importPathUrl) ||
                 frame.scriptName.startsWith('data:text/javascript,')) {
               scripts.push({
                 scriptId: frame.scriptId,
