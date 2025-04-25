@@ -16,6 +16,7 @@ message ReconfigureBody {
   repeated string tags = 9;
   optional bool tracingEnabled = 10;
   optional uint32 tracingModulesBlacklist = 11;
+  optional bool contCpuProfile = 12;
 }
 
 message ReconfigureEvent {
