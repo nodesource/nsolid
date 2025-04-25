@@ -2,6 +2,7 @@
 
 const http = require('node:http');
 const { parseArgs } = require('node:util');
+const { pathToFileURL } = require('node:url');
 const { isMainThread, parentPort, Worker, threadId } = require('node:worker_threads');
 const nsolid = require('nsolid');
 const { fixturesDir } = require('../fixtures');
@@ -81,7 +82,7 @@ function blockFor(duration) {
 
 async function handleImport(msg) {
   const { url } = msg;
-  const { blockFor } = await import(url);
+  const { blockFor } = await import(pathToFileURL(url));
   blockFor(500);
 }
 
