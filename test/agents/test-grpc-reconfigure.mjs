@@ -113,6 +113,7 @@ const newConfigs = [
   [ 'tags', [ 'tag1', 'tag2' ] ],
   [ 'tracingEnabled', true ],
   [ 'tracingModulesBlacklist', 1 ],
+  [ 'contCpuProfile', true ],
 ];
 
 tests.push({
