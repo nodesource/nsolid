@@ -11,7 +11,7 @@ When looking for support, please first search for your question in these venues:
 * [Open or closed issues in the N|Solid GitHub repository](https://github.com/nodesource/nsolid/issues)
 * [Questions tagged 'nsolid' on Stack Overflow](https://stackoverflow.com/questions/tagged/nsolid)
 
-GitHub issues are for tracking enhancements and bugs, not general support.
+**GitHub issues are for tracking enhancements and bugs, not general support.**
 
 The open-source license grants you the freedom to use N|Solid. It does not
 guarantee commitments of other people's time. Please be respectful and manage

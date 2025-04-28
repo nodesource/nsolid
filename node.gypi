@@ -70,12 +70,16 @@
         'NODE_PLATFORM="win32"',
         '_UNICODE=1',
       ],
-      'msvs_precompiled_header': 'tools/msvs/pch/node_pch.h',
-      'msvs_precompiled_source': 'tools/msvs/pch/node_pch.cc',
-      'sources': [
-        '<(_msvs_precompiled_header)',
-        '<(_msvs_precompiled_source)',
-      ],
+      'conditions': [
+          ['clang != 1 or use_ccache_win != 1', {
+            'msvs_precompiled_header': 'tools/msvs/pch/node_pch.h',
+            'msvs_precompiled_source': 'tools/msvs/pch/node_pch.cc',
+            'sources': [
+              '<(_msvs_precompiled_header)',
+              '<(_msvs_precompiled_source)',
+            ],
+          }]
+      ]
     }, { # POSIX
       'defines': [ '__POSIX__' ],
     }],
@@ -416,11 +420,16 @@
       ],
     }],
 
+    [ 'node_shared_zstd=="false"', {
+      'dependencies': [ 'deps/zstd/zstd.gyp:zstd' ],
+    }],
+
     [ 'OS=="mac"', {
       # linking Corefoundation is needed since certain macOS debugging tools
       # like Instruments require it for some features
       'libraries': [
         '-framework CoreFoundation',
+        '-framework Security',
         '-framework SystemConfiguration' # For libcurl
       ],
       'defines!': [

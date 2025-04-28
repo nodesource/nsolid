@@ -3,9 +3,9 @@
 const common = require('../common');
 const assert = require('assert');
 const nsolid = require('nsolid');
-const { Worker, parentPort, threadId } = require('worker_threads');
+const { Worker, isMainThread, parentPort, threadId } = require('worker_threads');
 
-if (!common.isMainThread) {
+if (!isMainThread) {
   parentPort.postMessage(nsolid.metrics().threadId);
   return;
 }

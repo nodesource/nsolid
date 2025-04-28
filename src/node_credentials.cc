@@ -26,7 +26,6 @@ using v8::Context;
 using v8::FunctionCallbackInfo;
 using v8::Isolate;
 using v8::Local;
-using v8::MaybeLocal;
 using v8::Object;
 using v8::Uint32;
 using v8::Value;
@@ -99,15 +98,7 @@ bool SafeGetenv(const char* key, std::string* text, Environment* env) {
     *text = value.value();
   }
 
-  auto options =
-      (env != nullptr ? env->options()
-                      : per_process::cli_options->per_isolate->per_env);
-
-  if (options->trace_env) {
-    fprintf(stderr, "[--trace-env] get environment variable \"%s\"\n", key);
-
-    PrintTraceEnvStack(options);
-  }
+  TraceEnvVar(env, "get", key);
 
   return has_env;
 }
@@ -119,9 +110,10 @@ static void SafeGetenv(const FunctionCallbackInfo<Value>& args) {
   Utf8Value strenvtag(isolate, args[0]);
   std::string text;
   if (!SafeGetenv(*strenvtag, &text, env)) return;
-  Local<Value> result =
-      ToV8Value(isolate->GetCurrentContext(), text).ToLocalChecked();
-  args.GetReturnValue().Set(result);
+  Local<Value> result;
+  if (ToV8Value(isolate->GetCurrentContext(), text).ToLocal(&result)) {
+    args.GetReturnValue().Set(result);
+  }
 }
 
 static void GetTempDir(const FunctionCallbackInfo<Value>& args) {
@@ -145,8 +137,10 @@ static void GetTempDir(const FunctionCallbackInfo<Value>& args) {
     dir.pop_back();
   }
 
-  args.GetReturnValue().Set(
-      ToV8Value(isolate->GetCurrentContext(), dir).ToLocalChecked());
+  Local<Value> result;
+  if (ToV8Value(isolate->GetCurrentContext(), dir).ToLocal(&result)) {
+    args.GetReturnValue().Set(result);
+  }
 }
 
 #ifdef NODE_IMPLEMENTS_POSIX_CREDENTIALS
@@ -393,9 +387,10 @@ static void GetGroups(const FunctionCallbackInfo<Value>& args) {
   gid_t egid = getegid();
   if (std::find(groups.begin(), groups.end(), egid) == groups.end())
     groups.push_back(egid);
-  MaybeLocal<Value> array = ToV8Value(env->context(), groups);
-  if (!array.IsEmpty())
-    args.GetReturnValue().Set(array.ToLocalChecked());
+  Local<Value> result;
+  if (ToV8Value(env->context(), groups).ToLocal(&result)) {
+    args.GetReturnValue().Set(result);
+  }
 }
 
 static void SetGroups(const FunctionCallbackInfo<Value>& args) {
@@ -411,8 +406,12 @@ static void SetGroups(const FunctionCallbackInfo<Value>& args) {
   MaybeStackBuffer<gid_t, 64> groups(size);
 
   for (size_t i = 0; i < size; i++) {
-    gid_t gid = gid_by_name(
-        env->isolate(), groups_list->Get(env->context(), i).ToLocalChecked());
+    Local<Value> val;
+    if (!groups_list->Get(env->context(), i).ToLocal(&val)) {
+      // V8 will have scheduled an error to be thrown.
+      return;
+    }
+    gid_t gid = gid_by_name(env->isolate(), val);
 
     if (gid == gid_not_found) {
       // Tells JS to throw ERR_INVALID_CREDENTIAL

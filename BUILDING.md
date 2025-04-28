@@ -30,6 +30,8 @@ file a new issue.
     * [Building a debug build](#building-a-debug-build)
     * [Building an ASan build](#building-an-asan-build)
     * [Speeding up frequent rebuilds when developing](#speeding-up-frequent-rebuilds-when-developing)
+      * [ccache](#ccache)
+      * [Loading JS files from disk instead of embedding](#loading-js-files-from-disk-instead-of-embedding)
     * [Troubleshooting Unix and macOS builds](#troubleshooting-unix-and-macos-builds)
   * [Windows](#windows)
     * [Windows Prerequisites](#windows-prerequisites)
@@ -165,8 +167,8 @@ Binaries at <https://downloads.nodesource.com/> are produced on:
 | Binary package          | Platform and Toolchain                                                                                      |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------- |
 | aix-ppc64               | AIX 7.2 TL04 on PPC64BE with GCC 10                                                                         |
-| darwin-x64              | macOS 11, Xcode 13 with -mmacosx-version-min=11.0                                                           |
-| darwin-arm64 (and .pkg) | macOS 11 (arm64), Xcode 13 with -mmacosx-version-min=11.0                                                   |
+| darwin-x64              | macOS 13, Xcode 16 with -mmacosx-version-min=11.0                                                           |
+| darwin-arm64 (and .pkg) | macOS 13 (arm64), Xcode 16 with -mmacosx-version-min=11.0                                                   |
 | linux-arm64             | RHEL 8 with GCC 10[^6]                                                                                      |
 | linux-armv7l            | Cross-compiled on RHEL 8 x64 with [custom GCC toolchain](https://github.com/rvagg/rpi-newer-crosstools)[^7] |
 | linux-ppc64le           | RHEL 8 with gcc-toolset-10[^6]                                                                              |
@@ -230,7 +232,7 @@ If compiling without one of the above, use `configure` with the
 
 Installation via Linux package manager can be achieved with:
 
-* Ubuntu, Debian: `sudo apt-get install python3 g++ make python3-pip`
+* Ubuntu, Debian: `sudo apt-get install python3 g++-12 gcc-12 make python3-pip`
 * Fedora: `sudo dnf install python3 gcc-c++ make python3-pip`
 * CentOS and RHEL: `sudo yum install python3 gcc-c++ make python3-pip`
 * OpenSUSE: `sudo zypper install python3 gcc-c++ make python3-pip`
@@ -258,6 +260,7 @@ fail.
 To build N|Solid:
 
 ```bash
+export CXX=g++-12
 ./configure
 make -j4
 ```
@@ -536,7 +539,7 @@ export CC="ccache cc"    # add to ~/.zshrc or other shell config file
 export CXX="ccache c++"  # add to ~/.zshrc or other shell config file
 ```
 
-This will allow for near-instantaneous rebuilds even when switching branches.
+##### Loading JS files from disk instead of embedding
 
 When modifying only the JS layer in `lib`, it is possible to externally load it
 without modifying the executable:
@@ -619,6 +622,42 @@ To test if N|Solid was built correctly:
 
 ```powershell
 Release\nsolid -e "console.log('Hello from N|Solid', process.version)"
+```
+
+##### Using ccache:
+
+Follow <https://github.com/ccache/ccache/wiki/MS-Visual-Studio>, and you
+should notice that obj file will be bigger than the normal one.
+
+First, install ccache. Assuming the installation of ccache is in `c:\ccache`
+(where you can find `ccache.exe`), copy `c:\ccache\ccache.exe` to `c:\ccache\cl.exe`
+with this command.
+
+```powershell
+cp c:\ccache\ccache.exe c:\ccache\cl.exe
+```
+
+With newer version of Visual Studio, it may need the copy to be `clang-cl.exe`
+instead. If the output of `vcbuild.bat` suggestion missing `clang-cl.exe`, copy
+it differently:
+
+```powershell
+cp c:\ccache\ccache.exe c:\ccache\clang-cl.exe
+```
+
+When building Node.js, provide a path to your ccache via the option:
+
+```powershell
+.\vcbuild.bat ccache c:\ccache\
+```
+
+This will allow for near-instantaneous rebuilds when switching branches back
+and forth that were built with cache.
+
+To use it with ClangCL, run this instead:
+
+```powershell
+.\vcbuild.bat clang-cl ccache c:\ccache\
 ```
 
 ### Android
