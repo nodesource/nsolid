@@ -109,6 +109,9 @@ class GRPCServer extends EventEmitter {
         case 'profile':
           this.emit('profile', message.data);
           break;
+        case 'reconfigure':
+          this.emit('reconfigure', message.data);
+          break;
         case 'snapshot':
           this.emit('snapshot', message.data);
           break;
@@ -239,6 +242,27 @@ class GRPCServer extends EventEmitter {
             resolve({ requestId, data: msg.data });
           }
         });
+      } else {
+        resolve(null);
+      }
+    });
+  }
+
+  async reconfigure(agentId, config = null) {
+    return new Promise((resolve) => {
+      if (this.#server) {
+        const requestId = randomUUID();
+        // Create a message handler that checks for the specific message type
+        const messageHandler = (msg) => {
+          if (msg.type === 'reconfigure' &&
+              msg.data.msg.common.requestId === requestId) {
+            this.#server.removeListener('message', messageHandler);
+            resolve({ data: msg.data, requestId });
+          }
+        };
+
+        this.#server.on('message', messageHandler);
+        this.#server.send({ type: 'reconfigure', agentId, config, requestId });
       } else {
         resolve(null);
       }
