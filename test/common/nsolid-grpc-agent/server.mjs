@@ -150,6 +150,7 @@ async function startServer(cb) {
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
       callback(null, {});
+      process.send({ type: 'reconfigure', data: { msg: call.request, metadata: call.metadata } });
     },
     ExportSourceCode: (call, callback) => {
       // Extract data from the request object
@@ -202,6 +203,8 @@ process.on('message', (message) => {
     sendMetrics(message.agentId, message.requestId);
   } else if (message.type === 'packages') {
     sendPackages(message.agentId, message.requestId);
+  } else if (message.type === 'reconfigure') {
+    sendReconfigure(message.agentId, message.requestId, message.config);
   } else if (message.type === 'snapshot') {
     sendHeapSnapshot(message.agentId, message.requestId, message.options);
   } else if (message.type === 'source_code') {
@@ -278,6 +281,14 @@ async function sendMetrics(agentId, requestId) {
 
 async function sendPackages(agentId, requestId) {
   return sendCommand('packages', agentId, requestId);
+}
+
+async function sendReconfigure(agentId, requestId, reconfigure) {
+  const args = {
+    reconfigure,
+  };
+
+  return sendCommand('reconfigure', agentId, requestId, args);
 }
 
 async function sendSourceCode(agentId, requestId, options) {
