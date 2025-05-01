@@ -42,10 +42,6 @@ test-performance-function: PASS, FLAKY
 test-esm-loader-hooks-inspect-wait: PASS, FLAKY
 # https://github.com/nodejs/node/issues/54534
 test-runner-run-watch: PASS, FLAKY
-# https://github.com/nodejs/node/issues/37692
-test-fs-utimes: PASS, FLAKY
-# https://github.com/nodejs/node/issues/52274
-test-worker-arraybuffer-zerofill: PASS, FLAKY
 
 [$system==linux || $system==win32]
 # https://github.com/nodejs/node/issues/49605
@@ -70,6 +66,8 @@ test-pipe-file-to-http: PASS, FLAKY
 test-debugger-heap-profiler: PASS, FLAKY
 
 [$system==solaris] # Also applies to SmartOS
+# https://github.com/nodejs/node/issues/56726
+test-buffer-tostring-range: SKIP
 # https://github.com/nodejs/node/issues/43457
 test-domain-no-error-handler-abort-on-uncaught-0: PASS, FLAKY
 test-domain-no-error-handler-abort-on-uncaught-1: PASS,FLAKY

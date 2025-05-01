@@ -128,6 +128,12 @@ parser.add_argument('--use-prefix-to-find-headers',
     default=None,
     help='use the prefix to look for pre-installed headers')
 
+parser.add_argument('--use_clang',
+    action='store_true',
+    dest='use_clang',
+    default=None,
+    help='use clang instead of gcc')
+
 parser.add_argument('--dest-os',
     action='store',
     dest='dest_os',
@@ -1326,7 +1332,7 @@ def configure_zos(o):
   o['variables']['node_static_zoslib'] = b(True)
   if options.static_zoslib_gyp:
     # Apply to all N|Solid components for now
-    o['variables']['zoslib_include_dir'] = Path(options.static_zoslib_gyp).parent + '/include'
+    o['variables']['zoslib_include_dir'] = Path(options.static_zoslib_gyp).parent / 'include'
     o['include_dirs'] += [o['variables']['zoslib_include_dir']]
   else:
     raise Exception('--static-zoslib-gyp=<path to zoslib.gyp file> is required.')
@@ -1375,6 +1381,10 @@ def configure_node(o):
   o['variables']['host_arch'] = host_arch
   o['variables']['target_arch'] = target_arch
   o['variables']['node_byteorder'] = sys.byteorder
+
+  # Allow overriding the compiler - needed by embedders.
+  if options.use_clang:
+    o['variables']['clang'] = 1
 
   cross_compiling = (options.cross_compiling
                      if options.cross_compiling is not None
@@ -1847,7 +1857,7 @@ def configure_intl(o):
   elif with_intl == 'system-icu':
     # ICU from pkg-config.
     o['variables']['v8_enable_i18n_support'] = 1
-    pkgicu = pkg_config('icu-i18n')
+    pkgicu = pkg_config(['icu-i18n', 'icu-uc'])
     if not pkgicu[0]:
       error('''Could not load pkg-config data for "icu-i18n".
        See above errors or the README.md.''')

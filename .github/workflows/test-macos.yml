@@ -38,21 +38,25 @@ permissions:
 jobs:
   test-macOS:
     if: github.event.pull_request.draft == false
-    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        macos-version: [macos-13, macos-14]
+    runs-on: ${{ matrix.macos-version }}
     env:
       CC: sccache gcc
       CXX: sccache g++
       SCCACHE_GHA_ENABLED: 'true'
     steps:
-      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938  # v4.2.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           persist-credentials: false
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Set up sccache
-        uses: mozilla-actions/sccache-action@9e326ebed976843c9932b3aa0e021c6f50310eb4  # v0.0.6
+        uses: Mozilla-Actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad  # v0.0.9
         with:
           version: v0.8.1
       - name: Environment Information

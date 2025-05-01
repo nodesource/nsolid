@@ -22,7 +22,6 @@ const expected_keys = [
   'simdutf',
   'ada',
   'cjs_module_lexer',
-  'base64',
   'curl',
   'grpc',
   'nlohmann',

@@ -240,7 +240,7 @@ coverage-clean:
 	$(RM) -r coverage/tmp
 	@if [ -d "out/Release/obj.target" ]; then \
 		$(FIND) out/$(BUILDTYPE)/obj.target \( -name "*.gcda" -o -name "*.gcno" \) \
-			-type f -exec $(RM) {};\
+			-type f | xargs $(RM); \
 	fi
 
 .PHONY: coverage
@@ -266,7 +266,7 @@ coverage-build-js:
 .PHONY: coverage-test
 coverage-test: coverage-build
 	@if [ -d "out/Release/obj.target" ]; then \
-		$(FIND) out/$(BUILDTYPE)/obj.target -name "*.gcda" -type f -exec $(RM) {}; \
+		$(FIND) out/$(BUILDTYPE)/obj.target -name "*.gcda" -type f | xargs $(RM); \
 	fi
 	-NODE_V8_COVERAGE=coverage/tmp \
 		TEST_CI_ARGS="$(TEST_CI_ARGS) --type=coverage" $(MAKE) $(COVTESTS)
@@ -611,6 +611,10 @@ test-debug: BUILDTYPE_LOWER=debug
 test-release test-debug: test-build
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) --mode=$(BUILDTYPE_LOWER)
 
+.PHONY: test-test426
+test-test426: all ## Run the Web Platform Tests.
+	$(PYTHON) tools/test.py $(PARALLEL_ARGS) test426
+
 .PHONY: test-wpt
 test-wpt: all
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) wpt
@@ -937,7 +941,11 @@ else
 ifeq ($(findstring riscv64,$(UNAME_M)),riscv64)
 DESTCPU ?= riscv64
 else
+ifeq ($(findstring loongarch64,$(UNAME_M)),loongarch64)
+DESTCPU ?= loong64
+else
 DESTCPU ?= x86
+endif
 endif
 endif
 endif
@@ -974,7 +982,11 @@ else
 ifeq ($(DESTCPU),riscv64)
 ARCH=riscv64
 else
+ifeq ($(DESTCPU),loong64)
+ARCH=loong64
+else
 ARCH=x86
+endif
 endif
 endif
 endif

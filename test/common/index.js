@@ -937,9 +937,14 @@ function getPrintedStackTrace(stderr) {
  * @param {object} mod result returned by require()
  * @param {object} expectation shape of expected namespace.
  */
-function expectRequiredModule(mod, expectation) {
+function expectRequiredModule(mod, expectation, checkESModule = true) {
+  const clone = { ...mod };
+  if (Object.hasOwn(mod, 'default') && checkESModule) {
+    assert.strictEqual(mod.__esModule, true);
+    delete clone.__esModule;
+  }
   assert(isModuleNamespaceObject(mod));
-  assert.deepStrictEqual({ ...mod }, { ...expectation });
+  assert.deepStrictEqual(clone, { ...expectation });
 }
 
 const common = {
@@ -1022,14 +1027,6 @@ const common = {
 
   get hasOpenSSL3() {
     return hasOpenSSL(3);
-  },
-
-  get hasOpenSSL31() {
-    return hasOpenSSL(3, 1);
-  },
-
-  get hasOpenSSL32() {
-    return hasOpenSSL(3, 2);
   },
 
   get inFreeBSDJail() {
