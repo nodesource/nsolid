@@ -1622,8 +1622,10 @@ static void CompileFunctionForCJSLoader(
   Local<Object> result = Object::New(
       isolate, v8::Null(isolate), names.data(), values.data(), names.size());
 
-  auto envinst = nsolid::EnvInst::GetCurrent(isolate);
-  envinst->StoreSourceCode(fn->ScriptId(), filename, code, false);
+  if (!fn.IsEmpty()) {
+    auto envinst = nsolid::EnvInst::GetCurrent(isolate);
+    envinst->StoreSourceCode(fn->ScriptId(), filename, code, false);
+  }
 
   args.GetReturnValue().Set(result);
 }
