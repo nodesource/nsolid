@@ -169,9 +169,9 @@ with-code-cache test-code-cache:
 	$(warning '$@' target is a noop)
 
 out/Makefile: config.gypi common.gypi node.gyp \
-	deps/uv/uv.gyp deps/llhttp/llhttp.gyp deps/zlib/zlib.gyp \
-	deps/simdutf/simdutf.gyp deps/ada/ada.gyp \
-	tools/v8_gypfiles/toolchain.gypi tools/v8_gypfiles/features.gypi \
+	deps/*/*.gyp \
+	tools/v8_gypfiles/toolchain.gypi \
+	tools/v8_gypfiles/features.gypi \
 	tools/v8_gypfiles/inspector.gypi tools/v8_gypfiles/v8.gyp
 	$(PYTHON) tools/gyp_node.py -f make
 
@@ -250,7 +250,7 @@ coverage: coverage-test ## Run the tests and generate a coverage report.
 .PHONY: coverage-build
 coverage-build: all
 	-$(MAKE) coverage-build-js
-	if [ ! -d gcovr ]; then $(PYTHON) -m pip install -t gcovr gcovr==4.2; fi
+	if [ ! -d gcovr ]; then $(PYTHON) -m pip install -t gcovr gcovr==7.2; fi
 	$(MAKE)
 
 .PHONY: coverage-build-js
@@ -266,9 +266,10 @@ coverage-test: coverage-build
 	-NODE_V8_COVERAGE=coverage/tmp \
 		TEST_CI_ARGS="$(TEST_CI_ARGS) --type=coverage" $(MAKE) $(COVTESTS)
 	$(MAKE) coverage-report-js
-	-(cd out && PYTHONPATH=../gcovr $(PYTHON) -m gcovr \
-		--gcov-exclude='.*\b(deps|usr|out|cctest|embedding)\b' -v \
-		-r ../src/ --object-directory Release/obj.target \
+	-(PYTHONPATH=./gcovr $(PYTHON) -m gcovr \
+		--object-directory=out \
+		--filter src -v \
+		--root ./ \
 		--html --html-details -o ../coverage/cxxcoverage.html \
 		--gcov-executable="$(GCOV)")
 	@printf "Javascript coverage %%: "
