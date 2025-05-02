@@ -13,8 +13,7 @@ function setupTracesCheck(port, addresses) {
   const expectedTraces = [
     {
       attributes: {
-        'dns.address': [{ address: addresses[0].address,
-                          family: addresses[0].family }],
+        'dns.address': addresses[0].address,
         'dns.hostname': 'localhost',
         'dns.op_type': binding.kDnsLookup,
       },
