@@ -75,17 +75,9 @@ echo "Copying existing gyp files"
 cp "$DEPS_DIR/opentelemetry-cpp/otlp-http-exporter.gyp" "$WORKSPACE/opentelemetry-cpp"
 
 # Build opentelemetry-proto files
-echo "Getting protoc executable"
-
 cd "$WORKSPACE"
-PROTOBUF_VERSION_3=$(grep "PACKAGE_VERSION=" "$DEPS_DIR/protobuf/configure" | awk -F"'" '{print $2}')
-PROTOBUF_VERSION="${PROTOBUF_VERSION_3#3.}"
-PROTOC_ZIP="protoc-$PROTOBUF_VERSION-linux-x86_64.zip"
-
-curl -sL -o "$PROTOC_ZIP" "https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOBUF_VERSION/$PROTOC_ZIP"
-unzip -o "$PROTOC_ZIP" -d ./protoc/
-
 echo "Getting opentelemetry-proto files"
+
 OTEL_PROTO_VERSION=$(grep "opentelemetry-proto" "opentelemetry-cpp/MODULE.bazel" | sed -n 's/.*version = "\([^"]*\)".*/\1/p')
 OTEL_PROTO_TARBALL=v$OTEL_PROTO_VERSION.tar.gz
 
@@ -96,32 +88,6 @@ log_and_verify_sha256sum "opentelemetry-proto" "$OTEL_PROTO_TARBALL"
 gzip -dc "$OTEL_PROTO_TARBALL" | tar xf -
 rm "$OTEL_PROTO_TARBALL"
 
-echo "Generating grpc_cpp_plugin"
-cd "$BASE_DIR"
-./configure && make -C out grpc_cpp_plugin
-cp out/Release/grpc_cpp_plugin "$WORKSPACE/protoc/bin/"
-cd "$WORKSPACE"
-
-echo "Building protobuf files"
-cd "opentelemetry-proto-$OTEL_PROTO_VERSION"
-mkdir -p "$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp"
-"$WORKSPACE/protoc/bin/protoc" \
-    --cpp_out="$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp" \
-    --grpc-cpp_out="$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/gen/cpp" \
-    --plugin="protoc-gen-grpc-cpp=$WORKSPACE/protoc/bin/grpc_cpp_plugin" \
-    opentelemetry/proto/common/v1/common.proto \
-    opentelemetry/proto/logs/v1/logs.proto \
-    opentelemetry/proto/metrics/v1/metrics.proto \
-    opentelemetry/proto/resource/v1/resource.proto \
-    opentelemetry/proto/trace/v1/trace.proto \
-    opentelemetry/proto/collector/logs/v1/logs_service.proto \
-    opentelemetry/proto/collector/metrics/v1/metrics_service.proto \
-    opentelemetry/proto/collector/trace/v1/trace_service.proto
-
-echo "Copying protobuf files to opentelemetry-cpp for testing purposes"
-cp -r opentelemetry "$WORKSPACE/opentelemetry-cpp/third_party/opentelemetry-proto/."
-
-
 echo "Replacing existing opentelemetry-cpp"
 rm -rf "$DEPS_DIR/opentelemetry-cpp"
 mv "$WORKSPACE/opentelemetry-cpp" "$DEPS_DIR/"
@@ -130,3 +96,7 @@ mv "$WORKSPACE/opentelemetry-cpp" "$DEPS_DIR/"
 # and print the new version as the last line of the script as we need
 # to add it to $GITHUB_ENV variable
 finalize_version_update "opentelemetry-cpp" "$NEW_VERSION"
+
+# Regenerate proto files after updating protobuf
+echo "Regenerating OpenTelemetry proto files"
+regenerate_proto_otel "$WORKSPACE" "$DEPS_DIR" "$BASE_DIR"

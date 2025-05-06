@@ -11,25 +11,25 @@ DEPS_DIR="$BASE_DIR/deps"
 # shellcheck disable=SC1091
 . "$BASE_DIR/tools/dep_updaters/utils.sh"
 
-# NEW_VERSION=$1
+NEW_VERSION=$1
 
-# if [ "$#" -le 0 ]; then
-#   echo "Error: please provide a protobuf version to update to"
-#   exit 1
-# fi
+if [ "$#" -le 0 ]; then
+  echo "Error: please provide a protobuf version to update to"
+  exit 1
+fi
 
-NEW_VERSION="$("$NODE" --input-type=module <<'EOF'
-const res = await fetch('https://api.github.com/repos/grpc/grpc/releases/latest',
-  process.env.GITHUB_TOKEN && {
-    headers: {
-      "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`
-    },
-  });
-if (!res.ok) throw new Error(`FetchError: ${res.status} ${res.statusText}`, { cause: res });
-const { tag_name } = await res.json();
-console.log(tag_name.replace('v', ''));
-EOF
-)"
+#NEW_VERSION="$("$NODE" --input-type=module <<'EOF'
+#const res = await fetch('https://api.github.com/repos/grpc/grpc/releases/latest',
+#  process.env.GITHUB_TOKEN && {
+#    headers: {
+#      "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`
+#    },
+#  });
+#if (!res.ok) throw new Error(`FetchError: ${res.status} ${res.statusText}`, { cause: res });
+#const { tag_name } = await res.json();
+#console.log(tag_name.replace('v', ''));
+#EOF
+#)"
 
 CURRENT_VERSION=$(grep GRPC_CPP_VERSION_STRING ./deps/grpc/include/grpcpp/version_info.h | awk -F" " '{print $3}' | tr -d '"')
 
@@ -59,8 +59,8 @@ git clone -b "v$NEW_VERSION" --depth=1 --no-recurse-submodules https://github.co
 
 cd grpc
 
-git submodule init third_party/abseil-cpp third_party/address_sorting third_party/re2 third_party/upb third_party/xxhash
-git submodule update --depth 1 third_party/abseil-cpp third_party/address_sorting third_party/re2 third_party/upb third_party/xxhash
+git submodule init third_party/address_sorting third_party/re2 third_party/upb third_party/xxhash
+git submodule update --depth 1 third_party/address_sorting third_party/re2 third_party/upb third_party/xxhash
 
 echo "Removing everything, except source files and LICENSE"
 for dir in *; do

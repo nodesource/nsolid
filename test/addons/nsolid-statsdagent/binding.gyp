@@ -8,6 +8,7 @@
       '../../../src/',
       '../../../deps/nsuv/include/',
       '../../../deps/protobuf/src',
+      '../../../deps/protobuf/third_party/abseil-cpp',
       '../../../agents/statsd/src/',
     ],
     'target_defaults': {

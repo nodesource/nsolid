@@ -8,6 +8,7 @@
       'include_dirs': [
         '../../../deps/nsuv/include',
         '../../../deps/protobuf/src',
+        '../../../deps/protobuf/third_party/abseil-cpp',
         '../../../src/',
       ],
     }

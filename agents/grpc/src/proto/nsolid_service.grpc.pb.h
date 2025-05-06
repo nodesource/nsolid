@@ -24,6 +24,7 @@
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/stub_options.h>
 #include <grpcpp/support/sync_stream.h>
+#include <grpcpp/ports_def.inc>
 
 namespace grpcagent {
 
@@ -1882,4 +1883,5 @@ class NSolidService final {
 }  // namespace grpcagent
 
 
+#include <grpcpp/ports_undef.inc>
 #endif  // GRPC_nsolid_5fservice_2eproto__INCLUDED
