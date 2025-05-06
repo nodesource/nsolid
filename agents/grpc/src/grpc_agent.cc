@@ -1530,10 +1530,12 @@ void GrpcAgent::got_continuous_profile(
   // Check if the profile is complete
   bool profileStreamComplete = stor.profile.length() == 0;
   if (profileStreamComplete) {
+    uint64_t now = uv_hrtime() - performance::performance_process_start;
+    uint64_t start = start_timestamp - performance::performance_process_start;
     double start_ts =
-        performance_process_start_timestamp + start_timestamp / 1e6;
-    double end_ts = performance_process_start_timestamp + uv_hrtime() / 1e6;
-    uint64_t duration = (uv_hrtime() - start_timestamp) / 1e6;
+        performance_process_start_timestamp + start / 1e6;
+    double end_ts = performance_process_start_timestamp + now / 1e6;
+    uint64_t duration = (now - start) / 1e6;
     // Create complete profile
     grpcagent::Asset asset;
     PopulateCommon(asset.mutable_common(),
