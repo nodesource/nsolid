@@ -17,21 +17,21 @@
 #ifndef GRPC_SRC_CORE_XDS_GRPC_XDS_BOOTSTRAP_GRPC_H
 #define GRPC_SRC_CORE_XDS_GRPC_XDS_BOOTSTRAP_GRPC_H
 
+#include <grpc/support/port_platform.h>
+
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
-
-#include <grpc/support/port_platform.h>
-
-#include "src/core/lib/gprpp/validation_errors.h"
 #include "src/core/util/json/json.h"
 #include "src/core/util/json/json_args.h"
 #include "src/core/util/json/json_object_loader.h"
+#include "src/core/util/ref_counted_ptr.h"
+#include "src/core/util/validation_errors.h"
 #include "src/core/xds/grpc/certificate_provider_store.h"
 #include "src/core/xds/grpc/xds_audit_logger_registry.h"
 #include "src/core/xds/grpc/xds_cluster_specifier_plugin.h"
@@ -151,7 +151,7 @@ class GrpcXdsBootstrap final : public XdsBootstrap {
 
  private:
   std::vector<GrpcXdsServer> servers_;
-  absl::optional<GrpcNode> node_;
+  std::optional<GrpcNode> node_;
   std::string client_default_listener_resource_name_template_;
   std::string server_listener_resource_name_template_;
   std::map<std::string, GrpcAuthority> authorities_;

@@ -18,6 +18,10 @@
 
 #include "src/core/channelz/channelz.h"
 
+#include <grpc/support/json.h>
+#include <grpc/support/port_platform.h>
+#include <grpc/support/time.h>
+
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
@@ -27,20 +31,15 @@
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/strip.h"
-
-#include <grpc/support/json.h>
-#include <grpc/support/port_platform.h>
-#include <grpc/support/time.h>
-
 #include "src/core/channelz/channelz_registry.h"
 #include "src/core/lib/address_utils/parse_address.h"
 #include "src/core/lib/address_utils/sockaddr_utils.h"
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/iomgr/resolved_address.h"
 #include "src/core/lib/transport/connectivity_state.h"
-#include "src/core/lib/uri/uri_parser.h"
 #include "src/core/util/json/json_writer.h"
 #include "src/core/util/string.h"
+#include "src/core/util/uri.h"
 #include "src/core/util/useful.h"
 
 namespace grpc_core {
@@ -335,7 +334,7 @@ ServerNode::~ServerNode() {}
 
 void ServerNode::AddChildSocket(RefCountedPtr<SocketNode> node) {
   MutexLock lock(&child_mu_);
-  child_sockets_.insert(std::make_pair(node->uuid(), std::move(node)));
+  child_sockets_.insert(std::pair(node->uuid(), std::move(node)));
 }
 
 void ServerNode::RemoveChildSocket(intptr_t child_uuid) {
@@ -345,7 +344,7 @@ void ServerNode::RemoveChildSocket(intptr_t child_uuid) {
 
 void ServerNode::AddChildListenSocket(RefCountedPtr<ListenSocketNode> node) {
   MutexLock lock(&child_mu_);
-  child_listen_sockets_.insert(std::make_pair(node->uuid(), std::move(node)));
+  child_listen_sockets_.insert(std::pair(node->uuid(), std::move(node)));
 }
 
 void ServerNode::RemoveChildListenSocket(intptr_t child_uuid) {

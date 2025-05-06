@@ -18,8 +18,8 @@
 
 #include <grpc/support/port_platform.h>
 
-#include "src/core/lib/gprpp/crash.h"
 #include "src/core/lib/iomgr/port.h"
+#include "src/core/util/crash.h"
 
 // This polling engine is only relevant on linux kernels supporting epoll
 // epoll_create() or epoll_create1()
@@ -27,6 +27,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <grpc/support/alloc.h>
+#include <grpc/support/cpu.h>
 #include <limits.h>
 #include <poll.h>
 #include <pthread.h>
@@ -43,12 +45,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
-
-#include <grpc/support/alloc.h>
-#include <grpc/support/cpu.h>
-
-#include "src/core/lib/gprpp/manual_constructor.h"
-#include "src/core/lib/gprpp/strerror.h"
+#include "src/core/lib/experiments/experiments.h"
 #include "src/core/lib/iomgr/block_annotate.h"
 #include "src/core/lib/iomgr/ev_epoll1_linux.h"
 #include "src/core/lib/iomgr/ev_posix.h"
@@ -57,6 +54,8 @@
 #include "src/core/lib/iomgr/wakeup_fd_posix.h"
 #include "src/core/telemetry/stats.h"
 #include "src/core/telemetry/stats_data.h"
+#include "src/core/util/manual_constructor.h"
+#include "src/core/util/strerror.h"
 #include "src/core/util/string.h"
 #include "src/core/util/useful.h"
 
@@ -334,7 +333,11 @@ static void fork_fd_list_remove_grpc_fd(grpc_fd* fd) {
 
 static grpc_fd* fd_create(int fd, const char* name, bool track_err) {
   grpc_fd* new_fd = nullptr;
-
+  if (grpc_core::IsEventEngineForAllOtherEndpointsEnabled()) {
+    grpc_fd* new_fd = static_cast<grpc_fd*>(gpr_malloc(sizeof(grpc_fd)));
+    new_fd->fd = fd;
+    return new_fd;
+  }
   gpr_mu_lock(&fd_freelist_mu);
   if (fd_freelist != nullptr) {
     new_fd = fd_freelist;
@@ -412,6 +415,13 @@ static void fd_shutdown(grpc_fd* fd, grpc_error_handle why) {
 
 static void fd_orphan(grpc_fd* fd, grpc_closure* on_done, int* release_fd,
                       const char* reason) {
+  if (grpc_core::IsEventEngineForAllOtherEndpointsEnabled()) {
+    CHECK_NE(release_fd, nullptr);
+    CHECK_EQ(on_done, nullptr);
+    *release_fd = fd->fd;
+    gpr_free(fd);
+    return;
+  }
   grpc_error_handle error;
   bool is_release_fd = (release_fd != nullptr);
 
@@ -708,7 +718,7 @@ static grpc_error_handle process_epoll_events(grpc_pollset* /*pollset*/) {
 
 // NOTE ON SYNCHRONIZATION: At any point of time, only the g_active_poller
 // (i.e the designated poller thread) will be calling this function. So there is
-// no need for any synchronization when accesing fields in g_epoll_set
+// no need for any synchronization when accessing fields in g_epoll_set
 static grpc_error_handle do_epoll_wait(grpc_pollset* ps,
                                        grpc_core::Timestamp deadline) {
   int r;
@@ -1011,7 +1021,7 @@ static grpc_error_handle pollset_work(grpc_pollset* ps,
     // threads
 
     // process_epoll_events() returns very quickly: It just queues the work on
-    // exec_ctx but does not execute it (the actual exectution or more
+    // exec_ctx but does not execute it (the actual execution or more
     // accurately grpc_core::ExecCtx::Get()->Flush() happens in end_worker()
     // AFTER selecting a designated poller). So we are not waiting long periods
     // without a designated poller

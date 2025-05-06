@@ -20,14 +20,13 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/variant.h"
-
-#include "src/core/lib/gprpp/ref_counted.h"
+#include "src/core/util/ref_counted.h"
 #include "src/core/xds/grpc/xds_cluster.h"
 #include "src/core/xds/grpc/xds_endpoint.h"
 #include "src/core/xds/grpc/xds_listener.h"
@@ -74,7 +73,7 @@ struct XdsConfig : public RefCounted<XdsConfig> {
         return leaf_clusters == other.leaf_clusters;
       }
     };
-    absl::variant<EndpointConfig, AggregateConfig> children;
+    std::variant<EndpointConfig, AggregateConfig> children;
 
     // Ctor for leaf clusters.
     ClusterConfig(std::shared_ptr<const XdsClusterResource> cluster,

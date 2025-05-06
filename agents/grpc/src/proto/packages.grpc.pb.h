@@ -30,10 +30,12 @@
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/stub_options.h>
 #include <grpcpp/support/sync_stream.h>
+#include <grpcpp/ports_def.inc>
 
 namespace grpcagent {
 
 }  // namespace grpcagent
 
 
+#include <grpcpp/ports_undef.inc>
 #endif  // GRPC_packages_2eproto__INCLUDED
