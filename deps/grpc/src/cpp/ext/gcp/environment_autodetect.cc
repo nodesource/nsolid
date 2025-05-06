@@ -18,7 +18,13 @@
 
 #include "src/cpp/ext/gcp/environment_autodetect.h"
 
+#include <grpc/support/alloc.h>
+#include <grpc/support/port_platform.h>
+#include <grpc/support/sync.h>
+#include <grpcpp/impl/grpc_library.h>
+
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
@@ -26,21 +32,8 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
-
-#include <grpc/support/alloc.h>
-#include <grpc/support/port_platform.h>
-#include <grpc/support/sync.h>
-#include <grpcpp/impl/grpc_library.h>
-
 #include "src/core/lib/debug/trace.h"
 #include "src/core/lib/event_engine/default_event_engine.h"
-#include "src/core/lib/gprpp/crash.h"
-#include "src/core/lib/gprpp/env.h"
-#include "src/core/lib/gprpp/load_file.h"
-#include "src/core/lib/gprpp/orphanable.h"
-#include "src/core/lib/gprpp/status_helper.h"
-#include "src/core/lib/gprpp/time.h"
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/iomgr/error.h"
 #include "src/core/lib/iomgr/exec_ctx.h"
@@ -48,7 +41,13 @@
 #include "src/core/lib/iomgr/polling_entity.h"
 #include "src/core/lib/iomgr/pollset.h"
 #include "src/core/lib/slice/slice.h"
+#include "src/core/util/crash.h"
+#include "src/core/util/env.h"
 #include "src/core/util/gcp_metadata_query.h"
+#include "src/core/util/load_file.h"
+#include "src/core/util/orphanable.h"
+#include "src/core/util/status_helper.h"
+#include "src/core/util/time.h"
 
 namespace grpc {
 namespace internal {
@@ -253,7 +252,7 @@ class EnvironmentAutoDetectHelper
                 << (result.ok() ? result.value()
                                 : grpc_core::StatusToString(result.status()))
                 << "\"";
-            absl::optional<EnvironmentAutoDetect::ResourceType> resource;
+            std::optional<EnvironmentAutoDetect::ResourceType> resource;
             {
               grpc_core::MutexLock lock(&mu_);
               auto it = attributes_to_fetch_.find(attribute);

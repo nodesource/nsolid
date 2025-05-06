@@ -174,12 +174,12 @@ void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
     proto_stack->set_is_eval(stack["is_eval"].get<bool>());
     auto it = stack.find("script_name");
     if (it != stack.end() && it->is_string()) {
-      proto_stack->set_script_name(*it);
+      proto_stack->set_script_name(it->get<std::string>());
     }
 
     it = stack.find("function_name");
     if (it != stack.end() && it->is_string()) {
-      proto_stack->set_function_name(*it);
+      proto_stack->set_function_name(it->get<std::string>());
     }
 
     proto_stack->set_line_number(stack["line_number"].get<int32_t>());
@@ -363,15 +363,15 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   }
   it = config.find("statsd");
   if (it != config.end()) {
-    body->set_statsd(*it);
+    body->set_statsd(it->get<std::string>());
   }
   it = config.find("statsdBucket");
   if (it != config.end()) {
-    body->set_statsdbucket(*it);
+    body->set_statsdbucket(it->get<std::string>());
   }
   it = config.find("statsdtags");
   if (it != config.end()) {
-    body->set_blockedloopthreshold(*it);
+    body->set_statsdtags(it->get<std::string>());
   }
   it = config.find("tags");
   if (it != config.end()) {

@@ -39,6 +39,7 @@
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/stub_options.h>
 #include <grpcpp/support/sync_stream.h>
+#include <grpcpp/ports_def.inc>
 
 namespace opentelemetry {
 namespace proto {
@@ -263,4 +264,5 @@ class LogsService final {
 }  // namespace opentelemetry
 
 
+#include <grpcpp/ports_undef.inc>
 #endif  // GRPC_opentelemetry_2fproto_2fcollector_2flogs_2fv1_2flogs_5fservice_2eproto__INCLUDED
