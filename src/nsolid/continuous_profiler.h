@@ -79,12 +79,9 @@ class ContinuousProfiler :
   ContinuousProfiler(ContinuousProfiler&&) = delete;
   ContinuousProfiler& operator=(ContinuousProfiler&&) = delete;
 
-  // Start the profiler if there are callbacks registered and profiling is
-  // enabled
-  void start_if_needed();
-
-  // Stop the profiler if there are no callbacks or profiling is disabled
-  void stop_if_needed();
+  inline bool should_start() const {
+    return !callbacks_.empty() && enabled_;
+  }
 
   // Thread hooks
   static void thread_added_callback(SharedEnvInst envinst,
@@ -117,7 +114,7 @@ class ContinuousProfiler :
 
   // Loop
   uv_loop_t* loop_ = nullptr;
-  uint64_t interval_ = 60000;  // Default: 1 minute per configuration
+  std::atomic<uint64_t> interval_ = 60000;  // 1 min
   bool enabled_ = false;  // Disabled by default per config
 
   // Thread management
