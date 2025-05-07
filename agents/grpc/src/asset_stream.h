@@ -15,12 +15,6 @@ namespace grpc {
 // Predeclarations
 class AssetStream;
 
-// RPC type enum for specifying which RPC method to use
-enum AssetStreamRpcType {
-  EXPORT_ASSET,
-  EXPORT_CONTINUOUS_PROFILE
-};
-
 struct AssetStor {
   ProfileType type;
   uint64_t thread_id;
@@ -47,8 +41,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
                        AssetStor&& stor,
                        std::weak_ptr<AssetStreamObserver> observer,
                        const std::string& agent_id,
-                       const std::string& saas,
-                       AssetStreamRpcType rpc_type = EXPORT_ASSET);
+                       const std::string& saas);
 
   ~AssetStream();
 
