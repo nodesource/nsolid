@@ -2,6 +2,32 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-05-07, Version 20.19.1-nsolid-v5.7.1 'Iron'
+
+### Commits
+
+* \[[`b76f7d4706`](https://github.com/nsolid/node/commit/b76f7d4706)] - Merge tag 'v20.19.1' into node-v20.x-nsolid-v5.x (Santiago Gimeno)
+* \[[`55344efc54`](https://github.com/nsolid/node/commit/55344efc54)] - **agents**: dry DelegateAsyncExport to use templates (Santiago Gimeno) [nodesource/nsolid#294](https://github.com/nodesource/nsolid/pull/294)
+* \[[`bf250835a7`](https://github.com/nsolid/node/commit/bf250835a7)] - **agents**: export extra\_attrs when using OTLP (Santiago Gimeno) [nodesource/nsolid#293](https://github.com/nodesource/nsolid/pull/293)
+* \[[`1cacda4a95`](https://github.com/nsolid/node/commit/1cacda4a95)] - **agents**: make ProfileCollector to use AsyncTSQueue (Santiago Gimeno) [nodesource/nsolid#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`4b38237e33`](https://github.com/nsolid/node/commit/4b38237e33)] - **agents**: use AsyncTSQueue for blocked\_loop events (Santiago Gimeno) [nodesource/nsolid#279](https://github.com/nodesource/nsolid/pull/279)
+* \[[`6d95ddd457`](https://github.com/nsolid/node/commit/6d95ddd457)] - **agents**: fix possible grpc mutex race condition (Santiago Gimeno) [nodesource/nsolid#277](https://github.com/nodesource/nsolid/pull/277)
+* \[[`ecf6450f18`](https://github.com/nsolid/node/commit/ecf6450f18)] - **build**: fix grpc\_cpp\_plugin target (Santiago Gimeno) [nodesource/nsolid#291](https://github.com/nodesource/nsolid/pull/291)
+* \[[`713be49360`](https://github.com/nsolid/node/commit/713be49360)] - **deps**: update libcurl to 8.12.1 (Santiago Gimeno) [nodesource/nsolid#280](https://github.com/nodesource/nsolid/pull/280)
+* \[[`11c654da4e`](https://github.com/nsolid/node/commit/11c654da4e)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [nodesource/nsolid#286](https://github.com/nodesource/nsolid/pull/286)
+* \[[`b445351cfd`](https://github.com/nsolid/node/commit/b445351cfd)] - **deps**: update opentelemetry-cpp to 1.20.0 (Santiago Gimeno) [nodesource/nsolid#286](https://github.com/nodesource/nsolid/pull/286)
+* \[[`d9e68fed2c`](https://github.com/nsolid/node/commit/d9e68fed2c)] - **deps**: enable async otlp exporting (Santiago Gimeno) [nodesource/nsolid#278](https://github.com/nodesource/nsolid/pull/278)
+* \[[`ef24f0d75e`](https://github.com/nsolid/node/commit/ef24f0d75e)] - **lib**: fix undici span propagation (Santiago Gimeno) [nodesource/nsolid#276](https://github.com/nodesource/nsolid/pull/276)
+* \[[`75143f37cc`](https://github.com/nsolid/node/commit/75143f37cc)] - **lib**: cleanup tracing channels subscriptions (Santiago Gimeno) [nodesource/nsolid#276](https://github.com/nodesource/nsolid/pull/276)
+* \[[`236be0349f`](https://github.com/nsolid/node/commit/236be0349f)] - **lib,src,test**: add http protocol version to spans (Santiago Gimeno) [nodesource/nsolid#276](https://github.com/nodesource/nsolid/pull/276)
+* \[[`c27780bdac`](https://github.com/nsolid/node/commit/c27780bdac)] - **src**: fix GetSourceCode for ESM file url (Santiago Gimeno) [nodesource/nsolid#296](https://github.com/nodesource/nsolid/pull/296)
+* \[[`e8a1cd6732`](https://github.com/nsolid/node/commit/e8a1cd6732)] - **src**: fix string encoding in some N|Solid bindings (Santiago Gimeno) [nodesource/nsolid#295](https://github.com/nodesource/nsolid/pull/295)
+* \[[`7c0ee2cee8`](https://github.com/nsolid/node/commit/7c0ee2cee8)] - **src**: harden NSolidCPUProfiler (Santiago Gimeno) [nodesource/nsolid#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`df3892b2ee`](https://github.com/nsolid/node/commit/df3892b2ee)] - **src**: implement AsyncTSQueue (Santiago Gimeno) [nodesource/nsolid#279](https://github.com/nodesource/nsolid/pull/279)
+* \[[`363f07fad4`](https://github.com/nsolid/node/commit/363f07fad4)] - **test**: add test-grpc-reconfigure to agent tests (Santiago Gimeno) [nodesource/nsolid#298](https://github.com/nodesource/nsolid/pull/298)
+* \[[`62323c66d1`](https://github.com/nsolid/node/commit/62323c66d1)] - **test**: fix flaky test-otlp-grpc-metrics (Santiago Gimeno) [nodesource/nsolid#281](https://github.com/nodesource/nsolid/pull/281)
+* \[[`eb10641ce8`](https://github.com/nsolid/node/commit/eb10641ce8)] - **test**: fix flaky test-zmq-packages.mjs (Santiago Gimeno) [nodesource/nsolid#288](https://github.com/nodesource/nsolid/pull/288)
+
 ## 2025-02-14, Version 20.18.2-nsolid-v5.7.0 'Iron'
 
 ### Commits
