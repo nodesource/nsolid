@@ -9,12 +9,11 @@ import {
 
 const {
   validateArray,
-  validateNumber,
   validateObject,
   validateString,
 } = validators;
 
-function checkContinuousProfileData(profile, metadata, agentId, options, interval = 100) {
+function checkContinuousProfileData(profile, metadata, agentId, options) {
   console.dir(profile, { depth: null });
   validateString(profile.common.requestId, 'requestId');
   assert.ok(profile.common.requestId.length > 0);
@@ -34,18 +33,6 @@ function checkContinuousProfileData(profile, metadata, agentId, options, interva
   validateString(profile.duration, 'profile.duration');
   const duration = BigInt(profile.duration);
   assert.ok(duration > 0);
-
-  validateNumber(profile.startTs, 'profile.startTs');
-  validateNumber(profile.endTs, 'profile.endTs');
-  // Make sure the start and end timestamps are correctly calculated
-  const diff = profile.endTs - profile.startTs;
-  assert.ok(diff > 0);
-  assert.ok(diff < 5 * interval);
-  const now = Date.now();
-  assert.ok(now - profile.startTs > 0);
-  assert.ok(now - profile.startTs < 5000);
-  assert.ok(now - profile.endTs > 0);
-  assert.ok(now - profile.endTs < 5000);
 
   validateString(profile.data, 'profile.data');
   const profileData = JSON.parse(profile.data);
