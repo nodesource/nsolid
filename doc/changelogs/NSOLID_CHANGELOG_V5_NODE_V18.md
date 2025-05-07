@@ -2,6 +2,29 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-05-07, Version 18.20.8-nsolid-v5.7.1 'Hydrogen'
+
+### Commits
+
+* \[[`df1109bbe0`](https://github.com/nsolid/node/commit/df1109bbe0)] - Merge tag 'v18.20.8' into node-v18.x-nsolid-v5.x (Santiago Gimeno)
+* \[[`e8c0de55bf`](https://github.com/nsolid/node/commit/e8c0de55bf)] - **agents**: dry DelegateAsyncExport to use templates (Santiago Gimeno) [nodesource/nsolid#294](https://github.com/nodesource/nsolid/pull/294)
+* \[[`f8166a2531`](https://github.com/nsolid/node/commit/f8166a2531)] - **agents**: export extra\_attrs when using OTLP (Santiago Gimeno) [nodesource/nsolid#293](https://github.com/nodesource/nsolid/pull/293)
+* \[[`c33f26c447`](https://github.com/nsolid/node/commit/c33f26c447)] - **agents**: make ProfileCollector to use AsyncTSQueue (Santiago Gimeno) [nodesource/nsolid#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`b30d396d8e`](https://github.com/nsolid/node/commit/b30d396d8e)] - **agents**: use AsyncTSQueue for blocked\_loop events (Santiago Gimeno) [nodesource/nsolid#279](https://github.com/nodesource/nsolid/pull/279)
+* \[[`6b1f1a236d`](https://github.com/nsolid/node/commit/6b1f1a236d)] - **agents**: fix possible grpc mutex race condition (Santiago Gimeno) [nodesource/nsolid#277](https://github.com/nodesource/nsolid/pull/277)
+* \[[`fb17441c5d`](https://github.com/nsolid/node/commit/fb17441c5d)] - **build**: fix grpc\_cpp\_plugin target (Santiago Gimeno) [nodesource/nsolid#291](https://github.com/nodesource/nsolid/pull/291)
+* \[[`eb9f09badb`](https://github.com/nsolid/node/commit/eb9f09badb)] - **deps**: update libcurl to 8.12.1 (Santiago Gimeno) [nodesource/nsolid#280](https://github.com/nodesource/nsolid/pull/280)
+* \[[`66d9bff083`](https://github.com/nsolid/node/commit/66d9bff083)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [nodesource/nsolid#286](https://github.com/nodesource/nsolid/pull/286)
+* \[[`35e19eef25`](https://github.com/nsolid/node/commit/35e19eef25)] - **deps**: update opentelemetry-cpp to 1.20.0 (Santiago Gimeno) [nodesource/nsolid#286](https://github.com/nodesource/nsolid/pull/286)
+* \[[`4007418c2a`](https://github.com/nsolid/node/commit/4007418c2a)] - **deps**: enable async otlp exporting (Santiago Gimeno) [nodesource/nsolid#278](https://github.com/nodesource/nsolid/pull/278)
+* \[[`dc189b0838`](https://github.com/nsolid/node/commit/dc189b0838)] - **lib**: cleanup tracing channels subscriptions (Santiago Gimeno) [nodesource/nsolid#276](https://github.com/nodesource/nsolid/pull/276)
+* \[[`df1a1f4b55`](https://github.com/nsolid/node/commit/df1a1f4b55)] - **lib,src,test**: add http protocol version to spans (Santiago Gimeno) [nodesource/nsolid#276](https://github.com/nodesource/nsolid/pull/276)
+* \[[`ee34abbf66`](https://github.com/nsolid/node/commit/ee34abbf66)] - **src**: fix string encoding in some N|Solid bindings (Santiago Gimeno) [nodesource/nsolid#295](https://github.com/nodesource/nsolid/pull/295)
+* \[[`23209c99a7`](https://github.com/nsolid/node/commit/23209c99a7)] - **src**: implement AsyncTSQueue (Santiago Gimeno) [nodesource/nsolid#279](https://github.com/nodesource/nsolid/pull/279)
+* \[[`76fb2de584`](https://github.com/nsolid/node/commit/76fb2de584)] - **test**: add test-grpc-reconfigure to agent tests (Santiago Gimeno) [nodesource/nsolid#298](https://github.com/nodesource/nsolid/pull/298)
+* \[[`13208ed66d`](https://github.com/nsolid/node/commit/13208ed66d)] - **test**: fix flaky test-otlp-grpc-metrics (Santiago Gimeno) [nodesource/nsolid#281](https://github.com/nodesource/nsolid/pull/281)
+* \[[`520d869135`](https://github.com/nsolid/node/commit/520d869135)] - **test**: fix flaky test-zmq-packages.mjs (Santiago Gimeno) [nodesource/nsolid#288](https://github.com/nodesource/nsolid/pull/288)
+
 ## 2025-02-14, Version 18.20.6-nsolid-v5.7.0 'Hydrogen'
 
 ### Commits
