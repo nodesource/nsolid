@@ -27,15 +27,14 @@ void ContinuousProfiler::Initialize() {
         // Process the profile data
         sp->on_profile_data(data);
 
-        // Check if this is a profile completion (duration-based profile)
-        uint64_t thread_id = 0;
-        std::visit([&thread_id](auto& opt) {
-          thread_id = opt.thread_id;
-        }, data.options);
-
         // If the profile has completed (empty profile data indicates end of
         // serialization)
         if (data.profile.length() == 0 && data.status == 0) {
+          // Check if this is a profile completion (duration-based profile)
+          uint64_t thread_id = 0;
+          std::visit([&thread_id](auto& opt) {
+            thread_id = opt.thread_id;
+          }, data.options);
           // Notify that the profile has completed for this thread
           sp->on_profile_completed(thread_id);
         }
@@ -51,19 +50,25 @@ void ContinuousProfiler::Initialize() {
 void ContinuousProfiler::Disable() {
   nsuv::ns_mutex::scoped_lock lock(callback_mutex_);
   enabled_ = false;
-  stop_if_needed();
 }
 
 void ContinuousProfiler::Enable(uint64_t interval_ms) {
-  nsuv::ns_mutex::scoped_lock lock(callback_mutex_);
-  enabled_ = true;
+  bool start = false;
   interval_ = interval_ms > 0 ? interval_ms : 60000;
-  start_if_needed();
+  {
+    nsuv::ns_mutex::scoped_lock lock(callback_mutex_);
+    enabled_ = true;
+    start = should_start();
+  }
+
+  if (start) {
+    start_cpu_profiling();
+  }
 }
 
 bool ContinuousProfiler::IsEnabled() {
   nsuv::ns_mutex::scoped_lock lock(callback_mutex_);
-  return enabled_ && !callbacks_.empty();
+  return should_start();
 }
 
 uint64_t ContinuousProfiler::register_hook_impl(ProfileHookCallback callback) {
@@ -72,6 +77,7 @@ uint64_t ContinuousProfiler::register_hook_impl(ProfileHookCallback callback) {
   }
 
   uint64_t id;
+  bool start = false;
   {
     // Store the callback
     nsuv::ns_mutex::scoped_lock lock(callback_mutex_);
@@ -81,7 +87,11 @@ uint64_t ContinuousProfiler::register_hook_impl(ProfileHookCallback callback) {
     callbacks_[id] = std::move(callback);
 
     // Start profiling if enabled
-    start_if_needed();
+    start = should_start();
+  }
+
+  if (start) {
+    start_cpu_profiling();
   }
 
   return id;
@@ -89,33 +99,8 @@ uint64_t ContinuousProfiler::register_hook_impl(ProfileHookCallback callback) {
 
 bool ContinuousProfiler::UnregisterHook(uint64_t hook_id) {
   nsuv::ns_mutex::scoped_lock lock(callback_mutex_);
-
   // Erase the callback and return whether it was found
-  bool removed = callbacks_.erase(hook_id) > 0;
-
-  // Stop profiling if needed
-  if (removed) {
-    stop_if_needed();
-  }
-
-  return removed;
-}
-
-void ContinuousProfiler::start_if_needed() {
-  // This method should only be called while holding callback_mutex_
-
-  // Start profiling directly if we have callbacks and profiling is enabled
-  if (!callbacks_.empty() && enabled_) {
-    // Start profiling immediately
-    start_cpu_profiling();
-  }
-}
-
-void ContinuousProfiler::stop_if_needed() {
-  // This method should only be called while holding callback_mutex_
-
-  // Nothing to do here since we're not using a timer anymore
-  // Profiling will naturally stop when current profiles complete
+  return callbacks_.erase(hook_id) > 0;
 }
 
 /*static*/
@@ -143,18 +128,25 @@ void ContinuousProfiler::prepare_cb(nsuv::ns_prepare*,
 }
 
 void ContinuousProfiler::on_prepare() {
-  for (auto it = pending_threads_.begin(); it != pending_threads_.end(); ) {
-    uint64_t thread_id = *it;
+  std::unordered_set<uint64_t> pending_threads;
+  {
+    nsuv::ns_mutex::scoped_lock lock(thread_mutex_);
+    pending_threads = pending_threads_;
+  }
+
+  for (auto thread_id : pending_threads) {
     int result = start_cpu_profiling_for_thread(thread_id);
     if (result == 0) {
-      it = pending_threads_.erase(it);
-    } else {
-      ++it;
+      nsuv::ns_mutex::scoped_lock lock(thread_mutex_);
+      pending_threads_.erase(thread_id);
     }
   }
 
-  if (pending_threads_.empty()) {
-    ASSERT_EQ(0, prepare_->stop());
+  {
+    nsuv::ns_mutex::scoped_lock lock(thread_mutex_);
+    if (pending_threads_.empty()) {
+      ASSERT_EQ(0, prepare_->stop());
+    }
   }
 }
 
@@ -176,6 +168,7 @@ void ContinuousProfiler::on_thread_removed(SharedEnvInst envinst) {
   uint64_t thread_id = GetThreadId(envinst);
   thread_ids_.erase(thread_id);
   currently_profiling_threads_.erase(thread_id);
+  pending_threads_.erase(thread_id);
 }
 
 void ContinuousProfiler::on_profile_data(
@@ -235,6 +228,7 @@ int ContinuousProfiler::start_cpu_profiling_for_thread(uint64_t thread_id) {
     currently_profiling_threads_.insert(thread_id);
   } else {
     // add thread_id to pending_threads
+    nsuv::ns_mutex::scoped_lock lock(thread_mutex_);
     pending_threads_.insert(thread_id);
     if (pending_threads_.size() == 1) {
       ASSERT_EQ(0, prepare_->start(prepare_cb, weak_from_this()));
