@@ -127,9 +127,8 @@ async function startServer(cb) {
         metadata: null,
         data: '',
         duration: null,
-        startTs: null,
-        endTs: null,
       };
+      call._my_data = '';
       call.on('data', (data) => {
         console.log('[ExportContinuousProfile] data', data.data.length);
         asset.common = data.common;
@@ -138,8 +137,6 @@ async function startServer(cb) {
         asset.data += data.data;
         if (data.complete) {
           asset.duration = data.duration;
-          asset.startTs = data.startTs;
-          asset.endTs = data.endTs;
         }
       });
       call.on('error', (err) => {
