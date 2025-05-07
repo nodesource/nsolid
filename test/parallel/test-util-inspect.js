@@ -1644,6 +1644,15 @@ util.inspect(process);
 
   assert.throws(() => util.inspect(new ThrowingClass()), /toStringTag error/);
 
+  const y = {
+    get [Symbol.toStringTag]() {
+      return JSON.stringify(this);
+    }
+  };
+  const x = { y };
+  y.x = x;
+  assert.throws(() => util.inspect(x), /TypeError: Converting circular structure to JSON/);
+
   class NotStringClass {
     get [Symbol.toStringTag]() {
       return null;
@@ -3313,4 +3322,34 @@ assert.strictEqual(
       throw new Error();
     }
   }), '{ [Symbol(Symbol.iterator)]: [Getter] }');
+}
+
+{
+  const o = {};
+  const { prototype: BuiltinPrototype } = Object;
+  const desc = Reflect.getOwnPropertyDescriptor(BuiltinPrototype, 'constructor');
+  Object.defineProperty(BuiltinPrototype, 'constructor', {
+    get: () => BuiltinPrototype,
+    configurable: true,
+  });
+  assert.strictEqual(
+    util.inspect(o),
+    '{}',
+  );
+  Object.defineProperty(BuiltinPrototype, 'constructor', desc);
+}
+
+{
+  const o = { f() {} };
+  const { prototype: BuiltinPrototype } = Function;
+  const desc = Reflect.getOwnPropertyDescriptor(BuiltinPrototype, 'constructor');
+  Object.defineProperty(BuiltinPrototype, 'constructor', {
+    get: () => BuiltinPrototype,
+    configurable: true,
+  });
+  assert.strictEqual(
+    util.inspect(o),
+    '{ f: [Function: f] }',
+  );
+  Object.defineProperty(BuiltinPrototype, 'constructor', desc);
 }

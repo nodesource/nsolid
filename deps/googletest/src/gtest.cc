@@ -1660,10 +1660,25 @@ std::string GetBoolAssertionFailureMessage(
   return msg.GetString();
 }
 
-// Helper function for implementing ASSERT_NEAR.
+// Helper function for implementing ASSERT_NEAR. Treats infinity as a specific
+// value, such that comparing infinity to infinity is equal, the distance
+// between -infinity and +infinity is infinity, and infinity <= infinity is
+// true.
 AssertionResult DoubleNearPredFormat(const char* expr1, const char* expr2,
                                      const char* abs_error_expr, double val1,
                                      double val2, double abs_error) {
+  // We want to return success when the two values are infinity and at least
+  // one of the following is true:
+  //  * The values are the same-signed infinity.
+  //  * The error limit itself is infinity.
+  // This is done here so that we don't end up with a NaN when calculating the
+  // difference in values.
+  if (std::isinf(val1) && std::isinf(val2) &&
+      (std::signbit(val1) == std::signbit(val2) ||
+       (abs_error > 0.0 && std::isinf(abs_error)))) {
+    return AssertionSuccess();
+  }
+
   const double diff = fabs(val1 - val2);
   if (diff <= abs_error) return AssertionSuccess();
 
@@ -3974,6 +3989,12 @@ class XmlUnitTestResultPrinter : public EmptyTestEventListener {
   static void OutputXmlTestSuiteForTestResult(::std::ostream* stream,
                                               const TestResult& result);
 
+  // Streams a test case XML stanza containing the given test result.
+  //
+  // Requires: result.Failed()
+  static void OutputXmlTestCaseForTestResult(::std::ostream* stream,
+                                             const TestResult& result);
+
   // Streams an XML representation of a TestResult object.
   static void OutputXmlTestResult(::std::ostream* stream,
                                   const TestResult& result);
@@ -4221,6 +4242,15 @@ void XmlUnitTestResultPrinter::OutputXmlTestSuiteForTestResult(
       FormatEpochTimeInMillisAsIso8601(result.start_timestamp()));
   *stream << ">";
 
+  OutputXmlTestCaseForTestResult(stream, result);
+
+  // Complete the test suite.
+  *stream << "  </testsuite>\n";
+}
+
+// Streams a test case XML stanza containing the given test result.
+void XmlUnitTestResultPrinter::OutputXmlTestCaseForTestResult(
+    ::std::ostream* stream, const TestResult& result) {
   // Output the boilerplate for a minimal test case with a single test.
   *stream << "    <testcase";
   OutputXmlAttribute(stream, "testcase", "name", "");
@@ -4235,9 +4265,6 @@ void XmlUnitTestResultPrinter::OutputXmlTestSuiteForTestResult(
 
   // Output the actual test result.
   OutputXmlTestResult(stream, result);
-
-  // Complete the test suite.
-  *stream << "  </testsuite>\n";
 }
 
 // Prints an XML representation of a TestInfo object.
@@ -4364,6 +4391,10 @@ void XmlUnitTestResultPrinter::PrintXmlTestSuite(std::ostream* stream,
     if (test_suite.GetTestInfo(i)->is_reportable())
       OutputXmlTestInfo(stream, test_suite.name(), *test_suite.GetTestInfo(i));
   }
+  if (test_suite.ad_hoc_test_result().Failed()) {
+    OutputXmlTestCaseForTestResult(stream, test_suite.ad_hoc_test_result());
+  }
+
   *stream << "  </" << kTestsuite << ">\n";
 }
 
@@ -4502,6 +4533,12 @@ class JsonUnitTestResultPrinter : public EmptyTestEventListener {
   // Requires: result.Failed()
   static void OutputJsonTestSuiteForTestResult(::std::ostream* stream,
                                                const TestResult& result);
+
+  // Streams a test case JSON stanza containing the given test result.
+  //
+  // Requires: result.Failed()
+  static void OutputJsonTestCaseForTestResult(::std::ostream* stream,
+                                              const TestResult& result);
 
   // Streams a JSON representation of a TestResult object.
   static void OutputJsonTestResult(::std::ostream* stream,
@@ -4673,6 +4710,15 @@ void JsonUnitTestResultPrinter::OutputJsonTestSuiteForTestResult(
   }
   *stream << Indent(6) << "\"testsuite\": [\n";
 
+  OutputJsonTestCaseForTestResult(stream, result);
+
+  // Finish the test suite.
+  *stream << "\n" << Indent(6) << "]\n" << Indent(4) << "}";
+}
+
+// Streams a test case JSON stanza containing the given test result.
+void JsonUnitTestResultPrinter::OutputJsonTestCaseForTestResult(
+    ::std::ostream* stream, const TestResult& result) {
   // Output the boilerplate for a new test case.
   *stream << Indent(8) << "{\n";
   OutputJsonKey(stream, "testcase", "name", "", Indent(10));
@@ -4689,9 +4735,6 @@ void JsonUnitTestResultPrinter::OutputJsonTestSuiteForTestResult(
 
   // Output the actual test result.
   OutputJsonTestResult(stream, result);
-
-  // Finish the test suite.
-  *stream << "\n" << Indent(6) << "]\n" << Indent(4) << "}";
 }
 
 // Prints a JSON representation of a TestInfo object.
@@ -4836,6 +4879,16 @@ void JsonUnitTestResultPrinter::PrintJsonTestSuite(
       OutputJsonTestInfo(stream, test_suite.name(), *test_suite.GetTestInfo(i));
     }
   }
+
+  // If there was a failure in the test suite setup or teardown include that in
+  // the output.
+  if (test_suite.ad_hoc_test_result().Failed()) {
+    if (comma) {
+      *stream << ",\n";
+    }
+    OutputJsonTestCaseForTestResult(stream, test_suite.ad_hoc_test_result());
+  }
+
   *stream << "\n" << kIndent << "]\n" << Indent(4) << "}";
 }
 

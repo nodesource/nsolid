@@ -61,8 +61,7 @@ namespace node {
   V(protobuf)                                                                  \
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
-  V(zmq)                                                                       \
-  V(base64)
+  V(zmq)
 
 #if HAVE_OPENSSL
 #define NODE_VERSIONS_KEY_CRYPTO(V) V(openssl)

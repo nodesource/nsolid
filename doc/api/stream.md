@@ -3715,7 +3715,7 @@ class WriteStream extends Writable {
     this.fd = null;
   }
   _construct(callback) {
-    fs.open(this.filename, (err, fd) => {
+    fs.open(this.filename, 'w', (err, fd) => {
       if (err) {
         callback(err);
       } else {
@@ -3830,8 +3830,6 @@ added: v8.0.0
 
 The `_destroy()` method is called by [`writable.destroy()`][writable-destroy].
 It can be overridden by child classes but it **must not** be called directly.
-Furthermore, the `callback` should not be mixed with async/await
-once it is executed when a promise is resolved.
 
 #### `writable._final(callback)`
 

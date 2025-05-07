@@ -7,6 +7,9 @@
 <!-- YAML
 added: v8.5.0
 changes:
+  - version: v20.18.3
+    pr-url: https://github.com/nodejs/node/pull/55333
+    description: Import attributes are no longer experimental.
   - version: v20.10.0
     pr-url: https://github.com/nodejs/node/pull/50140
     description: Add experimental support for import attributes.
@@ -262,13 +265,9 @@ changes:
     description: Switch from Import Assertions to Import Attributes.
 -->
 
-> Stability: 1.1 - Active development
+> Stability: 2 - Stable
 
-> This feature was previously named "Import assertions", and using the `assert`
-> keyword instead of `with`. Any uses in code of the prior `assert` keyword
-> should be updated to use `with` instead.
-
-The [Import Attributes proposal][] adds an inline syntax for module import
+[Import attributes][Import Attributes MDN] are an inline syntax for module import
 statements to pass on more information alongside the module specifier.
 
 ```js
@@ -278,12 +277,13 @@ const { default: barData } =
   await import('./bar.json', { with: { type: 'json' } });
 ```
 
-Node.js supports the following `type` values, for which the attribute is
-mandatory:
+Node.js only supports the `type` attribute, for which it supports the following values:
 
 | Attribute `type` | Needed for       |
 | ---------------- | ---------------- |
 | `'json'`         | [JSON modules][] |
+
+The `type: 'json'` attribute is mandatory when importing JSON modules.
 
 ## Built-in modules
 
@@ -330,7 +330,7 @@ modules it can be used to load ES modules.
 * {Object}
 
 The `import.meta` meta property is an `Object` that contains the following
-properties.
+properties. It is only supported in ES modules.
 
 ### `import.meta.dirname`
 
@@ -450,7 +450,7 @@ compatibility.
 ### `require`
 
 The CommonJS module `require` currently only supports loading synchronous ES
-modules when `--experimental-require-module` is enabled.
+modules (that is, ES modules that do not use top-level `await`).
 
 See [Loading ECMAScript modules using `require()`][] for details.
 
@@ -591,7 +591,14 @@ separate cache.
 
 ## JSON modules
 
-> Stability: 1 - Experimental
+<!-- YAML
+changes:
+  - version: v20.18.3
+    pr-url: https://github.com/nodejs/node/pull/55333
+    description: JSON modules are no longer experimental.
+-->
+
+> Stability: 2 - Stable
 
 JSON files can be referenced by `import`:
 
@@ -1064,8 +1071,7 @@ _isImports_, _conditions_)
 > 10. If _url_ ends in _".js"_, then
 >     1. If _packageType_ is not **null**, then
 >        1. Return _packageType_.
->     2. If `--experimental-detect-module` is enabled and the result of
->        **DETECT\_MODULE\_SYNTAX**(_source_) is true, then
+>     2. If the result of **DETECT\_MODULE\_SYNTAX**(_source_) is true, then
 >        1. Return _"module"_.
 >     3. Return _"commonjs"_.
 > 11. If _url_ does not have any extension, then
@@ -1075,8 +1081,7 @@ _isImports_, _conditions_)
 >        1. Return _"wasm"_.
 >     2. If _packageType_ is not **null**, then
 >        1. Return _packageType_.
->     3. If `--experimental-detect-module` is enabled and the source of
->        module contains static import or export syntax, then
+>     3. If the result of **DETECT\_MODULE\_SYNTAX**(_source_) is true, then
 >        1. Return _"module"_.
 >     4. Return _"commonjs"_.
 > 12. Return **undefined** (will throw during load phase).
@@ -1129,7 +1134,7 @@ resolution for ESM specifiers is [commonjs-extension-resolution-loader][].
 [Dynamic `import()`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import
 [ES Module Integration Proposal for WebAssembly]: https://github.com/webassembly/esm-integration
 [Import Attributes]: #import-attributes
-[Import Attributes proposal]: https://github.com/tc39/proposal-import-attributes
+[Import Attributes MDN]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import/with
 [JSON modules]: #json-modules
 [Loading ECMAScript modules using `require()`]: modules.md#loading-ecmascript-modules-using-require
 [Module customization hooks]: module.md#customization-hooks
