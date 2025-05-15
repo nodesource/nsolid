@@ -18,7 +18,6 @@
 #include "node_snapshotable.h"
 #include "nsolid.h"
 #include "nsuv-inl.h"
-#include "continuous_profiler.h"
 #include "nsolid_heap_snapshot.h"
 #include "nsolid_trace.h"
 #include "nsolid_util.h"
@@ -55,7 +54,6 @@ namespace nsolid {
 
 class EnvInst;
 class EnvList;
-class ContinuousProfiler;
 
 
 template <typename DataType>
@@ -603,11 +601,6 @@ class EnvList {
 
   NSolidHeapSnapshot* HeapSnapshot() { return &heap_snapshot_; }
 
-  // Get the ContinuousProfiler instance
-  std::shared_ptr<ContinuousProfiler> GetContinuousProfiler() {
-    return continuous_profiler_;
-  }
-
  private:
   friend class EnvInst;
   friend class Metrics;
@@ -630,8 +623,6 @@ class EnvList {
   void fill_span_id_q();
 
   void fill_trace_id_q();
-
-  void update_continuous_profiler(bool enabled, uint64_t interval);
 
 #ifdef __POSIX__
   static void signal_handler_(int signum, siginfo_t* info, void* ucontext);
@@ -727,9 +718,6 @@ class EnvList {
   DispatchQueue<tracing::SpanItem> span_item_q_;
 
   NSolidHeapSnapshot heap_snapshot_;
-
-  // ContinuousProfiler instance
-  std::shared_ptr<ContinuousProfiler> continuous_profiler_;
 };
 
 
