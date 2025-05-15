@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-05-15, Version 22.15.1-nsolid-v5.7.2 'Jod'
+
+### Commits
+
+* \[[`255e93ff55`](https://github.com/nodesource/nsolid/commit/255e93ff55)] - Merge tag 'v22.15.1' into node-v22.x-nsolid-v5.x (Santiago Gimeno)
+
 ## 2025-05-07, Version 22.15.0-nsolid-v5.7.1 'Jod'
 
 ### Commits
