@@ -193,7 +193,6 @@ class ReconfigureBody final :
     kRedactSnapshotsFieldNumber = 5,
     kTracingEnabledFieldNumber = 10,
     kTracingModulesBlacklistFieldNumber = 11,
-    kContCpuProfileFieldNumber = 12,
   };
   // repeated string tags = 9;
   int tags_size() const;
@@ -364,19 +363,6 @@ class ReconfigureBody final :
   void _internal_set_tracingmodulesblacklist(uint32_t value);
   public:
 
-  // optional bool contCpuProfile = 12;
-  bool has_contcpuprofile() const;
-  private:
-  bool _internal_has_contcpuprofile() const;
-  public:
-  void clear_contcpuprofile();
-  bool contcpuprofile() const;
-  void set_contcpuprofile(bool value);
-  private:
-  bool _internal_contcpuprofile() const;
-  void _internal_set_contcpuprofile(bool value);
-  public:
-
   // @@protoc_insertion_point(class_scope:grpcagent.ReconfigureBody)
  private:
   class _Internal;
@@ -398,7 +384,6 @@ class ReconfigureBody final :
     bool redactsnapshots_;
     bool tracingenabled_;
     uint32_t tracingmodulesblacklist_;
-    bool contcpuprofile_;
   };
   union { Impl_ _impl_; };
   friend struct ::TableStruct_reconfigure_2eproto;
@@ -1064,34 +1049,6 @@ inline void ReconfigureBody::_internal_set_tracingmodulesblacklist(uint32_t valu
 inline void ReconfigureBody::set_tracingmodulesblacklist(uint32_t value) {
   _internal_set_tracingmodulesblacklist(value);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.tracingModulesBlacklist)
-}
-
-// optional bool contCpuProfile = 12;
-inline bool ReconfigureBody::_internal_has_contcpuprofile() const {
-  bool value = (_impl_._has_bits_[0] & 0x00000400u) != 0;
-  return value;
-}
-inline bool ReconfigureBody::has_contcpuprofile() const {
-  return _internal_has_contcpuprofile();
-}
-inline void ReconfigureBody::clear_contcpuprofile() {
-  _impl_.contcpuprofile_ = false;
-  _impl_._has_bits_[0] &= ~0x00000400u;
-}
-inline bool ReconfigureBody::_internal_contcpuprofile() const {
-  return _impl_.contcpuprofile_;
-}
-inline bool ReconfigureBody::contcpuprofile() const {
-  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.contCpuProfile)
-  return _internal_contcpuprofile();
-}
-inline void ReconfigureBody::_internal_set_contcpuprofile(bool value) {
-  _impl_._has_bits_[0] |= 0x00000400u;
-  _impl_.contcpuprofile_ = value;
-}
-inline void ReconfigureBody::set_contcpuprofile(bool value) {
-  _internal_set_contcpuprofile(value);
-  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.contCpuProfile)
 }
 
 // -------------------------------------------------------------------

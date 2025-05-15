@@ -386,10 +386,6 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   if (it != config.end()) {
     body->set_tracingmodulesblacklist(*it);
   }
-  it = config.find("contCpuProfile");
-  if (it != config.end()) {
-    body->set_contcpuprofile(*it);
-  }
 }
 
 void PopulateStartupTimesEvent(grpcagent::StartupTimesEvent* st_events,
@@ -1718,10 +1714,6 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   }
   if (body.has_tracingmodulesblacklist()) {
       out["tracingModulesBlacklist"] = body.tracingmodulesblacklist();
-  }
-
-  if (body.has_contcpuprofile()) {
-      out["contCpuProfile"] = body.contcpuprofile();
   }
 
   DebugJSON("Reconfigure out: \n%s\n", out);
