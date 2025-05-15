@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-05-15, Version 20.19.2-nsolid-v5.7.2 'Iron'
+
+### Commits
+
+* \[[`cdd4fefa68`](https://github.com/nodesource/nsolid/commit/cdd4fefa68)] - Merge tag 'v20.19.2' into node-v20.x-nsolid-v5.x (Santiago Gimeno)
+
 ## 2025-05-07, Version 20.19.1-nsolid-v5.7.1 'Iron'
 
 ### Commits
