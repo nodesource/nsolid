@@ -2537,22 +2537,90 @@ static void GetConfigVersion(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(EnvList::Inst()->current_config_version());
 }
 
-static void GetKernelVersion(const FunctionCallbackInfo<Value>& args) {
-  std::string kernel_version = "";
-
 #ifdef __linux__
-  // Retrieve the kernel version only on Linux
-  // as we are going to use it to collect eBPF information
-  struct utsname info;
-  if (uname(&info) == 0) {
-    kernel_version = info.release;
+
+uint32_t calculateKernelVersion() {
+  struct utsname u;
+  static uint32_t version = 0;
+  uint32_t major;
+  uint32_t minor;
+  uint32_t patch;
+  char v_sig[256];
+  char* needle;
+
+  if (version != 0) return version;
+
+  /* Check /proc/version_signature first as it's the way to get the mainline
+   * kernel version in Ubuntu. The format is:
+   *   Ubuntu ubuntu_kernel_version mainline_kernel_version
+   * For example:
+   *   Ubuntu 5.15.0-79.86-generic 5.15.111
+   */
+
+  if (0 == ReadFileSync("/proc/version_signature", v_sig))
+    if (3 == sscanf(v_sig, "Ubuntu %*s %u.%u.%u", &major, &minor, &patch))
+      goto calculate_version;
+
+  if (-1 == uname(&u)) return 0;
+
+  /* In Debian we need to check `version` instead of `release` to extract the
+   * mainline kernel version. This is an example of how it looks like:
+   *  #1 SMP Debian 5.10.46-4 (2021-08-03)
+   */
+  needle = strstr(u.version, "Debian ");
+  if (needle != nullptr)
+    if (3 == sscanf(needle, "Debian %u.%u.%u", &major, &minor, &patch))
+      goto calculate_version;
+
+  if (3 != sscanf(u.release, "%u.%u.%u", &major, &minor, &patch)) return 0;
+
+  /* Handle it when the process runs under the UNAME26 personality:
+   *
+   * - kernels >= 3.x identify as 2.6.40+x
+   * - kernels >= 4.x identify as 2.6.60+x
+   *
+   * UNAME26 is a poorly conceived hack that doesn't let us distinguish
+   * between 4.x kernels and 5.x/6.x kernels so we conservatively assume
+   * that 2.6.60+x means 4.x.
+   *
+   * Fun fact of the day: it's technically possible to observe the actual
+   * kernel version for a brief moment because uname() first copies out the
+   * real release string before overwriting it with the backcompat string.
+   */
+  if (major == 2 && minor == 6) {
+    if (patch >= 60) {
+      major = 4;
+      minor = patch - 60;
+      patch = 0;
+    } else if (patch >= 40) {
+      major = 3;
+      minor = patch - 40;
+      patch = 0;
+    }
   }
+
+calculate_version:
+  version = major * 65536 + minor * 256 + patch;
+
+  return version;
+}
 #endif
 
-  // Return the kernel version, or empty string if not supported/failed
-  args.GetReturnValue().Set(
-      String::NewFromUtf8(args.GetIsolate(), kernel_version.c_str())
-          .ToLocalChecked());
+static void GetKernelVersion(const FunctionCallbackInfo<Value>& args) {
+  static uint32_t kernel_version = 0;
+
+#ifdef __linux__
+  if (kernel_version != 0) {
+    args.GetReturnValue().Set(kernel_version);
+    return;
+  }
+
+  // Retrieve the kernel version only on Linux
+  // as we are going to use it to collect eBPF information
+  kernel_version = calculateKernelVersion();
+#endif
+
+  args.GetReturnValue().Set(kernel_version);
 }
 
 static void PauseMetrics(const FunctionCallbackInfo<Value>& args) {

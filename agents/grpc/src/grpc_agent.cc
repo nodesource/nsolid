@@ -253,7 +253,7 @@ void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
     }
 
     if (info.find("kernelVersion") != info.end()) {
-      body->set_kernelversion(info["kernelVersion"].get<std::string>());
+      body->set_kernelversion(info["kernelVersion"].get<uint32_t>());
     }
   }
 }

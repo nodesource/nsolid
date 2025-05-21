@@ -76,8 +76,12 @@ if (process.argv[2]) {
   assert.deepStrictEqual(info.tags, tags);
   assert.strictEqual(info.totalMem, totalMem);
   assert.strictEqual(info.totalMem, os.totalmem());
-  assert.strictEqual(typeof info.kernelVersion, 'string');
-  assert.ok(info.kernelVersion.length > 0);
+  assert.strictEqual(typeof info.kernelVersion, 'number');
+  if (common.isLinux) {
+    assert.ok(info.kernelVersion !== 0);
+  } else {
+    assert.strictEqual(info.kernelVersion, 0);
+  }
 } else {
   const env = {};
   const stdio = 'inherit';
