@@ -2545,7 +2545,7 @@ uint32_t calculateKernelVersion() {
   uint32_t major;
   uint32_t minor;
   uint32_t patch;
-  char v_sig[256];
+  std::string v_sig;
   char* needle;
 
   if (version != 0) return version;
@@ -2557,8 +2557,9 @@ uint32_t calculateKernelVersion() {
    *   Ubuntu 5.15.0-79.86-generic 5.15.111
    */
 
-  if (0 == ReadFileSync("/proc/version_signature", v_sig))
-    if (3 == sscanf(v_sig, "Ubuntu %*s %u.%u.%u", &major, &minor, &patch))
+  if (0 == ReadFileSync(&v_sig, "/proc/version_signature"))
+    if (3 ==
+        sscanf(v_sig.c_str(), "Ubuntu %*s %u.%u.%u", &major, &minor, &patch))
       goto calculate_version;
 
   if (-1 == uname(&u)) return 0;
