@@ -234,6 +234,66 @@ TEST_F(AsyncTSQueueTest, MultipleEnqueueOperations) {
   EXPECT_EQ(processed_items[3], 4);
 }
 
+// Test batch callback with std::vector<T>&&
+TEST_F(AsyncTSQueueTest, BatchCallbackRvalueVector) {
+  std::vector<int> batch_processed;
+  int call_count = 0;
+  auto queue = AsyncTSQueue<int>::create(
+      loop_,
+      [&batch_processed, &call_count](std::vector<int>&& batch) {
+        ++call_count;
+        batch_processed = std::move(batch);
+      });
+  queue->enqueue(10);
+  queue->enqueue(20);
+  queue->enqueue(30);
+  ProcessEvents();
+  EXPECT_EQ(call_count, 1);
+  ASSERT_EQ(batch_processed.size(), 3u);
+  EXPECT_EQ(batch_processed[0], 10);
+  EXPECT_EQ(batch_processed[1], 20);
+  EXPECT_EQ(batch_processed[2], 30);
+}
+
+// Test batch callback with extra argument
+TEST_F(AsyncTSQueueTest, BatchCallbackWithExtraArg) {
+  std::vector<std::string> batch_processed;
+  std::string context = "CTX";
+  auto queue = AsyncTSQueue<std::string>::create(
+    loop_,
+    [&batch_processed](std::vector<std::string>&& batch,
+                       const std::string& ctx) {
+      for (auto& item : batch) batch_processed.push_back(ctx + ":" + item);
+    },
+    std::cref(context));
+  queue->enqueue("a");
+  queue->enqueue("b");
+  queue->enqueue("c");
+  ProcessEvents();
+  ASSERT_EQ(batch_processed.size(), 3u);
+  EXPECT_EQ(batch_processed[0], "CTX:a");
+  EXPECT_EQ(batch_processed[1], "CTX:b");
+  EXPECT_EQ(batch_processed[2], "CTX:c");
+}
+
+// Test batch callback with const std::vector<T>&
+TEST_F(AsyncTSQueueTest, BatchCallbackConstVector) {
+  std::vector<int> batch_processed;
+  auto queue = AsyncTSQueue<int>::create(
+      loop_,
+      [&batch_processed](const std::vector<int>& batch) {
+        batch_processed = batch;
+      });
+  queue->enqueue(5);
+  queue->enqueue(7);
+  queue->enqueue(9);
+  ProcessEvents();
+  ASSERT_EQ(batch_processed.size(), 3u);
+  EXPECT_EQ(batch_processed[0], 5);
+  EXPECT_EQ(batch_processed[1], 7);
+  EXPECT_EQ(batch_processed[2], 9);
+}
+
 // Test with a complex data type
 struct TestData {
   int id;
