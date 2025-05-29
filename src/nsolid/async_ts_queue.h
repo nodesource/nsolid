@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include <tuple>
+#include <type_traits>
 
 namespace node {
 namespace nsolid {
@@ -26,7 +27,6 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
  public:
   using SharedAsyncTSQueue = std::shared_ptr<AsyncTSQueue<T>>;
   using WeakAsyncTSQueue = std::weak_ptr<AsyncTSQueue<T>>;
-  using ProcessCallback = std::function<void(T&&)>;
 
   /**
    * Factory method to create and initialize an AsyncTSQueue
@@ -37,11 +37,8 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
    */
   template<typename Cb, typename... Args>
   static SharedAsyncTSQueue create(uv_loop_t* loop, Cb&& cb, Args&&... args) {
-    // Create a shared_ptr with the private constructor
     SharedAsyncTSQueue queue(new AsyncTSQueue<T>(
         loop, std::forward<Cb>(cb), std::forward<Args>(args)...));
-
-    // Initialize the queue and return it
     queue->initialize();
     return queue;
   }
@@ -79,33 +76,70 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
 
   /**
    * Process all items in the queue
+   * 
+   * Calls the appropriate callback based on the callback type (single or batch)
+   * determined at compile time using if constexpr.
    */
   void process() {
-    process_single_items();
+    process_callback_();
   }
 
  private:
+  // Callback support for both single-item and batch processing
+  using ProcessCallback = std::function<void()>;
+  // --- Type traits for Callback Type Detection ---
+  template <typename Cb, typename... Extra>
+  using is_batch_callback = std::disjunction<
+      std::is_invocable<Cb, std::vector<T>&&, Extra...>,
+      std::is_invocable<Cb, const std::vector<T>&, Extra...>
+  >;
+  template <typename Cb, typename... Extra>
+  using is_single_callback = std::disjunction<
+      std::is_invocable<Cb, T&&, Extra...>,
+      std::is_invocable<Cb, const T&, Extra...>
+  >;
+
   /**
    * Constructor for AsyncTSQueue
    *
-   * @param loop The UV loop to use for async notifications
-   * @param callback The callback to process items
+   * Uses if constexpr with type traits to select between single-item and batch
+   * callback logic at compile time.
    */
   template<typename Cb, typename... Args>
   AsyncTSQueue(uv_loop_t* loop, Cb&& cb, Args&&... args)
-      : loop_(loop),
-        async_handle_(new nsuv::ns_async()) {
-    // Create a lambda that captures the callback and arguments by value
-    // and forwards them when called
-    process_callback_ = [cb = std::forward<Cb>(cb),
-                         args_tuple = std::make_tuple(
-                             std::forward<Args>(args)...)]
-                         (T&& item) mutable {
-      // Apply the callback with the item and stored arguments
-      std::apply([&cb, &item](auto&&... args) {
-        cb(std::forward<T>(item), std::forward<decltype(args)>(args)...);
-      }, args_tuple);
+      : loop_(loop), async_handle_(new nsuv::ns_async()) {
+    // Create a bound callback function
+    auto bound_cb = [cb = std::forward<Cb>(cb),
+                     ...args = std::forward<Args>(args)](auto&& first) mutable {
+      std::invoke(cb, std::forward<decltype(first)>(first), args...);
     };
+    if constexpr (is_batch_callback<Cb, Args...>::value) {
+      // Batch callback: process all items at once
+      process_callback_ = [this, bound_cb = bound_cb]() mutable {
+        T item;
+        size_t size = queue_.dequeue(item);
+        if (size > 0) {
+          std::vector<T> batch;
+          batch.reserve(size + 1);
+          batch.push_back(std::move(item));
+          while (queue_.dequeue(item)) {
+            batch.push_back(std::move(item));
+          }
+          bound_cb(std::move(batch));
+        }
+      };
+    } else if constexpr (is_single_callback<Cb, Args...>::value) {
+      process_callback_ = [this, bound_cb = bound_cb]() mutable {
+        T item;
+        while (queue_.dequeue(item)) {
+          bound_cb(std::move(item));
+        }
+      };
+    } else {
+      static_assert(is_batch_callback<Cb, Args...>::value ||
+                    is_single_callback<Cb, Args...>::value,
+                    "AsyncTSQueue callback signature not supported");
+    }
   }
 
   /**
@@ -126,16 +160,6 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
       return;
     }
     queue->process();
-  }
-
-  /**
-   * Process items one by one using the process_callback_
-   */
-  void process_single_items() {
-    T item;
-    while (queue_.dequeue(item)) {
-      process_callback_(std::move(item));
-    }
   }
 
   uv_loop_t* loop_;
