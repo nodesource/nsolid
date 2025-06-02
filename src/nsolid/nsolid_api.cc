@@ -1,27 +1,24 @@
 #include "nsolid_api.h"
+#include "env-inl.h"
+#include "grpc/src/grpc_agent.h"
+#include "memory_tracker-inl.h"
+#include "node_buffer.h"
+#include "node_external_reference.h"
+#include "node_internals.h"
+#include "node_perf.h"
+#include "node_url.h"
+#include "nsolid/continuous_profiler.h"
 #include "nsolid/nsolid_heap_snapshot.h"
 #include "nsolid_bindings.h"
-#include "node_buffer.h"
+#include "nsolid_bpf.h"
 #include "nsolid_cpu_profiler.h"
-#include "nsolid/continuous_profiler.h"
-#include "grpc/src/grpc_agent.h"
 #include "otlp/src/otlp_agent.h"
 #include "statsd/src/statsd_agent.h"
 #include "util.h"
-#include "env-inl.h"
 #include "uv.h"
-#include "node_internals.h"
-#include "node_external_reference.h"
-#include "memory_tracker-inl.h"
-#include "node_perf.h"
-#include "node_url.h"
 #include "v8-fast-api-calls.h"
 
 #include <cmath>
-
-#if defined(__linux__)
-#include <sys/utsname.h>
-#endif
 
 #define MICROS_PER_SEC 1000000
 #define NANOS_PER_SEC 1000000000
@@ -2589,7 +2586,6 @@ static void GetConfigVersion(const FunctionCallbackInfo<Value>& args) {
 }
 
 #ifdef __linux__
-
 uint32_t calculateKernelVersion() {
   struct utsname u;
   static uint32_t version = 0;
@@ -2656,6 +2652,10 @@ calculate_version:
 
   return version;
 }
+#else
+uint32_t calculateKernelVersion() {
+  return -1;
+}
 #endif
 
 static void GetKernelVersion(const FunctionCallbackInfo<Value>& args) {
@@ -2673,6 +2673,81 @@ static void GetKernelVersion(const FunctionCallbackInfo<Value>& args) {
 #endif
 
   args.GetReturnValue().Set(kernel_version);
+}
+
+// Comprehensive eBPF detection function that checks kernel version,
+// BPF subsystem status, supported program types, permissions, and features
+static void DetectEBPFSupport(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+
+  EBPFSupportInfo info = detectEBPFSupport();
+
+  // Create result object
+  Local<Object> result = Object::New(isolate);
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "isSupported"),
+            v8::Boolean::New(isolate, info.is_supported))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "kernelVersion"),
+            v8::Integer::NewFromUnsigned(isolate, info.kernel_version))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "bpfJitEnabled"),
+            v8::Boolean::New(isolate, info.bpf_jit_enabled))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "hasRootAccess"),
+            v8::Boolean::New(isolate, info.has_root_access))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "hasBPFCapability"),
+            v8::Boolean::New(isolate, info.has_bpf_capability))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "hasSysAdminCapability"),
+            v8::Boolean::New(isolate, info.has_sys_admin_capability))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "supportsPerfEvents"),
+            v8::Boolean::New(isolate, info.supports_perf_events))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "supportsKprobes"),
+            v8::Boolean::New(isolate, info.supports_kprobes))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "supportsUprobes"),
+            v8::Boolean::New(isolate, info.supports_uprobes))
+      .Check();
+
+  result
+      ->Set(context,
+            OneByteString(isolate, "supportsTracepoints"),
+            v8::Boolean::New(isolate, info.supports_tracepoints))
+      .Check();
+
+
+  args.GetReturnValue().Set(result);
 }
 
 static void PauseMetrics(const FunctionCallbackInfo<Value>& args) {
@@ -3098,6 +3173,7 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "getConfig", GetConfig);
   SetMethod(context, target, "getConfigVersion", GetConfigVersion);
   SetMethod(context, target, "getKernelVersion", GetKernelVersion);
+  SetMethod(context, target, "detectEBPFSupport", DetectEBPFSupport);
   SetMethod(context, target, "pauseMetrics", PauseMetrics);
   SetMethod(context, target, "resumeMetrics", ResumeMetrics);
   SetMethod(context, target, "setMetricsInterval", SetMetricsInterval);
@@ -3231,6 +3307,7 @@ void BindingData::RegisterExternalReferences(
   registry->Register(GetConfig);
   registry->Register(GetConfigVersion);
   registry->Register(GetKernelVersion);
+  registry->Register(DetectEBPFSupport);
   registry->Register(PauseMetrics);
   registry->Register(ResumeMetrics);
   registry->Register(SetMetricsInterval);
