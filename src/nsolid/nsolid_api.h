@@ -968,6 +968,8 @@ inline uv_loop_t* EnvList::thread_loop() {
   return &thread_loop_;
 }
 
+uint32_t calculateKernelVersion();
+
 }  // namespace nsolid
 }  // namespace node
 
