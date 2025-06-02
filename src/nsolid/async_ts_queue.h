@@ -51,26 +51,27 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
   }
 
   /**
-   * Enqueue an item to the queue
+   * Enqueue an item to the queue (copy or move)
    *
    * @param item The item to enqueue
    * @return The current size of the queue after enqueuing
    */
   size_t enqueue(const T& item) {
-    size_t size = queue_.enqueue(item);
-    ASSERT_EQ(0, async_handle_->send());
-    return size;
+    return enqueue_impl(item);
   }
 
-  /**
-   * Enqueue an item to the queue using move semantics
-   *
-   * @param item The item to enqueue
-   * @return The current size of the queue after enqueuing
-   */
   size_t enqueue(T&& item) {
-    size_t size = queue_.enqueue(std::move(item));
-    ASSERT_EQ(0, async_handle_->send());
+    return enqueue_impl(std::move(item));
+  }
+
+ private:
+  // DRY helper for enqueue logic
+  template<typename U>
+  size_t enqueue_impl(U&& item) {
+    size_t size = queue_.enqueue(std::forward<U>(item));
+    if (size == 1) {
+      ASSERT_EQ(0, async_handle_->send());
+    }
     return size;
   }
 
