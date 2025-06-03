@@ -54,6 +54,9 @@ extern AnyValueDefaultTypeInternal _AnyValue_default_instance_;
 class ArrayValue;
 struct ArrayValueDefaultTypeInternal;
 extern ArrayValueDefaultTypeInternal _ArrayValue_default_instance_;
+class EntityRef;
+struct EntityRefDefaultTypeInternal;
+extern EntityRefDefaultTypeInternal _EntityRef_default_instance_;
 class InstrumentationScope;
 struct InstrumentationScopeDefaultTypeInternal;
 extern InstrumentationScopeDefaultTypeInternal _InstrumentationScope_default_instance_;
@@ -70,6 +73,7 @@ extern KeyValueListDefaultTypeInternal _KeyValueList_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::opentelemetry::proto::common::v1::AnyValue* Arena::CreateMaybeMessage<::opentelemetry::proto::common::v1::AnyValue>(Arena*);
 template<> ::opentelemetry::proto::common::v1::ArrayValue* Arena::CreateMaybeMessage<::opentelemetry::proto::common::v1::ArrayValue>(Arena*);
+template<> ::opentelemetry::proto::common::v1::EntityRef* Arena::CreateMaybeMessage<::opentelemetry::proto::common::v1::EntityRef>(Arena*);
 template<> ::opentelemetry::proto::common::v1::InstrumentationScope* Arena::CreateMaybeMessage<::opentelemetry::proto::common::v1::InstrumentationScope>(Arena*);
 template<> ::opentelemetry::proto::common::v1::KeyValue* Arena::CreateMaybeMessage<::opentelemetry::proto::common::v1::KeyValue>(Arena*);
 template<> ::opentelemetry::proto::common::v1::KeyValueList* Arena::CreateMaybeMessage<::opentelemetry::proto::common::v1::KeyValueList>(Arena*);
@@ -1057,6 +1061,227 @@ class InstrumentationScope final :
   union { Impl_ _impl_; };
   friend struct ::TableStruct_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto;
 };
+// -------------------------------------------------------------------
+
+class EntityRef final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:opentelemetry.proto.common.v1.EntityRef) */ {
+ public:
+  inline EntityRef() : EntityRef(nullptr) {}
+  ~EntityRef() override;
+  explicit PROTOBUF_CONSTEXPR EntityRef(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  EntityRef(const EntityRef& from);
+  EntityRef(EntityRef&& from) noexcept
+    : EntityRef() {
+    *this = ::std::move(from);
+  }
+
+  inline EntityRef& operator=(const EntityRef& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline EntityRef& operator=(EntityRef&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const EntityRef& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const EntityRef* internal_default_instance() {
+    return reinterpret_cast<const EntityRef*>(
+               &_EntityRef_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    5;
+
+  friend void swap(EntityRef& a, EntityRef& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(EntityRef* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(EntityRef* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  EntityRef* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<EntityRef>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const EntityRef& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const EntityRef& from) {
+    EntityRef::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(EntityRef* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "opentelemetry.proto.common.v1.EntityRef";
+  }
+  protected:
+  explicit EntityRef(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kIdKeysFieldNumber = 3,
+    kDescriptionKeysFieldNumber = 4,
+    kSchemaUrlFieldNumber = 1,
+    kTypeFieldNumber = 2,
+  };
+  // repeated string id_keys = 3;
+  int id_keys_size() const;
+  private:
+  int _internal_id_keys_size() const;
+  public:
+  void clear_id_keys();
+  const std::string& id_keys(int index) const;
+  std::string* mutable_id_keys(int index);
+  void set_id_keys(int index, const std::string& value);
+  void set_id_keys(int index, std::string&& value);
+  void set_id_keys(int index, const char* value);
+  void set_id_keys(int index, const char* value, size_t size);
+  std::string* add_id_keys();
+  void add_id_keys(const std::string& value);
+  void add_id_keys(std::string&& value);
+  void add_id_keys(const char* value);
+  void add_id_keys(const char* value, size_t size);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>& id_keys() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>* mutable_id_keys();
+  private:
+  const std::string& _internal_id_keys(int index) const;
+  std::string* _internal_add_id_keys();
+  public:
+
+  // repeated string description_keys = 4;
+  int description_keys_size() const;
+  private:
+  int _internal_description_keys_size() const;
+  public:
+  void clear_description_keys();
+  const std::string& description_keys(int index) const;
+  std::string* mutable_description_keys(int index);
+  void set_description_keys(int index, const std::string& value);
+  void set_description_keys(int index, std::string&& value);
+  void set_description_keys(int index, const char* value);
+  void set_description_keys(int index, const char* value, size_t size);
+  std::string* add_description_keys();
+  void add_description_keys(const std::string& value);
+  void add_description_keys(std::string&& value);
+  void add_description_keys(const char* value);
+  void add_description_keys(const char* value, size_t size);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>& description_keys() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>* mutable_description_keys();
+  private:
+  const std::string& _internal_description_keys(int index) const;
+  std::string* _internal_add_description_keys();
+  public:
+
+  // string schema_url = 1;
+  void clear_schema_url();
+  const std::string& schema_url() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_schema_url(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_schema_url();
+  PROTOBUF_NODISCARD std::string* release_schema_url();
+  void set_allocated_schema_url(std::string* schema_url);
+  private:
+  const std::string& _internal_schema_url() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_schema_url(const std::string& value);
+  std::string* _internal_mutable_schema_url();
+  public:
+
+  // string type = 2;
+  void clear_type();
+  const std::string& type() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_type(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_type();
+  PROTOBUF_NODISCARD std::string* release_type();
+  void set_allocated_type(std::string* type);
+  private:
+  const std::string& _internal_type() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_type(const std::string& value);
+  std::string* _internal_mutable_type();
+  public:
+
+  // @@protoc_insertion_point(class_scope:opentelemetry.proto.common.v1.EntityRef)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> id_keys_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> description_keys_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr schema_url_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr type_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto;
+};
 // ===================================================================
 
 
@@ -1889,9 +2114,265 @@ inline void InstrumentationScope::set_dropped_attributes_count(uint32_t value) {
   // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.InstrumentationScope.dropped_attributes_count)
 }
 
+// -------------------------------------------------------------------
+
+// EntityRef
+
+// string schema_url = 1;
+inline void EntityRef::clear_schema_url() {
+  _impl_.schema_url_.ClearToEmpty();
+}
+inline const std::string& EntityRef::schema_url() const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.common.v1.EntityRef.schema_url)
+  return _internal_schema_url();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void EntityRef::set_schema_url(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.schema_url_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.EntityRef.schema_url)
+}
+inline std::string* EntityRef::mutable_schema_url() {
+  std::string* _s = _internal_mutable_schema_url();
+  // @@protoc_insertion_point(field_mutable:opentelemetry.proto.common.v1.EntityRef.schema_url)
+  return _s;
+}
+inline const std::string& EntityRef::_internal_schema_url() const {
+  return _impl_.schema_url_.Get();
+}
+inline void EntityRef::_internal_set_schema_url(const std::string& value) {
+  
+  _impl_.schema_url_.Set(value, GetArenaForAllocation());
+}
+inline std::string* EntityRef::_internal_mutable_schema_url() {
+  
+  return _impl_.schema_url_.Mutable(GetArenaForAllocation());
+}
+inline std::string* EntityRef::release_schema_url() {
+  // @@protoc_insertion_point(field_release:opentelemetry.proto.common.v1.EntityRef.schema_url)
+  return _impl_.schema_url_.Release();
+}
+inline void EntityRef::set_allocated_schema_url(std::string* schema_url) {
+  if (schema_url != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.schema_url_.SetAllocated(schema_url, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.schema_url_.IsDefault()) {
+    _impl_.schema_url_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.common.v1.EntityRef.schema_url)
+}
+
+// string type = 2;
+inline void EntityRef::clear_type() {
+  _impl_.type_.ClearToEmpty();
+}
+inline const std::string& EntityRef::type() const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.common.v1.EntityRef.type)
+  return _internal_type();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void EntityRef::set_type(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.type_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.EntityRef.type)
+}
+inline std::string* EntityRef::mutable_type() {
+  std::string* _s = _internal_mutable_type();
+  // @@protoc_insertion_point(field_mutable:opentelemetry.proto.common.v1.EntityRef.type)
+  return _s;
+}
+inline const std::string& EntityRef::_internal_type() const {
+  return _impl_.type_.Get();
+}
+inline void EntityRef::_internal_set_type(const std::string& value) {
+  
+  _impl_.type_.Set(value, GetArenaForAllocation());
+}
+inline std::string* EntityRef::_internal_mutable_type() {
+  
+  return _impl_.type_.Mutable(GetArenaForAllocation());
+}
+inline std::string* EntityRef::release_type() {
+  // @@protoc_insertion_point(field_release:opentelemetry.proto.common.v1.EntityRef.type)
+  return _impl_.type_.Release();
+}
+inline void EntityRef::set_allocated_type(std::string* type) {
+  if (type != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.type_.SetAllocated(type, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.type_.IsDefault()) {
+    _impl_.type_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.common.v1.EntityRef.type)
+}
+
+// repeated string id_keys = 3;
+inline int EntityRef::_internal_id_keys_size() const {
+  return _impl_.id_keys_.size();
+}
+inline int EntityRef::id_keys_size() const {
+  return _internal_id_keys_size();
+}
+inline void EntityRef::clear_id_keys() {
+  _impl_.id_keys_.Clear();
+}
+inline std::string* EntityRef::add_id_keys() {
+  std::string* _s = _internal_add_id_keys();
+  // @@protoc_insertion_point(field_add_mutable:opentelemetry.proto.common.v1.EntityRef.id_keys)
+  return _s;
+}
+inline const std::string& EntityRef::_internal_id_keys(int index) const {
+  return _impl_.id_keys_.Get(index);
+}
+inline const std::string& EntityRef::id_keys(int index) const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.common.v1.EntityRef.id_keys)
+  return _internal_id_keys(index);
+}
+inline std::string* EntityRef::mutable_id_keys(int index) {
+  // @@protoc_insertion_point(field_mutable:opentelemetry.proto.common.v1.EntityRef.id_keys)
+  return _impl_.id_keys_.Mutable(index);
+}
+inline void EntityRef::set_id_keys(int index, const std::string& value) {
+  _impl_.id_keys_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.EntityRef.id_keys)
+}
+inline void EntityRef::set_id_keys(int index, std::string&& value) {
+  _impl_.id_keys_.Mutable(index)->assign(std::move(value));
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.EntityRef.id_keys)
+}
+inline void EntityRef::set_id_keys(int index, const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.id_keys_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:opentelemetry.proto.common.v1.EntityRef.id_keys)
+}
+inline void EntityRef::set_id_keys(int index, const char* value, size_t size) {
+  _impl_.id_keys_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:opentelemetry.proto.common.v1.EntityRef.id_keys)
+}
+inline std::string* EntityRef::_internal_add_id_keys() {
+  return _impl_.id_keys_.Add();
+}
+inline void EntityRef::add_id_keys(const std::string& value) {
+  _impl_.id_keys_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:opentelemetry.proto.common.v1.EntityRef.id_keys)
+}
+inline void EntityRef::add_id_keys(std::string&& value) {
+  _impl_.id_keys_.Add(std::move(value));
+  // @@protoc_insertion_point(field_add:opentelemetry.proto.common.v1.EntityRef.id_keys)
+}
+inline void EntityRef::add_id_keys(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.id_keys_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:opentelemetry.proto.common.v1.EntityRef.id_keys)
+}
+inline void EntityRef::add_id_keys(const char* value, size_t size) {
+  _impl_.id_keys_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:opentelemetry.proto.common.v1.EntityRef.id_keys)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>&
+EntityRef::id_keys() const {
+  // @@protoc_insertion_point(field_list:opentelemetry.proto.common.v1.EntityRef.id_keys)
+  return _impl_.id_keys_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>*
+EntityRef::mutable_id_keys() {
+  // @@protoc_insertion_point(field_mutable_list:opentelemetry.proto.common.v1.EntityRef.id_keys)
+  return &_impl_.id_keys_;
+}
+
+// repeated string description_keys = 4;
+inline int EntityRef::_internal_description_keys_size() const {
+  return _impl_.description_keys_.size();
+}
+inline int EntityRef::description_keys_size() const {
+  return _internal_description_keys_size();
+}
+inline void EntityRef::clear_description_keys() {
+  _impl_.description_keys_.Clear();
+}
+inline std::string* EntityRef::add_description_keys() {
+  std::string* _s = _internal_add_description_keys();
+  // @@protoc_insertion_point(field_add_mutable:opentelemetry.proto.common.v1.EntityRef.description_keys)
+  return _s;
+}
+inline const std::string& EntityRef::_internal_description_keys(int index) const {
+  return _impl_.description_keys_.Get(index);
+}
+inline const std::string& EntityRef::description_keys(int index) const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.common.v1.EntityRef.description_keys)
+  return _internal_description_keys(index);
+}
+inline std::string* EntityRef::mutable_description_keys(int index) {
+  // @@protoc_insertion_point(field_mutable:opentelemetry.proto.common.v1.EntityRef.description_keys)
+  return _impl_.description_keys_.Mutable(index);
+}
+inline void EntityRef::set_description_keys(int index, const std::string& value) {
+  _impl_.description_keys_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.EntityRef.description_keys)
+}
+inline void EntityRef::set_description_keys(int index, std::string&& value) {
+  _impl_.description_keys_.Mutable(index)->assign(std::move(value));
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.EntityRef.description_keys)
+}
+inline void EntityRef::set_description_keys(int index, const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.description_keys_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:opentelemetry.proto.common.v1.EntityRef.description_keys)
+}
+inline void EntityRef::set_description_keys(int index, const char* value, size_t size) {
+  _impl_.description_keys_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:opentelemetry.proto.common.v1.EntityRef.description_keys)
+}
+inline std::string* EntityRef::_internal_add_description_keys() {
+  return _impl_.description_keys_.Add();
+}
+inline void EntityRef::add_description_keys(const std::string& value) {
+  _impl_.description_keys_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:opentelemetry.proto.common.v1.EntityRef.description_keys)
+}
+inline void EntityRef::add_description_keys(std::string&& value) {
+  _impl_.description_keys_.Add(std::move(value));
+  // @@protoc_insertion_point(field_add:opentelemetry.proto.common.v1.EntityRef.description_keys)
+}
+inline void EntityRef::add_description_keys(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.description_keys_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:opentelemetry.proto.common.v1.EntityRef.description_keys)
+}
+inline void EntityRef::add_description_keys(const char* value, size_t size) {
+  _impl_.description_keys_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:opentelemetry.proto.common.v1.EntityRef.description_keys)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>&
+EntityRef::description_keys() const {
+  // @@protoc_insertion_point(field_list:opentelemetry.proto.common.v1.EntityRef.description_keys)
+  return _impl_.description_keys_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>*
+EntityRef::mutable_description_keys() {
+  // @@protoc_insertion_point(field_mutable_list:opentelemetry.proto.common.v1.EntityRef.description_keys)
+  return &_impl_.description_keys_;
+}
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
