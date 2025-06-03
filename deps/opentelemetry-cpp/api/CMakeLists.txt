@@ -9,20 +9,20 @@ target_include_directories(
 
 set_target_properties(opentelemetry_api PROPERTIES EXPORT_NAME api)
 
+otel_add_component(
+  COMPONENT
+  api
+  TARGETS
+  opentelemetry_api
+  FILES_DIRECTORY
+  "include/opentelemetry"
+  FILES_DESTINATION
+  "include"
+  FILES_MATCHING
+  PATTERN
+  "*.h")
+
 if(OPENTELEMETRY_INSTALL)
-  install(
-    TARGETS opentelemetry_api
-    EXPORT "${PROJECT_NAME}-target"
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-  install(
-    DIRECTORY include/opentelemetry
-    DESTINATION include
-    FILES_MATCHING
-    PATTERN "*.h")
-
   unset(TARGET_DEPS)
 endif()
 
@@ -33,21 +33,6 @@ endif()
 if(WITH_NO_DEPRECATED_CODE)
   target_compile_definitions(opentelemetry_api
                              INTERFACE OPENTELEMETRY_NO_DEPRECATED_CODE)
-endif()
-
-if(WITH_ABSEIL)
-  target_compile_definitions(opentelemetry_api INTERFACE HAVE_ABSEIL)
-  target_link_libraries(
-    opentelemetry_api INTERFACE absl::bad_variant_access absl::any absl::base
-                                absl::bits absl::city)
-  list(
-    APPEND
-    TARGET_DEPS
-    "absl_bad_variant_access"
-    "absl_any"
-    "absl_base"
-    "absl_bits"
-    "absl_city")
 endif()
 
 if(WITH_STL STREQUAL "OFF")

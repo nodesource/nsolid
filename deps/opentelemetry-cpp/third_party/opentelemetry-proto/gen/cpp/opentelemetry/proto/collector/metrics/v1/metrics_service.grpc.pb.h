@@ -57,8 +57,6 @@ class MetricsService final {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
-    // For performance reasons, it is recommended to keep this RPC
-    // alive for the entire life of the application.
     virtual ::grpc::Status Export(::grpc::ClientContext* context, const ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceRequest& request, ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceResponse>> AsyncExport(::grpc::ClientContext* context, const ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceResponse>>(AsyncExportRaw(context, request, cq));
@@ -69,8 +67,6 @@ class MetricsService final {
     class async_interface {
      public:
       virtual ~async_interface() {}
-      // For performance reasons, it is recommended to keep this RPC
-      // alive for the entire life of the application.
       virtual void Export(::grpc::ClientContext* context, const ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceRequest* request, ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Export(::grpc::ClientContext* context, const ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceRequest* request, ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
@@ -117,8 +113,6 @@ class MetricsService final {
    public:
     Service();
     virtual ~Service();
-    // For performance reasons, it is recommended to keep this RPC
-    // alive for the entire life of the application.
     virtual ::grpc::Status Export(::grpc::ServerContext* context, const ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceRequest* request, ::opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceResponse* response);
   };
   template <class BaseClass>

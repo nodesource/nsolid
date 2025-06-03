@@ -25,6 +25,7 @@ using std::chrono::nanoseconds;
 using opentelemetry::common::SystemTimestamp;
 using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
 using LogsRecordable = opentelemetry::sdk::logs::Recordable;
+using opentelemetry::sdk::common::OwnedAttributeType;
 using opentelemetry::sdk::metrics::AggregationTemporality;
 using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::InstrumentDescriptor;
@@ -173,7 +174,7 @@ Resource* UpdateResource(ResourceAttributes&& attrs) {
   if (attributes.find(kServiceName) != attributes.end() &&
       attrs.find(kServiceName) == attrs.end()) {
     attrs.SetAttribute(kServiceName,
-                       std::get<std::string>(attributes[kServiceName]));
+        opentelemetry::nostd::get<std::string>(attributes[kServiceName]));
   }
 
   auto new_res = std::make_unique<Resource>(Resource::Create(attrs));

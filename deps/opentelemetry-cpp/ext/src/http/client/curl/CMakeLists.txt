@@ -67,11 +67,5 @@ if(WITH_OTLP_HTTP_COMPRESSION)
   endif()
 endif()
 
-if(OPENTELEMETRY_INSTALL)
-  install(
-    TARGETS opentelemetry_http_client_curl
-    EXPORT "${PROJECT_NAME}-target"
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()
+otel_add_component(COMPONENT ext_http_curl TARGETS
+                   opentelemetry_http_client_curl)
