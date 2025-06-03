@@ -188,6 +188,7 @@ class Resource final :
 
   enum : int {
     kAttributesFieldNumber = 1,
+    kEntityRefsFieldNumber = 3,
     kDroppedAttributesCountFieldNumber = 2,
   };
   // repeated .opentelemetry.proto.common.v1.KeyValue attributes = 1;
@@ -208,6 +209,24 @@ class Resource final :
   const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::KeyValue >&
       attributes() const;
 
+  // repeated .opentelemetry.proto.common.v1.EntityRef entity_refs = 3;
+  int entity_refs_size() const;
+  private:
+  int _internal_entity_refs_size() const;
+  public:
+  void clear_entity_refs();
+  ::opentelemetry::proto::common::v1::EntityRef* mutable_entity_refs(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::EntityRef >*
+      mutable_entity_refs();
+  private:
+  const ::opentelemetry::proto::common::v1::EntityRef& _internal_entity_refs(int index) const;
+  ::opentelemetry::proto::common::v1::EntityRef* _internal_add_entity_refs();
+  public:
+  const ::opentelemetry::proto::common::v1::EntityRef& entity_refs(int index) const;
+  ::opentelemetry::proto::common::v1::EntityRef* add_entity_refs();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::EntityRef >&
+      entity_refs() const;
+
   // uint32 dropped_attributes_count = 2;
   void clear_dropped_attributes_count();
   uint32_t dropped_attributes_count() const;
@@ -226,6 +245,7 @@ class Resource final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::KeyValue > attributes_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::EntityRef > entity_refs_;
     uint32_t dropped_attributes_count_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -298,6 +318,43 @@ inline void Resource::_internal_set_dropped_attributes_count(uint32_t value) {
 inline void Resource::set_dropped_attributes_count(uint32_t value) {
   _internal_set_dropped_attributes_count(value);
   // @@protoc_insertion_point(field_set:opentelemetry.proto.resource.v1.Resource.dropped_attributes_count)
+}
+
+// repeated .opentelemetry.proto.common.v1.EntityRef entity_refs = 3;
+inline int Resource::_internal_entity_refs_size() const {
+  return _impl_.entity_refs_.size();
+}
+inline int Resource::entity_refs_size() const {
+  return _internal_entity_refs_size();
+}
+inline ::opentelemetry::proto::common::v1::EntityRef* Resource::mutable_entity_refs(int index) {
+  // @@protoc_insertion_point(field_mutable:opentelemetry.proto.resource.v1.Resource.entity_refs)
+  return _impl_.entity_refs_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::EntityRef >*
+Resource::mutable_entity_refs() {
+  // @@protoc_insertion_point(field_mutable_list:opentelemetry.proto.resource.v1.Resource.entity_refs)
+  return &_impl_.entity_refs_;
+}
+inline const ::opentelemetry::proto::common::v1::EntityRef& Resource::_internal_entity_refs(int index) const {
+  return _impl_.entity_refs_.Get(index);
+}
+inline const ::opentelemetry::proto::common::v1::EntityRef& Resource::entity_refs(int index) const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.resource.v1.Resource.entity_refs)
+  return _internal_entity_refs(index);
+}
+inline ::opentelemetry::proto::common::v1::EntityRef* Resource::_internal_add_entity_refs() {
+  return _impl_.entity_refs_.Add();
+}
+inline ::opentelemetry::proto::common::v1::EntityRef* Resource::add_entity_refs() {
+  ::opentelemetry::proto::common::v1::EntityRef* _add = _internal_add_entity_refs();
+  // @@protoc_insertion_point(field_add:opentelemetry.proto.resource.v1.Resource.entity_refs)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::opentelemetry::proto::common::v1::EntityRef >&
+Resource::entity_refs() const {
+  // @@protoc_insertion_point(field_list:opentelemetry.proto.resource.v1.Resource.entity_refs)
+  return _impl_.entity_refs_;
 }
 
 #ifdef __GNUC__

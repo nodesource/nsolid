@@ -57,8 +57,6 @@ class TraceService final {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
-    // For performance reasons, it is recommended to keep this RPC
-    // alive for the entire life of the application.
     virtual ::grpc::Status Export(::grpc::ClientContext* context, const ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest& request, ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceResponse>> AsyncExport(::grpc::ClientContext* context, const ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceResponse>>(AsyncExportRaw(context, request, cq));
@@ -69,8 +67,6 @@ class TraceService final {
     class async_interface {
      public:
       virtual ~async_interface() {}
-      // For performance reasons, it is recommended to keep this RPC
-      // alive for the entire life of the application.
       virtual void Export(::grpc::ClientContext* context, const ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest* request, ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Export(::grpc::ClientContext* context, const ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest* request, ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
@@ -117,8 +113,6 @@ class TraceService final {
    public:
     Service();
     virtual ~Service();
-    // For performance reasons, it is recommended to keep this RPC
-    // alive for the entire life of the application.
     virtual ::grpc::Status Export(::grpc::ServerContext* context, const ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest* request, ::opentelemetry::proto::collector::trace::v1::ExportTraceServiceResponse* response);
   };
   template <class BaseClass>

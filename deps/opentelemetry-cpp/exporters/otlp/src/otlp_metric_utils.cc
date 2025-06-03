@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <map>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -12,6 +13,7 @@
 #include "opentelemetry/exporters/otlp/otlp_preferred_temporality.h"
 #include "opentelemetry/nostd/variant.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
+#include "opentelemetry/sdk/metrics/data/circular_buffer.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/data/point_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
@@ -63,15 +65,15 @@ metric_sdk::AggregationType OtlpMetricUtils::GetAggregationType(
   {
     return metric_sdk::AggregationType::kHistogram;
   }
+  else if (nostd::holds_alternative<sdk::metrics::Base2ExponentialHistogramPointData>(
+               point_data_with_attributes.point_data))
+  {
+    return metric_sdk::AggregationType::kBase2ExponentialHistogram;
+  }
   else if (nostd::holds_alternative<sdk::metrics::LastValuePointData>(
                point_data_with_attributes.point_data))
   {
     return metric_sdk::AggregationType::kLastValue;
-  }
-  else if (nostd::holds_alternative<sdk::metrics::SummaryPointData>(
-               point_data_with_attributes.point_data))
-  {
-    return metric_sdk::AggregationType::kSummary;
   }
   return metric_sdk::AggregationType::kDrop;
 }
@@ -182,6 +184,70 @@ void OtlpMetricUtils::ConvertHistogramMetric(
   }
 }
 
+void OtlpMetricUtils::ConvertExponentialHistogramMetric(
+    const metric_sdk::MetricData &metric_data,
+    proto::metrics::v1::ExponentialHistogram *const histogram) noexcept
+{
+  histogram->set_aggregation_temporality(
+      GetProtoAggregationTemporality(metric_data.aggregation_temporality));
+  auto start_ts = metric_data.start_ts.time_since_epoch().count();
+  auto ts       = metric_data.end_ts.time_since_epoch().count();
+  for (auto &point_data_with_attributes : metric_data.point_data_attr_)
+  {
+    proto::metrics::v1::ExponentialHistogramDataPoint *proto_histogram_point_data =
+        histogram->add_data_points();
+    proto_histogram_point_data->set_start_time_unix_nano(start_ts);
+    proto_histogram_point_data->set_time_unix_nano(ts);
+    auto histogram_data = nostd::get<sdk::metrics::Base2ExponentialHistogramPointData>(
+        point_data_with_attributes.point_data);
+    if (histogram_data.positive_buckets_ == nullptr && histogram_data.negative_buckets_ == nullptr)
+    {
+      continue;
+    }
+    // sum
+    proto_histogram_point_data->set_sum(histogram_data.sum_);
+    proto_histogram_point_data->set_count(histogram_data.count_);
+    if (histogram_data.record_min_max_)
+    {
+      proto_histogram_point_data->set_min(histogram_data.min_);
+      proto_histogram_point_data->set_max(histogram_data.max_);
+    }
+    // negative buckets
+    if (!histogram_data.negative_buckets_->Empty())
+    {
+      auto negative_buckets = proto_histogram_point_data->mutable_negative();
+      negative_buckets->set_offset(histogram_data.negative_buckets_->StartIndex());
+
+      for (auto index = histogram_data.negative_buckets_->StartIndex();
+           index <= histogram_data.negative_buckets_->EndIndex(); ++index)
+      {
+        negative_buckets->add_bucket_counts(histogram_data.negative_buckets_->Get(index));
+      }
+    }
+    // positive buckets
+    if (!histogram_data.positive_buckets_->Empty())
+    {
+      auto positive_buckets = proto_histogram_point_data->mutable_positive();
+      positive_buckets->set_offset(histogram_data.positive_buckets_->StartIndex());
+
+      for (auto index = histogram_data.positive_buckets_->StartIndex();
+           index <= histogram_data.positive_buckets_->EndIndex(); ++index)
+      {
+        positive_buckets->add_bucket_counts(histogram_data.positive_buckets_->Get(index));
+      }
+    }
+    proto_histogram_point_data->set_scale(histogram_data.scale_);
+    proto_histogram_point_data->set_zero_count(histogram_data.zero_count_);
+
+    // attributes
+    for (auto &kv_attr : point_data_with_attributes.attributes)
+    {
+      OtlpPopulateAttributeUtils::PopulateAttribute(proto_histogram_point_data->add_attributes(),
+                                                    kv_attr.first, kv_attr.second);
+    }
+  }
+}
+
 void OtlpMetricUtils::ConvertGaugeMetric(const opentelemetry::sdk::metrics::MetricData &metric_data,
                                          proto::metrics::v1::Gauge *const gauge) noexcept
 {
@@ -212,56 +278,6 @@ void OtlpMetricUtils::ConvertGaugeMetric(const opentelemetry::sdk::metrics::Metr
   }
 }
 
-void OtlpMetricUtils::ConvertSummaryMetric(const metric_sdk::MetricData &metric_data,
-                                           proto::metrics::v1::Summary *const summary) noexcept
-{
-  auto start_ts = metric_data.start_ts.time_since_epoch().count();
-  auto ts       = metric_data.end_ts.time_since_epoch().count();
-  for (auto &point_data_with_attributes : metric_data.point_data_attr_)
-  {
-    proto::metrics::v1::SummaryDataPoint *proto_summary_point_data = summary->add_data_points();
-    proto_summary_point_data->set_start_time_unix_nano(start_ts);
-    proto_summary_point_data->set_time_unix_nano(ts);
-    auto summary_data = nostd::get<sdk::metrics::SummaryPointData>(point_data_with_attributes.point_data);
-
-    // sum
-    if ((nostd::holds_alternative<int64_t>(summary_data.sum_)))
-    {
-      // Use static_cast to avoid C4244 in MSVC
-      proto_summary_point_data->set_sum(
-          static_cast<double>(nostd::get<int64_t>(summary_data.sum_)));
-    }
-    else
-    {
-      proto_summary_point_data->set_sum(nostd::get<double>(summary_data.sum_));
-    }
-    // count
-    proto_summary_point_data->set_count(summary_data.count_);
-    // quantile values
-    for (auto &kv : summary_data.quantile_values_)
-    {
-      proto::metrics::v1::SummaryDataPoint::ValueAtQuantile *quantile =
-          proto_summary_point_data->add_quantile_values();
-      quantile->set_quantile(kv.first);
-      if ((nostd::holds_alternative<int64_t>(kv.second)))
-      {
-        // Use static_cast to avoid C4244 in MSVC
-        quantile->set_value(static_cast<double>(nostd::get<int64_t>(kv.second)));
-      }
-      else
-      {
-        quantile->set_value(nostd::get<double>(kv.second));
-      }
-    }
-    // set attributes
-    for (auto &kv_attr : point_data_with_attributes.attributes)
-    {
-      OtlpPopulateAttributeUtils::PopulateAttribute(proto_summary_point_data->add_attributes(),
-                                                    kv_attr.first, kv_attr.second);
-    }
-  }
-}
-
 void OtlpMetricUtils::PopulateInstrumentInfoMetrics(
     const opentelemetry::sdk::metrics::MetricData &metric_data,
     proto::metrics::v1::Metric *metric) noexcept
@@ -280,12 +296,12 @@ void OtlpMetricUtils::PopulateInstrumentInfoMetrics(
       ConvertHistogramMetric(metric_data, metric->mutable_histogram());
       break;
     }
-    case metric_sdk::AggregationType::kLastValue: {
-      ConvertGaugeMetric(metric_data, metric->mutable_gauge());
+    case metric_sdk::AggregationType::kBase2ExponentialHistogram: {
+      ConvertExponentialHistogramMetric(metric_data, metric->mutable_exponential_histogram());
       break;
     }
-    case metric_sdk::AggregationType::kSummary: {
-      ConvertSummaryMetric(metric_data, metric->mutable_summary());
+    case metric_sdk::AggregationType::kLastValue: {
+      ConvertGaugeMetric(metric_data, metric->mutable_gauge());
       break;
     }
     default:
@@ -364,8 +380,6 @@ sdk::metrics::AggregationTemporality OtlpMetricUtils::DeltaTemporalitySelector(
     case sdk::metrics::InstrumentType::kUpDownCounter:
     case sdk::metrics::InstrumentType::kObservableUpDownCounter:
       return sdk::metrics::AggregationTemporality::kCumulative;
-    case sdk::metrics::InstrumentType::kSummary:
-      return sdk::metrics::AggregationTemporality::kUnspecified;
   }
   return sdk::metrics::AggregationTemporality::kUnspecified;
 }
@@ -390,8 +404,6 @@ sdk::metrics::AggregationTemporality OtlpMetricUtils::LowMemoryTemporalitySelect
     case sdk::metrics::InstrumentType::kUpDownCounter:
     case sdk::metrics::InstrumentType::kObservableUpDownCounter:
       return sdk::metrics::AggregationTemporality::kCumulative;
-    case sdk::metrics::InstrumentType::kSummary:
-      return sdk::metrics::AggregationTemporality::kUnspecified;
   }
   return sdk::metrics::AggregationTemporality::kUnspecified;
 }
