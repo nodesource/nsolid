@@ -97,6 +97,7 @@
 #include "src/core/util/match.h"
 #include "src/core/util/orphanable.h"
 #include "src/core/util/ref_counted_ptr.h"
+#include "src/core/util/shared_bit_gen.h"
 #include "src/core/util/status_helper.h"
 #include "src/core/util/sync.h"
 #include "src/core/util/time.h"
@@ -1557,7 +1558,7 @@ RlsLb::RlsChannel::RlsChannel(RefCountedPtr<RlsLb> lb_policy)
     auto parent_channelz_node =
         lb_policy_->channel_args_.GetObjectRef<channelz::ChannelNode>();
     if (child_channelz_node != nullptr && parent_channelz_node != nullptr) {
-      parent_channelz_node->AddChildChannel(child_channelz_node->uuid());
+      child_channelz_node->AddParent(parent_channelz_node.get());
       parent_channelz_node_ = std::move(parent_channelz_node);
     }
     // Start connectivity watch.
@@ -1578,7 +1579,7 @@ void RlsLb::RlsChannel::Orphan() {
     if (parent_channelz_node_ != nullptr) {
       channelz::ChannelNode* child_channelz_node = channel_->channelz_node();
       CHECK_NE(child_channelz_node, nullptr);
-      parent_channelz_node_->RemoveChildChannel(child_channelz_node->uuid());
+      child_channelz_node->RemoveParent(parent_channelz_node_.get());
     }
     // Stop connectivity watch.
     if (watcher_ != nullptr) {
@@ -1852,9 +1853,9 @@ RlsLb::ResponseInfo RlsLb::RlsRequest::ParseResponseProto() {
 
 std::string GenerateUUID() {
   absl::uniform_int_distribution<uint64_t> distribution;
-  absl::BitGen bitgen;
-  uint64_t hi = distribution(bitgen);
-  uint64_t lo = distribution(bitgen);
+  SharedBitGen g;
+  uint64_t hi = distribution(g);
+  uint64_t lo = distribution(g);
   return GenerateUUIDv4(hi, lo);
 }
 
