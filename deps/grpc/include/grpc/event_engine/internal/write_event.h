@@ -1,4 +1,4 @@
-// Copyright 2024 gRPC authors.
+// Copyright 2022 gRPC authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SRC_CPP_EXT_CHAOTIC_GOOD_H
-#define GRPC_SRC_CPP_EXT_CHAOTIC_GOOD_H
+#ifndef GRPC_EVENT_ENGINE_INTERNAL_WRITE_EVENT_H
+#define GRPC_EVENT_ENGINE_INTERNAL_WRITE_EVENT_H
 
-#include <grpcpp/security/credentials.h>
-#include <grpcpp/security/server_credentials.h>
+namespace grpc_event_engine::experimental::internal {
 
-#include <memory>
+// Use of this enum via this name is internal to gRPC.
+// API users should get this enumeration via the
+// EventEngine::Endpoint::WriteEvent.
+enum class WriteEvent {
+  kSendMsg,
+  kScheduled,
+  kSent,
+  kAcked,
+  kClosed,
+  kCount  // Must be last.
+};
 
-namespace grpc {
+}  // namespace grpc_event_engine::experimental::internal
 
-std::shared_ptr<ChannelCredentials> ChaoticGoodInsecureChannelCredentials();
-std::shared_ptr<ServerCredentials> ChaoticGoodInsecureServerCredentials();
-
-}  // namespace grpc
-
-#endif  // GRPC_SRC_CPP_EXT_CHAOTIC_GOOD_H
+#endif  // GRPC_EVENT_ENGINE_INTERNAL_WRITE_EVENT_H
