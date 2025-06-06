@@ -18,7 +18,6 @@
         'third_party/utf8_range/lookup.c',
         'third_party/utf8_range/naive.c',
         'third_party/utf8_range/utf8_range.c',
-        'third_party/utf8_range/utf8_validity.cc',
         'third_party/utf8_range/utf8_to_utf16/naive.c',
       ],
     },
