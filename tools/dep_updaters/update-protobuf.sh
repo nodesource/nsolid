@@ -41,13 +41,13 @@ PROTOBUF_TARBALL="protobuf-$NEW_VERSION.tar.gz"
 cd "$WORKSPACE"
 echo "Cloning protobuf repository"
 # We can either use git clone with PROTOBUF_REF
-# git clone -b "$PROTOBUF_REF" --depth=1 --no-recurse-submodules https://github.com/protocolbuffers/protobuf
+git clone -b "$PROTOBUF_REF" --depth=1 --no-recurse-submodules https://github.com/protocolbuffers/protobuf
 
 # Or download the tarball using PROTOBUF_TARBALL (uncomment to use this method)
-curl -sL -o "$PROTOBUF_TARBALL" "https://github.com/protocolbuffers/protobuf/archive/refs/tags/$PROTOBUF_REF.tar.gz"
-gzip -dc "$PROTOBUF_TARBALL" | tar xf -
-rm "$PROTOBUF_TARBALL"
-mv "protobuf-$NEW_VERSION" protobuf
+# curl -sL -o "$PROTOBUF_TARBALL" "https://github.com/protocolbuffers/protobuf/archive/refs/tags/$PROTOBUF_REF.tar.gz"
+# gzip -dc "$PROTOBUF_TARBALL" | tar xf -
+# rm "$PROTOBUF_TARBALL"
+# mv "protobuf-$NEW_VERSION" protobuf
 
 cd protobuf
 
