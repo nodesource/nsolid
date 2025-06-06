@@ -95,7 +95,7 @@ setup_protoc_environment() {
   cd "$_base_dir" || exit 1
   # Generate grpc_cpp_plugin
   echo "Generating protoc and grpc_cpp_plugin"
-  ./configure && make -C out protoc protoc-gen-cpp grpc_cpp_plugin
+  ./configure && make -j12 -C out protoc protoc-gen-cpp grpc_cpp_plugin
 }
 
 regenerate_proto_otel() {
