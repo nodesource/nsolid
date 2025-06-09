@@ -146,9 +146,17 @@ struct TSList {
     nsuv::ns_mutex::scoped_lock lock(lock_);
     std::for_each(list_.begin(), list_.end(), fn);
   }
-  inline void erase(iterator it) {
+  inline void for_each(std::function<void(const DataType&, size_t)> fn) {
+    nsuv::ns_mutex::scoped_lock lock(lock_);
+    size_t current_size = list_.size();
+    for (auto& item : list_) {
+      fn(item, current_size);
+    }
+  }
+  inline size_t erase(iterator it) {
     nsuv::ns_mutex::scoped_lock lock(lock_);
     list_.erase(it);
+    return list_.size();
   }
   inline size_t size() {
     nsuv::ns_mutex::scoped_lock lock(lock_);
@@ -178,9 +186,17 @@ struct TSList<DataType*> {
     nsuv::ns_mutex::scoped_lock lock(lock_);
     std::for_each(list_.begin(), list_.end(), fn);
   }
-  inline void erase(iterator it) {
+  inline void for_each(std::function<void(DataType*, size_t)> fn) {
+    nsuv::ns_mutex::scoped_lock lock(lock_);
+    size_t current_size = list_.size();
+    for (auto& item : list_) {
+      fn(item, current_size);
+    }
+  }
+  inline size_t erase(iterator it) {
     nsuv::ns_mutex::scoped_lock lock(lock_);
     list_.erase(it);
+    return list_.size();
   }
   inline size_t size() {
     nsuv::ns_mutex::scoped_lock lock(lock_);
