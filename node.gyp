@@ -515,6 +515,7 @@
       'src/nsolid.cc',
       'src/nsolid/continuous_profiler.cc',
       'src/nsolid/nsolid_api.cc',
+      'src/nsolid/nsolid_code_event_handler.cc',
       'src/nsolid/nsolid_trace.cc',
       'src/nsolid/nsolid_cpu_profiler.cc',
       'src/nsolid/nsolid_heap_snapshot.cc',

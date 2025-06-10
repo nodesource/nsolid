@@ -1,4 +1,5 @@
 #include "nsolid_api.h"
+#include "nsolid/nsolid_code_event_handler.h"
 #include "nsolid/nsolid_heap_snapshot.h"
 #include "nsolid_bindings.h"
 #include "node_buffer.h"
@@ -841,6 +842,19 @@ void EnvInst::StoreSourceCode(int script_id,
 }
 
 
+void EnvInst::setup_code_event_handler() {
+  if (!code_event_handler_) {
+    code_event_handler_ =
+      std::make_unique<NSolidCodeEventHandler>(isolate_, thread_id_);
+    code_event_handler_->Enable();
+  }
+}
+
+void EnvInst::disable_code_event_handler() {
+  code_event_handler_.reset();
+}
+
+
 EnvList::EnvList(): info_(nlohmann::json()) {
   int er;
   // Create event loop and new thread to run EnvList commands.
@@ -870,6 +884,13 @@ EnvList::EnvList(): info_(nlohmann::json()) {
   er = thread_.create(env_list_routine_, this);
   CHECK_EQ(er, 0);
   continuous_profiler_ = std::make_shared<ContinuousProfiler>(&thread_loop_);
+  on_code_event_q_ =
+    AsyncTSQueue<CodeEventInfo>::create(
+      &thread_loop_,
+      +[](CodeEventInfo&& info, EnvList* envlist) {
+        envlist->got_code_event(std::move(info));
+      },
+      this);
 }
 
 
@@ -979,6 +1000,58 @@ void EnvList::OnUnblockedLoopHook(
     { 0, proxy, nsolid::internal::user_data(data, deleter) });
 }
 
+TSList<EnvList::CodeEventHookStor>::iterator EnvList::AddCodeEventHook(
+    void* data,
+    internal::code_event_hook_proxy_sig proxy,
+    internal::deleter_sig deleter) {
+
+  auto it = code_event_hook_list_.push_back(
+    { proxy, nsolid::internal::user_data(data, deleter) });
+
+  decltype(env_map_) env_map;
+  {
+    // Copy the envinst map so we don't need to keep it locked the entire time.
+    ns_mutex::scoped_lock lock(map_lock_);
+    env_map = env_map_;
+  }
+
+  for (auto& entry : env_map) {
+    SharedEnvInst envinst = entry.second;
+    int er = RunCommand(envinst,
+                        CommandType::InterruptOnly,
+                        setup_code_event_handler);
+    if (er) {
+      // Nothing to do here, really.
+    }
+  }
+
+  return it;
+}
+
+void EnvList::RemoveCodeEventHook(
+    TSList<EnvList::CodeEventHookStor>::iterator it) {
+  size_t size = code_event_hook_list_.erase(it);
+  if (size == 0) {
+    // No hooks left, disable the code event handler.
+    decltype(env_map_) env_map;
+    {
+      // Copy the envinst map so we don't need to keep it locked the entire
+      // time.
+      ns_mutex::scoped_lock lock(map_lock_);
+      env_map = env_map_;
+    }
+
+    for (auto& entry : env_map) {
+      SharedEnvInst envinst = entry.second;
+      int er = RunCommand(envinst,
+                          CommandType::InterruptOnly,
+                          disable_code_event_handler);
+      if (er) {
+        // Nothing to do here, really.
+      }
+    }
+  }
+}
 
 int EnvList::QueueCallback(q_cb_sig cb, uint64_t timeout, void* data) {
   QCbTimeoutStor* stor = new (std::nothrow) QCbTimeoutStor({
@@ -1041,6 +1114,10 @@ NODE_PERFORMANCE_MILESTONES(V)
                                         envinst_sp.get());
   env->isolate()->AddGCEpilogueCallback(EnvInst::v8_gc_epilogue_cb_,
                                         envinst_sp.get());
+
+  if (code_event_hook_list_.size() > 0) {
+    envinst_sp->setup_code_event_handler();
+  }
 
   // Run EnvironmentCreationHook callbacks.
   env_creation_list_.for_each([envinst_sp](auto& stor) {
@@ -1416,6 +1493,18 @@ void EnvList::datapoint_cb_(std::queue<MetricsStream::Datapoint>&& q) {
   });
 }
 
+void EnvList::setup_code_event_handler(SharedEnvInst envinst_sp) {
+  DCHECK_EQ(envinst_sp->isolate(), v8::Isolate::TryGetCurrent());
+
+  envinst_sp->setup_code_event_handler();
+}
+
+void EnvList::disable_code_event_handler(SharedEnvInst envinst_sp) {
+  DCHECK_EQ(envinst_sp->isolate(), v8::Isolate::TryGetCurrent());
+
+  envinst_sp->disable_code_event_handler();
+}
+
 
 void EnvInst::send_datapoint(MetricsStream::Type type,
                              double value) {
@@ -1618,9 +1707,11 @@ void EnvList::log_written_cb_(ns_async*, EnvList* envlist) {
 // registered users will need to receive their last set of metrics and a
 // notification that it'll be their last.
 void EnvList::removed_env_cb_(ns_async*, EnvList* envlist) {
+  envlist->on_code_event_q_.reset();
   if (envlist->continuous_profiler_) {
     envlist->continuous_profiler_.reset();
   }
+
   envlist->removed_env_msg_.close();
   envlist->process_callbacks_msg_.close();
   envlist->log_written_msg_.close();
@@ -1882,6 +1973,20 @@ void EnvList::fill_trace_id_q() {
   }
 }
 
+void EnvList::got_code_event(CodeEventInfo&& info) {
+  auto envinst_sp = EnvInst::GetInst(info.thread_id);
+  if (envinst_sp == nullptr) {
+    return;
+  }
+
+  code_event_hook_list_.for_each([&info, &envinst_sp](auto& stor, size_t size) {
+    if (size == 1) {
+      stor.cb(envinst_sp, std::move(info), stor.data.get());
+    } else {
+      stor.cb(envinst_sp, info, stor.data.get());
+    }
+  });
+}
 
 void EnvInst::custom_command_(SharedEnvInst envinst_sp,
                               const std::string req_id) {

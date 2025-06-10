@@ -597,6 +597,42 @@ int Snapshot::get_snapshot_(SharedEnvInst envinst,
     GetHeapSnapshot(envinst, redacted, data, proxy, deleter);
 }
 
+class CodeEventHook::Impl {
+ public:
+  Impl() = default;
+  ~Impl() {
+    // Remove the hook from the TSList in EnvList
+    EnvList::Inst()->RemoveCodeEventHook(hook_);
+  }
+
+ private:
+  friend class CodeEventHook;
+  void Setup(internal::code_event_hook_proxy_sig cb,
+             void(*deleter)(void*),
+             void* data) {
+    // Add hook to the TSList in EnvList
+    hook_ = EnvList::Inst()->AddCodeEventHook(data, cb, deleter);
+  }
+
+  TSList<EnvList::CodeEventHookStor>::iterator hook_;
+};
+
+CodeEventHook::CodeEventHook(): impl_(std::make_unique<Impl>()) {
+}
+
+CodeEventHook::~CodeEventHook() = default;
+
+void CodeEventHook::Dispose() {
+  // This method transfers ownership to the callee and deletes the object.
+  // The caller must not use this object after calling Dispose().
+  delete this;
+}
+
+void CodeEventHook::DoSetup(internal::code_event_hook_proxy_sig cb,
+                            internal::deleter_sig deleter,
+                            void* data) {
+  impl_->Setup(cb, deleter, data);
+}
 
 namespace internal {
 
@@ -635,6 +671,17 @@ void thread_removed_hook_(void* data,
                           thread_removed_hook_proxy_sig proxy,
                           deleter_sig deleter) {
   EnvList::Inst()->EnvironmentDeletionHook(data, proxy, deleter);
+}
+
+CodeEventHook* add_code_event_hook_(void* data,
+                                    code_event_hook_proxy_sig proxy,
+                                    deleter_sig deleter) {
+  CodeEventHook* hook = new (std::nothrow) CodeEventHook();
+  if (hook == nullptr) {
+    return nullptr;
+  }
+  hook->DoSetup(proxy, deleter, data);
+  return hook;
 }
 
 

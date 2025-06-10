@@ -18,6 +18,7 @@
 #include "node_snapshotable.h"
 #include "nsolid.h"
 #include "nsuv-inl.h"
+#include "async_ts_queue.h"
 #include "nsolid_heap_snapshot.h"
 #include "nsolid_trace.h"
 #include "nsolid_util.h"
@@ -32,6 +33,7 @@
 
 namespace node {
 namespace nsolid {
+
 
 #define NSOLID_JS_METRICS_COUNTERS(V)                                          \
   V(kHttpClientCount)                                                          \
@@ -55,6 +57,7 @@ namespace nsolid {
 class EnvInst;
 class EnvList;
 class ContinuousProfiler;
+class NSolidCodeEventHandler;
 
 
 template <typename DataType>
@@ -241,6 +244,9 @@ class EnvInst {
   void inc_fs_handles_closed() { fs_handles_closed_++; }
   void inc_fs_handles_opened() { fs_handles_opened_++; }
 
+  void setup_code_event_handler();
+  void disable_code_event_handler();
+
   /*
    * Return a shared_ptr<EnvInst> instead of a normal pointer because the
    * lifetime of the EnvInst instance depends on the state of several things
@@ -416,6 +422,8 @@ class EnvInst {
 
   nsuv::ns_mutex source_files_lock_;
   std::map<int, SourceCodeInfo> source_files_;
+
+  std::unique_ptr<NSolidCodeEventHandler> code_event_handler_;
 };
 
 /**
@@ -492,6 +500,11 @@ class EnvList {
     nsolid::internal::user_data data;
   };
 
+  struct CodeEventHookStor {
+    nsolid::internal::code_event_hook_proxy_sig cb;
+    nsolid::internal::user_data data;
+  };
+
   // Return the one true instance.
   NSOLID_EXTERN_PRIVATE static EnvList* Inst();
 
@@ -526,6 +539,11 @@ class EnvList {
       void* data,
       internal::on_unblock_loop_hook_proxy_sig proxy,
       internal::deleter_sig deleter);
+
+  TSList<EnvList::CodeEventHookStor>::iterator AddCodeEventHook(void* data,
+                        internal::code_event_hook_proxy_sig proxy,
+                        internal::deleter_sig deleter);
+  void RemoveCodeEventHook(TSList<EnvList::CodeEventHookStor>::iterator it);
 
   // Queue callbacks to run on the EnvList thread without reference to a
   // specific EnvInst instance.
@@ -612,6 +630,7 @@ class EnvList {
  private:
   friend class EnvInst;
   friend class Metrics;
+  friend class NSolidCodeEventHandler;
   friend class tracing::TracerImpl;
 
   EnvList();
@@ -631,6 +650,8 @@ class EnvList {
   void fill_span_id_q();
 
   void fill_trace_id_q();
+
+  void got_code_event(CodeEventInfo&& info);
 
   void update_continuous_profiler(bool enabled, uint64_t interval);
 
@@ -655,6 +676,8 @@ class EnvList {
   static void fill_tracing_ids_cb_(nsuv::ns_async*, EnvList* envlist);
   static void q_cb_timeout_cb_(nsuv::ns_timer*, QCbTimeoutStor*);
   static void datapoint_cb_(std::queue<MetricsStream::Datapoint>&&);
+  static void setup_code_event_handler(SharedEnvInst envinst_sp);
+  static void disable_code_event_handler(SharedEnvInst envinst_sp);
 
   std::atomic<bool> is_alive_ = { true };
   // unique agent id
@@ -732,6 +755,9 @@ class EnvList {
 
   // ContinuousProfiler instance
   std::shared_ptr<ContinuousProfiler> continuous_profiler_;
+
+  std::shared_ptr<AsyncTSQueue<CodeEventInfo>> on_code_event_q_;
+  TSList<CodeEventHookStor> code_event_hook_list_;
 };
 
 
