@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-06-23, Version 22.15.1-nsolid-v5.7.3 'Jod'
+
+### Commits
+
+* \[[`1cadfdec33`](https://github.com/nodesource/nsolid/commit/1cadfdec33)] - **doc**: fix changelog for node-v22.15.0-nsolid-v5.7.1 (Santiago Gimeno)
+* \[[`6d6b58adc2`](https://github.com/nodesource/nsolid/commit/6d6b58adc2)] - **deps**: update minimatch to 10.0.3 (nodejs-github-bot) [#328](https://github.com/nodesource/nsolid/pull/328)
+
 ## 2025-05-15, Version 22.15.1-nsolid-v5.7.2 'Jod'
 
 ### Commits
