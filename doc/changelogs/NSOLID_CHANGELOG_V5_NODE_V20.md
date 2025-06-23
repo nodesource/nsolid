@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-06-23, Version 20.19.2-nsolid-v5.7.3 'Iron'
+
+### Commits
+
+* \[[`e6e57c7e4a`](https://github.com/nodesource/nsolid/commit/e6e57c7e4a)] - **doc**: fix changelog for a couple of versions (Santiago Gimeno)
+* \[[`49fabe63c1`](https://github.com/nodesource/nsolid/commit/49fabe63c1)] - **deps**: update minimatch to 10.0.3 (nodejs-github-bot)
+
 ## 2025-05-15, Version 20.19.2-nsolid-v5.7.2 'Iron'
 
 ### Commits
