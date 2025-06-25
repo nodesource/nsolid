@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-06-25, Version 20.19.2-nsolid-v5.7.4 'Iron'
+
+### Commits
+
+* \[[`0d28b93d18`](https://github.com/nodesource/nsolid/commit/0d28b93d18)] - **deps**: update to brace-expansion\@2.0.2 in npm (Santiago Gimeno) [#331](https://github.com/nodesource/nsolid/pull/331)
+
 ## 2025-06-23, Version 20.19.2-nsolid-v5.7.3 'Iron'
 
 ### Commits
