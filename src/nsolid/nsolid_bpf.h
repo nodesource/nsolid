@@ -88,12 +88,6 @@ class EbpfLoader {
 #undef V
 
   EbpfLoadStatus LoadProgram(const std::string& program_name) {
-    EBPFSupportInfo info = detectEBPFSupport();
-
-    if (!info.is_supported || !info.has_sys_admin_capability) {
-      return EbpfLoadStatus::NOT_SUPPORTED;
-    }
-
 #ifdef __linux__
 #define V(name, _, prog)                                                       \
   if (program_name == prog) return Load##name();
