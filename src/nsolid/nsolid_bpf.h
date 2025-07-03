@@ -3,6 +3,9 @@
 
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
+// Forward declarations for BPF structures (outside the namespace)
+struct bpf_object;  // Forward declaration
+
 #ifdef __linux__
 #include <fcntl.h>
 #include <linux/version.h>
@@ -15,6 +18,8 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 // Define these if we don't have libcap headers
 #ifndef CAP_BPF
@@ -46,10 +51,33 @@ inline void cap_free(cap_t) {}
 
 namespace node {
 namespace nsolid {
-// Define Linux-specific struct that works on all platforms
+
+enum class EbpfLoadStatus {
+  SUCCESS,
+  FILE_NOT_FOUND,
+  LOAD_ERROR,
+  NOT_ALLOWED,
+  UNKNOWN_ERROR,
+  NOT_SUPPORTED
+};
+
+class EbpfLoader {
+ public:
+  EbpfLoader();
+  ~EbpfLoader();
+
+  EbpfLoadStatus LoadProgram(const std::string& program_name);
+
+  void CleanupAllBpfObjects();
+ private:
+  const std::unordered_set<std::string> allowed_programs_;
+  const std::string ebpf_program_path_;
+
+  std::vector<struct ::bpf_object*> loaded_objects_;
+};
+
 struct EBPFSupportInfo {
   bool is_supported;
-  uint32_t kernel_version;
   bool bpf_jit_enabled;
   bool has_root_access;
   bool has_bpf_capability;
@@ -115,6 +143,7 @@ inline bool checkTracepointsSupport() {
 #endif  // __linux__
 
 uint32_t calculateKernelVersion();
+
 EBPFSupportInfo detectEBPFSupport();
 
 }  // namespace nsolid

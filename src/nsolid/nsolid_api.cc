@@ -1,16 +1,4 @@
 #include "nsolid_api.h"
-<<<<<<< Updated upstream
-#include "env-inl.h"
-#include "grpc/src/grpc_agent.h"
-#include "memory_tracker-inl.h"
-#include "node_buffer.h"
-#include "node_external_reference.h"
-#include "node_internals.h"
-#include "node_perf.h"
-#include "node_url.h"
-#include "nsolid/continuous_profiler.h"
-=======
->>>>>>> Stashed changes
 #include "nsolid/nsolid_heap_snapshot.h"
 #include "nsolid_bindings.h"
 #include "node_buffer.h"
@@ -105,6 +93,10 @@ constexpr size_t datapoints_q_max_size = 100;
 
 static const char* get_startuptime_name(const char* name);
 
+template <typename... Args>
+inline void Debug(DebugCategory category, Args&&... args) {
+  per_process::Debug(category, std::forward<Args>(args)...);
+}
 
 EnvInst::EnvInst(Environment* env)
     : count_fields(),
@@ -883,6 +875,10 @@ EnvList::EnvList(): info_(nlohmann::json()) {
   er = thread_.create(env_list_routine_, this);
   CHECK_EQ(er, 0);
   continuous_profiler_ = std::make_shared<ContinuousProfiler>(&thread_loop_);
+
+#if __linux__
+  InitializeEbpf();
+#endif
 }
 
 
@@ -2019,6 +2015,50 @@ void EnvList::RemoveMetricsStreamHook(
     UpdateHasMetricsStreamHooks(false);
 }
 
+void EnvList::InitializeEbpf() {
+  std::string loadEbpf;
+  auto load_ebpf =
+    per_process::system_environment->Get("NSOLID_LOAD_EBPF");
+  if (load_ebpf.has_value()) {
+    load_ebpf_programs();
+  }
+}
+
+void EnvList::load_ebpf_programs() {
+  Debug(DebugCategory::NSOLID_EBPF, "Attempting to load eBPF programs...\n");
+
+  EbpfLoadStatus status = ebpf_loader_.LoadProgram("hello_world");
+
+  switch (status) {
+    case EbpfLoadStatus::SUCCESS:
+      Debug(DebugCategory::NSOLID_EBPF,
+            "eBPF program 'hello_world' loaded successfully.\n");
+      break;
+    case EbpfLoadStatus::FILE_NOT_FOUND:
+      Debug(DebugCategory::NSOLID_EBPF,
+            "Error - eBPF program 'hello_world' file not found.\n");
+      break;
+    case EbpfLoadStatus::NOT_ALLOWED:
+      Debug(DebugCategory::NSOLID_EBPF,
+            "Error - eBPF program 'hello_world' is not in the allowed list.\n");
+      break;
+    case EbpfLoadStatus::LOAD_ERROR:
+      Debug(DebugCategory::NSOLID_EBPF,
+            "Error - Failed to load eBPF program 'hello_world'.\n");
+      break;
+    case EbpfLoadStatus::NOT_SUPPORTED:
+      Debug(DebugCategory::NSOLID_EBPF,
+            "Failed to load: either eBPF is not supported or missing required "
+            "privileges (e.g., not running with sudo)\n");
+      break;
+    default:
+      Debug(
+          DebugCategory::NSOLID_EBPF,
+          "Error - Unknown status while loading eBPF program 'hello_world'.\n");
+      break;
+  }
+}
+
 
 void EnvList::update_has_metrics_stream_hooks(SharedEnvInst envinst_sp,
                                               bool has_metrics) {
@@ -2603,6 +2643,7 @@ static void GetConfigVersion(const FunctionCallbackInfo<Value>& args) {
 }
 
 #ifdef __linux__
+
 uint32_t calculateKernelVersion() {
   struct utsname u;
   static uint32_t version = 0;
@@ -2707,12 +2748,6 @@ static void DetectEBPFSupport(const FunctionCallbackInfo<Value>& args) {
       ->Set(context,
             OneByteString(isolate, "isSupported"),
             v8::Boolean::New(isolate, info.is_supported))
-      .Check();
-
-  result
-      ->Set(context,
-            OneByteString(isolate, "kernelVersion"),
-            v8::Integer::NewFromUnsigned(isolate, info.kernel_version))
       .Check();
 
   result

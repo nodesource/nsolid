@@ -9,7 +9,9 @@
 #include "node_context_data.h"
 #include "node_contextify.h"
 #include "node_errors.h"
+#include "node_external_reference.h"
 #include "node_internals.h"
+#include "node_file.h"
 #include "node_options-inl.h"
 #include "node_process-inl.h"
 #include "node_shadow_realm.h"
@@ -25,6 +27,7 @@
 #include "v8-profiler.h"
 
 #include "nsolid/nsolid_api.h"
+#include "nsolid/nsolid_bpf.h"
 
 #include <algorithm>
 #include <atomic>

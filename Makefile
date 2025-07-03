@@ -1460,6 +1460,7 @@ LINT_CPP_EXCLUDE += src/asserts-cpp/asserts.h
 LINT_CPP_EXCLUDE += src/nlohmann/json.h
 # These files were copied more or less verbatim from V8.
 LINT_CPP_EXCLUDE += src/tracing/trace_event.h src/tracing/trace_event_common.h
+LINT_CPP_EXCLUDE += $(wildcard src/ebpf/*.h src/ebpf/*.bpf.c src/ebpf/*.skel.h)
 
 # deps/ncrypto is included in this list, as it is maintained in
 # this repository, and should be linted. Eventually it should move
