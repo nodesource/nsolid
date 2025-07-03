@@ -22,6 +22,7 @@
 #include "nsolid_heap_snapshot.h"
 #include "nsolid_trace.h"
 #include "nsolid_util.h"
+#include "nsolid_bpf.h"
 #include "spinlock.h"
 #include "thread_safe.h"
 #include "v8.h"
@@ -601,6 +602,8 @@ class EnvList {
                        void* data);
   void RemoveMetricsStreamHook(TSList<MetricsStreamHookStor>::iterator it);
 
+  void InitializeEbpf();
+
   NSolidHeapSnapshot* HeapSnapshot() { return &heap_snapshot_; }
 
   // Get the ContinuousProfiler instance
@@ -637,6 +640,8 @@ class EnvList {
   static void signal_handler_(int signum, siginfo_t* info, void* ucontext);
   void setup_signal_handler(int signum);
 #endif
+
+  void load_ebpf_programs();
 
   static void get_blocked_loop_body_(SharedEnvInst envinst_sp, void*);
   static void process_callbacks_(nsuv::ns_async*, EnvList* envlist);
@@ -727,6 +732,8 @@ class EnvList {
   DispatchQueue<tracing::SpanItem> span_item_q_;
 
   NSolidHeapSnapshot heap_snapshot_;
+
+  EbpfLoader ebpf_loader_;
 
   // ContinuousProfiler instance
   std::shared_ptr<ContinuousProfiler> continuous_profiler_;

@@ -1,8 +1,65 @@
 #include "nsolid_bpf.h"
 #include "nsolid_api.h"
 
+#ifdef __linux__
+#include "libbpf.h"
+#endif
+
+#include <string>
+#include <vector>
+
 namespace node {
 namespace nsolid {
+
+EbpfLoader::EbpfLoader()
+    : allowed_programs_({"hello_world"}),
+      ebpf_program_path_("./src/ebpf/") {}
+
+EbpfLoader::~EbpfLoader() {
+  CleanupAllBpfObjects();
+}
+
+EbpfLoadStatus EbpfLoader::LoadProgram(const std::string& program_name) {
+  EBPFSupportInfo info = detectEBPFSupport();
+
+  if (!info.is_supported || !info.has_sys_admin_capability) {
+    return EbpfLoadStatus::NOT_SUPPORTED;
+  }
+
+#ifdef __linux__
+  if (allowed_programs_.find(program_name) == allowed_programs_.end()) {
+    return EbpfLoadStatus::NOT_ALLOWED;
+  }
+
+  std::string full_path = ebpf_program_path_ + program_name + ".bpf.o";
+  if (!std::filesystem::exists(full_path)) {
+    return EbpfLoadStatus::FILE_NOT_FOUND;
+  }
+
+  struct bpf_object_open_opts open_opts = {};
+  open_opts.sz = sizeof(struct bpf_object_open_opts);
+  struct bpf_object* obj;
+  int err;
+
+  obj = bpf_object__open_file(full_path.c_str(), &open_opts);
+  if (!obj) {
+    err = -errno;
+    return EbpfLoadStatus::LOAD_ERROR;
+  }
+
+  err = bpf_object__load(obj);
+  if (err) {
+    bpf_object__close(obj);
+    return EbpfLoadStatus::LOAD_ERROR;
+  }
+
+  loaded_objects_.push_back(obj);
+
+  return EbpfLoadStatus::SUCCESS;
+#else
+  return EbpfLoadStatus::NOT_SUPPORTED;
+#endif  // __linux__
+}
 
 EBPFSupportInfo detectEBPFSupport() {
   static EBPFSupportInfo cached_info = {.is_supported = false,
@@ -22,7 +79,7 @@ EBPFSupportInfo detectEBPFSupport() {
 
   EBPFSupportInfo& info = cached_info;
 
-#if defined(__linux__)
+#ifdef __linux__
   auto kernel_version = calculateKernelVersion();
   uint32_t major = kernel_version >> 16;
   uint32_t minor = (kernel_version >> 8) & 0xFF;
@@ -52,6 +109,17 @@ EBPFSupportInfo detectEBPFSupport() {
   initialized = true;
 
   return info;
+}
+
+void EbpfLoader::CleanupAllBpfObjects() {
+#ifdef __linux__
+  for (struct bpf_object* obj : loaded_objects_) {
+    if (obj != nullptr) {
+      bpf_object__close(obj);
+    }
+  }
+  loaded_objects_.clear();
+#endif
 }
 
 }  // namespace nsolid
