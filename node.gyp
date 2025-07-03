@@ -1127,6 +1127,11 @@
             },
           ],
         }],
+        [ 'OS=="linux"', {
+          'dependencies': [
+            'deps/libbpf/libbpf.gyp:libbpf',
+          ],
+        }],
         [ 'debug_nghttp2==1', {
           'defines': [ 'NODE_DEBUG_NGHTTP2=1' ]
         }],
