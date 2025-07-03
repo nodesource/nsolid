@@ -11,54 +11,10 @@
 namespace node {
 namespace nsolid {
 
-EbpfLoader::EbpfLoader()
-    : allowed_programs_({"hello_world"}),
-      ebpf_program_path_("./src/ebpf/") {}
+EbpfLoader::EbpfLoader() {}
 
 EbpfLoader::~EbpfLoader() {
   CleanupAllBpfObjects();
-}
-
-EbpfLoadStatus EbpfLoader::LoadProgram(const std::string& program_name) {
-  EBPFSupportInfo info = detectEBPFSupport();
-
-  if (!info.is_supported || !info.has_sys_admin_capability) {
-    return EbpfLoadStatus::NOT_SUPPORTED;
-  }
-
-#ifdef __linux__
-  if (allowed_programs_.find(program_name) == allowed_programs_.end()) {
-    return EbpfLoadStatus::NOT_ALLOWED;
-  }
-
-  std::string full_path = ebpf_program_path_ + program_name + ".bpf.o";
-  if (!std::filesystem::exists(full_path)) {
-    return EbpfLoadStatus::FILE_NOT_FOUND;
-  }
-
-  struct bpf_object_open_opts open_opts = {};
-  open_opts.sz = sizeof(struct bpf_object_open_opts);
-  struct bpf_object* obj;
-  int err;
-
-  obj = bpf_object__open_file(full_path.c_str(), &open_opts);
-  if (!obj) {
-    err = -errno;
-    return EbpfLoadStatus::LOAD_ERROR;
-  }
-
-  err = bpf_object__load(obj);
-  if (err) {
-    bpf_object__close(obj);
-    return EbpfLoadStatus::LOAD_ERROR;
-  }
-
-  loaded_objects_.push_back(obj);
-
-  return EbpfLoadStatus::SUCCESS;
-#else
-  return EbpfLoadStatus::NOT_SUPPORTED;
-#endif  // __linux__
 }
 
 EBPFSupportInfo detectEBPFSupport() {
@@ -113,13 +69,23 @@ EBPFSupportInfo detectEBPFSupport() {
 
 void EbpfLoader::CleanupAllBpfObjects() {
 #ifdef __linux__
-  for (struct bpf_object* obj : loaded_objects_) {
-    if (obj != nullptr) {
-      bpf_object__close(obj);
-    }
-  }
-  loaded_objects_.clear();
+#define V(_, key, __)                                                          \
+  if (key##_skel_ != nullptr) key##_bpf__destroy(key##_skel_);
+  EBPF_PROGRAMS(V)
+#undef V
 #endif
+}
+
+EbpfLoadStatus EbpfLoader::LoadHelloWorld() {
+#ifdef __linux__
+  hello_world_skel_ = hello_world_bpf__open_and_load();
+  if (!hello_world_skel_) {
+    return EbpfLoadStatus::LOAD_ERROR;
+  }
+#else
+  return EbpfLoadStatus::NOT_SUPPORTED;
+#endif
+  return EbpfLoadStatus::SUCCESS;
 }
 
 }  // namespace nsolid
