@@ -14,6 +14,7 @@ struct bpf_object;  // Forward declaration
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <fstream>
+#include "ebpf/hello_world.skel.h"
 #endif
 
 #include <cstdint>
@@ -49,8 +50,24 @@ inline int cap_get_flag(cap_t, int, int, cap_flag_value_t*) {
 inline void cap_free(cap_t) {}
 #endif
 
+#define EBPF_PROGRAMS(V) V(HelloWorld, hello_world, "hello_world")
+
 namespace node {
 namespace nsolid {
+
+struct EBPFSupportInfo {
+  bool is_supported;
+  bool bpf_jit_enabled;
+  bool has_root_access;
+  bool has_bpf_capability;
+  bool has_sys_admin_capability;
+  bool supports_perf_events;
+  bool supports_kprobes;
+  bool supports_uprobes;
+  bool supports_tracepoints;
+};
+
+EBPFSupportInfo detectEBPFSupport();
 
 enum class EbpfLoadStatus {
   SUCCESS,
@@ -66,26 +83,36 @@ class EbpfLoader {
   EbpfLoader();
   ~EbpfLoader();
 
-  EbpfLoadStatus LoadProgram(const std::string& program_name);
+#define V(name, _, __) EbpfLoadStatus Load##name();
+  EBPF_PROGRAMS(V)
+#undef V
+
+  EbpfLoadStatus LoadProgram(const std::string& program_name) {
+    EBPFSupportInfo info = detectEBPFSupport();
+
+    if (!info.is_supported || !info.has_sys_admin_capability) {
+      return EbpfLoadStatus::NOT_SUPPORTED;
+    }
+
+#ifdef __linux__
+#define V(name, _, prog)                                                       \
+  if (program_name == prog) return Load##name();
+    EBPF_PROGRAMS(V)
+#undef V
+    return EbpfLoadStatus::NOT_ALLOWED;
+#else
+    return EbpfLoadStatus::NOT_SUPPORTED;
+#endif  // __linux__
+  }
 
   void CleanupAllBpfObjects();
+
  private:
-  const std::unordered_set<std::string> allowed_programs_;
-  const std::string ebpf_program_path_;
-
-  std::vector<struct ::bpf_object*> loaded_objects_;
-};
-
-struct EBPFSupportInfo {
-  bool is_supported;
-  bool bpf_jit_enabled;
-  bool has_root_access;
-  bool has_bpf_capability;
-  bool has_sys_admin_capability;
-  bool supports_perf_events;
-  bool supports_kprobes;
-  bool supports_uprobes;
-  bool supports_tracepoints;
+#ifdef __linux
+#define V(_, key, __) key##_bpf* key##_skel_;
+  EBPF_PROGRAMS(V)
+#undef V
+#endif  // __linux
 };
 
 #ifdef __linux__
@@ -143,8 +170,6 @@ inline bool checkTracepointsSupport() {
 #endif  // __linux__
 
 uint32_t calculateKernelVersion();
-
-EBPFSupportInfo detectEBPFSupport();
 
 }  // namespace nsolid
 }  // namespace node
