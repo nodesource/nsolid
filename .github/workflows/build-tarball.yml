@@ -85,6 +85,8 @@ jobs:
         uses: Mozilla-Actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696  # v0.0.10
         with:
           version: v0.16.0
+      - name: Install eBPF deps
+        run: sudo apt install -y libelf-dev
       - name: Environment Information
         run: npx envinfo
       - name: Download tarball
