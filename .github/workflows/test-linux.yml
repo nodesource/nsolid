@@ -67,6 +67,10 @@ jobs:
         uses: Mozilla-Actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba  # v0.0.11
         with:
           version: v0.17.0
+      - name: Install eBPF deps
+        run: sudo apt install -y libelf-dev
+      - name: Environment Information
+        run: npx envinfo
       - name: Build
         working-directory: node
         run: make build-ci -j4 V=1 CONFIG_FLAGS="--error-on-warn"

@@ -557,10 +557,18 @@
     [ 'OS=="sunos"', {
       'ldflags': [ '-Wl,-M,/usr/lib/ld/map.noexstk' ],
     }],
-    [ '(OS=="linux" and not nsolid_use_librt) or OS=="openharmony"', {
+    [ 'OS=="openharmony"', {
       'libraries!': [
         '-lrt'
       ],
+    }],
+    [ 'OS=="linux"', {
+      'libraries': [ '-lelf' ],
+      'conditions': [
+        [ 'not nsolid_use_librt', {
+          'libraries!': [ '-lrt' ],
+        }]
+      ]
     }],
     [ 'OS in "freebsd linux openharmony"', {
       'ldflags': [ '-Wl,-z,relro',
