@@ -5,6 +5,7 @@
 #include "nsolid/nsolid_api.h"
 #include "nsolid/nsolid_util.h"
 #include "../../otlp/src/otlp_common.h"
+#include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
@@ -72,10 +73,6 @@ const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4GB
 
 const int PUB_KEY_SIZE = 40;
 const int CONSOLE_ID_SIZE = 36;
-
-static const char* const root_certs[] = {
-#include "node_root_certs.h"  // NOLINT(build/include_order)
-};
 
 template <typename... Args>
 inline void Debug(Args&&... args) {
@@ -457,8 +454,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
 
   if (custom_certs_.empty()) {
     Debug("Using default certs\n");
-    for (size_t i = 0; i < sizeof(root_certs) / sizeof(root_certs[0]); i++) {
-      cacert_ += root_certs[i];
+    for (size_t i = 0; i < GetRootCertsCount(); i++) {
+      cacert_ += GetRootCerts()[i];
       cacert_ += "\n";
     }
   }
