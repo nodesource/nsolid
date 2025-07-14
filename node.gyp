@@ -419,6 +419,8 @@
       'agents/src/http_client.h',
       'agents/src/profile_collector.cc',
       'agents/src/profile_collector.h',
+      'agents/src/root_certs.cc',
+      'agents/src/root_certs.h',
       'agents/src/span_collector.cc',
       'agents/src/span_collector.h',
       'agents/grpc/src/asset_stream.cc',
