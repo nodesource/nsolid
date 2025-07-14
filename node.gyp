@@ -496,6 +496,8 @@
         'agents/src/http_client.cc',
         'agents/src/profile_collector.cc',
         'agents/src/span_collector.cc',
+        'agents/src/root_certs.cc',
+        'agents/src/root_certs.h',
         'agents/grpc/src/asset_stream.cc',
         'agents/grpc/src/binding.cc',
         'agents/grpc/src/command_stream.cc',

@@ -18,6 +18,7 @@
 #include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
 #include "opentelemetry/ext/http/client/curl/http_client_curl.h"
 #include "opentelemetry/trace/propagation/detail/hex.h"
+#include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
 
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
@@ -96,6 +97,11 @@ OTLPAgent::OTLPAgent(): ready_(false),
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
   ASSERT_EQ(0, exit_lock_.init(true));
   is_running_ = true;
+
+  for (size_t i = 0; i < GetRootCertsCount(); i++) {
+    cacert_ += GetRootCerts()[i];
+    cacert_ += "\n";
+  }
 }
 
 
@@ -538,7 +544,7 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
     }
 
     metrics_exporter_.reset(
-      new OTLPMetrics(&loop_, GetScope()));
+      new OTLPMetrics(&loop_, GetScope(), cacert_));
     return;
   }
 
@@ -563,7 +569,7 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
   }
 
   metrics_exporter_.reset(
-    new OTLPMetrics(&loop_, url, "", is_http, GetScope()));
+    new OTLPMetrics(&loop_, url, "", is_http, GetScope(), cacert_));
 }
 
 
@@ -582,12 +588,14 @@ void OTLPAgent::setup_trace_otlp_exporter(
     exporter::otlp::OtlpHttpExporterOptions& opts) {
   opts.content_type  = exporter::otlp::HttpRequestContentType::kBinary;
   opts.console_debug = true;
+  opts.ssl_ca_cert_string = cacert_;
   otlp_exporter_.reset(new exporter::otlp::OtlpHttpExporter(opts));
 }
 
 
 void OTLPAgent::setup_trace_grpc_otlp_exporter(
     exporter::otlp::OtlpGrpcExporterOptions& opts) {
+  opts.ssl_credentials_cacert_as_string = cacert_;
   otlp_exporter_.reset(new exporter::otlp::OtlpGrpcExporter(opts));
 }
 

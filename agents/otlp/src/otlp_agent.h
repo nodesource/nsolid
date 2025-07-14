@@ -149,6 +149,8 @@ class OTLPAgent {
   nsuv::ns_async config_msg_;
   TSQueue<nlohmann::json> config_msg_q_;
   nlohmann::json config_;
+
+  std::string cacert_;
 };
 
 }  // namespace otlp
