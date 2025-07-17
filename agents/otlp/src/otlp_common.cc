@@ -407,17 +407,17 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
 
   for (const auto& attr : attrs.items()) {
     const json val = attr.value();
-    if (val.is_boolean())
+    if (val.is_boolean()) {
       recordable->SetAttribute(attr.key(), attr.value().get<bool>());
-    else if (val.is_number_integer())
+    } else if (val.is_number_integer()) {
       recordable->SetAttribute(attr.key(), attr.value().get<int64_t>());
-    else if (val.is_number_unsigned())
+    } else if (val.is_number_unsigned()) {
       recordable->SetAttribute(attr.key(), attr.value().get<uint64_t>());
-    else if (val.is_number_float())
+    } else if (val.is_number_float()) {
       recordable->SetAttribute(attr.key(), attr.value().get<double>());
-    else if (val.is_string())
+    } else if (val.is_string()) {
       recordable->SetAttribute(attr.key(), attr.value().get<std::string>());
-    else if (val.is_array()) {
+    } else if (val.is_array()) {
       // Handle arrays of primitive types according to OpenTelemetry spec.
       if (val.empty()) {
         // Skip empty arrays
