@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-07-17, Version 22.17.1-nsolid-v5.7.5 'Jod'
+
+### Commits
+
+* \[[`1fba3de726`](https://github.com/nodesource/nsolid/commit/1fba3de726)] - Merge tag 'v22.17.1' into node-v22.17.1-nsolid-v5.7.5-release (Santiago Gimeno)
+* \[[`585a50063b`](https://github.com/nodesource/nsolid/commit/585a50063b)] - **agents**: add root certs API and use it in OTLPAgent (Santiago Gimeno) [#340](https://github.com/nodesource/nsolid/pull/340)
+
 ## 2025-06-25, Version 22.15.1-nsolid-v5.7.4 'Jod'
 
 ### Commits
