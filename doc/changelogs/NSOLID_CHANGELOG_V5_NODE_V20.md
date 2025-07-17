@@ -2,6 +2,14 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-07-17, Version 20.19.4-nsolid-v5.7.5 'Iron'
+
+### Commits
+
+* \[[`f6e6e7ad4e`](https://github.com/nodesource/nsolid/commit/f6e6e7ad4e)] - Merge tag 'v20.19.4' into node-v20.19.4-nsolid-v5.7.5-release (Santiago Gimeno)
+* \[[`3c92c0a374`](https://github.com/nodesource/nsolid/commit/3c92c0a374)] - **agents**: add root certs API and use it in OTLPAgent (Santiago Gimeno) [#340](https://github.com/nodesource/nsolid/pull/340)
+* \[[`2b4d17e68f`](https://github.com/nodesource/nsolid/commit/2b4d17e68f)] - **agents**: fix linting errors (Santiago Gimeno)
+
 ## 2025-06-25, Version 20.19.2-nsolid-v5.7.4 'Iron'
 
 ### Commits
