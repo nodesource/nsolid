@@ -7,6 +7,8 @@
     'include_dirs': [
       '../../../src/',
       '../../../deps/nsuv/include/',
+      '../../../deps/v8',
+        '../../../deps/v8/include',
       '../../../agents/statsd/src/',
     ],
     'cflags_cc': [ '-std=c++20' ],

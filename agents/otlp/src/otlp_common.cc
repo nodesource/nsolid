@@ -172,8 +172,13 @@ Resource* UpdateResource(ResourceAttributes&& attrs) {
   auto attributes = resource->GetAttributes();
   if (attributes.find(kServiceName) != attributes.end() &&
       attrs.find(kServiceName) == attrs.end()) {
-    attrs.SetAttribute(kServiceName,
-                       std::get<std::string>(attributes[kServiceName]));
+    auto it = attributes.find(kServiceName);
+    if (it != attributes.end()) {
+      const auto* val = absl::get_if<std::string>(&it->second);
+      if (val) {
+        attrs.SetAttribute(kServiceName, *val);
+      }
+    }
   }
 
   auto new_res = std::make_unique<Resource>(Resource::Create(attrs));
