@@ -16,7 +16,9 @@
 #include "simdjson.h"
 #include "opentelemetry/version.h"
 #include "simdutf.h"
+#if HAVE_SQLITE
 #include "sqlite3.h"
+#endif  // HAVE_SQLITE
 #include "undici_version.h"
 #include "util.h"
 #include "uv.h"
@@ -160,7 +162,9 @@ Metadata::Versions::Versions() {
 
   simdjson = SIMDJSON_VERSION;
   simdutf = SIMDUTF_VERSION;
+#if HAVE_SQLITE
   sqlite = SQLITE_VERSION;
+#endif  // HAVE_SQLITE
   ada = ADA_VERSION;
   nbytes = NBYTES_VERSION;
   curl = LIBCURL_VERSION;

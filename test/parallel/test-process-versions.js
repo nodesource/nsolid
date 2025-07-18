@@ -22,7 +22,6 @@ const expected_keys = [
   'acorn',
   'simdjson',
   'simdutf',
-  'sqlite',
   'ada',
   'cjs_module_lexer',
   'nbytes',
@@ -34,6 +33,7 @@ const expected_keys = [
   'sodium',
   'protobuf',
 ];
+
 
 const hasUndici = process.config.variables.node_builtin_shareable_builtins.includes('deps/undici/undici.js');
 const hasAmaro = process.config.variables.node_builtin_shareable_builtins.includes('deps/amaro/dist/index.js');
@@ -62,6 +62,10 @@ if (common.hasIntl) {
   expected_keys.push('cldr');
   expected_keys.push('tz');
   expected_keys.push('unicode');
+}
+
+if (common.hasSQLite) {
+  expected_keys.push('sqlite');
 }
 
 expected_keys.sort();
