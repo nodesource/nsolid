@@ -260,7 +260,17 @@ const testConfigs = [
         NSOLID_GRPC: `localhost:${port}`,
         NSOLID_INTERVAL: 10000,
       };
-    }
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+        NSOLID_INTERVAL: 10000,
+      };
+    },
   },
 ];
 

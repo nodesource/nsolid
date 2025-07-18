@@ -1029,11 +1029,10 @@ int GrpcAgent::config(const json& config) {
 
       bool insecure = false;
       std::string insecure_str;
+      bool insecure_set = per_process::system_environment->
+                            Get(kNSOLID_GRPC_INSECURE).To(&insecure_str);
       // Only parse the insecure flag in non SaaS mode.
-      if (!saas_ &&
-          per_process::system_environment->
-            Get(kNSOLID_GRPC_INSECURE).To(&insecure_str)) {
-        // insecure = std::stoull(insecure_str);
+      if (insecure_set && (!saas_ || saas_->testing)) {
         insecure = std::stoi(insecure_str);
       }
 
@@ -1664,11 +1663,28 @@ void GrpcAgent::parse_saas_token(const std::string& token) {
     return;
   }
 
+  std::string endpoint;
+  bool is_testing = false;
   bool is_staging = token.find("staging") != std::string::npos;
-  std::string endpoint = is_staging ?
-    console_id + ".grpc.staging.nodesource.io:443" :
-    console_id + ".grpc.nodesource.io:443";
-  saas_ = std::make_unique<SaaSInfo>(SaaSInfo{token, std::move(endpoint)});
+  if (is_staging) {
+    endpoint = console_id + ".grpc.staging.nodesource.io:443";
+  } else {
+    is_testing = token.find("testing") != std::string::npos;
+    if (is_testing) {
+      // For testing, set endpoint to the string after the last dot in the token
+      size_t last_dot = token.rfind('.');
+      if (last_dot != std::string::npos && last_dot + 1 < token.size()) {
+        endpoint = token.substr(last_dot + 1);
+      } else {
+        endpoint = "localhost:50051";  // fallback if no dot is found
+      }
+    } else {
+      endpoint = console_id + ".grpc.nodesource.io:443";
+    }
+  }
+
+  saas_ = std::make_unique<SaaSInfo>(
+      SaaSInfo{token, std::move(endpoint), is_testing});
 }
 
 bool GrpcAgent::pending_profiles() const {

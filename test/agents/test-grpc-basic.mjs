@@ -13,7 +13,7 @@ const tests = [];
 
 tests.push({
   name: 'should work if agent is killed with signal',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -23,11 +23,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -43,7 +39,7 @@ tests.push({
 
 tests.push({
   name: 'should work if agent exits gracefully without error',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -53,11 +49,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -76,7 +68,7 @@ tests.push({
 
 tests.push({
   name: 'should work if agent exits gracefully with error code',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -86,11 +78,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -109,7 +97,7 @@ tests.push({
 
 tests.push({
   name: 'should work if agent exits with exception',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -120,11 +108,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -141,7 +125,30 @@ tests.push({
   },
 });
 
-for (const { name, test } of tests) {
-  console.log(`[basic] ${name}`);
-  await test();
+const testConfigs = [
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_GRPC: `localhost:${port}`,
+      };
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+      };
+    },
+  },
+];
+
+for (const testConfig of testConfigs) {
+  for (const { name, test } of tests) {
+    console.log(`[basic] ${name}`);
+    await test(testConfig.getEnv);
+  }
 }

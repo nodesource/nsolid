@@ -438,7 +438,7 @@ if (process.argv[2] === 'child') {
   const State = {
     None: 0,
     ProcMetrics: 1,
-    ThreadMetrics: 2
+    ThreadMetrics: 2,
   };
 
   let nsolidId;

@@ -143,7 +143,7 @@ const tests = [];
 
 tests.push({
   name: 'should work in the main thread',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -157,13 +157,7 @@ tests.push({
           }
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_BLOCKED_LOOP_THRESHOLD: 100
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -178,12 +172,12 @@ tests.push({
         await child.log(threadId, 'fatal', 'my fatal message');
       }));
     });
-  }
+  },
 });
 
 tests.push({
   name: 'should work for workers',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -197,13 +191,7 @@ tests.push({
           }
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_BLOCKED_LOOP_THRESHOLD: 100
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -220,10 +208,35 @@ tests.push({
         await child.log(wid, 'fatal', 'my fatal message');
       }));
     });
-  }
+  },
 });
 
-for (const { name, test } of tests) {
-  console.log(`logging ${name}`);
-  await test();
+const testConfigs = [
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_GRPC: `localhost:${port}`,
+        NSOLID_BLOCKED_LOOP_THRESHOLD: 100,
+      };
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+        NSOLID_BLOCKED_LOOP_THRESHOLD: 100,
+      };
+    },
+  },
+];
+
+for (const testConfig of testConfigs) {
+  for (const { name, test } of tests) {
+    console.log(`[logs] ${name}`);
+    await test(testConfig.getEnv);
+  }
 }
