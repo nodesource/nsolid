@@ -220,20 +220,16 @@ const config = {
   HWM: 0,
   bulkHWM: 0,
   commandTimeoutMilliseconds: 5000,
+  saas: false,
 };
 
+const playground = new TestPlayground(config);
+await playground.startServer();
 
-for (const saas of [false, true]) {
-  config.saas = saas;
-  const label = saas ? 'saas' : 'local';
-  const playground = new TestPlayground(config);
-  await playground.startServer();
-
-  for (const { name, test } of tests) {
-    console.log(`[${label}] packages command ${name}`);
-    await test(playground);
-    await playground.stopClient();
-  }
-
-  await playground.stopServer();
+for (const { name, test } of tests) {
+  console.log(`[local] packages command ${name}`);
+  await test(playground);
+  await playground.stopClient();
 }
+
+await playground.stopServer();

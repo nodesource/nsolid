@@ -73,7 +73,7 @@ function execProc3() {
   proc.on('close', (code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
-    assert.strictEqual(config.command, saasCommand);
+    assert.strictEqual(config.command, undefined);
     assert.strictEqual(config.saas, saasToken);
   });
 }
@@ -105,7 +105,7 @@ function execProc5() {
                      [ __filename, 'child4' ],
                      {
                        env: {
-                         NSOLID_SAAS: saasToken
+                         NSOLID_SAAS: saasToken,
                        }
                      });
   proc.stdout.on('data', (d) => {
@@ -117,7 +117,7 @@ function execProc5() {
     const config = JSON.parse(output);
     assert.strictEqual(config.first.command, `localhost:${PORT}`);
     assert.strictEqual(config.first.saas, undefined);
-    assert.strictEqual(config.second.command, saasCommand);
+    assert.strictEqual(config.second.command, undefined);
     assert.strictEqual(config.second.saas, saasToken);
   });
 }

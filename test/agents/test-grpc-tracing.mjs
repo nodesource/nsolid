@@ -183,7 +183,7 @@ function mergeResourceSpans(data, result) {
 const tests = [];
 tests.push({
   name: 'should work for http tracing',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -193,14 +193,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_TRACING_ENABLED: 1,
-          NSOLID_INTERVAL: 100000,
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -229,7 +222,7 @@ tests.push({
 
 tests.push({
   name: 'should work for custom tracing',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -239,14 +232,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_TRACING_ENABLED: 1,
-          NSOLID_INTERVAL: 100000,
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -273,7 +259,34 @@ tests.push({
   },
 });
 
-for (const { name, test } of tests) {
-  console.log(`[tracing] ${name}`);
-  await test();
+const testConfigs = [
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_GRPC: `localhost:${port}`,
+        NSOLID_TRACING_ENABLED: 1,
+        NSOLID_INTERVAL: 100000,
+      };
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+        NSOLID_TRACING_ENABLED: 1,
+        NSOLID_INTERVAL: 100000,
+      };
+    },
+  },
+];
+
+for (const testConfig of testConfigs) {
+  for (const { name, test } of tests) {
+    console.log(`[tracing] ${name}`);
+    await test(testConfig.getEnv);
+  }
 }
