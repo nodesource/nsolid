@@ -80,7 +80,7 @@ const tests = [];
 
 tests.push({
   name: 'should start continuous CPU profiling when enabled',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -98,13 +98,7 @@ tests.push({
             resolve();
           }
         });
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_CONT_CPU_PROFILE: 'true',
-          NSOLID_CONT_CPU_PROFILE_INTERVAL: '100', // 100ms for faster testing
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -124,7 +118,7 @@ tests.push({
 
 tests.push({
   name: 'should also work with worker threads',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -153,13 +147,7 @@ tests.push({
             resolve();
           }
         });
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_CONT_CPU_PROFILE: 'true',
-          NSOLID_CONT_CPU_PROFILE_INTERVAL: '100', // 100ms for faster testing
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -178,7 +166,7 @@ tests.push({
 
 tests.push({
   name: 'should start continuous CPU profiling after enabling',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -196,11 +184,7 @@ tests.push({
             resolve();
           }
         });
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -224,18 +208,14 @@ tests.push({
 
 tests.push({
   name: 'should enable continuous profiling during an active CPU profile',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         let continuousProfilesReceived = 0;
 
         // Start TestClient without continuous profiling
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -283,7 +263,7 @@ tests.push({
 
 tests.push({
   name: 'should not allow manual CPU profiling when continuous CPU profiling is enabled',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
@@ -307,13 +287,7 @@ tests.push({
         });
 
         // Start TestClient with continuous profiling enabled
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_CONT_CPU_PROFILE: 'true',
-          NSOLID_CONT_CPU_PROFILE_INTERVAL: '100', // 100ms for faster testing
-        };
+        const env = getEnv(port);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -351,7 +325,34 @@ tests.push({
   },
 });
 
-for (const { name, test } of tests) {
-  console.log(`[continuous profile] ${name}`);
-  await test();
+const testConfigs = [
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_GRPC: `localhost:${port}`,
+        NSOLID_CONT_CPU_PROFILE: 'true',
+        NSOLID_CONT_CPU_PROFILE_INTERVAL: '100', // 100ms for faster testing
+      };
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+        NSOLID_CONT_CPU_PROFILE: 'true',
+        NSOLID_CONT_CPU_PROFILE_INTERVAL: '100', // 100ms for faster testing
+      };
+    },
+  },
+];
+
+for (const testConfig of testConfigs) {
+  for (const { name, test } of tests) {
+    console.log(`[continuous profile] ${name}`);
+    await test(testConfig.getEnv);
+  }
 }

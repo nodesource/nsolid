@@ -10,7 +10,7 @@ const {
   validateString,
   validateNumber,
   validateObject,
-  validateUint32
+  validateUint32,
 } = validators;
 
 
@@ -252,7 +252,7 @@ tests.push({
   test: async (playground) => {
     return new Promise((resolve) => {
       const opts = {
-        opts: { env: { NSOLID_INTERVAL: 100 } }
+        opts: { env: { NSOLID_INTERVAL: 100 } },
       };
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
         const workers = await playground.client.workers();
@@ -268,7 +268,7 @@ tests.push({
         }, 200);
       }));
     });
-  }
+  },
 });
 
 tests.push({
@@ -277,7 +277,7 @@ tests.push({
     return new Promise((resolve) => {
       const opts = {
         args: [ '-w', 2 ],
-        opts: { env: { NSOLID_INTERVAL: 200 } }
+        opts: { env: { NSOLID_INTERVAL: 200 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -298,7 +298,7 @@ tests.push({
         }, 400);
       }));
     });
-  }
+  },
 });
 
 const config = {
@@ -307,21 +307,17 @@ const config = {
   bulkBindAddr: 'tcp://*:9003',
   HWM: 0,
   bulkHWM: 0,
-  commandTimeoutMilliseconds: 5000
+  commandTimeoutMilliseconds: 5000,
+  saas: false,
 };
 
+const playground = new TestPlayground(config);
+await playground.startServer();
 
-for (const saas of [false, true]) {
-  config.saas = saas;
-  const label = saas ? 'saas' : 'local';
-  const playground = new TestPlayground(config);
-  await playground.startServer();
-
-  for (const { name, test } of tests) {
-    console.log(`[${label}] metrics command ${name}`);
-    await test(playground);
-    await playground.stopClient();
-  }
-
-  await playground.stopServer();
+for (const { name, test } of tests) {
+  console.log(`[local] metrics command ${name}`);
+  await test(playground);
+  await playground.stopClient();
 }
+
+await playground.stopServer();

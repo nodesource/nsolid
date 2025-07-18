@@ -13,6 +13,7 @@ const {
   validateString,
 } = require('internal/validators');
 
+
 function checkExitData(data, metadata, agentId, expectedData) {
   console.dir(data, { depth: null });
   assert.strictEqual(data.common.requestId, '');

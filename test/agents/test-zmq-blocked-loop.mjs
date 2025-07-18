@@ -138,7 +138,7 @@ tests.push({
       let events = 0;
       let bInfo = null;
       const opts = {
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } }
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -152,7 +152,7 @@ tests.push({
             bInfo = {
               blocked_for: data.body.blocked_for,
               loop_id: data.body.loop_id,
-              callback_cntr: data.body.callback_cntr
+              callback_cntr: data.body.callback_cntr,
             };
             break;
           case 2:
@@ -163,7 +163,7 @@ tests.push({
         }
       }, 2));
     });
-  }
+  },
 });
 
 tests.push({
@@ -175,7 +175,7 @@ tests.push({
       let bInfo = null;
       const opts = {
         args: [ '-w', 1 ],
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } }
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } },
       };
 
       playground.bootstrap(opts, mustSucceed(async (agentId) => {
@@ -191,7 +191,7 @@ tests.push({
             bInfo = {
               blocked_for: data.body.blocked_for,
               loop_id: data.body.loop_id,
-              callback_cntr: data.body.callback_cntr
+              callback_cntr: data.body.callback_cntr,
             };
             break;
           case 2:
@@ -202,7 +202,7 @@ tests.push({
         }
       }, 2));
     });
-  }
+  },
 });
 
 
@@ -212,21 +212,17 @@ const config = {
   bulkBindAddr: 'tcp://*:9003',
   HWM: 0,
   bulkHWM: 0,
-  commandTimeoutMilliseconds: 5000
+  commandTimeoutMilliseconds: 5000,
+  saas: false,
 };
 
+const playground = new TestPlayground(config);
+await playground.startServer();
 
-for (const saas of [false, true]) {
-  config.saas = saas;
-  const label = saas ? 'saas' : 'local';
-  const playground = new TestPlayground(config);
-  await playground.startServer();
-
-  for (const { name, test } of tests) {
-    console.log(`[${label}] blocked loop generation ${name}`);
-    await test(playground);
-    await playground.stopClient();
-  }
-
-  await playground.stopServer();
+for (const { name, test } of tests) {
+  console.log(`[local] blocked loop generation ${name}`);
+  await test(playground);
+  await playground.stopClient();
 }
+
+await playground.stopServer();

@@ -145,6 +145,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   struct SaaSInfo {
     std::string token;
     std::string endpoint;
+    bool testing;
   };
 
   GrpcAgent();

@@ -147,7 +147,7 @@ async function startUdpServer(port, cb) {
 
 
 nsolid.start({
-  interval: 100
+  interval: 100,
 });
 
 describe('StatsD status', () => {
@@ -160,7 +160,7 @@ describe('StatsD status', () => {
   });
   afterEach(async () => {
     nsolid.start({
-      statsd: null
+      statsd: null,
     });
     return waitForStatus('unconfigured');
   });
@@ -170,7 +170,7 @@ describe('StatsD status', () => {
   it('should return initializing if started', async () => {
     assert.strictEqual(nsolid.statsd.status(), 'unconfigured');
     nsolid.start({
-      statsd: 'udp://127.0.0.1:8125'
+      statsd: 'udp://127.0.0.1:8125',
     });
 
     await waitForStatus('ready');
@@ -178,20 +178,20 @@ describe('StatsD status', () => {
   it('should be connecting if started and configured using TCP but no statsd server', async () => {
     assert.strictEqual(nsolid.statsd.status(), 'unconfigured');
     nsolid.start({
-      statsd: 'tcp://127.0.0.1:8125'
+      statsd: 'tcp://127.0.0.1:8125',
     });
     await waitForStatus('connecting');
   });
   it('should also work starting UDP and then TCP', async () => {
     assert.strictEqual(nsolid.statsd.status(), 'unconfigured');
     nsolid.start({
-      statsd: 'udp://127.0.0.1:8125'
+      statsd: 'udp://127.0.0.1:8125',
     });
     await waitForStatus('ready');
     assert.strictEqual(nsolid.statsd.tcpIp(), null);
     assert.strictEqual(nsolid.statsd.udpIp(), '127.0.0.1:8125');
     nsolid.start({
-      statsd: 'tcp://127.0.0.1:8125'
+      statsd: 'tcp://127.0.0.1:8125',
     });
     await waitForStatus('connecting');
   });
@@ -201,7 +201,7 @@ describe('StatsD status', () => {
       const recvMetrics = [];
       this.tcpConnection = conn;
       const rl = readline.createInterface({
-        input: conn
+        input: conn,
       });
 
       rl.on('line', (line) => {
@@ -223,7 +223,7 @@ describe('StatsD status', () => {
         this.tcpServer = tcpServer;
         this.tcpServer.on('close', resolve);
         nsolid.start({
-          statsd: 'tcp://127.0.0.1:8125'
+          statsd: 'tcp://127.0.0.1:8125',
         });
         return waitForStatus('ready').then(() => {
           assert.strictEqual(nsolid.statsd.tcpIp(), '127.0.0.1:8125');
@@ -241,7 +241,7 @@ describe('StatsD status', () => {
       const recvMetrics = [];
       this.udpServer = udpServer;
       const rl = readline.createInterface({
-        input: bufferStream
+        input: bufferStream,
       });
 
       rl.on('line', (line) => {

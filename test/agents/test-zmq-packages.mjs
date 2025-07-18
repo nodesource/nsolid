@@ -94,19 +94,27 @@ import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 //       required: false
 //     },
 //     {
-//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/underscore',
-//       name: 'underscore',
-//       version: '1.13.6',
-//       main: 'underscore-umd.js',
-//       dependencies: [],
-//       required: false
-//     },
-//     {
 //       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/zeromq',
 //       name: 'zeromq',
 //       version: '5.3.1',
 //       main: 'index',
 //       dependencies: [ '../nan', '../node-gyp-build' ],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/nodesource/nsolid/test/common/nsolid-zmq-agent/node_modules/zeromq/node_modules/nan',
+//       name: 'nan',
+//       version: '2.22.2',
+//       main: 'include_dirs.js',
+//       dependencies: [],
+//       required: false
+//     },
+//     {
+//       path: '/home/sgimeno/[]/node_modules/zeromq/node_modules/node-gyp-build',
+//       name: 'node-gyp-build',
+//       version: '4.8.4',
+//       main: 'index.js',
+//       dependencies: [],
 //       required: false
 //     }
 //   ]
@@ -117,13 +125,13 @@ import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 
 const expectedPackageNames = [
   'base64-js', 'base85', 'buffer', 'ieee754', 'ip-address', 'jsbn', 'lodash',
-  'nan', 'node-gyp-build', 'sprintf-js', 'zeromq',
+  'nan', 'node-gyp-build', 'sprintf-js', 'zeromq', 'nan', 'node-gyp-build',
 ];
 
-const expectedPackagesMajorVersions = ['1', '3', '6', '1', '5', '1', '4', '2', '4', '1', '5'];
+const expectedPackagesMajorVersions = ['1', '3', '6', '1', '5', '1', '4', '2', '4', '1', '1', '5', '2', '4'];
 const expectedPackagesMains = [
   'index.js', 'lib/base85.js', 'index.js', 'index.js', 'ip-address.js', 'index.js', 'lodash.js',
-  'include_dirs.js', 'index.js', 'src/sprintf.js', 'index',
+  'include_dirs.js', 'index.js', 'src/sprintf.js', 'index.js', 'index', 'index.js', 'index.js',
 ];
 
 function checkPackagesData(packages, requestId, agentId) {
@@ -152,7 +160,8 @@ function checkPackagesData(packages, requestId, agentId) {
     assert.strictEqual(pkg.required, false);
   }
 
-  assert.ok(packages.body.packages.length <= expectedPackageNames.length);
+  assert.ok(packages.body.packages.every(
+    (e) => expectedPackageNames.includes(e.name)));
   if (packages.body.packages.length < expectedPackageNames.length) {
     return false;
   }
@@ -201,7 +210,7 @@ tests.push({
         resolve();
       }));
     });
-  }
+  },
 });
 
 const config = {
@@ -210,21 +219,17 @@ const config = {
   bulkBindAddr: 'tcp://*:9003',
   HWM: 0,
   bulkHWM: 0,
-  commandTimeoutMilliseconds: 5000
+  commandTimeoutMilliseconds: 5000,
+  saas: false,
 };
 
+const playground = new TestPlayground(config);
+await playground.startServer();
 
-for (const saas of [false, true]) {
-  config.saas = saas;
-  const label = saas ? 'saas' : 'local';
-  const playground = new TestPlayground(config);
-  await playground.startServer();
-
-  for (const { name, test } of tests) {
-    console.log(`[${label}] packages command ${name}`);
-    await test(playground);
-    await playground.stopClient();
-  }
-
-  await playground.stopServer();
+for (const { name, test } of tests) {
+  console.log(`[local] packages command ${name}`);
+  await test(playground);
+  await playground.stopClient();
 }
+
+await playground.stopServer();

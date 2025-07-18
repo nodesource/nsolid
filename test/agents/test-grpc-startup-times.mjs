@@ -72,17 +72,11 @@ const tests = [];
 
 tests.push({
   name: 'should work with the default values',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_BLOCKED_LOOP_THRESHOLD: 100
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -96,22 +90,16 @@ tests.push({
         resolve();
       }));
     });
-  }
+  },
 });
 
 tests.push({
   name: 'should work with the custom times',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-          NSOLID_BLOCKED_LOOP_THRESHOLD: 100
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -126,10 +114,35 @@ tests.push({
         resolve();
       }));
     });
-  }
+  },
 });
 
-for (const { name, test } of tests) {
-  console.log(`[startup times] ${name}`);
-  await test();
+const testConfigs = [
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_GRPC: `localhost:${port}`,
+        NSOLID_BLOCKED_LOOP_THRESHOLD: 100,
+      };
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+        NSOLID_BLOCKED_LOOP_THRESHOLD: 100,
+      };
+    },
+  },
+];
+
+for (const testConfig of testConfigs) {
+  for (const { name, test } of tests) {
+    console.log(`[startup times] ${name}`);
+    await test(testConfig.getEnv);
+  }
 }
