@@ -418,6 +418,15 @@ const testConfigs = [
       };
     },
   },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+      };
+    },
+  },
 ];
 
 for (const testConfig of testConfigs) {

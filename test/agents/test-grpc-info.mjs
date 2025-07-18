@@ -113,6 +113,16 @@ if (process.argv[2] === 'child') {
         return {
           NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
           NSOLID_GRPC_INSECURE: 1,
+          NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+        };
+      },
+      nsolidConfig: {},
+    },
+    {
+      getEnv: (port) => {
+        return {
+          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+          NSOLID_GRPC_INSECURE: 1,
           NSOLID_GRPC: `localhost:${port}`,
           NSOLID_APPNAME: 'myapp',
           NSOLID_TAGS: 'tag1,tag2',
