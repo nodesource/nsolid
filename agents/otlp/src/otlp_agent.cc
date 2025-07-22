@@ -12,7 +12,7 @@
 #include "newrelic_metrics.h"
 #include "nsolid/nsolid_util.h"
 #include "otlp_metrics.h"
-#include "opentelemetry/sdk/resource/semantic_conventions.h"
+#include "opentelemetry/semconv/incubating/service_attributes.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
@@ -32,9 +32,9 @@ namespace resource = sdk::resource;
 namespace instrumentationscope = sdk::instrumentationscope;
 namespace detail = trace::propagation::detail;
 using resource::ResourceAttributes;
-using resource::SemanticConventions::kServiceName;
-using resource::SemanticConventions::kServiceInstanceId;
-using resource::SemanticConventions::kServiceVersion;
+using opentelemetry::semconv::service::kServiceName;
+using opentelemetry::semconv::service::kServiceInstanceId;
+using opentelemetry::semconv::service::kServiceVersion;
 
 static std::atomic<bool> is_running_ = { false };
 nsuv::ns_rwlock exit_lock_;

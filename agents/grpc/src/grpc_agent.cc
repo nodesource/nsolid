@@ -10,7 +10,8 @@
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
-#include "opentelemetry/sdk/resource/semantic_conventions.h"
+#include "opentelemetry/semconv/incubating/process_attributes.h"
+#include "opentelemetry/semconv/service_attributes.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter.h"
@@ -20,7 +21,6 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
-#include "opentelemetry/trace/semantic_conventions.h"
 
 using std::chrono::system_clock;
 using std::chrono::time_point;
@@ -29,13 +29,14 @@ using google::protobuf::ArenaOptions;
 using json = nlohmann::json;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
 using opentelemetry::nostd::span;
+using opentelemetry::semconv::process::kProcessOwner;
+using opentelemetry::semconv::service::kServiceName;
 using LogsRecordable = opentelemetry::sdk::logs::Recordable;
 using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
-using opentelemetry::sdk::resource::SemanticConventions::kServiceName;
 using opentelemetry::sdk::trace::Recordable;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClient;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientFactory;
@@ -50,7 +51,6 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
-using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
 using nsolid_grpc_async =
   grpcagent::NSolidService::StubInterface::async_interface;
 

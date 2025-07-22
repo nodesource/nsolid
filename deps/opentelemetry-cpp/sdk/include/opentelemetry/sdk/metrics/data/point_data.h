@@ -25,10 +25,12 @@ class SumPointData
 {
 public:
   // TODO: remove ctors and initializers when GCC<5 stops shipping on Ubuntu
-  SumPointData(SumPointData &&)            = default;
-  SumPointData(const SumPointData &)       = default;
-  SumPointData &operator=(SumPointData &&) = default;
-  SumPointData()                           = default;
+  SumPointData(SumPointData &&)                      = default;
+  SumPointData(const SumPointData &)                 = default;
+  SumPointData &operator=(SumPointData &&)           = default;
+  SumPointData()                                     = default;
+  SumPointData &operator=(const SumPointData &other) = default;
+  ~SumPointData()                                    = default;
 
   ValueType value_   = {};
   bool is_monotonic_ = true;
@@ -38,10 +40,12 @@ class LastValuePointData
 {
 public:
   // TODO: remove ctors and initializers when GCC<5 stops shipping on Ubuntu
-  LastValuePointData(LastValuePointData &&)            = default;
-  LastValuePointData(const LastValuePointData &)       = default;
-  LastValuePointData &operator=(LastValuePointData &&) = default;
-  LastValuePointData()                                 = default;
+  LastValuePointData(LastValuePointData &&)                      = default;
+  LastValuePointData(const LastValuePointData &)                 = default;
+  LastValuePointData &operator=(LastValuePointData &&)           = default;
+  LastValuePointData()                                           = default;
+  LastValuePointData &operator=(const LastValuePointData &other) = default;
+  ~LastValuePointData()                                          = default;
 
   ValueType value_                                  = {};
   bool is_lastvalue_valid_                          = {};
@@ -56,7 +60,10 @@ public:
   HistogramPointData &operator=(HistogramPointData &&) = default;
   HistogramPointData(const HistogramPointData &)       = default;
   HistogramPointData()                                 = default;
-  HistogramPointData(std::vector<double> &boundaries) : boundaries_(boundaries) {}
+  HistogramPointData(const std::vector<double> &boundaries) : boundaries_(boundaries) {}
+  HistogramPointData &operator=(const HistogramPointData &other) = default;
+  ~HistogramPointData()                                          = default;
+
   std::vector<double> boundaries_ = {};
   ValueType sum_                  = {};
   ValueType min_                  = {};
@@ -158,20 +165,6 @@ public:
   DropPointData(const DropPointData &)       = default;
   DropPointData()                            = default;
   DropPointData &operator=(DropPointData &&) = default;
-};
-
-class SummaryPointData
-{
-public:
-// TODO: remove ctors and initializers when GCC<5 stops shipping on Ubuntu
-  SummaryPointData(SummaryPointData &&)            = default;
-  SummaryPointData(const SummaryPointData &)       = default;
-  SummaryPointData &operator=(SummaryPointData &&) = default;
-  SummaryPointData()                               = default;
-
-  uint64_t count_                 = {};
-  ValueType sum_                  = {};
-  std::unordered_map<double, ValueType> quantile_values_ = {};
 };
 
 }  // namespace metrics
