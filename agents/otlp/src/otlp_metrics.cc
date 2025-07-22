@@ -8,7 +8,6 @@
 #include "env-inl.h"
 #include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/exporters/otlp/otlp_http_metric_exporter.h"
-#include "opentelemetry/trace/semantic_conventions.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 
