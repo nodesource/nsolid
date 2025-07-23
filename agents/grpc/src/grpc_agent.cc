@@ -1046,6 +1046,7 @@ int GrpcAgent::config(const json& config) {
             endpoint.c_str(), static_cast<unsigned>(insecure));
 
       OtlpGrpcClientOptions opts;
+      opts.compression = "gzip";
       opts.endpoint = endpoint;
       opts.metadata = {{"nsolid-agent-id", agent_id_},
                        {"nsolid-saas", saas()}};
@@ -1071,6 +1072,7 @@ int GrpcAgent::config(const json& config) {
 
       {
         OtlpGrpcExporterOptions options;
+        options.compression = "gzip";
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
@@ -1087,6 +1089,7 @@ int GrpcAgent::config(const json& config) {
       }
       {
         OtlpGrpcMetricExporterOptions options;
+        options.compression = "gzip";
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
@@ -1104,6 +1107,7 @@ int GrpcAgent::config(const json& config) {
       }
       {
         OtlpGrpcLogRecordExporterOptions options;
+        options.compression = "gzip";
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
