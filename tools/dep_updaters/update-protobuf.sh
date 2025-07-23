@@ -36,7 +36,6 @@ cleanup () {
 trap cleanup INT TERM EXIT
 
 PROTOBUF_REF="v${NEW_VERSION#5.}"
-PROTOBUF_TARBALL="protobuf-$NEW_VERSION.tar.gz"
 
 cd "$WORKSPACE"
 echo "Cloning protobuf repository"
@@ -44,6 +43,7 @@ echo "Cloning protobuf repository"
 git clone -b "$PROTOBUF_REF" --depth=1 --no-recurse-submodules https://github.com/protocolbuffers/protobuf
 
 # Or download the tarball using PROTOBUF_TARBALL (uncomment to use this method)
+# PROTOBUF_TARBALL="protobuf-$NEW_VERSION.tar.gz"
 # curl -sL -o "$PROTOBUF_TARBALL" "https://github.com/protocolbuffers/protobuf/archive/refs/tags/$PROTOBUF_REF.tar.gz"
 # gzip -dc "$PROTOBUF_TARBALL" | tar xf -
 # rm "$PROTOBUF_TARBALL"
