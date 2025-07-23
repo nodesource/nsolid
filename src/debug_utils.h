@@ -52,9 +52,12 @@ void NODE_EXTERN_PRIVATE FWrite(FILE* file, const std::string& str);
   V(NGTCP2_DEBUG)                                                              \
   V(SEA)                                                                       \
   V(WASI)                                                                      \
+  V(MODULE)                                                                    \
   V(MKSNAPSHOT)                                                                \
   V(SNAPSHOT_SERDES)                                                           \
   V(PERMISSION_MODEL)                                                          \
+  V(PLATFORM_MINIMAL)                                                          \
+  V(PLATFORM_VERBOSE)                                                          \
   V(QUIC)                                                                      \
   V(NSOLID_GRPC_AGENT)                                                         \
   V(NSOLID_OTLP_AGENT)                                                         \

@@ -1,5 +1,5 @@
 #include "http_client.h"
-#include "util.h"
+#include "root_certs.h"
 
 #include <queue>
 
@@ -7,10 +7,6 @@
 
 namespace node {
 namespace nsolid {
-
-static const char* const root_certs[] = {
-#include "node_root_certs.h"  // NOLINT(build/include_order)
-};
 
 CurlContext::CurlContext(HttpClient* http_client, curl_socket_t sockfd):
     http_client_(http_client),
@@ -43,8 +39,8 @@ HttpClient::HttpClient(uv_loop_t* loop): loop_(loop),
                                  CURLMOPT_TIMERFUNCTION,
                                  start_timeout_));
   ASSERT_EQ(0, curl_multi_setopt(curl_handle_, CURLMOPT_TIMERDATA, this));
-  for (size_t i = 0; i < node::arraysize(root_certs); i++) {
-    cacert_ += root_certs[i];
+  for (size_t i = 0; i < GetRootCertsCount(); i++) {
+    cacert_ += GetRootCerts()[i];
     cacert_ += "\n";
   }
 }

@@ -64,6 +64,8 @@ const noop = () => {};
 const hasCrypto = Boolean(process.versions.openssl) &&
                   !process.env.NODE_SKIP_CRYPTO;
 
+const hasSQLite = Boolean(process.versions.sqlite);
+
 const hasQuic = hasCrypto && !!process.config.variables.openssl_quic;
 
 function parseTestFlags(filename = process.argv[1]) {
@@ -692,6 +694,12 @@ function skipIf32Bits() {
   }
 }
 
+function skipIfSQLiteMissing() {
+  if (!hasSQLite) {
+    skip('missing SQLite');
+  }
+}
+
 function getArrayBufferViews(buf) {
   const { buffer, byteOffset, byteLength } = buf;
 
@@ -893,6 +901,7 @@ const common = {
   hasIntl,
   hasCrypto,
   hasQuic,
+  hasSQLite,
   invalidArgTypeHelper,
   isAlive,
   isASan,
@@ -922,6 +931,7 @@ const common = {
   skipIf32Bits,
   skipIfEslintMissing,
   skipIfInspectorDisabled,
+  skipIfSQLiteMissing,
   spawnPromisified,
 
   get enoughTestMem() {
