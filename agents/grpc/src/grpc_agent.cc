@@ -814,7 +814,7 @@ int GrpcAgent::start_heap_snapshot_from_js(
     const ProfileCollector::ProfileQStor& profile_data,
     WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
+  if (agent == nullptr || agent->cont_profile_queue_ == nullptr) {
     return;
   }
 
