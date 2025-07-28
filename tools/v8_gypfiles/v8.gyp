@@ -271,7 +271,7 @@
         'v8_initializers',
         'v8_maybe_icu',
         'fp16',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'sources': [
         '<(V8_ROOT)/src/init/setup-isolate-full.cc',
@@ -288,7 +288,7 @@
         'generate_bytecode_builtins_list',
         'run_torque',
         'fp16',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'cflags!': ['-O3'],
       'cflags': ['-O1'],
@@ -317,7 +317,7 @@
         'v8_shared_internal_headers',
         'v8_pch',
         'fp16',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'include_dirs': [
         '<(SHARED_INTERMEDIATE_DIR)',
@@ -630,7 +630,7 @@
         'run_torque',
         'v8_libbase',
         'fp16',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'direct_dependent_settings': {
         'sources': [
@@ -949,7 +949,7 @@
         'v8_shared_internal_headers',
         'v8_pch',
         'fp16',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'conditions': [
         ['v8_enable_maglev==0', {
@@ -1067,7 +1067,7 @@
         'fp16',
         'highway',
         'simdutf',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'includes': ['inspector.gypi'],
       'direct_dependent_settings': {
@@ -1738,7 +1738,7 @@
         'v8_maybe_icu',
         'v8_pch',
         'fp16',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
         # "build/win:default_exe_manifest",
       ],
       'sources': [
