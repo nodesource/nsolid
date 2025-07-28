@@ -4,7 +4,7 @@
       'target_name': 'utf8_range',
       'type': 'static_library',
       'dependencies': [
-        './abseil.gyp:abseil',
+        './abseil.gyp:abseil_proto',
       ],
       'direct_dependent_settings': {
         'include_dirs': [

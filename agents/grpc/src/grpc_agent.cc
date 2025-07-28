@@ -3,6 +3,7 @@
 #include "asserts-cpp/asserts.h"
 #include "debug_utils-inl.h"
 #include "nsolid/nsolid_api.h"
+#include "nsolid/continuous_profiler.h"
 #include "nsolid/nsolid_util.h"
 #include "../../otlp/src/otlp_common.h"
 #include "../../src/root_certs.h"
