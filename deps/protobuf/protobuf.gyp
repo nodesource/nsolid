@@ -7,7 +7,7 @@
       'HAVE_PTHREAD'
     ],
     'dependencies': [
-      './abseil.gyp:abseil',
+      './abseil.gyp:abseil_proto',
     ],
     'cflags_cc': [
       '-Wall',

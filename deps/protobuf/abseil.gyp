@@ -1,7 +1,7 @@
 {
   'targets': [
     {
-      'target_name': 'abseil',
+      'target_name': 'abseil_proto',
       'type': 'static_library',
       'variables': {
         'ABSEIL_ROOT': 'third_party/abseil-cpp',

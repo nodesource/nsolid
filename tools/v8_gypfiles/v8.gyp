@@ -261,7 +261,7 @@
         'v8_base_without_compiler',
         'v8_initializers',
         'v8_maybe_icu',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'sources': [
         '<(V8_ROOT)/src/init/setup-isolate-full.cc',
@@ -277,7 +277,7 @@
       'dependencies': [
         'generate_bytecode_builtins_list',
         'run_torque',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'cflags!': ['-O3'],
       'cflags': ['-O1'],
@@ -305,7 +305,7 @@
         'v8_base_without_compiler',
         'v8_shared_internal_headers',
         'v8_pch',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'include_dirs': [
         '<(SHARED_INTERMEDIATE_DIR)',
@@ -495,6 +495,7 @@
             'v8_compiler_for_mksnapshot',
             'v8_initializers',
             'v8_libplatform',
+            'abseil.gyp:abseil',
           ]
         }],
         ['OS=="win" and clang==1', {
@@ -609,7 +610,7 @@
         'run_torque',
         'v8_libbase',
         'fp16',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'direct_dependent_settings': {
         'sources': [
@@ -938,7 +939,7 @@
         'v8_shared_internal_headers',
         'v8_turboshaft',
         'v8_pch',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'conditions': [
         ['v8_enable_turbofan==1', {
@@ -961,7 +962,7 @@
         'v8_libbase',
         'v8_shared_internal_headers',
         'v8_pch',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'sources': [
         '<!@pymod_do_main(GN-scraper "<(V8_ROOT)/BUILD.gn"  "v8_source_set.\\"v8_turboshaft.*?sources = ")',
@@ -1082,7 +1083,7 @@
         'v8_zlib',
         'v8_pch',
         'fp16',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
       ],
       'includes': ['inspector.gypi'],
       'direct_dependent_settings': {
@@ -1802,7 +1803,7 @@
         'v8_maybe_icu',
         'v8_turboshaft',
         'v8_pch',
-        '../../deps/protobuf/abseil.gyp:abseil',
+        'abseil.gyp:abseil',
         # "build/win:default_exe_manifest",
       ],
       'sources': [

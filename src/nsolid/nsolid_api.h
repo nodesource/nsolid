@@ -18,7 +18,6 @@
 #include "node_snapshotable.h"
 #include "nsolid.h"
 #include "nsuv-inl.h"
-#include "continuous_profiler.h"
 #include "nsolid_heap_snapshot.h"
 #include "nsolid_trace.h"
 #include "nsolid_util.h"
