@@ -81,7 +81,7 @@
         'CARES_STATICLIB',
       ],
       'dependencies': [
-        '../protobuf/abseil.gyp:abseil',
+        '../protobuf/abseil.gyp:abseil_proto',
         'address_sorting',
         'upb',
         're2',
@@ -695,6 +695,7 @@
         'src/core/lib/promise/activity.cc',
         'src/core/lib/promise/party.cc',
         'src/core/lib/promise/sleep.cc',
+        'src/core/lib/promise/wait_set.cc',
         'src/core/lib/resource_quota/api.cc',
         'src/core/lib/resource_quota/arena.cc',
         'src/core/lib/resource_quota/connection_quota.cc',
@@ -994,7 +995,7 @@
       'dependencies': [
         'grpc',
         'upb',
-        '../protobuf/abseil.gyp:abseil',
+        '../protobuf/abseil.gyp:abseil_proto',
         '../protobuf/utf8_range.gyp:utf8_range',
         '../openssl/openssl.gyp:openssl',
       ],
@@ -1072,7 +1073,7 @@
       ],
       'dependencies': [
         '../protobuf/protobuf.gyp:protobuf',
-        '../protobuf/abseil.gyp:abseil',
+        '../protobuf/abseil.gyp:abseil_proto',
       ],
       'include_dirs': [
         './',

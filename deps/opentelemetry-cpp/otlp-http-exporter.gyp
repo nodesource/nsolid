@@ -68,7 +68,7 @@
         '../protobuf/protobuf.gyp:protobuf',
         '../curl/curl.gyp:curl',
         '../grpc/grpc.gyp:grpc++',
-	'../protobuf/abseil.gyp:abseil',
+	'../protobuf/abseil.gyp:abseil_proto',
         '../zlib/zlib.gyp:zlib',
       ],
       'direct_dependent_settings': {
