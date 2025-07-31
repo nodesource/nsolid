@@ -109,6 +109,7 @@ BuiltinLoader::BuiltinCategories BuiltinLoader::GetBuiltinCategories() const {
     "internal/debugger/",
 #endif  // !HAVE_OPENSSL
 
+    "internal/agents/",
     "internal/bootstrap/",
     "internal/per_context/",
     "internal/deps/",

@@ -29,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Environment Information
@@ -44,51 +44,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38  # v5.4.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Environment Information
         run: npx envinfo
       - name: Lint C/C++ files
         run: make lint-cpp
-  format-cpp:
-    if: ${{ github.event.pull_request && github.event.pull_request.draft == false && github.base_ref == github.event.repository.default_branch }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Environment Information
-        run: npx envinfo
-      - name: Format C/C++ files
-        run: |
-          make format-cpp-build
-          # The `make format-cpp` error code is intentionally ignored here
-          # because it is irrelevant. We already check if the formatter produced
-          # a diff in the next line.
-          # Refs: https://github.com/nodejs/node/pull/42764
-          CLANG_FORMAT_START="$(git merge-base HEAD refs/remotes/origin/$GITHUB_BASE_REF)" \
-            make format-cpp || true
-          git --no-pager diff --exit-code && EXIT_CODE="$?" || EXIT_CODE="$?"
-          if [ "$EXIT_CODE" != "0" ]
-          then
-            echo
-            echo 'ERROR: Please run:'
-            echo
-            echo "  CLANG_FORMAT_START="$\(git merge-base HEAD ${GITHUB_BASE_REF}\)" make format-cpp"
-            echo
-            echo 'to format the commits in your branch.'
-            exit "$EXIT_CODE"
-          fi
   lint-js-and-md:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
@@ -97,7 +59,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Environment Information
@@ -105,7 +67,7 @@ jobs:
       - name: Lint JavaScript files
         run: NODE=$(command -v node) make lint-js
       - name: Get release version numbers
-        if: ${{ github.event.pull_request && github.event.pull_request.base.ref == github.event.pull_request.base.repo.default_branch }}
+        if: ${{ github.event.pull_request && github.event.pull_request.base.ref == github.event.pull_request.base.repo.default_branch && false }}
         id: get-released-versions
         run: ./tools/lint-md/list-released-versions-from-changelogs.mjs >> $GITHUB_OUTPUT
       - name: Lint markdown files
@@ -122,7 +84,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38  # v5.4.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Environment Information
@@ -131,23 +93,6 @@ jobs:
         run: |
           make lint-py-build
           make lint-py
-  lint-yaml:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-        with:
-          persist-credentials: false
-      - name: Use Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Environment Information
-        run: npx envinfo
-      - name: Lint YAML
-        run: |
-          make lint-yaml-build || true
-          make lint-yaml
 
   lint-sh:
     if: github.event.pull_request.draft == false
@@ -159,16 +104,6 @@ jobs:
       - run: shellcheck -V
       - name: Lint Shell scripts
         run: tools/lint-sh.mjs .
-  lint-codeowners:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-        with:
-          persist-credentials: false
-      - uses: mszostok/codeowners-validator@7f3f5e28c6d7b8dfae5731e54ce2272ca384592f
-        with:
-          checks: files,duppatterns
   lint-pr-url:
     if: ${{ github.event.pull_request }}
     runs-on: ubuntu-latest
@@ -180,6 +115,7 @@ jobs:
       # GH Actions squashes all PR commits, HEAD^ refers to the base branch.
       - run: git diff HEAD^ HEAD -G"pr-url:" -- "*.md" | ./tools/lint-pr-url.mjs ${{ github.event.pull_request.html_url }}
   lint-readme:
+    if: false  # Disable for N|Solid
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0

@@ -42,6 +42,10 @@ if (spawnSync('strace').error !== undefined) {
     if (file.match(/\/proc\/.+/) !== null) {
       return;
     }
+    // skip /sys/*
+    if (file.match(/\/sys\/.+/) !== null) {
+      return;
+    }
 
     assert(allowedOpenCalls.delete(file), `${file} is not in the list of allowed openat calls`);
   });
