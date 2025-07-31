@@ -1,3 +1,7 @@
+> \[!IMPORTANT]
+> This document is from and refers to the upstream Node.js project.
+> See [CONTRIBUTING](CONTRIBUTING.md) for specific N|Solid content.
+
 # Onboarding
 
 This document is an outline of the things we tell new collaborators at their
