@@ -71,9 +71,10 @@ const { startNewREPLServer } = require('../common/repl');
       assert.strictEqual(data[0][lastIndex + 1], '');
       // There is only one Node.js module that starts with n:
       assert.strictEqual(data[0][lastIndex + 2], 'net');
-      assert.strictEqual(data[0][lastIndex + 3], '');
+      assert.strictEqual(data[0][lastIndex + 3], 'nsolid');
+      assert.strictEqual(data[0][lastIndex + 4], '');
       // It's possible to pick up non-core modules too
-      data[0].slice(lastIndex + 4).forEach((completion) => {
+      data[0].slice(lastIndex + 5).forEach((completion) => {
         assert.match(completion, /^n/);
       });
     })

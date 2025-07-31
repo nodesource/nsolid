@@ -57,6 +57,7 @@ const knownFlagsMissingFromManPage = new Set([
   'trace-require-module',
   'use-system-ca',
   'watch-preserve-output',
+  'vv',
 ]);
 
 const optionsEncountered = { dash: 0, dashDash: 0, named: 0 };
