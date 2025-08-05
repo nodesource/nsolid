@@ -2,7 +2,7 @@
 
 const util = require('node:util');
 const debuglog = util.debuglog('test');
-const zmq = require("zeromq/v5-compat");
+const zmq = require('zeromq');
 
 class ZMQBindSocket {
   constructor(params) {
