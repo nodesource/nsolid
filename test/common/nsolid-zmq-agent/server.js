@@ -3,7 +3,7 @@
 const http = require('node:http');
 const util = require('node:util');
 const debuglog = util.debuglog('test');
-const zmq = require('zeromq');
+const zmq = require("zeromq/v5-compat");
 const ZMQBindSocket = require('./socket');
 
 // Create a version of a function which will only be called once

@@ -73,6 +73,8 @@ async function startServer(cb) {
         call.end();
         commandCallMap.delete(agentId);
       });
+
+      process.send({ type: 'command', data: { agentId } });
     },
     ExportAsset: async (call) => {
       console.log('ExportAsset');
