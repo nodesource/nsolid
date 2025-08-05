@@ -345,6 +345,7 @@ const expectedPackageNames = [
 ];
 
 function checkPackagesData(msg, metadata, requestId, agentId) {
+  console.dir(msg, { depth: null });
   const packages = msg;
   assert.strictEqual(packages.common.requestId, requestId);
   assert.strictEqual(packages.common.command, 'packages');
