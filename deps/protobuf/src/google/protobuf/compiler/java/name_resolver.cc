@@ -133,6 +133,25 @@ bool MessageHasConflictingClassName(const Descriptor* message,
 
 }  // namespace
 
+class MemoizeProjection {
+ public:
+  template <typename Desc, typename Func>
+  const auto& operator()(const Desc* descriptor, Func func) {
+    return DescriptorPool::MemoizeProjection(descriptor, func);
+  }
+};
+
+bool ComputeNeedsOuterClassSuffix(const FileDescriptor* file) {
+  if (!UseOldFileClassNameDefault(file)) return false;
+  return ClassNameResolver::HasConflictingClassName(
+      file, ClassNameResolver::GetFileDefaultImmutableClassName(file),
+      NameEquality::EXACT_EQUAL);
+}
+
+bool NeedsOuterClassSuffix(const FileDescriptor* file) {
+  return MemoizeProjection()(file, ComputeNeedsOuterClassSuffix);
+}
+
 std::string ClassNameResolver::GetFileDefaultImmutableClassName(
     const FileDescriptor* file) {
   std::string basename;
@@ -149,24 +168,21 @@ std::string ClassNameResolver::GetFileDefaultImmutableClassName(
 
 std::string ClassNameResolver::GetFileImmutableClassName(
     const FileDescriptor* file) {
-  std::string& class_name = file_immutable_outer_class_names_[file];
-  if (class_name.empty()) {
-    if (file->options().has_java_outer_classname()) {
-      class_name = file->options().java_outer_classname();
-    } else {
-      class_name = GetFileDefaultImmutableClassName(file);
-
-      // This disambiguation logic is deprecated and only enabled when using
-      // the old default scheme.
-      if (UseOldFileClassNameDefault(file) &&
-          HasConflictingClassName(file, class_name,
-                                  NameEquality::EXACT_EQUAL)) {
-        class_name += kOuterClassNameSuffix;
-      }
-    }
+  if (file->options().has_java_outer_classname()) {
+    return file->options().java_outer_classname();
   }
+
+  std::string class_name = GetFileDefaultImmutableClassName(file);
+
+  // This disambiguation logic is deprecated and only enabled when using
+  // the old default scheme.
+  if (NeedsOuterClassSuffix(file)) {
+    absl::StrAppend(&class_name, kOuterClassNameSuffix);
+  }
+
   return class_name;
 }
+
 
 std::string ClassNameResolver::GetFileClassName(const FileDescriptor* file,
                                                 bool immutable) {
@@ -226,7 +242,7 @@ std::string ClassNameResolver::GetClassName(const FileDescriptor* descriptor,
 
 std::string ClassNameResolver::GetClassName(const FileDescriptor* descriptor,
                                             bool immutable, bool kotlin) {
-  std::string result = FileJavaPackage(descriptor, immutable, options_);
+  std::string result = GetFileJavaPackage(descriptor, immutable);
   if (!result.empty()) result += '.';
   result += GetFileClassName(descriptor, immutable, kotlin);
   return result;
@@ -246,7 +262,7 @@ std::string ClassNameResolver::GetClassFullName(
     bool immutable, bool is_own_file, bool kotlin) {
   std::string result;
   if (is_own_file) {
-    result = FileJavaPackage(file, immutable, options_);
+    result = GetFileJavaPackage(file, immutable);
   } else {
     result = GetClassName(file, immutable, kotlin);
   }
@@ -313,7 +329,7 @@ std::string ClassNameResolver::GetJavaClassFullName(
     result = GetClassName(file, immutable, kotlin);
     if (!result.empty()) result += '$';
   } else {
-    result = FileJavaPackage(file, immutable, options_);
+    result = GetFileJavaPackage(file, immutable);
     if (!result.empty()) result += '.';
   }
   result += absl::StrReplaceAll(name_without_package, {{".", "$"}});
@@ -336,6 +352,19 @@ std::string ClassNameResolver::GetKotlinFactoryName(
     const Descriptor* descriptor) {
   std::string name = ToCamelCase(descriptor->name(), /* lower_first = */ true);
   return IsForbiddenKotlin(name) ? absl::StrCat(name, "_") : name;
+}
+
+std::string ClassNameResolver::GetFullyQualifiedKotlinFactoryName(
+    const Descriptor* descriptor) {
+  if (descriptor->containing_type() != nullptr) {
+    return absl::StrCat(
+        GetKotlinExtensionsClassName(descriptor->containing_type()), ".",
+        GetKotlinFactoryName(descriptor));
+  } else {
+    return absl::StrCat(
+        GetFileJavaPackage(descriptor->file(), /*immutable=*/true), ".",
+        GetKotlinFactoryName(descriptor));
+  }
 }
 
 std::string ClassNameResolver::GetJavaImmutableClassName(
@@ -380,36 +409,23 @@ std::string ClassNameResolver::GetKotlinExtensionsClassNameEscaped(
   return full_name;
 }
 
-std::string ClassNameResolver::GetJavaMutableClassName(
-    const Descriptor* descriptor) {
-  return GetJavaClassFullName(ClassNameWithoutPackage(descriptor, false),
-                              *descriptor, false);
-}
 
-std::string ClassNameResolver::GetJavaMutableClassName(
-    const EnumDescriptor* descriptor) {
-  return GetJavaClassFullName(ClassNameWithoutPackage(descriptor, false),
-                              *descriptor, false);
-}
+std::string ClassNameResolver::GetFileJavaPackage(const FileDescriptor* file,
+                                                  bool immutable) {
+  std::string result;
 
-std::string ClassNameResolver::GetJavaMutableClassName(
-    const ServiceDescriptor* descriptor) {
-  return GetJavaClassFullName(ClassNameWithoutPackage(descriptor, false),
-                              *descriptor, false);
-}
+  if (file->options().has_java_package()) {
+    result = file->options().java_package();
+  } else {
+    result = options_.opensource_runtime ? "" : "com.google.protos";
+    if (!file->package().empty()) {
+      if (!result.empty()) result += '.';
+      absl::StrAppend(&result, file->package());
+    }
+  }
 
-std::string ClassNameResolver::GetDowngradedFileClassName(
-    const FileDescriptor* file) {
-  return absl::StrCat("Downgraded", GetFileClassName(file, false));
+  return result;
 }
-
-std::string ClassNameResolver::GetDowngradedClassName(
-    const Descriptor* descriptor) {
-  return absl::StrCat(FileJavaPackage(descriptor->file(), true, options_), ".",
-                      GetDowngradedFileClassName(descriptor->file()), ".",
-                      ClassNameWithoutPackage(descriptor, false));
-}
-
 }  // namespace java
 }  // namespace compiler
 }  // namespace protobuf
