@@ -23,8 +23,8 @@ if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
 endif (POLICY CMP0141)
 
-project(absl LANGUAGES CXX VERSION 20250127)
-set(ABSL_SOVERSION "2501.0.0")
+project(absl LANGUAGES CXX VERSION 20250512)
+set(ABSL_SOVERSION "2505.0.0")
 include(CTest)
 
 # Output directory is correct by default for most build setups. However, when
@@ -46,7 +46,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 set(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
 
 option(ABSL_PROPAGATE_CXX_STD
-  "Use CMake C++ standard meta features (e.g. cxx_std_14) that propagate to targets that link to Abseil"
+  "Use CMake C++ standard meta features (e.g. cxx_std_17) that propagate to targets that link to Abseil"
   ON)
 
 option(ABSL_USE_SYSTEM_INCLUDES
