@@ -348,6 +348,8 @@ class DynamicMessage final : public Message {
   // implementation.
   template <typename T = void>
   T* MutableRaw(int i);
+  template <typename T = void>
+  const T& GetRaw(int i) const;
   void* MutableExtensionsRaw();
   void* MutableWeakFieldMapRaw();
   void* MutableOneofCaseRaw(int i);
@@ -445,6 +447,15 @@ inline T* DynamicMessage::MutableRaw(int i) {
   }
   return reinterpret_cast<T*>(OffsetToPointer(type_info_->offsets[i] & mask));
 }
+template <typename T>
+inline const T& DynamicMessage::GetRaw(int i) const {
+  uint32_t mask = ~uint32_t{};
+  if constexpr (!std::is_void_v<T>) {
+    mask = ~(uint32_t{alignof(T)} - 1);
+  }
+  return *reinterpret_cast<const T*>(
+      OffsetToPointer(type_info_->offsets[i] & mask));
+}
 inline void* DynamicMessage::MutableExtensionsRaw() {
   return OffsetToPointer(type_info_->extensions_offset);
 }
@@ -541,11 +552,15 @@ void DynamicMessage::SharedCtor(bool lock_factory) {
           case FieldDescriptor::CppStringType::kView:
             if (internal::EnableExperimentalMicroString() &&
                 !field->is_repeated()) {
-              auto* str = ::new (MutableRaw<MicroString>(i)) MicroString();
-              if (field->has_default_value()) {
-                // TODO: Use an unowned block instead.
-                str->Set(field->default_value_string(), arena);
-              }
+              *MutableRaw<MicroString>(i) =
+                  is_prototype()
+                      // Make a new object, potentially creating the default.
+                      ? MicroString::MakeDefaultValuePrototype(
+                            field->default_value_string())
+                      // Copy from the prototype.
+                      : MicroString(arena, static_cast<const DynamicMessage*>(
+                                               type_info_->class_data.prototype)
+                                               ->GetRaw<MicroString>(i));
               break;
             }
             [[fallthrough]];
@@ -637,7 +652,12 @@ DynamicMessage::~DynamicMessage() {
               break;
             case FieldDescriptor::CppStringType::kView:
               if (internal::EnableExperimentalMicroString()) {
-                reinterpret_cast<MicroString*>(field_ptr)->Destroy();
+                if (is_prototype()) {
+                  reinterpret_cast<MicroString*>(field_ptr)
+                      ->DestroyDefaultValuePrototype();
+                } else {
+                  reinterpret_cast<MicroString*>(field_ptr)->Destroy();
+                }
                 break;
               }
               [[fallthrough]];
@@ -703,7 +723,11 @@ DynamicMessage::~DynamicMessage() {
           break;
         case FieldDescriptor::CppStringType::kView:
           if (internal::EnableExperimentalMicroString()) {
-            MutableRaw<MicroString>(i)->Destroy();
+            if (is_prototype()) {
+              MutableRaw<MicroString>(i)->DestroyDefaultValuePrototype();
+            } else {
+              MutableRaw<MicroString>(i)->Destroy();
+            }
             break;
           }
           [[fallthrough]];
@@ -838,7 +862,7 @@ const Message* DynamicMessageFactory::GetPrototypeNoLock(
     // fields will have "hint hasbits" where
     // - if hasbit is unset, field is not present.
     // - if hasbit is set, field is present if it is also nonempty.
-    if (internal::cpp::HasHasbit(field)) {
+    if (internal::cpp::HasHasbitWithoutProfile(field)) {
       // TODO: b/112602698 - during Python textproto serialization, MapEntry
       // messages may be generated from DynamicMessage on the fly. C++
       // implementations of MapEntry messages always have hasbits, but
@@ -923,6 +947,14 @@ const Message* DynamicMessageFactory::GetPrototypeNoLock(
   for (int i = 0; i < type->real_oneof_decl_count(); i++) {
     size = AlignTo(size, kSafeAlignment);
     offsets[type->field_count() + i] = size;
+
+    for (int j = 0; j < type->real_oneof_decl(i)->field_count(); j++) {
+      const FieldDescriptor* field = type->real_oneof_decl(i)->field(j);
+      // oneof fields' offset is the one for the union.
+      // They are already set above, so copy them.
+      offsets[field->index()] = size | FieldFlags(field);
+    }
+
     size += kMaxOneofUnionSize;
   }
 
@@ -932,20 +964,6 @@ const Message* DynamicMessageFactory::GetPrototypeNoLock(
       internal::MessageCreator(DynamicMessage::NewImpl, size, kSafeAlignment);
 
   // Construct the reflection object.
-
-  // Compute the size of default oneof instance and offsets of default
-  // oneof fields.
-  for (int i = 0; i < type->real_oneof_decl_count(); i++) {
-    for (int j = 0; j < type->real_oneof_decl(i)->field_count(); j++) {
-      const FieldDescriptor* field = type->real_oneof_decl(i)->field(j);
-      // oneof fields are not accessed through offsets, but we still have the
-      // entry for each.
-      // Mark the field to prevent unintentional access through reflection.
-      // Don't use the top bit because that is for unused fields.
-      offsets[field->index()] =
-          internal::kInvalidFieldOffsetTag | FieldFlags(field);
-    }
-  }
 
   // Allocate the prototype fields.
   void* base = operator new(size);
