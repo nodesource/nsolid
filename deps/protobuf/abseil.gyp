@@ -6,6 +6,13 @@
       'variables': {
         'ABSEIL_ROOT': 'third_party/abseil-cpp',
       },
+      'conditions': [
+        ['OS == "win"', {
+          'defines': [
+            'NOMINMAX',
+          ],
+        }],
+      ],
       'direct_dependent_settings': {
         'include_dirs': [
           '<(ABSEIL_ROOT)',
