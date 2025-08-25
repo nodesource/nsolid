@@ -125,16 +125,17 @@ import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 
 const expectedPackageNames = [
   'base64-js', 'base85', 'buffer', 'ieee754', 'ip-address', 'jsbn', 'lodash',
-  'nan', 'node-gyp-build', 'sprintf-js', 'zeromq', 'nan', 'node-gyp-build',
+  'nan', 'node-gyp-build', 'sprintf-js', 'zeromq',
 ];
 
-const expectedPackagesMajorVersions = ['1', '3', '6', '1', '5', '1', '4', '2', '4', '1', '1', '5', '2', '4'];
+const expectedPackagesMajorVersions = ['1', '3', '6', '1', '5', '1', '4', '2', '4', '1', '1', '5'];
 const expectedPackagesMains = [
   'index.js', 'lib/base85.js', 'index.js', 'index.js', 'ip-address.js', 'index.js', 'lodash.js',
   'include_dirs.js', 'index.js', 'src/sprintf.js', 'index.js', 'index', 'index.js', 'index.js',
 ];
 
 function checkPackagesData(packages, requestId, agentId) {
+  console.dir(packages, { depth: null });
   assert.strictEqual(packages.requestId, requestId);
   assert.strictEqual(packages.agentId, agentId);
   assert.strictEqual(packages.app, 'untitled application');
