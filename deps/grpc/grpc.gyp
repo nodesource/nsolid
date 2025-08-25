@@ -716,6 +716,7 @@
         'src/core/lib/promise/mpsc.cc',
         'src/core/lib/promise/party.cc',
         'src/core/lib/promise/sleep.cc',
+        'src/core/lib/promise/wait_set.cc',
         'src/core/lib/resource_quota/api.cc',
         'src/core/lib/resource_quota/arena.cc',
         'src/core/lib/resource_quota/connection_quota.cc',
