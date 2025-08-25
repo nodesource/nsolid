@@ -18,6 +18,38 @@
 namespace node {
 namespace nsolid {
 
+// Template class serves as a C++17-compatible replacement for C++20's pack
+// init-capture
+// Primary template
+template <typename Cb, typename... Args>
+class CallbackWrapper {
+ public:
+  CallbackWrapper(Cb cb, Args... args)
+      : cb_(std::move(cb)), args_(std::move(args)...) {}
+
+  CallbackWrapper(const CallbackWrapper&) = default;
+  CallbackWrapper(CallbackWrapper&&) = default;
+
+  template <typename T>
+  void operator()(T&& first) {
+    invoke_impl(std::forward<T>(first), std::index_sequence_for<Args...>{});
+  }
+
+ private:
+  template <typename T, size_t... I>
+  void invoke_impl(T&& first, std::index_sequence<I...>) {
+    std::invoke(cb_, std::forward<T>(first), std::get<I>(args_)...);
+  }
+
+  Cb cb_;
+  std::tuple<Args...> args_;
+};
+
+// deduction guide (C++17 feature)
+template <typename Cb, typename... Args>
+CallbackWrapper(Cb&&, Args&&...)
+  -> CallbackWrapper<std::decay_t<Cb>, std::decay_t<Args>...>;
+
 /**
  * Options for AsyncTSQueue batching notification
  */
@@ -185,10 +217,8 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
   template<typename Cb, typename... Args>
   void setup_callback(Cb&& cb, Args&&... args) {
     // Create a bound callback function
-    auto bound_cb = [cb = std::forward<Cb>(cb),
-                     ...args = std::forward<Args>(args)](auto&& first) mutable {
-      std::invoke(cb, std::forward<decltype(first)>(first), args...);
-    };
+    auto bound_cb = CallbackWrapper(std::forward<Cb>(cb),
+                                    std::forward<Args>(args)...);
     if constexpr (is_batch_callback<Cb, Args...>::value) {
       // Batch callback: process all items at once
       process_callback_ = [this, bound_cb = bound_cb]() mutable {
