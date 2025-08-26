@@ -1,6 +1,6 @@
 {
   "name": "nsolid-cli",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "N|Solid CLI",
   "main": "cli.js",
   "dependencies": {
@@ -9,8 +9,8 @@
     "minimist-lite": "^2.2.1"
   },
   "devDependencies": {
-    "nodemon": "~1.12.1",
-    "standard": "~10.0.3",
+    "nodemon": "^3.1.10",
+    "standard": "^17.1.2",
     "tape": "~4.8.0",
     "terminus": "~1.1.0"
   },
