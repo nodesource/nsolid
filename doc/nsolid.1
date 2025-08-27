@@ -899,7 +899,8 @@ Delay initializing nsolid for duration (milliseconds) after the process starts.
 Time in milliseconds the event loop is stuck on a single iteration before considered being blocked.
 .
 .It Ev NSOLID_DISABLE_PACKAGE_SCAN
-Disable automatically scanning all directories for modules that can be require
+Disable automatically scanning all directories for modules that can be imported or required.
+Packages that are actually imported or required are still reported to the Console.
 .
 .It Ev NSOLID_TRACK_GLOBAL_PACKAGES
 Track packages listed in the globalPaths
