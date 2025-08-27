@@ -3335,40 +3335,31 @@ void BindingData::RegisterExternalReferences(
     ExternalReferenceRegistry* registry) {
 
   registry->Register(SlowPushClientBucket);
-  registry->Register(FastPushClientBucket);
-  registry->Register(fast_push_client_bucket_.GetTypeInfo());
+  registry->Register(fast_push_client_bucket_);
 
   registry->Register(SlowPushDnsBucket);
-  registry->Register(FastPushDnsBucket);
-  registry->Register(fast_push_dns_bucket_.GetTypeInfo());
+  registry->Register(fast_push_dns_bucket_);
 
   registry->Register(SlowPushServerBucket);
-  registry->Register(FastPushServerBucket);
-  registry->Register(fast_push_server_bucket_.GetTypeInfo());
+  registry->Register(fast_push_server_bucket_);
 
   registry->Register(SlowPushSpanDataDouble);
-  registry->Register(FastPushSpanDataDouble);
-  registry->Register(fast_push_span_data_double_.GetTypeInfo());
+  registry->Register(fast_push_span_data_double_);
 
   registry->Register(SlowPushSpanDataUint64);
-  registry->Register(FastPushSpanDataUint64);
-  registry->Register(fast_push_span_data_uint64_.GetTypeInfo());
+  registry->Register(fast_push_span_data_uint64_);
 
   registry->Register(SlowPushSpanDataString);
-  registry->Register(FastPushSpanDataString);
-  registry->Register(fast_push_span_data_string_.GetTypeInfo());
+  registry->Register(fast_push_span_data_string_);
 
   registry->Register(SlowPushSpanDataString3);
-  registry->Register(FastPushSpanDataString3);
-  registry->Register(fast_push_span_data_string3_.GetTypeInfo());
+  registry->Register(fast_push_span_data_string3_);
 
   registry->Register(SlowGetSpanId);
-  registry->Register(FastGetSpanId);
-  registry->Register(fast_get_span_id_.GetTypeInfo());
+  registry->Register(fast_get_span_id_);
 
   registry->Register(SlowGetTraceId);
-  registry->Register(FastGetTraceId);
-  registry->Register(fast_get_trace_id_.GetTypeInfo());
+  registry->Register(fast_get_trace_id_);
 
   registry->Register(AgentId);
   registry->Register(WriteLog);

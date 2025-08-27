@@ -1,4 +1,4 @@
-/* auto-generated on 2025-03-27 15:01:10 -0400. Do not edit! */
+/* auto-generated on 2025-06-04 00:22:10 -0400. Do not edit! */
 /* including simdjson.h:  */
 /* begin file simdjson.h */
 #ifndef SIMDJSON_H
@@ -393,7 +393,7 @@ double from_chars(const char *first, const char* end) noexcept;
 }
 
 #ifndef SIMDJSON_EXCEPTIONS
-#if __cpp_exceptions
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
 #define SIMDJSON_EXCEPTIONS 1
 #else
 #define SIMDJSON_EXCEPTIONS 0
@@ -596,12 +596,14 @@ double from_chars(const char *first, const char* end) noexcept;
 // even if we do not have C++17 support.
 #ifdef __cpp_lib_string_view
 #define SIMDJSON_HAS_STRING_VIEW
+#include <string_view>
 #endif
 
 // Some systems have string_view even if we do not have C++17 support,
 // and even if __cpp_lib_string_view is undefined, it is the case
 // with Apple clang version 11.
 // We must handle it. *This is important.*
+#ifndef _MSC_VER
 #ifndef SIMDJSON_HAS_STRING_VIEW
 #if defined __has_include
 // do not combine the next #if with the previous one (unsafe)
@@ -617,6 +619,7 @@ double from_chars(const char *first, const char* end) noexcept;
 #endif // __has_include (<string_view>)
 #endif // defined __has_include
 #endif // def SIMDJSON_HAS_STRING_VIEW
+#endif // def _MSC_VER
 // end of complicated but important routine to try to detect string_view.
 
 //
@@ -2437,7 +2440,7 @@ namespace std {
 #define SIMDJSON_SIMDJSON_VERSION_H
 
 /** The version of simdjson being used (major.minor.revision) */
-#define SIMDJSON_VERSION "3.12.3"
+#define SIMDJSON_VERSION "3.13.0"
 
 namespace simdjson {
 enum {
@@ -2448,11 +2451,11 @@ enum {
   /**
    * The minor version (major.MINOR.revision) of simdjson being used.
    */
-  SIMDJSON_VERSION_MINOR = 12,
+  SIMDJSON_VERSION_MINOR = 13,
   /**
    * The revision (major.minor.REVISION) of simdjson being used.
    */
-  SIMDJSON_VERSION_REVISION = 3
+  SIMDJSON_VERSION_REVISION = 0
 };
 } // namespace simdjson
 
@@ -2670,6 +2673,7 @@ struct simdjson_result_base : protected std::pair<T, error_code> {
    * @throw simdjson_error if there was an error.
    */
   simdjson_inline operator T&&() && noexcept(false);
+
 #endif // SIMDJSON_EXCEPTIONS
 
   /**
@@ -2726,7 +2730,17 @@ struct simdjson_result : public internal::simdjson_result_base<T> {
    * @param value The variable to assign the value to. May not be set if there is an error.
    */
   simdjson_warn_unused simdjson_inline error_code get(T &value) && noexcept;
-
+//
+  /**
+   * Copy the value to a provided std::string, only enabled for std::string_view.
+   *
+   * @param value The variable to assign the value to. May not be set if there is an error.
+   */
+  simdjson_warn_unused simdjson_inline error_code get(std::string &value) && noexcept
+#if SIMDJSON_SUPPORTS_DESERIALIZATION
+  requires (!std::is_same_v<T, std::string>)
+#endif // SIMDJSON_SUPPORTS_DESERIALIZATION
+  ;
   /**
    * The error.
    */
@@ -3120,6 +3134,23 @@ simdjson_inline void simdjson_result<T>::tie(T &value, error_code &error) && noe
 template<typename T>
 simdjson_warn_unused simdjson_inline error_code simdjson_result<T>::get(T &value) && noexcept {
   return std::forward<internal::simdjson_result_base<T>>(*this).get(value);
+}
+
+template<typename T>
+simdjson_warn_unused simdjson_inline error_code
+simdjson_result<T>::get(std::string &value) && noexcept
+#if SIMDJSON_SUPPORTS_DESERIALIZATION
+requires (!std::is_same_v<T, std::string>)
+#endif // SIMDJSON_SUPPORTS_DESERIALIZATION
+{
+  // SFINAE : n'active que pour T = std::string_view
+  static_assert(std::is_same<T, std::string_view>::value, "simdjson_result<T>::get(std::string&) n'est disponible que pour T = std::string_view");
+  std::string_view v;
+  error_code error = std::forward<simdjson_result<T>>(*this).get(v);
+  if (!error) {
+    value.assign(v.data(), v.size());
+  }
+  return error;
 }
 
 template<typename T>
@@ -6845,7 +6876,7 @@ std::string prettify(simdjson_result<T> x) {
 #define SIMDJSON_JSONPATHUTIL_H
 
 #include <string>
-#include <string_view>
+/* skipped duplicate #include "simdjson/common_defs.h" */
 
 namespace simdjson {
 /**
@@ -12140,7 +12171,16 @@ simdjson_inline error_code parse_number(const uint8_t *const src, W &writer) {
   if (i > uint64_t(INT64_MAX)) {
     WRITE_UNSIGNED(i, src, writer);
   } else {
-    WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+    if(i == 0 && negative) {
+      // We have to write -0.0 instead of 0
+      WRITE_DOUBLE(-0.0, src, writer);
+    } else {
+      WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+    }
+#else
+  WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#endif
   }
   if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
   return SUCCESS;
@@ -12601,6 +12641,12 @@ simdjson_unused simdjson_inline simdjson_result<number_type> get_number_type(con
       if (simdjson_unlikely(digit_count == 19 && memcmp(src, smaller_big_integer, 19) > 0)) {
         return number_type::big_integer;
       }
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+      if(digit_count == 1 && src[0] == '0') {
+        // We have to write -0.0 instead of 0
+        return number_type::floating_point_number;
+      }
+#endif
       return number_type::signed_integer;
     }
     // Let us check if we have a big integer (>=2**64).
@@ -14248,7 +14294,16 @@ simdjson_inline error_code parse_number(const uint8_t *const src, W &writer) {
   if (i > uint64_t(INT64_MAX)) {
     WRITE_UNSIGNED(i, src, writer);
   } else {
-    WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+    if(i == 0 && negative) {
+      // We have to write -0.0 instead of 0
+      WRITE_DOUBLE(-0.0, src, writer);
+    } else {
+      WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+    }
+#else
+  WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#endif
   }
   if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
   return SUCCESS;
@@ -14709,6 +14764,12 @@ simdjson_unused simdjson_inline simdjson_result<number_type> get_number_type(con
       if (simdjson_unlikely(digit_count == 19 && memcmp(src, smaller_big_integer, 19) > 0)) {
         return number_type::big_integer;
       }
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+      if(digit_count == 1 && src[0] == '0') {
+        // We have to write -0.0 instead of 0
+        return number_type::floating_point_number;
+      }
+#endif
       return number_type::signed_integer;
     }
     // Let us check if we have a big integer (>=2**64).
@@ -16848,7 +16909,16 @@ simdjson_inline error_code parse_number(const uint8_t *const src, W &writer) {
   if (i > uint64_t(INT64_MAX)) {
     WRITE_UNSIGNED(i, src, writer);
   } else {
-    WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+    if(i == 0 && negative) {
+      // We have to write -0.0 instead of 0
+      WRITE_DOUBLE(-0.0, src, writer);
+    } else {
+      WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+    }
+#else
+  WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#endif
   }
   if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
   return SUCCESS;
@@ -17309,6 +17379,12 @@ simdjson_unused simdjson_inline simdjson_result<number_type> get_number_type(con
       if (simdjson_unlikely(digit_count == 19 && memcmp(src, smaller_big_integer, 19) > 0)) {
         return number_type::big_integer;
       }
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+      if(digit_count == 1 && src[0] == '0') {
+        // We have to write -0.0 instead of 0
+        return number_type::floating_point_number;
+      }
+#endif
       return number_type::signed_integer;
     }
     // Let us check if we have a big integer (>=2**64).
@@ -19445,7 +19521,16 @@ simdjson_inline error_code parse_number(const uint8_t *const src, W &writer) {
   if (i > uint64_t(INT64_MAX)) {
     WRITE_UNSIGNED(i, src, writer);
   } else {
-    WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+    if(i == 0 && negative) {
+      // We have to write -0.0 instead of 0
+      WRITE_DOUBLE(-0.0, src, writer);
+    } else {
+      WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+    }
+#else
+  WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#endif
   }
   if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
   return SUCCESS;
@@ -19906,6 +19991,12 @@ simdjson_unused simdjson_inline simdjson_result<number_type> get_number_type(con
       if (simdjson_unlikely(digit_count == 19 && memcmp(src, smaller_big_integer, 19) > 0)) {
         return number_type::big_integer;
       }
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+      if(digit_count == 1 && src[0] == '0') {
+        // We have to write -0.0 instead of 0
+        return number_type::floating_point_number;
+      }
+#endif
       return number_type::signed_integer;
     }
     // Let us check if we have a big integer (>=2**64).
@@ -22159,7 +22250,16 @@ simdjson_inline error_code parse_number(const uint8_t *const src, W &writer) {
   if (i > uint64_t(INT64_MAX)) {
     WRITE_UNSIGNED(i, src, writer);
   } else {
-    WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+    if(i == 0 && negative) {
+      // We have to write -0.0 instead of 0
+      WRITE_DOUBLE(-0.0, src, writer);
+    } else {
+      WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+    }
+#else
+  WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#endif
   }
   if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
   return SUCCESS;
@@ -22620,6 +22720,12 @@ simdjson_unused simdjson_inline simdjson_result<number_type> get_number_type(con
       if (simdjson_unlikely(digit_count == 19 && memcmp(src, smaller_big_integer, 19) > 0)) {
         return number_type::big_integer;
       }
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+      if(digit_count == 1 && src[0] == '0') {
+        // We have to write -0.0 instead of 0
+        return number_type::floating_point_number;
+      }
+#endif
       return number_type::signed_integer;
     }
     // Let us check if we have a big integer (>=2**64).
@@ -25190,7 +25296,16 @@ simdjson_inline error_code parse_number(const uint8_t *const src, W &writer) {
   if (i > uint64_t(INT64_MAX)) {
     WRITE_UNSIGNED(i, src, writer);
   } else {
-    WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+    if(i == 0 && negative) {
+      // We have to write -0.0 instead of 0
+      WRITE_DOUBLE(-0.0, src, writer);
+    } else {
+      WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+    }
+#else
+  WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#endif
   }
   if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
   return SUCCESS;
@@ -25651,6 +25766,12 @@ simdjson_unused simdjson_inline simdjson_result<number_type> get_number_type(con
       if (simdjson_unlikely(digit_count == 19 && memcmp(src, smaller_big_integer, 19) > 0)) {
         return number_type::big_integer;
       }
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+      if(digit_count == 1 && src[0] == '0') {
+        // We have to write -0.0 instead of 0
+        return number_type::floating_point_number;
+      }
+#endif
       return number_type::signed_integer;
     }
     // Let us check if we have a big integer (>=2**64).
@@ -27698,7 +27819,16 @@ simdjson_inline error_code parse_number(const uint8_t *const src, W &writer) {
   if (i > uint64_t(INT64_MAX)) {
     WRITE_UNSIGNED(i, src, writer);
   } else {
-    WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+    if(i == 0 && negative) {
+      // We have to write -0.0 instead of 0
+      WRITE_DOUBLE(-0.0, src, writer);
+    } else {
+      WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+    }
+#else
+  WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#endif
   }
   if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
   return SUCCESS;
@@ -28159,6 +28289,12 @@ simdjson_unused simdjson_inline simdjson_result<number_type> get_number_type(con
       if (simdjson_unlikely(digit_count == 19 && memcmp(src, smaller_big_integer, 19) > 0)) {
         return number_type::big_integer;
       }
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+      if(digit_count == 1 && src[0] == '0') {
+        // We have to write -0.0 instead of 0
+        return number_type::floating_point_number;
+      }
+#endif
       return number_type::signed_integer;
     }
     // Let us check if we have a big integer (>=2**64).
@@ -30219,7 +30355,16 @@ simdjson_inline error_code parse_number(const uint8_t *const src, W &writer) {
   if (i > uint64_t(INT64_MAX)) {
     WRITE_UNSIGNED(i, src, writer);
   } else {
-    WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+    if(i == 0 && negative) {
+      // We have to write -0.0 instead of 0
+      WRITE_DOUBLE(-0.0, src, writer);
+    } else {
+      WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+    }
+#else
+  WRITE_INTEGER(negative ? (~i+1) : i, src, writer);
+#endif
   }
   if (jsoncharutils::is_not_structural_or_whitespace(*p)) { return INVALID_NUMBER(src); }
   return SUCCESS;
@@ -30680,6 +30825,12 @@ simdjson_unused simdjson_inline simdjson_result<number_type> get_number_type(con
       if (simdjson_unlikely(digit_count == 19 && memcmp(src, smaller_big_integer, 19) > 0)) {
         return number_type::big_integer;
       }
+#if SIMDJSON_MINUS_ZERO_AS_FLOAT
+      if(digit_count == 1 && src[0] == '0') {
+        // We have to write -0.0 instead of 0
+        return number_type::floating_point_number;
+      }
+#endif
       return number_type::signed_integer;
     }
     // Let us check if we have a big integer (>=2**64).

@@ -23,6 +23,7 @@
 #include "aliased_buffer-inl.h"
 #include "memory_tracker-inl.h"
 #include "node_buffer.h"
+#include "node_debug.h"
 #include "node_errors.h"
 #include "node_external_reference.h"
 #include "node_file-inl.h"
@@ -59,9 +60,6 @@ using v8::Array;
 using v8::BigInt;
 using v8::Context;
 using v8::EscapableHandleScope;
-using v8::FastApiCallbackOptions;
-using v8::FastOneByteString;
-using v8::Function;
 using v8::FunctionCallbackInfo;
 using v8::FunctionTemplate;
 using v8::HandleScope;
@@ -1037,6 +1035,7 @@ static void ExistsSync(const FunctionCallbackInfo<Value>& args) {
   // will **not** return an error and is therefore not enough.
   // Double check with `uv_fs_stat()`.
   if (err == 0) {
+    uv_fs_req_cleanup(&req);
     FS_SYNC_TRACE_BEGIN(stat);
     err = uv_fs_stat(nullptr, &req, path.out(), nullptr);
     FS_SYNC_TRACE_END(stat);
@@ -1054,9 +1053,9 @@ static void ExistsSync(const FunctionCallbackInfo<Value>& args) {
 static void InternalModuleStat(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
 
-  CHECK_GE(args.Length(), 2);
-  CHECK(args[1]->IsString());
-  BufferValue path(env->isolate(), args[1]);
+  CHECK_EQ(args.Length(), 1);
+  CHECK(args[0]->IsString());
+  BufferValue path(env->isolate(), args[0]);
   CHECK_NOT_NULL(*path);
   ToNamespacedPath(env, &path);
 
@@ -1070,36 +1069,6 @@ static void InternalModuleStat(const FunctionCallbackInfo<Value>& args) {
 
   args.GetReturnValue().Set(rc);
 }
-
-static int32_t FastInternalModuleStat(
-    Local<Object> unused,
-    Local<Object> recv,
-    const FastOneByteString& input,
-    // NOLINTNEXTLINE(runtime/references) This is V8 api.
-    FastApiCallbackOptions& options) {
-  // This needs a HandleScope which needs an isolate.
-  Isolate* isolate = Isolate::TryGetCurrent();
-  if (!isolate) {
-    options.fallback = true;
-    return -1;
-  }
-
-  HandleScope scope(isolate);
-
-  auto path = std::filesystem::path(input.data, input.data + input.length);
-
-  switch (std::filesystem::status(path).type()) {
-    case std::filesystem::file_type::directory:
-      return 1;
-    case std::filesystem::file_type::regular:
-      return 0;
-    default:
-      return -1;
-  }
-}
-
-v8::CFunction fast_internal_module_stat_(
-    v8::CFunction::Make(FastInternalModuleStat));
 
 constexpr bool is_uv_error_except_no_entry(int result) {
   return result < 0 && result != UV_ENOENT;
@@ -1746,6 +1715,7 @@ int MKDirpAsync(uv_loop_t* loop,
           break;
         }
         case UV_EACCES:
+        case UV_ENOSPC:
         case UV_ENOTDIR:
         case UV_EPERM: {
           req_wrap->continuation_data()->Done(err);
@@ -2773,10 +2743,10 @@ static void Chown(const FunctionCallbackInfo<Value>& args) {
   ToNamespacedPath(env, &path);
 
   CHECK(IsSafeJsInt(args[1]));
-  const uv_uid_t uid = static_cast<uv_uid_t>(args[1].As<Integer>()->Value());
+  const auto uid = FromV8Value<uv_uid_t, true>(args[1]);
 
   CHECK(IsSafeJsInt(args[2]));
-  const uv_gid_t gid = static_cast<uv_gid_t>(args[2].As<Integer>()->Value());
+  const auto gid = FromV8Value<uv_gid_t, true>(args[2]);
 
   if (argc > 3) {  // chown(path, uid, gid, req)
     FSReqBase* req_wrap_async = GetReqWrap(args, 3);
@@ -2818,10 +2788,10 @@ static void FChown(const FunctionCallbackInfo<Value>& args) {
   }
 
   CHECK(IsSafeJsInt(args[1]));
-  const uv_uid_t uid = static_cast<uv_uid_t>(args[1].As<Integer>()->Value());
+  const auto uid = FromV8Value<uv_uid_t, true>(args[1]);
 
   CHECK(IsSafeJsInt(args[2]));
-  const uv_gid_t gid = static_cast<uv_gid_t>(args[2].As<Integer>()->Value());
+  const auto gid = FromV8Value<uv_gid_t, true>(args[2]);
 
   if (argc > 3) {  // fchown(fd, uid, gid, req)
     FSReqBase* req_wrap_async = GetReqWrap(args, 3);
@@ -2848,10 +2818,10 @@ static void LChown(const FunctionCallbackInfo<Value>& args) {
   ToNamespacedPath(env, &path);
 
   CHECK(IsSafeJsInt(args[1]));
-  const uv_uid_t uid = static_cast<uv_uid_t>(args[1].As<Integer>()->Value());
+  const auto uid = FromV8Value<uv_uid_t, true>(args[1]);
 
   CHECK(IsSafeJsInt(args[2]));
-  const uv_gid_t gid = static_cast<uv_gid_t>(args[2].As<Integer>()->Value());
+  const auto gid = FromV8Value<uv_gid_t, true>(args[2]);
 
   if (argc > 3) {  // lchown(path, uid, gid, req)
     FSReqBase* req_wrap_async = GetReqWrap(args, 3);
@@ -3245,6 +3215,38 @@ static void CpSyncCheckPaths(const FunctionCallbackInfo<Value>& args) {
   }
 }
 
+static bool CopyUtimes(const std::filesystem::path& src,
+                       const std::filesystem::path& dest,
+                       Environment* env) {
+  uv_fs_t req;
+  auto cleanup = OnScopeLeave([&req]() { uv_fs_req_cleanup(&req); });
+
+  auto src_path_str = PathToString(src);
+  int result = uv_fs_stat(nullptr, &req, src_path_str.c_str(), nullptr);
+  if (is_uv_error(result)) {
+    env->ThrowUVException(result, "stat", nullptr, src_path_str.c_str());
+    return false;
+  }
+
+  const uv_stat_t* const s = static_cast<const uv_stat_t*>(req.ptr);
+  const double source_atime = s->st_atim.tv_sec + s->st_atim.tv_nsec / 1e9;
+  const double source_mtime = s->st_mtim.tv_sec + s->st_mtim.tv_nsec / 1e9;
+
+  auto dest_file_path_str = PathToString(dest);
+  int utime_result = uv_fs_utime(nullptr,
+                                 &req,
+                                 dest_file_path_str.c_str(),
+                                 source_atime,
+                                 source_mtime,
+                                 nullptr);
+  if (is_uv_error(utime_result)) {
+    env->ThrowUVException(
+        utime_result, "utime", nullptr, dest_file_path_str.c_str());
+    return false;
+  }
+  return true;
+}
+
 static void CpSyncOverrideFile(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   Isolate* isolate = env->isolate();
@@ -3292,22 +3294,7 @@ static void CpSyncOverrideFile(const FunctionCallbackInfo<Value>& args) {
   }
 
   if (preserve_timestamps) {
-    uv_fs_t req;
-    auto cleanup = OnScopeLeave([&req]() { uv_fs_req_cleanup(&req); });
-    int result = uv_fs_stat(nullptr, &req, *src, nullptr);
-    if (is_uv_error(result)) {
-      return env->ThrowUVException(result, "stat", nullptr, *src);
-    }
-
-    const uv_stat_t* const s = static_cast<const uv_stat_t*>(req.ptr);
-    const double source_atime = s->st_atim.tv_sec + s->st_atim.tv_nsec / 1e9;
-    const double source_mtime = s->st_mtim.tv_sec + s->st_mtim.tv_nsec / 1e9;
-
-    int utime_result =
-        uv_fs_utime(nullptr, &req, *dest, source_atime, source_mtime, nullptr);
-    if (is_uv_error(utime_result)) {
-      return env->ThrowUVException(utime_result, "utime", nullptr, *dest);
-    }
+    CopyUtimes(*src, *dest, env);
   }
 }
 
@@ -3488,37 +3475,9 @@ static void CpSyncCopyDir(const FunctionCallbackInfo<Value>& args) {
           return false;
         }
 
-        if (preserve_timestamps) {
-          uv_fs_t req;
-          auto cleanup = OnScopeLeave([&req]() { uv_fs_req_cleanup(&req); });
-
-          auto dir_entry_path_str = PathToString(dir_entry.path());
-          int result =
-              uv_fs_stat(nullptr, &req, dir_entry_path_str.c_str(), nullptr);
-          if (is_uv_error(result)) {
-            env->ThrowUVException(
-                result, "stat", nullptr, dir_entry_path_str.c_str());
-            return false;
-          }
-
-          const uv_stat_t* const s = static_cast<const uv_stat_t*>(req.ptr);
-          const double source_atime =
-              s->st_atim.tv_sec + s->st_atim.tv_nsec / 1e9;
-          const double source_mtime =
-              s->st_mtim.tv_sec + s->st_mtim.tv_nsec / 1e9;
-
-          auto dest_file_path_str = PathToString(dest_file_path);
-          int utime_result = uv_fs_utime(nullptr,
-                                         &req,
-                                         dest_file_path_str.c_str(),
-                                         source_atime,
-                                         source_mtime,
-                                         nullptr);
-          if (is_uv_error(utime_result)) {
-            env->ThrowUVException(
-                utime_result, "utime", nullptr, dest_file_path_str.c_str());
-            return false;
-          }
+        if (preserve_timestamps &&
+            !CopyUtimes(dir_entry.path(), dest_file_path, env)) {
+          return false;
         }
       }
     }
@@ -3832,11 +3791,7 @@ static void CreatePerIsolateProperties(IsolateData* isolate_data,
   SetMethod(isolate, target, "rmdir", RMDir);
   SetMethod(isolate, target, "mkdir", MKDir);
   SetMethod(isolate, target, "readdir", ReadDir);
-  SetFastMethod(isolate,
-                target,
-                "internalModuleStat",
-                InternalModuleStat,
-                &fast_internal_module_stat_);
+  SetMethod(isolate, target, "internalModuleStat", InternalModuleStat);
   SetMethod(isolate, target, "stat", Stat);
   SetMethod(isolate, target, "lstat", LStat);
   SetMethod(isolate, target, "fstat", FStat);
@@ -3961,8 +3916,6 @@ void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(MKDir);
   registry->Register(ReadDir);
   registry->Register(InternalModuleStat);
-  registry->Register(FastInternalModuleStat);
-  registry->Register(fast_internal_module_stat_.GetTypeInfo());
   registry->Register(Stat);
   registry->Register(LStat);
   registry->Register(FStat);

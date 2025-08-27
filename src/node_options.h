@@ -229,6 +229,7 @@ class EnvironmentOptions : public Options {
   bool watch_mode = false;
   bool watch_mode_report_to_parent = false;
   bool watch_mode_preserve_output = false;
+  std::string watch_mode_kill_signal = "SIGTERM";
   std::vector<std::string> watch_mode_paths;
 
   bool syntax_check_only = false;
@@ -251,7 +252,7 @@ class EnvironmentOptions : public Options {
 
   std::vector<std::string> preload_esm_modules;
 
-  bool experimental_strip_types = false;
+  bool experimental_strip_types = true;
   bool experimental_transform_types = false;
 
   std::vector<std::string> user_argv;

@@ -77,15 +77,11 @@ if (process.argv[2] === 'child') {
           env,
         };
         const child = fork(__filename, ['child'], opts);
-        child.on('message', async (message) => {
-          console.log('message', message);
-          if (message.type === 'nsolid') {
-            const agentId = message.id;
-            const { data, requestId } = await grpcServer.info(agentId);
-            checkInfoData(data.msg, data.metadata, requestId, agentId, nsolidConfig);
-            console.dir(data, { depth: null });
-            child.send('exit');
-          }
+        grpcServer.on('command', async ({ agentId }) => {
+          const { data, requestId } = await grpcServer.info(agentId);
+          checkInfoData(data.msg, data.metadata, requestId, agentId, nsolidConfig);
+          console.dir(data, { depth: null });
+          child.send('exit');
         });
 
         child.on('exit', (code, signal) => {

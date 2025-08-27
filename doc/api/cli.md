@@ -154,6 +154,12 @@ Error: Cannot load native addon because loading addons is disabled.
 
 <!-- YAML
 added: v20.0.0
+changes:
+  - version: v22.18.0
+    pr-url: https://github.com/nodejs/node/pull/58853
+    description: When spawning process with the permission model enabled.
+                 The flags are inherit to the child Node.js process through
+                 NODE_OPTIONS environment variable.
 -->
 
 > Stability: 1.1 - Active development
@@ -184,11 +190,15 @@ Error: Access to this API has been restricted
 }
 ```
 
-Unlike `child_process.spawn`, the `child_process.fork` API copies the execution
-arguments from the parent process. This means that if you start Node.js with the
-Permission Model enabled and include the `--allow-child-process` flag, calling
-`child_process.fork()` will propagate all Permission Model flags to the child
-process.
+The `child_process.fork()` API inherits the execution arguments from the
+parent process. This means that if Node.js is started with the Permission
+Model enabled and the `--allow-child-process` flag is set, any child process
+created using `child_process.fork()` will automatically receive all relevant
+Permission Model flags.
+
+This behavior also applies to `child_process.spawn()`, but in that case, the
+flags are propagated via the `NODE_OPTIONS` environment variable rather than
+directly through the process arguments.
 
 ### `--allow-fs-read`
 
@@ -777,7 +787,7 @@ Any query parameter or hash in the URL will be accessible via [`import.meta.url`
 
 ```bash
 node --entry-url 'file:///path/to/file.js?queryparams=work#and-hashes-too'
-node --entry-url --experimental-strip-types 'file.ts?query#hash'
+node --entry-url 'file.ts?query#hash'
 node --entry-url 'data:text/javascript,console.log("Hello")'
 ```
 
@@ -879,8 +889,8 @@ On Windows, using `cmd.exe` a single quote will not work correctly because it
 only recognizes double `"` for quoting. In Powershell or Git bash, both `'`
 and `"` are usable.
 
-It is possible to run code containing inline types by passing
-[`--experimental-strip-types`][].
+It is possible to run code containing inline types unless the
+[`--no-experimental-strip-types`][] flag is provided.
 
 ### `--experimental-async-context-frame`
 
@@ -1119,17 +1129,6 @@ added:
 
 Use this flag to enable [ShadowRealm][] support.
 
-### `--experimental-strip-types`
-
-<!-- YAML
-added: v22.6.0
--->
-
-> Stability: 1.1 - Active development
-
-Enable experimental type-stripping for TypeScript files.
-For more information, see the [TypeScript type-stripping][] documentation.
-
 ### `--experimental-test-coverage`
 
 <!-- YAML
@@ -1189,7 +1188,7 @@ added: v22.7.0
 > Stability: 1.1 - Active development
 
 Enables the transformation of TypeScript-only syntax into JavaScript code.
-Implies `--experimental-strip-types` and `--enable-source-maps`.
+Implies `--enable-source-maps`.
 
 ### `--experimental-vm-modules`
 
@@ -1493,13 +1492,23 @@ forked processes, or clustered processes.
 
 <!-- YAML
 added: v12.0.0
+changes:
+  - version: v22.18.0
+    pr-url: https://github.com/nodejs/node/pull/56350
+    description: Add support for `-typescript` values.
+  - version:
+    - v22.7.0
+    - v20.19.0
+    pr-url: https://github.com/nodejs/node/pull/53619
+    description: ESM syntax detection is enabled by default.
 -->
 
 This configures Node.js to interpret `--eval` or `STDIN` input as CommonJS or
 as an ES module. Valid values are `"commonjs"`, `"module"`, `"module-typescript"` and `"commonjs-typescript"`.
-The `"-typescript"` values are available only in combination with the flag `--experimental-strip-types`.
-The default is `"commonjs"` unless [`--experimental-default-type=module`][] is used.
-If `--experimental-strip-types` is enabled and `--input-type` is not provided,
+The `"-typescript"` values are not available with the flag `--no-experimental-strip-types`.
+The default is no value, or `"commonjs"` if `--no-experimental-detect-module` is passed.
+
+If `--input-type` is not provided,
 Node.js will try to detect the syntax with the following steps:
 
 1. Run the input as CommonJS.
@@ -1794,13 +1803,28 @@ changes:
 
 Disable the experimental [`node:sqlite`][] module.
 
+### `--no-experimental-strip-types`
+
+<!-- YAML
+added: v22.6.0
+changes:
+  - version: v22.18.0
+    pr-url: https://github.com/nodejs/node/pull/56350
+    description: Type stripping is enabled by default.
+-->
+
+> Stability: 1.1 - Active development
+
+Disable experimental type-stripping for TypeScript files.
+For more information, see the [TypeScript type-stripping][] documentation.
+
 ### `--no-experimental-websocket`
 
 <!-- YAML
 added: v22.0.0
 -->
 
-Disable exposition of [`WebSocket`][] on the global scope.
+Disable exposition of {WebSocket} on the global scope.
 
 ### `--no-extra-info-on-fatal-exception`
 
@@ -3066,6 +3090,19 @@ mode. If no file is provided, Node.js will exit with status code `9`.
 node --watch index.js
 ```
 
+### `--watch-kill-signal`
+
+<!-- YAML
+added:
+  - v22.18.0
+-->
+
+Customizes the signal sent to the process on watch mode restarts.
+
+```bash
+node --watch --watch-kill-signal SIGINT test.js
+```
+
 ### `--watch-path`
 
 <!-- YAML
@@ -3305,7 +3342,6 @@ one is included in the list below.
 * `--experimental-require-module`
 * `--experimental-shadow-realm`
 * `--experimental-specifier-resolution`
-* `--experimental-strip-types`
 * `--experimental-top-level-await`
 * `--experimental-transform-types`
 * `--experimental-vm-modules`
@@ -3344,6 +3380,7 @@ one is included in the list below.
 * `--no-experimental-global-webcrypto`
 * `--no-experimental-repl-await`
 * `--no-experimental-sqlite`
+* `--no-experimental-strip-types`
 * `--no-experimental-websocket`
 * `--no-extra-info-on-fatal-exception`
 * `--no-force-async-hooks-checks`
@@ -3416,6 +3453,7 @@ one is included in the list below.
 * `--use-openssl-ca`
 * `--use-system-ca`
 * `--v8-pool-size`
+* `--watch-kill-signal`
 * `--watch-path`
 * `--watch-preserve-output`
 * `--watch`
@@ -3878,10 +3916,10 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`--env-file`]: #--env-fileconfig
 [`--experimental-default-type=module`]: #--experimental-default-typetype
 [`--experimental-sea-config`]: single-executable-applications.md#generating-single-executable-preparation-blobs
-[`--experimental-strip-types`]: #--experimental-strip-types
 [`--experimental-wasm-modules`]: #--experimental-wasm-modules
 [`--heap-prof-dir`]: #--heap-prof-dir
 [`--import`]: #--importmodule
+[`--no-experimental-strip-types`]: #--no-experimental-strip-types
 [`--openssl-config`]: #--openssl-configfile
 [`--preserve-symlinks`]: #--preserve-symlinks
 [`--print`]: #-p---print-script
@@ -3897,7 +3935,6 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`NO_COLOR`]: https://no-color.org
 [`SlowBuffer`]: buffer.md#class-slowbuffer
 [`Web Storage`]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API
-[`WebSocket`]: https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
 [`YoungGenerationSizeFromSemiSpaceSize`]: https://chromium.googlesource.com/v8/v8.git/+/refs/tags/10.3.129/src/heap/heap.cc#328
 [`dns.lookup()`]: dns.md#dnslookuphostname-options-callback
 [`dns.setDefaultResultOrder()`]: dns.md#dnssetdefaultresultorderorder
