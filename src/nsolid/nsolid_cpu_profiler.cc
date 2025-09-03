@@ -214,6 +214,9 @@ void NSolidCpuProfiler::run_cpuprofiler_(SharedEnvInst envinst_sp) {
     return;
   }
 
+  // Set the sampling interval to 99Hz (~10ms)
+  profiler->SetSamplingInterval(10101);
+
   v8::Local<v8::String> profile_title = v8::String::NewFromUtf8(
     isolate,
     stor.title_.c_str(),
