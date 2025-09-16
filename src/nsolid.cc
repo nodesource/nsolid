@@ -211,6 +211,9 @@ int ProcessMetrics::Update() {
   char title_buf[512];
   size_t rss;
   int er;
+  // uv_os_get_passwd() may fail (e.g., nameless system user). Leave `user`
+  // empty and continue.
+  std::string user;
 
   uv_loadavg(load_avgs);
   er = uv_get_process_title(title_buf, sizeof(title_buf));
@@ -231,9 +234,10 @@ int ProcessMetrics::Update() {
   if (er)
     return er;
   er = uv_os_get_passwd(&pwd);
-  if (er)
-    return er;
-  auto free_passwd = OnScopeLeave([&]() { uv_os_free_passwd(&pwd); });
+  if (er == 0) {
+    auto free_passwd = OnScopeLeave([&]() { uv_os_free_passwd(&pwd); });
+    user = pwd.username;
+  }
 
   cpu_percent[0] = (cpu[0] - cpu_prev_[0]) * 100.0 * 1000.0 / elapsed;
   cpu_percent[1] = (cpu[1] - cpu_prev_[1]) * 100.0 * 1000.0 / elapsed;
@@ -241,7 +245,7 @@ int ProcessMetrics::Update() {
 
   uv_mutex_lock(&stor_lock_);
   stor_.title = title_buf;
-  stor_.user = pwd.username;
+  stor_.user = user;
   stor_.timestamp = duration_cast<milliseconds>(
     system_clock::now().time_since_epoch()).count();
   stor_.uptime =
