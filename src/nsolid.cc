@@ -211,14 +211,18 @@ int ProcessMetrics::Update() {
   char title_buf[512];
   size_t rss;
   int er;
+  // uv_get_process_title() may fail. Leave `title` empty and continue.
+  std::string title;
   // uv_os_get_passwd() may fail (e.g., nameless system user). Leave `user`
   // empty and continue.
   std::string user;
 
   uv_loadavg(load_avgs);
   er = uv_get_process_title(title_buf, sizeof(title_buf));
-  if (er)
-    return er;
+  if (er == 0) {
+    title = title_buf;
+  }
+
   er = uv_resident_set_memory(&rss);
   if (er)
     return er;
@@ -244,7 +248,7 @@ int ProcessMetrics::Update() {
   cpu_percent[2] = (cpu[2] - cpu_prev_[2]) * 100.0 * 1000.0 / elapsed;
 
   uv_mutex_lock(&stor_lock_);
-  stor_.title = title_buf;
+  stor_.title = title;
   stor_.user = user;
   stor_.timestamp = duration_cast<milliseconds>(
     system_clock::now().time_since_epoch()).count();
