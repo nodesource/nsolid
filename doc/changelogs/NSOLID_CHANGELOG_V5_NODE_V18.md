@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-09-17, Version 18.20.8-nsolid-v5.7.2 'Hydrogen'
+
+### Commits
+
+* \[[`7ffa141691`](https://github.com/nsolid/node/commit/7ffa141691)] - **src**: allow missing process title in metrics update (Santiago Gimeno) [nodesource/nsolid#364](https://github.com/nodesource/nsolid/pull/364)
+* \[[`c997c60fb6`](https://github.com/nsolid/node/commit/c997c60fb6)] - **src**: handle nameless user @ ProcessMetrics::Update (Santiago Gimeno) [nodesource/nsolid#364](https://github.com/nodesource/nsolid/pull/364)
+
 ## 2025-05-07, Version 18.20.8-nsolid-v5.7.1 'Hydrogen'
 
 ### Commits
