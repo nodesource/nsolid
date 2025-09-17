@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-09-17, Version 20.19.4-nsolid-v6.0.1 'Iron'
+
+### Commits
+
+* \[[`b8cce4f42e`](https://github.com/nodesource/nsolid/commit/b8cce4f42e)] - **src**: allow missing process title in metrics update (Santiago Gimeno) [#364](https://github.com/nodesource/nsolid/pull/364)
+* \[[`71eff2f67c`](https://github.com/nodesource/nsolid/commit/71eff2f67c)] - **src**: handle nameless user @ ProcessMetrics::Update (Santiago Gimeno) [#364](https://github.com/nodesource/nsolid/pull/364)
+
 ## 2025-08-27, Version 20.19.4-nsolid-v6.0.0 'Iron'
 
 ### Commits
