@@ -76,7 +76,7 @@ const tests = [];
 
 tests.push({
   name: 'should work for both cjs and esm scripts and fail for non-existent scripts on the main thread',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const importPath = path.join(fixturesDir, 'nsolid-source-code', 'index.mjs');
       const esmPath = path.join(fixturesDir, 'nsolid-source-code', 'esm.mjs');
@@ -168,12 +168,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -188,7 +183,7 @@ tests.push({
 
 tests.push({
   name: 'should work for both cjs and esm scripts and fail for non-existent scripts on a worker thread',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const importPath = path.join(fixturesDir, 'nsolid-source-code', 'index.mjs');
       const esmPath = path.join(fixturesDir, 'nsolid-source-code', 'esm.mjs');
@@ -263,12 +258,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -285,7 +275,7 @@ tests.push({
 
 tests.push({
   name: 'should also work for imported data urls',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const importPath = path.join(fixturesDir, 'nsolid-source-code', 'data.mjs');
       const importPathUrl = pathToFileURL(importPath).toString();
@@ -321,12 +311,7 @@ tests.push({
           resolve();
         }));
 
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -339,8 +324,30 @@ tests.push({
   },
 });
 
+const testConfigs = [
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_GRPC: `localhost:${port}`,
+      };
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+      };
+    },
+  },
+];
 
-for (const { name, test } of tests) {
-  console.log(`[source code] ${name}`);
-  await test();
+for (const testConfig of testConfigs) {
+  for (const { name, test } of tests) {
+    console.log(`source code ${name}`);
+    await test(testConfig.getEnv);
+  }
 }

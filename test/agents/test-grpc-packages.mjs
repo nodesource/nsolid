@@ -345,7 +345,6 @@ const expectedPackageNames = [
 ];
 
 function checkPackagesData(msg, metadata, requestId, agentId) {
-  console.dir(msg, { depth: null });
   const packages = msg;
   assert.strictEqual(packages.common.requestId, requestId);
   assert.strictEqual(packages.common.command, 'packages');
@@ -416,6 +415,15 @@ const testConfigs = [
         NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
         NSOLID_GRPC_INSECURE: 1,
         NSOLID_GRPC: `localhost:${port}`,
+      };
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
       };
     },
   },

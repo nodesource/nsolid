@@ -66,16 +66,11 @@ const tests = [];
 
 tests.push({
   name: 'should provide current config correctly',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
@@ -118,20 +113,16 @@ const newConfigs = [
 
 tests.push({
   name: 'should return new config if valid config is provided',
-  test: async () => {
+  test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
-        const env = {
-          NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-          NSOLID_GRPC_INSECURE: 1,
-          NSOLID_GRPC: `localhost:${port}`,
-        };
-
+        const env = getEnv(port);
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
           env,
         };
+
         const client = new TestClient([], opts);
         const agentId = await client.id();
 
@@ -176,7 +167,30 @@ tests.push({
   },
 });
 
-for (const { name, test } of tests) {
-  console.log(`[reconfigure] ${name}`);
-  await test();
+const testConfigs = [
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_GRPC: `localhost:${port}`,
+      };
+    },
+  },
+  {
+    getEnv: (port) => {
+      return {
+        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
+        NSOLID_GRPC_INSECURE: 1,
+        NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
+      };
+    },
+  },
+];
+
+for (const testConfig of testConfigs) {
+  for (const { name, test } of tests) {
+    console.log(`[reconfigure] ${name}`);
+    await test(testConfig.getEnv);
+  }
 }
