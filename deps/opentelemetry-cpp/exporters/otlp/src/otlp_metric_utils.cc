@@ -11,6 +11,7 @@
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "opentelemetry/exporters/otlp/otlp_populate_attribute_utils.h"
 #include "opentelemetry/exporters/otlp/otlp_preferred_temporality.h"
+#include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/nostd/variant.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/metrics/data/circular_buffer.h"
@@ -112,7 +113,7 @@ void OtlpMetricUtils::ConvertSumMetric(const metric_sdk::MetricData &metric_data
     for (auto &kv_attr : point_data_with_attributes.attributes)
     {
       OtlpPopulateAttributeUtils::PopulateAttribute(proto_sum_point_data->add_attributes(),
-                                                    kv_attr.first, kv_attr.second);
+                                                    kv_attr.first, kv_attr.second, false);
     }
   }
 }
@@ -184,7 +185,7 @@ void OtlpMetricUtils::ConvertHistogramMetric(
     for (auto &kv_attr : point_data_with_attributes.attributes)
     {
       OtlpPopulateAttributeUtils::PopulateAttribute(proto_histogram_point_data->add_attributes(),
-                                                    kv_attr.first, kv_attr.second);
+                                                    kv_attr.first, kv_attr.second, false);
     }
   }
 }
@@ -248,7 +249,7 @@ void OtlpMetricUtils::ConvertExponentialHistogramMetric(
     for (auto &kv_attr : point_data_with_attributes.attributes)
     {
       OtlpPopulateAttributeUtils::PopulateAttribute(proto_histogram_point_data->add_attributes(),
-                                                    kv_attr.first, kv_attr.second);
+                                                    kv_attr.first, kv_attr.second, false);
     }
   }
 }
@@ -278,7 +279,7 @@ void OtlpMetricUtils::ConvertGaugeMetric(const opentelemetry::sdk::metrics::Metr
     for (auto &kv_attr : point_data_with_attributes.attributes)
     {
       OtlpPopulateAttributeUtils::PopulateAttribute(proto_gauge_point_data->add_attributes(),
-                                                    kv_attr.first, kv_attr.second);
+                                                    kv_attr.first, kv_attr.second, false);
     }
   }
 }
@@ -328,7 +329,7 @@ void OtlpMetricUtils::ConvertSummaryMetric(const metric_sdk::MetricData &metric_
     for (auto &kv_attr : point_data_with_attributes.attributes)
     {
       OtlpPopulateAttributeUtils::PopulateAttribute(proto_summary_point_data->add_attributes(),
-                                                    kv_attr.first, kv_attr.second);
+                                                    kv_attr.first, kv_attr.second, false);
     }
   }
 }
