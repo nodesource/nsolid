@@ -11,7 +11,8 @@
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
-#include "opentelemetry/sdk/resource/semantic_conventions.h"
+#include "opentelemetry/semconv/incubating/process_attributes.h"
+#include "opentelemetry/semconv/service_attributes.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter.h"
@@ -21,7 +22,6 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
-#include "opentelemetry/trace/semantic_conventions.h"
 
 using std::chrono::system_clock;
 using std::chrono::time_point;
@@ -30,13 +30,14 @@ using google::protobuf::ArenaOptions;
 using json = nlohmann::json;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
 using opentelemetry::nostd::span;
+using opentelemetry::semconv::process::kProcessOwner;
+using opentelemetry::semconv::service::kServiceName;
 using LogsRecordable = opentelemetry::sdk::logs::Recordable;
 using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
-using opentelemetry::sdk::resource::SemanticConventions::kServiceName;
 using opentelemetry::sdk::trace::Recordable;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClient;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientFactory;
@@ -51,7 +52,6 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
-using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
 using nsolid_grpc_async =
   grpcagent::NSolidService::StubInterface::async_interface;
 
@@ -815,7 +815,7 @@ int GrpcAgent::start_heap_snapshot_from_js(
     const ProfileCollector::ProfileQStor& profile_data,
     WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr) {
+  if (agent == nullptr || agent->cont_profile_queue_ == nullptr) {
     return;
   }
 
@@ -1034,7 +1034,7 @@ int GrpcAgent::config(const json& config) {
       auto insecure_str =
         per_process::system_environment->Get(kNSOLID_GRPC_INSECURE);
       // Only parse the insecure flag in non SaaS mode.
-      if (!saas_ && insecure_str.has_value()) {
+      if (insecure_str.has_value() && (!saas_ || saas_->testing)) {
         // insecure = std::stoull(insecure_str.value());
         insecure = std::stoi(insecure_str.value());
       }
@@ -1046,6 +1046,7 @@ int GrpcAgent::config(const json& config) {
             endpoint.c_str(), static_cast<unsigned>(insecure));
 
       OtlpGrpcClientOptions opts;
+      opts.compression = "gzip";
       opts.endpoint = endpoint;
       opts.metadata = {{"nsolid-agent-id", agent_id_},
                        {"nsolid-saas", saas()}};
@@ -1071,6 +1072,7 @@ int GrpcAgent::config(const json& config) {
 
       {
         OtlpGrpcExporterOptions options;
+        options.compression = "gzip";
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
@@ -1087,6 +1089,7 @@ int GrpcAgent::config(const json& config) {
       }
       {
         OtlpGrpcMetricExporterOptions options;
+        options.compression = "gzip";
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
@@ -1104,6 +1107,7 @@ int GrpcAgent::config(const json& config) {
       }
       {
         OtlpGrpcLogRecordExporterOptions options;
+        options.compression = "gzip";
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
@@ -1662,11 +1666,28 @@ void GrpcAgent::parse_saas_token(const std::string& token) {
     return;
   }
 
+  std::string endpoint;
+  bool is_testing = false;
   bool is_staging = token.find("staging") != std::string::npos;
-  std::string endpoint = is_staging ?
-    console_id + ".grpc.staging.nodesource.io:443" :
-    console_id + ".grpc.nodesource.io:443";
-  saas_ = std::make_unique<SaaSInfo>(SaaSInfo{token, std::move(endpoint)});
+  if (is_staging) {
+    endpoint = console_id + ".grpc.staging.nodesource.io:443";
+  } else {
+    is_testing = token.find("testing") != std::string::npos;
+    if (is_testing) {
+      // For testing, set endpoint to the string after the last dot in the token
+      size_t last_dot = token.rfind('.');
+      if (last_dot != std::string::npos && last_dot + 1 < token.size()) {
+        endpoint = token.substr(last_dot + 1);
+      } else {
+        endpoint = "localhost:50051";  // fallback if no dot is found
+      }
+    } else {
+      endpoint = console_id + ".grpc.nodesource.io:443";
+    }
+  }
+
+  saas_ = std::make_unique<SaaSInfo>(
+      SaaSInfo{token, std::move(endpoint), is_testing});
 }
 
 bool GrpcAgent::pending_profiles() const {

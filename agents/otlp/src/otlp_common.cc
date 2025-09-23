@@ -5,12 +5,13 @@
 #include "asserts-cpp/asserts.h"
 #include "env-inl.h"
 #include "nlohmann/json.hpp"
+#include "opentelemetry/semconv/incubating/process_attributes.h"
+#include "opentelemetry/semconv/incubating/service_attributes.h"
+#include "opentelemetry/semconv/incubating/thread_attributes.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/logs/recordable.h"
-#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/trace/propagation/detail/hex.h"
-#include "opentelemetry/trace/semantic_conventions.h"
 
 using nlohmann::json;
 
@@ -37,9 +38,6 @@ using opentelemetry::sdk::metrics::SumPointData;
 using opentelemetry::sdk::metrics::ValueType;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
-using opentelemetry::sdk::resource::SemanticConventions::kServiceName;
-using opentelemetry::sdk::resource::SemanticConventions::kServiceInstanceId;
-using opentelemetry::sdk::resource::SemanticConventions::kServiceVersion;
 using opentelemetry::sdk::trace::Recordable;
 using opentelemetry::trace::SpanContext;
 using opentelemetry::trace::SpanId;
@@ -47,9 +45,12 @@ using opentelemetry::trace::SpanKind;
 using opentelemetry::trace::TraceFlags;
 using opentelemetry::trace::TraceId;
 using opentelemetry::trace::propagation::detail::HexToBinary;
-using opentelemetry::v1::trace::SemanticConventions::kProcessOwner;
-using opentelemetry::v1::trace::SemanticConventions::kThreadId;
-using opentelemetry::v1::trace::SemanticConventions::kThreadName;
+using opentelemetry::semconv::process::kProcessOwner;
+using opentelemetry::semconv::service::kServiceName;
+using opentelemetry::semconv::service::kServiceInstanceId;
+using opentelemetry::semconv::service::kServiceVersion;
+using opentelemetry::semconv::thread::kThreadId;
+using opentelemetry::semconv::thread::kThreadName;
 
 namespace node {
 namespace nsolid {
