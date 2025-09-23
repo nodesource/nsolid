@@ -145,9 +145,9 @@ ABSL_NAMESPACE_END
 #ifdef __cplusplus
 extern "C"
 #endif  // __cplusplus
-
+/*
     bool
     AbslInternalGetFileMappingHint(const void** start, const void** end,
                                    uint64_t* offset, const char** filename);
-
+*/
 #endif  // ABSL_DEBUGGING_INTERNAL_SYMBOLIZE_H_
