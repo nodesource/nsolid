@@ -1,6 +1,7 @@
+'use strict';
 // This tests heap snapshot integration of worker.
 
-require('../common');
+const common = require('../common');
 const { validateByRetainingPath } = require('../common/heap');
 const { Worker } = require('worker_threads');
 const assert = require('assert');

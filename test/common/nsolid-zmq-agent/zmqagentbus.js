@@ -410,15 +410,14 @@ class ZmqAgentBus extends EventEmitter {
 
   /**
    * Send a command to an N|Solid Agent over ZeroMQ.
-   * @params {object} message
-   * @params {string} message.id - The ID of the agent.
-   * @params {string} message.command - The command type.
-   * @params {string} message.requestId - The request ID to use to associate
-   * responses.
-   * @params {object} [message.args] - Optional key-value pairs to send as
-   * arguments to the command.
-   * @params {object} [message.filter] - Optional key-value pairs for the
-   * agent to filter on to determine whether or not to process the message.
+   * @param {object} message
+   * @param {string} message.id - The ID of the agent.
+   * @param {string} message.command - The command type.
+   * @param {string} message.requestId - The request ID to use to associate responses.
+   * @param {object} [message.args] - Optional key-value pairs to send as arguments to the command.
+   * @param {object} [message.filter] - Optional key-value pairs for the agent to filter on to determine
+   *   whether or not to process the message.
+   * @returns {string} The request ID of the message.
    */
   _send(message) {
     const defaults = { requestId: randomUUID(), version: 4 };
@@ -495,6 +494,7 @@ class ZmqAgentBus extends EventEmitter {
    * This method can only be used with messages that respond with a single
    * data response, so SHOULD NOT be used with broadcast commands or commands
    * that send more than a single data response.
+   * @returns {string} The request ID of the message.
    */
   _sendCB(message, cb) {
     const requestId = this._send(message);

@@ -2480,7 +2480,8 @@ void BindingData::FastGetSpanId(v8::Local<v8::Value> receiver,
 
   DCHECK_EQ(output->Length(), span_id.size());
 
-  uint8_t* dst_data = static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
+  uint8_t* dst_data =
+    static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
 
   // Copy binary data directly to the output buffer
   memcpy(dst_data, span_id.data(), span_id.size());
@@ -2515,7 +2516,8 @@ void BindingData::FastGetTraceId(v8::Local<v8::Value> receiver,
 
   DCHECK_EQ(output->Length(), trace_id.size());
 
-  uint8_t* dst_data = static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
+  uint8_t* dst_data =
+    static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
 
   // Copy binary data directly to the output buffer
   memcpy(dst_data, trace_id.data(), trace_id.size());
