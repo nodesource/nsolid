@@ -22,8 +22,7 @@ using PointType       = opentelemetry::nostd::variant<SumPointData,
                                                       HistogramPointData,
                                                       Base2ExponentialHistogramPointData,
                                                       LastValuePointData,
-                                                      DropPointData,
-                                                      SummaryPointData>;
+                                                      DropPointData>;
 
 struct PointDataAttributes
 {
