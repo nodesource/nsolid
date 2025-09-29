@@ -606,6 +606,10 @@ void EnvInst::uv_metrics_cb_(nsuv::ns_prepare* handle, EnvInst* envinst) {
   // Use the previous values to calculate the values for this loop iteration.
   loop_duration = metrics_cb_time - envinst->prev_metrics_cb_time_;
   loop_idle_time = idle_time - envinst->prev_loop_idle_time_;
+  // Clamp loop_idle_time to avoid unsigned underflow in loop_proc_time when
+  // clock skew causes idle_time to be slightly larger than loop_duration.
+  if (loop_idle_time > loop_duration)
+    loop_idle_time = loop_duration;
   loop_proc_time = loop_duration - loop_idle_time;
   events_procd = metrics->events - envinst->prev_events_processed_;
   events_waiting = metrics->events_waiting - envinst->prev_events_waiting_;
@@ -2157,6 +2161,12 @@ void EnvInst::get_event_loop_stats_(EnvInst* envinst,
   uint64_t loop_idle_time = uv_metrics_idle_time(envinst->event_loop());
   uint64_t loop_diff = stor->current_hrtime_ - stor->prev_call_time_;
   uint64_t idle_diff = loop_idle_time - stor->prev_idle_time_;
+  // On some platforms the clocks backing loop_diff and idle_diff can differ by
+  // a few hundred nanoseconds when the loop is nearly 100% idle, making
+  // idle_diff slightly larger than loop_diff. Clamp to avoid unsigned
+  // underflow in proc_diff and bogus utilization values.
+  if (idle_diff > loop_diff)
+    idle_diff = loop_diff;
   uint64_t proc_diff = loop_diff - idle_diff;
   uint64_t count_diff = metrics->loop_count - stor->loop_iterations;
   auto entry_exit = envinst->provider_times();
