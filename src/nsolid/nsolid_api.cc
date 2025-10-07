@@ -1157,19 +1157,28 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     }
 
     if (old.empty() ||
-        utils::find_any_fields_in_diff(diff, { "/contCpuProfile",
+        utils::find_any_fields_in_diff(diff, { "/assetsEnabled",
+                                               "/contCpuProfile",
                                                "/contCpuProfileInterval" })) {
+      bool assetsEnabled = true;
       bool contCpuProfile = false;
       uint64_t contCpuProfileInterval = 60000;  // Default: 1 minute
 
-      it = curr.find("contCpuProfile");
+      it = curr.find("assetsEnabled");
       if (it != curr.end() && !it->is_null()) {
-        contCpuProfile = it->get<bool>();
+        assetsEnabled = it->get<bool>();
       }
 
-      it = curr.find("contCpuProfileInterval");
-      if (it != curr.end() && !it->is_null()) {
-        contCpuProfileInterval = it->get<uint64_t>();
+      if (assetsEnabled) {
+        it = curr.find("contCpuProfile");
+        if (it != curr.end() && !it->is_null()) {
+          contCpuProfile = it->get<bool>();
+        }
+
+        it = curr.find("contCpuProfileInterval");
+        if (it != curr.end() && !it->is_null()) {
+          contCpuProfileInterval = it->get<uint64_t>();
+        }
       }
 
       // Update the continuous profiler with the new configuration

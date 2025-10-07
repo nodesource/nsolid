@@ -96,8 +96,6 @@ setTimeout(() => {
     nsolid.profileEnd(common.mustCall((err) => {
       assert.notStrictEqual(err.code, 0);
       assert.strictEqual(err.message, 'CPU profile could not be stopped');
-      // The same with callback versions
-      // profile() should return an error if ongoing profile
       nsolid.profile(common.mustSucceed(() => {
         nsolid.profile(common.mustCall((err) => {
           assert.notStrictEqual(err.code, 0);
@@ -106,12 +104,79 @@ setTimeout(() => {
             // profileEnd() should return an error if no ongoing profile
             nsolid.profileEnd(common.mustCall((err) => {
               assert.notStrictEqual(err.code, 0);
-              assert.strictEqual(err.message,
-                                 'CPU profile could not be stopped');
+              assert.strictEqual(
+                err.message,
+                'CPU profile could not be stopped'
+              );
+              runAssetsToggleTests();
             }));
           }));
         }));
       }));
     }));
-  }, 100);
-}, 100);
+  }, common.platformTimeout(100));
+}, common.platformTimeout(100));
+
+function runAssetsToggleTests() {
+  // Disable assets through config update
+  nsolid.start({
+    command: 'localhost:9001',
+    data: 'localhost:9002',
+    assetsEnabled: false,
+  });
+
+  setTimeout(() => {
+    assert.throws(
+      () => {
+        nsolid.profile();
+      },
+      {
+        message: 'CPU profile could not be started'
+      }
+    );
+
+    nsolid.profile(common.mustCall((err) => {
+      assert.notStrictEqual(err.code, 0);
+      assert.strictEqual(err.message, 'CPU profile could not be started');
+    }));
+
+    assert.throws(
+      () => {
+        nsolid.profileEnd();
+      },
+      {
+        message: 'CPU profile could not be stopped'
+      }
+    );
+
+    // Re-enable through helper
+    nsolid.enableAssets();
+    setTimeout(() => {
+      // Start profile and wait for it to complete before toggling assets
+      nsolid.profile(common.mustSucceed(() => {
+        nsolid.profileEnd(common.mustSucceed(() => {
+          // Only disable assets after profile completes
+          nsolid.disableAssets();
+          setTimeout(() => {
+            assert.throws(
+              () => {
+                nsolid.profile();
+              },
+              {
+                message: 'CPU profile could not be started'
+              }
+            );
+
+            // Only re-enable after error is confirmed
+            nsolid.enableAssets();
+            setTimeout(() => {
+              nsolid.profile(common.mustSucceed(() => {
+                nsolid.profileEnd(common.mustSucceed());
+              }));
+            }, common.platformTimeout(100));
+          }, common.platformTimeout(100));
+        }));
+      }));
+    }, common.platformTimeout(100));
+  }, common.platformTimeout(100));
+}

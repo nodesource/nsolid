@@ -61,7 +61,12 @@ function execCustomTrace() {
   setTimeout(() => {
     const api = require(require.resolve('@opentelemetry/api',
                                         { paths: [fixturesDir] }));
-    nsolid.otel.register(api);
+    try {
+      nsolid.otel.register(api);
+    } catch (err) {
+      if (err.code !== 'ERR_NSOLID_OTEL_API_ALREADY_REGISTERED')
+        throw err;
+    }
     const tracer = api.trace.getTracer('test');
     const span = tracer.startSpan('initial_name', { attributes: { a: 1, b: 2 },
                                                     kind: api.SpanKind.CLIENT });
@@ -117,6 +122,18 @@ if (isMainThread) {
       }
 
       process.send({ type: 'config', config: nsolid.config });
+    } else if (msg.type === 'enable_assets') {
+      nsolid.enableAssets();
+      process.send({ type: 'enable_assets' });
+    } else if (msg.type === 'disable_assets') {
+      nsolid.disableAssets();
+      process.send({ type: 'disable_assets' });
+    } else if (msg.type === 'enable_traces') {
+      nsolid.enableTraces();
+      process.send({ type: 'enable_traces' });
+    } else if (msg.type === 'disable_traces') {
+      nsolid.disableTraces();
+      process.send({ type: 'disable_traces' });
     } else if (msg.type === 'heap_profile') {
       nsolid.heapProfile(msg.duration);
     } else if (msg.type === 'heap_sampling') {

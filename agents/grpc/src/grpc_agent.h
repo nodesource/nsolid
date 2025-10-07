@@ -348,6 +348,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
     log_exporter_;
 
   // Profiling
+  std::atomic<bool> assets_enabled_;
+  std::atomic<bool> cont_cpu_profile_enabled_;
   nsuv::ns_mutex profile_state_lock_;
   ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;

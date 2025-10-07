@@ -2,6 +2,7 @@
 import { mustCall, mustCallAtLeast, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { threadId } from 'node:worker_threads';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
   checkExitData,
   GRPCServer,
@@ -201,20 +202,49 @@ tests.push({
         const child = new TestClient(['-t', 'http'], opts);
         const agentId = await child.id();
         const resourceSpans = [];
+        let phase = 'initial';
         grpcServer.on('spans', mustCallAtLeast(async (spans) => {
+          if (phase === 'done')
+            return;
+
           mergeResourceSpans(spans, resourceSpans);
-          if (resourceSpans.length === 1 &&
+
+          if (phase === 'initial' &&
+              resourceSpans.length === 1 &&
               resourceSpans[0].scopeSpans.length === 1 &&
               resourceSpans[0].scopeSpans[0].spans.length === 2) {
-            await child.shutdown(0);
             console.dir(resourceSpans, { depth: null });
             const resourceSpan = resourceSpans[0];
             const scopeSpans = resourceSpan.scopeSpans[0].spans;
             checkResource(resourceSpan.resource);
             checkHttpSpans(scopeSpans, threadId, 0);
+
+            resourceSpans.length = 0;
+            phase = 'disabled';
+
+            await child.disableTraces();
+            await child.trace('http');
+            await delay(200);
+            assert.strictEqual(resourceSpans.length, 0);
+
+            phase = 'reenabled';
+            await child.enableTraces();
+            await child.trace('http');
+          } else if (phase === 'reenabled' &&
+                     resourceSpans.length === 1 &&
+                     resourceSpans[0].scopeSpans.length === 1 &&
+                     resourceSpans[0].scopeSpans[0].spans.length === 2) {
+            console.dir(resourceSpans, { depth: null });
+            const resourceSpan = resourceSpans[0];
+            const scopeSpans = resourceSpan.scopeSpans[0].spans;
+            checkResource(resourceSpan.resource);
+            checkHttpSpans(scopeSpans, threadId, 0);
+
+            phase = 'done';
+            await child.shutdown(0);
             resolve();
           }
-        }, 1));
+        }, 2));
       }));
     });
   },
@@ -240,20 +270,49 @@ tests.push({
         const child = new TestClient(['-t', 'custom'], opts);
         const agentId = await child.id();
         const resourceSpans = [];
+        let phase = 'initial';
         grpcServer.on('spans', mustCallAtLeast(async (spans) => {
+          if (phase === 'done')
+            return;
+
           mergeResourceSpans(spans, resourceSpans);
-          if (resourceSpans.length === 1 &&
+
+          if (phase === 'initial' &&
+              resourceSpans.length === 1 &&
               resourceSpans[0].scopeSpans.length === 1 &&
               resourceSpans[0].scopeSpans[0].spans.length === 1) {
-            await child.shutdown(0);
             console.dir(resourceSpans, { depth: null });
             const resourceSpan = resourceSpans[0];
             const scopeSpans = resourceSpan.scopeSpans[0].spans;
             checkResource(resourceSpan.resource);
             checkCustomSpans(scopeSpans, threadId, 0);
+
+            resourceSpans.length = 0;
+            phase = 'disabled';
+
+            await child.disableTraces();
+            await child.trace('custom');
+            await delay(200);
+            assert.strictEqual(resourceSpans.length, 0);
+
+            phase = 'reenabled';
+            await child.enableTraces();
+            await child.trace('custom');
+          } else if (phase === 'reenabled' &&
+                     resourceSpans.length === 1 &&
+                     resourceSpans[0].scopeSpans.length === 1 &&
+                     resourceSpans[0].scopeSpans[0].spans.length === 1) {
+            console.dir(resourceSpans, { depth: null });
+            const resourceSpan = resourceSpans[0];
+            const scopeSpans = resourceSpan.scopeSpans[0].spans;
+            checkResource(resourceSpan.resource);
+            checkCustomSpans(scopeSpans, threadId, 0);
+
+            phase = 'done';
+            await child.shutdown(0);
             resolve();
           }
-        }, 1));
+        }, 2));
       }));
     });
   },

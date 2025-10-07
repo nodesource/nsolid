@@ -184,6 +184,54 @@ class TestClient {
     });
   }
 
+  async enableTraces() {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'enableTraces' }, () => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  async disableTraces() {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'disableTraces' }, () => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  async enableAssets() {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'enableAssets' }, () => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  async disableAssets() {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send({ type: 'disableAssets' }, () => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+
   async workers() {
     return new Promise((resolve) => {
       if (this.#child) {

@@ -375,6 +375,10 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   if (it != config.end()) {
     body->set_contcpuprofile(*it);
   }
+  it = config.find("assetsEnabled");
+  if (it != config.end()) {
+    body->set_assetsenabled(*it);
+  }
 }
 
 void PopulateStartupTimesEvent(grpcagent::StartupTimesEvent* st_events,
@@ -423,6 +427,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         agent_id_(GetAgentId()),
                         auth_retries_(0),
                         unauthorized_(false),
+                        assets_enabled_(true),
+                        cont_cpu_profile_enabled_(false),
                         profile_on_exit_(false) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
@@ -1167,12 +1173,19 @@ int GrpcAgent::config(const json& config) {
     ret = setup_metrics_timer(period);
   }
 
-    // uint64_t period = NSOLID_SPANS_FLUSH_INTERVAL;
-    // std::string spans_flush_interval;
-    // if (per_process::system_environment->
-    //     Get(kNSOLID_SPANS_FLUSH_INTERVAL).To(&spans_flush_interval)) {
-    //   period = std::stoull(spans_flush_interval);
-    // }
+  {
+    auto it = config_.find("assetsEnabled");
+    if (it != config_.end() && it->is_boolean()) {
+      assets_enabled_.store(*it, std::memory_order_release);
+    }
+  }
+
+  {
+    auto it = config_.find("contCpuProfile");
+    if (it != config_.end() && it->is_boolean()) {
+      cont_cpu_profile_enabled_.store(*it, std::memory_order_release);
+    }
+  }
 
   return ret;
 }
@@ -1728,6 +1741,10 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
       out["contCpuProfile"] = body.contcpuprofile();
   }
 
+  if (body.has_assetsenabled()) {
+      out["assetsEnabled"] = body.assetsenabled();
+  }
+
   DebugJSON("Reconfigure out: \n%s\n", out);
 
   UpdateConfig(out.dump());
@@ -2065,18 +2082,21 @@ ErrorType GrpcAgent::do_start_prof_init(
     const grpcagent::CommandRequest& req,
     const ProfileType& type,
     ProfileOptions& options) {
+
+  if (!assets_enabled_.load(std::memory_order_acquire)) {
+    return ErrorType::EAssetsDisabled;
+  }
+
   const grpcagent::ProfileArgs& args = req.args().profile();
   uint64_t thread_id = args.thread_id();
   uint64_t duration = args.duration();
   StartProfiling start_profiling = nullptr;
 
   // Check if continuous profiling is enabled for this profile type
-  if (type == ProfileType::kCpu) {
-    auto it = config_.find("contCpuProfile");
-    if (it != config_.end() && it->get<bool>() == true) {
-      // Continuous CPU profiling is enabled, don't allow manual CPU profiles
-      return ErrorType::EInProgressError;
-    }
+  if (type == ProfileType::kCpu &&
+      cont_cpu_profile_enabled_.load(std::memory_order_acquire)) {
+    // Continuous CPU profiling is enabled, don't allow manual CPU profiles
+    return ErrorType::EInProgressError;
   }
 
   switch (type) {

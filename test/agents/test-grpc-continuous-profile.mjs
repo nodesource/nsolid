@@ -1,6 +1,7 @@
 // Flags: --expose-internals
 import { mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { setTimeout } from 'node:timers/promises';
 import validators from 'internal/validators';
 import {
   GRPCServer,
@@ -76,6 +77,7 @@ function checkProfileError(profile, metadata, requestId, agentId, code, msg) {
   assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
 }
 
+
 const tests = [];
 
 tests.push({
@@ -117,6 +119,132 @@ tests.push({
 });
 
 tests.push({
+  name: 'should not emit continuous profiles when assets are disabled via env',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = {
+          ...getEnv(port),
+          NSOLID_ASSETS_ENABLED: '0',
+        };
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+
+        let profileCount = 0;
+        grpcServer.on('profile', (data) => {
+          assert.strictEqual(data.metadata['nsolid-agent-id'][0], agentId);
+          profileCount++;
+        });
+
+        // Wait slightly longer than two intervals (100ms) to see if any profile arrives.
+        await setTimeout(300);
+        assert.strictEqual(profileCount, 0);
+
+        await child.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should stop continuous profiling after disabling assets via start config',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = getEnv(port);
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+
+        const child = new TestClient([], opts);
+        await child.id();
+        await child.config({
+          contCpuProfile: true,
+          contCpuProfileInterval: 100,
+        });
+
+        let profileCount = 0;
+        grpcServer.on('profile', () => {
+          profileCount++;
+        });
+
+        await setTimeout(250);
+        assert.ok(profileCount >= 1);
+
+        await child.config({ assetsEnabled: false });
+        const countAfterDisable = profileCount;
+
+        await setTimeout(250);
+        assert.ok(profileCount - countAfterDisable <= 1);
+
+        await child.config({ assetsEnabled: true });
+        await setTimeout(250);
+        assert.ok(profileCount > countAfterDisable);
+
+        await child.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should stop continuous profiling after disableAssets()/enableAssets()',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = getEnv(port);
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+
+        const child = new TestClient([], opts);
+        await child.id();
+
+        let profileCount = 0;
+        grpcServer.on('profile', () => {
+          profileCount++;
+        });
+
+        await setTimeout(250);
+        assert.ok(profileCount >= 1);
+
+        await child.disableAssets();
+        const countAfterDisable = profileCount;
+
+        await setTimeout(250);
+        assert.ok(profileCount - countAfterDisable <= 1);
+
+        await child.enableAssets();
+        await setTimeout(250);
+        assert.ok(profileCount > countAfterDisable);
+
+        const currentConfig = await child.config();
+        assert.strictEqual(currentConfig.assetsEnabled, true);
+
+        await child.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
+tests.push({
   name: 'should also work with worker threads',
   test: async (getEnv) => {
     return new Promise((resolve) => {
@@ -124,6 +252,19 @@ tests.push({
       grpcServer.start(mustSucceed(async (port) => {
         let timesMainThread = 0;
         let timesWorker = 0;
+        const env = getEnv(port);
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+
+        const startTime = process.hrtime();
+        const child = new TestClient([ '-w', 1 ], opts);
+        const agentId = await child.id();
+        const workers = await child.workers();
+        const wid = workers[0];
+
         grpcServer.on('profile', async (data) => {
           if (data.msg.threadId === '0') {
             timesMainThread++;
@@ -147,18 +288,6 @@ tests.push({
             resolve();
           }
         });
-        const env = getEnv(port);
-
-        const opts = {
-          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-          env,
-        };
-
-        let startTime = process.hrtime();
-        const child = new TestClient([ '-w', 1 ], opts);
-        const agentId = await child.id();
-        const workers = await child.workers();
-        const wid = workers[0];
       }));
     });
   },
@@ -248,14 +377,13 @@ tests.push({
         });
 
         // Wait a short time to ensure the profile has started
-        setTimeout(async () => {
-          console.log('Enabling continuous profiling during CPU profile');
-          // Enable continuous profiling by updating the configuration
-          await child.config({
-            contCpuProfile: true,
-            contCpuProfileInterval: 100, // 100ms for faster testing
-          });
-        }, 200);
+        await setTimeout(200);
+        console.log('Enabling continuous profiling during CPU profile');
+        // Enable continuous profiling by updating the configuration
+        await child.config({
+          contCpuProfile: true,
+          contCpuProfileInterval: 100, // 100ms for faster testing
+        });
       }));
     });
   },
@@ -299,27 +427,26 @@ tests.push({
         let profileErrorTested = false;
 
         // Wait for continuous profiling to start
-        setTimeout(async () => {
-          console.log('Attempting manual CPU profile while continuous profiling is active');
-          // Try to perform a manual CPU profile - this should fail with EInProgressError
-          const options = {
-            duration: 100,
-            threadId: 0,
-          };
-          const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
-          // Verify the error response
-          checkProfileError(
-            data.msg,
-            data.metadata,
-            requestId,
-            agentId,
-            409, // 409 Conflict - Operation already in progress
-            'Operation already in progress(1001)',
-          );
+        await setTimeout(400);
+        console.log('Attempting manual CPU profile while continuous profiling is active');
+        // Try to perform a manual CPU profile - this should fail with EInProgressError
+        const options = {
+          duration: 100,
+          threadId: 0,
+        };
+        const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
+        // Verify the error response
+        checkProfileError(
+          data.msg,
+          data.metadata,
+          requestId,
+          agentId,
+          409, // 409 Conflict - Operation already in progress
+          'Operation already in progress(1001)',
+        );
 
-          console.log('Received expected error for manual CPU profile');
-          profileErrorTested = true;
-        }, 400);
+        console.log('Received expected error for manual CPU profile');
+        profileErrorTested = true;
       }));
     });
   },
