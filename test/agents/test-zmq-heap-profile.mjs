@@ -340,6 +340,74 @@ tests.push({
 });
 
 tests.push({
+  name: 'should respect assetsEnabled toggled via nsolid.start()',
+  test: async (playground) => {
+    return new Promise((resolve) => {
+      let events = 0;
+      let profile = '';
+      let requestId;
+      let resolved = false;
+      const options = {
+        duration: 100,
+        threadId: 0,
+        trackAllocations: false,
+      };
+
+      const bootstrapOpts = {
+        // Just to be sure we don't receive the loop_blocked event
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
+      };
+
+      playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
+        const disabledConfig = await playground.client.config({ assetsEnabled: false });
+        assert.strictEqual(disabledConfig.assetsEnabled, false);
+
+        await new Promise((done) => {
+          playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
+            assert.strictEqual(err.code, 422);
+            assert.strictEqual(err.message, 'Invalid arguments');
+            done();
+          }));
+        });
+
+        const enabledConfig = await playground.client.config({ assetsEnabled: true });
+        assert.strictEqual(enabledConfig.assetsEnabled, true);
+
+        requestId = playground.zmqAgentBus.agentHeapProfileStart(agentId, options);
+      }), async (eventType, agentId, data) => {
+        if (resolved)
+          return;
+
+        switch (++events) {
+          case 1:
+            assert.strictEqual(eventType, 'asset-data-packet');
+            if (data.packet.length > 0) {
+              checkProfileData(requestId, options, agentId, data.metadata, false);
+              profile += data.packet;
+              --events;
+            } else {
+              checkProfileData(requestId, options, agentId, data.metadata, true);
+            }
+            break;
+          case 2: {
+            assert.strictEqual(eventType, 'asset-received');
+            checkProfileData(requestId, options, agentId, data, true);
+            const heapProf = JSON.parse(profile);
+            assert.strictEqual(heapProf.snapshot.trace_function_count, 0);
+            assert.strictEqual(heapProf.trace_function_infos.length, 0);
+            assert.strictEqual(heapProf.trace_tree.length, 0);
+            resolved = true;
+            const currentConfig = await playground.client.config();
+            assert.strictEqual(currentConfig.assetsEnabled, true);
+            resolve();
+          }
+        }
+      });
+    });
+  },
+});
+
+tests.push({
   name: 'should end an ongoing profile before exiting',
   test: async (playground) => {
     return new Promise((resolve) => {

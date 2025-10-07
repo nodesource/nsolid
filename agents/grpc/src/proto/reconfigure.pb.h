@@ -230,6 +230,7 @@ class ReconfigureBody final : public ::google::protobuf::Message
     kTracingEnabledFieldNumber = 10,
     kTracingModulesBlacklistFieldNumber = 11,
     kContCpuProfileFieldNumber = 12,
+    kAssetsEnabledFieldNumber = 13,
   };
   // repeated string tags = 9;
   int tags_size() const;
@@ -389,11 +390,22 @@ class ReconfigureBody final : public ::google::protobuf::Message
   void _internal_set_contcpuprofile(bool value);
 
   public:
+  // optional bool assetsEnabled = 13;
+  bool has_assetsenabled() const;
+  void clear_assetsenabled() ;
+  bool assetsenabled() const;
+  void set_assetsenabled(bool value);
+
+  private:
+  bool _internal_assetsenabled() const;
+  void _internal_set_assetsenabled(bool value);
+
+  public:
   // @@protoc_insertion_point(class_scope:grpcagent.ReconfigureBody)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 12,
+  static const ::google::protobuf::internal::TcParseTable<4, 13,
                                    0, 74,
                                    2>
       _table_;
@@ -427,6 +439,7 @@ class ReconfigureBody final : public ::google::protobuf::Message
     bool tracingenabled_;
     ::uint32_t tracingmodulesblacklist_;
     bool contcpuprofile_;
+    bool assetsenabled_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1157,6 +1170,34 @@ inline bool ReconfigureBody::_internal_contcpuprofile() const {
 inline void ReconfigureBody::_internal_set_contcpuprofile(bool value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.contcpuprofile_ = value;
+}
+
+// optional bool assetsEnabled = 13;
+inline bool ReconfigureBody::has_assetsenabled() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000800U) != 0;
+  return value;
+}
+inline void ReconfigureBody::clear_assetsenabled() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.assetsenabled_ = false;
+  _impl_._has_bits_[0] &= ~0x00000800U;
+}
+inline bool ReconfigureBody::assetsenabled() const {
+  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.assetsEnabled)
+  return _internal_assetsenabled();
+}
+inline void ReconfigureBody::set_assetsenabled(bool value) {
+  _internal_set_assetsenabled(value);
+  _impl_._has_bits_[0] |= 0x00000800U;
+  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.assetsEnabled)
+}
+inline bool ReconfigureBody::_internal_assetsenabled() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.assetsenabled_;
+}
+inline void ReconfigureBody::_internal_set_assetsenabled(bool value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.assetsenabled_ = value;
 }
 
 // -------------------------------------------------------------------

@@ -20,3 +20,10 @@ nsolid.start({
 });
 
 assert.strictEqual(nsolid.config.tracingEnabled, true);
+
+// Runtime helpers should keep config in sync
+nsolid.disableTraces();
+assert.strictEqual(nsolid.config.tracingEnabled, false);
+
+nsolid.enableTraces();
+assert.strictEqual(nsolid.config.tracingEnabled, true);

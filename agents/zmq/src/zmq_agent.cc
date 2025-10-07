@@ -659,6 +659,7 @@ ZmqAgent::ZmqAgent()
       config_(default_agent_config),
       status_(Unconfigured),
       profile_on_exit_(false),
+      assets_enabled_(true),
       trace_flags_(0),
       status_cb_(nullptr) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
@@ -1277,6 +1278,13 @@ int ZmqAgent::config(const json& config) {
 
   if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
     setup_blocked_loop_hooks();
+  }
+
+  {
+    auto it = config_.find("assetsEnabled");
+    if (it != config_.end()) {
+      assets_enabled_ = *it;
+    }
   }
 
   if (utils::find_any_fields_in_diff(diff, { "/app" })) {
@@ -2105,6 +2113,10 @@ void ZmqAgent::do_got_prof(ProfileType type,
 int ZmqAgent::do_start_prof_init(const nlohmann::json& message,
                                  ProfileType type,
                                  ProfileOptions& options) {
+  if (!assets_enabled_) {
+    return UV_EINVAL;
+  }
+
   StartProfiling start_profiling = nullptr;
   switch (type) {
     case ProfileType::kCpu:
@@ -2481,6 +2493,7 @@ std::string ZmqAgent::get_auth_url() const {
 
 int ZmqAgent::validate_reconfigure(const json& in, json& out) const {
   static json allowed_opts = {
+    "assetsEnabled",
     "blockedLoopThreshold",
     kInterval,
     "pauseMetrics",
@@ -2498,7 +2511,12 @@ int ZmqAgent::validate_reconfigure(const json& in, json& out) const {
   for (auto it = in.begin(); it != in.end(); ++it) {
     const nlohmann::json& val = it.value();
     const std::string& key = it.key();
-    if (key == "blockedLoopThreshold") {
+    if (key == "assetsEnabled") {
+      if (!val.is_boolean()) {
+        message = "'assetsEnabled' should be a boolean";
+        goto send_validation_error;
+      }
+    } else if (key == "blockedLoopThreshold") {
       if (!val.is_number_unsigned()) {
         message = "'blockedLoopThreshold' should be an unsigned int";
         goto send_validation_error;

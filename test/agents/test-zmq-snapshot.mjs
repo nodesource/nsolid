@@ -232,6 +232,69 @@ tests.push({
   },
 });
 
+tests.push({
+  name: 'should respect assetsEnabled toggled via nsolid.start()',
+  test: async (playground) => {
+    return new Promise((resolve) => {
+      let events = 0;
+      let snapshot = '';
+      let requestId;
+      let resolved = false;
+      const options = {
+        threadId: 0,
+      };
+
+      const bootstrapOpts = {
+        // Just to be sure we don't receive the loop_blocked event
+        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
+      };
+
+      playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
+        const disabledConfig = await playground.client.config({ assetsEnabled: false });
+        assert.strictEqual(disabledConfig.assetsEnabled, false);
+
+        await new Promise((done) => {
+          playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
+            assert.strictEqual(err.code, 422);
+            assert.strictEqual(err.message, 'Invalid arguments');
+            done();
+          }));
+        });
+
+        const enabledConfig = await playground.client.config({ assetsEnabled: true });
+        assert.strictEqual(enabledConfig.assetsEnabled, true);
+
+        requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
+      }), async (eventType, agentId, data) => {
+        if (resolved)
+          return;
+
+        switch (++events) {
+          case 1:
+            assert.strictEqual(eventType, 'asset-data-packet');
+            if (data.packet.length > 0) {
+              checkSnapshotData(requestId, options, agentId, data.metadata, false);
+              snapshot += data.packet;
+              --events;
+            } else {
+              checkSnapshotData(requestId, options, agentId, data.metadata, true);
+            }
+            break;
+          case 2: {
+            assert.strictEqual(eventType, 'asset-received');
+            checkSnapshotData(requestId, options, agentId, data, true);
+            JSON.parse(snapshot);
+            resolved = true;
+            const currentConfig = await playground.client.config();
+            assert.strictEqual(currentConfig.assetsEnabled, true);
+            resolve();
+          }
+        }
+      });
+    });
+  },
+});
+
 
 const config = {
   commandBindAddr: 'tcp://*:9001',

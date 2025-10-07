@@ -728,6 +728,7 @@ class ZmqAgent {
   // Profiling
   ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;
+  std::atomic<bool> assets_enabled_;
   std::shared_ptr<ProfileCollector> profile_collector_;
   nsuv::ns_async start_profiling_msg_;
   TSQueue<StartProfStor> start_profiling_msg_q_;

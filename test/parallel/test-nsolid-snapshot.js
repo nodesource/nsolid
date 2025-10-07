@@ -53,5 +53,58 @@ setImmediate(() => {
   nsolid.snapshot(common.mustCall((err) => {
     assert.notStrictEqual(err.code, 0);
     assert.strictEqual(err.message, 'Heap snapshot could not be generated');
+    runSnapshotAssetsToggleTests();
   }));
 });
+
+function runSnapshotAssetsToggleTests() {
+  nsolid.start({
+    command: 'localhost:9001',
+    data: 'localhost:9002',
+    assetsEnabled: false,
+    disableSnapshots: false,
+  });
+
+  setImmediate(() => {
+    assert.throws(
+      () => {
+        nsolid.snapshot();
+      },
+      {
+        message: 'Heap snapshot could not be generated'
+      }
+    );
+
+    nsolid.snapshot(common.mustCall((err) => {
+      assert.notStrictEqual(err.code, 0);
+      assert.strictEqual(err.message, 'Heap snapshot could not be generated');
+
+      // Only enable assets after the error callback completes
+      nsolid.enableAssets();
+      setImmediate(() => {
+        // Wait for snapshot to complete before disabling assets
+        nsolid.snapshot(common.mustSucceed(() => {
+          // Only disable assets after snapshot completes
+          nsolid.disableAssets();
+          setImmediate(() => {
+            assert.throws(
+              () => {
+                nsolid.snapshot();
+              },
+              {
+                message: 'Heap snapshot could not be generated'
+              }
+            );
+
+            // Only enable assets after error is confirmed
+            nsolid.enableAssets();
+            setImmediate(() => {
+              // Wait for final snapshot to complete
+              nsolid.snapshot(common.mustSucceed());
+            });
+          });
+        }));
+      });
+    }));
+  });
+}
