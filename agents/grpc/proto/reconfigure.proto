@@ -17,6 +17,7 @@ message ReconfigureBody {
   optional bool tracingEnabled = 10;
   optional uint32 tracingModulesBlacklist = 11;
   optional bool contCpuProfile = 12;
+  optional bool assetsEnabled = 13;
 }
 
 message ReconfigureEvent {

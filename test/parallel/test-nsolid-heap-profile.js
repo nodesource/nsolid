@@ -121,10 +121,84 @@ setTimeout(() => {
               assert.notStrictEqual(err.code, 0);
               assert.strictEqual(err.message,
                                  'Heap profile could not be stopped');
+              runHeapProfileAssetsToggleTests();
             }));
           }));
         }));
       }));
     }));
-  }, 100);
-}, 100);
+  }, common.platformTimeout(100));
+}, common.platformTimeout(100));
+
+function runHeapProfileAssetsToggleTests() {
+  // Disable assets via config update
+  nsolid.start({
+    command: 'localhost:9001',
+    data: 'localhost:9002',
+    assetsEnabled: false,
+  });
+
+  setTimeout(() => {
+    assert.throws(
+      () => {
+        nsolid.heapProfile();
+      },
+      {
+        message: 'Heap profile could not be started'
+      }
+    );
+
+    nsolid.heapProfile(common.mustCall((err) => {
+      assert.notStrictEqual(err.code, 0);
+      assert.strictEqual(err.message, 'Heap profile could not be started');
+    }));
+
+    assert.throws(
+      () => {
+        nsolid.heapProfileEnd();
+      },
+      {
+        message: 'Heap profile could not be stopped'
+      }
+    );
+
+    // Re-enable via helper
+    nsolid.enableAssets();
+    setTimeout(() => {
+      // Start profile and wait for it to complete before toggling assets
+      nsolid.heapProfile(common.mustSucceed(() => {
+        nsolid.heapProfileEnd(common.mustSucceed(() => {
+          // Only disable assets after profile completes
+          nsolid.disableAssets();
+          setTimeout(() => {
+            assert.throws(
+              () => {
+                nsolid.heapProfile();
+              },
+              {
+                message: 'Heap profile could not be started'
+              }
+            );
+
+            assert.throws(
+              () => {
+                nsolid.heapProfileEnd();
+              },
+              {
+                message: 'Heap profile could not be stopped'
+              }
+            );
+
+            // Only re-enable after errors are confirmed
+            nsolid.enableAssets();
+            setTimeout(() => {
+              nsolid.heapProfile(common.mustSucceed(() => {
+                nsolid.heapProfileEnd(common.mustSucceed());
+              }));
+            }, common.platformTimeout(100));
+          }, common.platformTimeout(100));
+        }));
+      }));
+    }, common.platformTimeout(100));
+  }, common.platformTimeout(100));
+}

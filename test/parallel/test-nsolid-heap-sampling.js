@@ -161,12 +161,88 @@ setTimeout(() => {
             // profileEnd() should return an error if no ongoing profile
             nsolid.heapSamplingEnd(common.mustCall((err) => {
               assert.notStrictEqual(err.code, 0);
-              assert.strictEqual(err.message,
-                                 'Heap sampling could not be stopped');
+              assert.strictEqual(
+                err.message,
+                'Heap sampling could not be stopped'
+              );
+              runHeapSamplingAssetsToggleTests();
             }));
           }));
         }));
       }));
     }));
-  }, 100);
-}, 100);
+  }, common.platformTimeout(100));
+}, common.platformTimeout(100));
+
+function runHeapSamplingAssetsToggleTests() {
+  // Disable assets through config update
+  nsolid.start({
+    command: 'localhost:9001',
+    data: 'localhost:9002',
+    assetsEnabled: false,
+  });
+
+  setTimeout(() => {
+    assert.throws(
+      () => {
+        nsolid.heapSampling();
+      },
+      {
+        message: 'Heap sampling could not be started'
+      }
+    );
+
+    nsolid.heapSampling(common.mustCall((err) => {
+      assert.notStrictEqual(err.code, 0);
+      assert.strictEqual(err.message, 'Heap sampling could not be started');
+    }));
+
+    assert.throws(
+      () => {
+        nsolid.heapSamplingEnd();
+      },
+      {
+        message: 'Heap sampling could not be stopped'
+      }
+    );
+
+    // Re-enable via helper
+    nsolid.enableAssets();
+    setTimeout(() => {
+      // Start sampling and wait for it to complete before toggling assets
+      nsolid.heapSampling(common.mustSucceed(() => {
+        nsolid.heapSamplingEnd(common.mustSucceed(() => {
+          // Only disable assets after sampling completes
+          nsolid.disableAssets();
+          setTimeout(() => {
+            assert.throws(
+              () => {
+                nsolid.heapSampling();
+              },
+              {
+                message: 'Heap sampling could not be started'
+              }
+            );
+
+            assert.throws(
+              () => {
+                nsolid.heapSamplingEnd();
+              },
+              {
+                message: 'Heap sampling could not be stopped'
+              }
+            );
+
+            // Only re-enable after errors are confirmed
+            nsolid.enableAssets();
+            setTimeout(() => {
+              nsolid.heapSampling(common.mustSucceed(() => {
+                nsolid.heapSamplingEnd(common.mustSucceed());
+              }));
+            }, common.platformTimeout(100));
+          }, common.platformTimeout(100));
+        }));
+      }));
+    }, common.platformTimeout(100));
+  }, common.platformTimeout(100));
+}

@@ -246,6 +246,138 @@ tests.push({
 });
 
 tests.push({
+  name: 'should return 500 if assets collection is disabled',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = {
+          ...getEnv(port),
+          NSOLID_ASSETS_ENABLED: '0',
+        };
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        const options = {
+          duration: 100,
+          threadId: 0,
+          heapSampling: {
+            sampleInterval: 50,
+          },
+        };
+
+        const { data, requestId } = await grpcServer.heapSampling(agentId, options);
+        checkProfileError(data.msg,
+                          data.metadata,
+                          requestId,
+                          agentId,
+                          500,
+                          'Assets collection disabled(1008)');
+        await child.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should respect assetsEnabled toggled via nsolid.start()',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = getEnv(port);
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        const profileOpts = {
+          duration: 100,
+          threadId: 0,
+          heapSampling: {
+            sampleInterval: 50,
+          },
+        };
+
+        const disabledConfig = await child.config({ assetsEnabled: false });
+        assert.strictEqual(disabledConfig.assetsEnabled, false);
+
+        const disabledResult = await grpcServer.heapSampling(agentId, profileOpts);
+        checkProfileError(disabledResult.data.msg,
+                          disabledResult.data.metadata,
+                          disabledResult.requestId,
+                          agentId,
+                          500,
+                          'Assets collection disabled(1008)');
+
+        const enabledConfig = await child.config({ assetsEnabled: true });
+        assert.strictEqual(enabledConfig.assetsEnabled, true);
+
+        const { data, requestId } = await grpcServer.heapSampling(agentId, profileOpts);
+        checkProfileData(data.msg, data.metadata, requestId, agentId, profileOpts, true);
+
+        await child.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should respect enableAssets()/disableAssets() helpers',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = getEnv(port);
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        const profileOpts = {
+          duration: 100,
+          threadId: 0,
+          heapSampling: {
+            sampleInterval: 50,
+          },
+        };
+
+        await child.disableAssets();
+
+        const disabledResult = await grpcServer.heapSampling(agentId, profileOpts);
+        checkProfileError(disabledResult.data.msg,
+                          disabledResult.data.metadata,
+                          disabledResult.requestId,
+                          agentId,
+                          500,
+                          'Assets collection disabled(1008)');
+
+        await child.enableAssets();
+
+        const { data, requestId } = await grpcServer.heapSampling(agentId, profileOpts);
+        checkProfileData(data.msg, data.metadata, requestId, agentId, profileOpts, true);
+
+        const currentConfig = await child.config();
+        assert.strictEqual(currentConfig.assetsEnabled, true);
+
+        await child.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
+tests.push({
   name: 'should end an ongoing profile before exiting',
   test: async (getEnv) => {
     return new Promise((resolve) => {

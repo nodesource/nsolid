@@ -344,17 +344,65 @@ class TestClient {
   }
 
   async config(config = null) {
+    if (!this.#child)
+      return null;
+    return this.#sendAndWait({
+      type: 'config',
+      payload: { config },
+      expect: 'config',
+      map: (msg) => msg.config,
+    });
+  }
+
+  async enableAssets() {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({ type: 'enable_assets' });
+  }
+
+  async disableAssets() {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({ type: 'disable_assets' });
+  }
+
+  async enableTraces() {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({ type: 'enable_traces' });
+  }
+
+  async disableTraces() {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({ type: 'disable_traces' });
+  }
+
+  async trace(kind, targetThreadId = 0) {
+    if (!this.#child)
+      return;
+    await new Promise((resolve) => {
+      this.#child.send({ type: 'trace', kind, threadId: targetThreadId }, resolve);
+    });
+  }
+
+  #sendAndWait({ type, payload = {}, expect = type, map }) {
     return new Promise((resolve) => {
-      if (this.#child) {
-        this.#child.send({ type: 'config', config });
-        this.#child.on('message', (msg) => {
-          if (msg.type === 'config') {
-            resolve(msg.config);
-          }
-        });
-      } else {
-        resolve(null);
-      }
+      const timeout = setTimeout(() => {
+        this.#child.off('message', handler);
+        resolve(map ? map(null) : undefined);
+      }, 30000); // 30 second timeout
+
+      const handler = (msg) => {
+        if (msg.type !== expect)
+          return;
+        clearTimeout(timeout);
+        this.#child.off('message', handler);
+        resolve(map ? map(msg) : undefined);
+      };
+
+      this.#child.on('message', handler);
+      this.#child.send({ type, ...payload });
     });
   }
 
