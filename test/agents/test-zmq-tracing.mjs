@@ -2,6 +2,7 @@
 import { mustCall, mustCallAtLeast, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { threadId } from 'node:worker_threads';
+import { setTimeout as delay } from 'node:timers/promises';
 import validators from 'internal/validators';
 import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 
@@ -398,6 +399,74 @@ tests.push({
         validateSpan(data.body.spans[0], 'custom', wid);
         resolve();
       }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should respect tracingEnabled toggled via enableTraces/disableTraces',
+  test: async (playground) => {
+    return new Promise((resolve) => {
+      let totalSpans = 0;
+      let phase = 'initial';
+      const opts = {
+        opts: {
+          env: {
+            NSOLID_TRACING_ENABLED: 1,
+            NSOLID_APPNAME: 'myapp',
+          },
+        },
+      };
+
+      playground.bootstrap(opts, mustSucceed(async (agentId) => {
+        // Initial trace with tracing enabled
+        await playground.client.tracing('http', threadId);
+      }), mustCallAtLeast(async (eventType, agentId, data) => {
+        if (phase === 'done')
+          return;
+
+        console.log(`${eventType}, ${agentId}, phase: ${phase}`);
+        assert.strictEqual(eventType, 'agent-tracing');
+
+        // Fail immediately if spans arrive while tracing is disabled
+        assert.notStrictEqual(phase, 'disabled');
+
+        if (phase === 'initial') {
+          checkTracingData(data, null, agentId, threadId, 'myapp');
+          const spanTypes = [ 'http_server', 'http_client'];
+          for (const span of data.body.spans) {
+            validateSpan(span, spanTypes[totalSpans], threadId);
+            totalSpans++;
+          }
+
+          if (totalSpans === 2) {
+            totalSpans = 0;
+            phase = 'disabled';
+
+            // Disable tracing and verify no spans are emitted
+            await playground.client.disableTraces();
+            await playground.client.tracing('http', threadId);
+            await delay(200);
+
+            // Re-enable tracing
+            await playground.client.enableTraces();
+            phase = 'reenabled';
+            await playground.client.tracing('http', threadId);
+          }
+        } else if (phase === 'reenabled') {
+          checkTracingData(data, null, agentId, threadId, 'myapp');
+          const spanTypes = [ 'http_server', 'http_client'];
+          for (const span of data.body.spans) {
+            validateSpan(span, spanTypes[totalSpans], threadId);
+            totalSpans++;
+          }
+
+          if (totalSpans === 2) {
+            phase = 'done';
+            resolve();
+          }
+        }
+      }, 2));
     });
   },
 });

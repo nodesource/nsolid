@@ -138,6 +138,14 @@ if (isMainThread) {
       }
     } else if (msg.type === 'workers') {
       process.send({ type: 'workers', ids: Array.from(workers.keys()) });
+    } else if (msg.type === 'enableTraces') {
+      nsolid.enableTraces();
+    } else if (msg.type === 'disableTraces') {
+      nsolid.disableTraces();
+    } else if (msg.type === 'enableAssets') {
+      nsolid.enableAssets();
+    } else if (msg.type === 'disableAssets') {
+      nsolid.disableAssets();
     }
   });
 

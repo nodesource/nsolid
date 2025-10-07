@@ -65,5 +65,60 @@ const {
   });
   stream.on('end', common.mustCall(() => {
     assert(JSON.parse(profile));
+    runHeapProfileStreamAssetsToggleTests();
   }));
+}
+
+function runHeapProfileStreamAssetsToggleTests() {
+  // Disable assets via config update and ensure stream creation fails
+  nsolid.start({
+    command: 'localhost:9001',
+    data: 'localhost:9002',
+    assetsEnabled: false,
+  });
+
+  setImmediate(() => {
+    assert.throws(
+      () => {
+        nsolid.heapProfileStream(0, 1000, true);
+      },
+      {
+        message: 'Heap profile could not be started'
+      }
+    );
+
+    // Re-enable through helper and confirm stream succeeds again
+    nsolid.enableAssets();
+    setImmediate(() => {
+      let profile = '';
+      const enabledStream = nsolid.heapProfileStream(0, 1200, true);
+      enabledStream.on('data', (chunk) => {
+        profile += chunk;
+      });
+      enabledStream.on('end', common.mustCall(() => {
+        assert(JSON.parse(profile));
+
+        // Disable assets via helper and ensure stream creation fails again
+        nsolid.disableAssets();
+        setImmediate(() => {
+          assert.throws(
+            () => {
+              nsolid.heapProfileStream(0, 1000, true);
+            },
+            {
+              message: 'Heap profile could not be started'
+            }
+          );
+
+          // Final re-enable to restore functionality
+          nsolid.enableAssets();
+          setImmediate(() => {
+            const finalStream = nsolid.heapProfileStream(0, 1200, true);
+            finalStream.resume();
+            finalStream.on('end', common.mustCall());
+          });
+        });
+      }));
+    });
+  });
 }

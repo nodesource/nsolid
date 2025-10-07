@@ -135,6 +135,7 @@ const {
   stream.on('end', common.mustCall(() => {
     assert(JSON.parse(profile));
     testProfileSchema(JSON.parse(profile));
+    runHeapSamplingStreamAssetsToggleTests();
   }));
 }
 
@@ -165,4 +166,63 @@ function testProfileSchema(profile) {
     if (!isTestDone) return testCallFrame(children[0]);
     assert(isTestDone);
   }
+}
+
+function runHeapSamplingStreamAssetsToggleTests() {
+  // Disable assets through config update
+  nsolid.start({
+    command: 'localhost:9001',
+    data: 'localhost:9002',
+    assetsEnabled: false,
+  });
+
+  setImmediate(() => {
+    assert.throws(
+      () => {
+        nsolid.heapSamplingStream(0, 1000);
+      },
+      {
+        code: 'ERR_NSOLID_HEAP_SAMPLING_START',
+        message: 'Heap sampling could not be started'
+      }
+    );
+
+    // Re-enable via helper and confirm success
+    nsolid.enableAssets();
+    setImmediate(() => {
+      let profile = '';
+      const enabledStream = nsolid.heapSamplingStream(0, 1200);
+      enabledStream.on('data', (chunk) => {
+        profile += chunk;
+      });
+      enabledStream.on('end', common.mustCall(() => {
+        assert(JSON.parse(profile));
+        testProfileSchema(JSON.parse(profile));
+
+        // Disable via helper and confirm failure again
+        nsolid.disableAssets();
+        setImmediate(() => {
+          assert.throws(
+            () => {
+              nsolid.heapSamplingStream(0, 1000);
+            },
+            {
+              code: 'ERR_NSOLID_HEAP_SAMPLING_START',
+              message: 'Heap sampling could not be started'
+            }
+          );
+
+          // Re-enable once more to restore functionality
+          nsolid.enableAssets();
+          setImmediate(() => {
+            const finalStream = nsolid.heapSamplingStream(0, 1200);
+            finalStream.resume();
+            finalStream.on('end', common.mustCall(() => {
+              assert.ok(true);
+            }));
+          });
+        });
+      }));
+    });
+  });
 }
