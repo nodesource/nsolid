@@ -4,7 +4,6 @@
 #include <nsolid.h>
 #include <nsolid/async_ts_queue.h>
 #include <nsolid/thread_safe.h>
-#include "nlohmann/json.hpp"
 #include <memory>
 #include "grpcpp/grpcpp.h"
 #include "./proto/nsolid_service.grpc.pb.h"
