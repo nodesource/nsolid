@@ -69,7 +69,7 @@ const {
 // },
 function checkBlockedLoopData(blocked, metadata, agentId, threadId) {
   console.dir(blocked, { depth: null });
-  assert.strictEqual(blocked.common.requestId, '');
+  validateString(blocked.common.requestId, 'common.requestId');
   assert.strictEqual(blocked.common.command, 'loop_blocked');
   // From here check at least that all the fields are present
   validateObject(blocked.common.recorded, 'recorded');
@@ -119,7 +119,7 @@ function checkBlockedLoopData(blocked, metadata, agentId, threadId) {
 // }
 function checkUnblockedLoopData(blocked, metadata, agentId, threadId, bInfo) {
   console.dir(blocked, { depth: null });
-  assert.strictEqual(blocked.common.requestId, '');
+  validateString(blocked.common.requestId, 'common.requestId');
   assert.strictEqual(blocked.common.command, 'loop_unblocked');
   // From here check at least that all the fields are present
   validateObject(blocked.common.recorded, 'recorded');

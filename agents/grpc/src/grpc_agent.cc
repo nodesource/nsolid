@@ -1,7 +1,6 @@
 #include "grpc_agent.h"
 
 #include "asserts-cpp/asserts.h"
-#include "debug_utils-inl.h"
 #include "nsolid/nsolid_api.h"
 #include "nsolid/nsolid_util.h"
 #include "../../otlp/src/otlp_common.h"
@@ -74,20 +73,6 @@ const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4GB
 const int PUB_KEY_SIZE = 40;
 const int CONSOLE_ID_SIZE = 36;
 
-template <typename... Args>
-inline void Debug(Args&&... args) {
-  per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
-                     std::forward<Args>(args)...);
-}
-
-
-inline void DebugJSON(const char* str, const json& msg) {
-  if (UNLIKELY(per_process::enabled_debug_list.enabled(
-        DebugCategory::NSOLID_GRPC_AGENT))) {
-    Debug(str, msg.dump(4).c_str());
-  }
-}
-
 JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)) {
 }
@@ -144,6 +129,8 @@ void PopulateCommon(grpcagent::CommonResponse* common,
   time->set_nanoseconds(recorded.second);
   if (req_id) {
     common->set_requestid(req_id);
+  } else {
+    common->set_requestid(utils::generate_unique_id());
   }
 }
 
@@ -191,8 +178,6 @@ void PopulateBlockedLoopEvent(grpcagent::BlockedLoopEvent* blocked_loop_event,
 void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
                        const nlohmann::json& info,
                        const char* req_id) {
-  DebugJSON("Process Info: \n%s\n", info);
-
   // Fill in the fields of the InfoResponse.
   PopulateCommon(info_event->mutable_common(), "info", req_id);
 
@@ -302,7 +287,6 @@ void PopulatePackagesEvent(grpcagent::PackagesEvent* packages_event,
 
   grpcagent::PackagesBody* body = packages_event->mutable_body();
   for (const auto& package : packages) {
-    DebugJSON("Populating Package: \n%s\n", package);
     grpcagent::Package* proto_package = body->add_packages();
     if (package.contains("path") && package["path"].is_string()) {
       proto_package->set_path(package["path"].get<std::string>());
@@ -1613,7 +1597,7 @@ void GrpcAgent::got_continuous_profile(
 
 void GrpcAgent::handle_command_request(CommandRequestStor&& req) {
   const grpcagent::CommandRequest& request = req.request;
-  Debug("Command Received: %s\n", request.DebugString().c_str());
+  DebugProtobufMsg("[in] ", request);
   command_stream_->Write(grpcagent::CommandResponse());
   const std::string cmd = request.command();
   if (cmd == "info") {

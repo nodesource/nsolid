@@ -16,12 +16,6 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
-template <typename... Args>
-inline void Debug(Args&&... args) {
-  per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
-                     std::forward<Args>(args)...);
-}
-
 /**
   * Create gRPC channel.
   */

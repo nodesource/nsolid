@@ -16,7 +16,7 @@ const {
 
 function checkExitData(data, metadata, agentId, expectedData) {
   console.dir(data, { depth: null });
-  assert.strictEqual(data.common.requestId, '');
+  validateString(data.common.requestId, 'common.requestId');
   assert.strictEqual(data.common.command, 'exit');
   // From here check at least that all the fields are present
   validateObject(data.common.recorded, 'recorded');
