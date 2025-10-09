@@ -5,6 +5,7 @@
 #include "nsolid/nsolid_api.h"
 #include "nsolid/continuous_profiler.h"
 #include "nsolid/nsolid_util.h"
+#include "google/protobuf/util/json_util.h"
 #include "../../otlp/src/otlp_common.h"
 #include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
@@ -86,6 +87,18 @@ inline void DebugJSON(const char* str, const json& msg) {
   if (per_process::enabled_debug_list.enabled(
         DebugCategory::NSOLID_GRPC_AGENT)) {
     Debug(str, msg.dump(4).c_str());
+  }
+}
+
+inline void DebugProtobufMsg(const char* str, const ::google::protobuf::Message& msg) {
+  if (per_process::enabled_debug_list.enabled(
+        DebugCategory::NSOLID_GRPC_AGENT)) {
+    std::string json_payload;
+    const auto status = google::protobuf::util::MessageToJsonString(msg, &json_payload);
+    if (status.ok()) {
+      Debug(str, json_payload.c_str());
+      return;
+    }
   }
 }
 
@@ -1616,7 +1629,7 @@ void GrpcAgent::got_continuous_profile(
 
 void GrpcAgent::handle_command_request(CommandRequestStor&& req) {
   const grpcagent::CommandRequest& request = req.request;
-  Debug("Command Received: %s\n", request.DebugString().c_str());
+  DebugProtobufMsg("Command Received: %s\n", request);
   command_stream_->Write(grpcagent::CommandResponse());
   const std::string cmd = request.command();
   if (cmd == "info") {
