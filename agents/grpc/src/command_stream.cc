@@ -1,6 +1,7 @@
 #include "command_stream.h"
-#include "debug_utils-inl.h"
+
 #include "asserts-cpp/asserts.h"
+#include "grpc_utils.h"
 
 using grpc::Status;
 using grpcagent::NSolidService;
@@ -8,12 +9,6 @@ using grpcagent::NSolidService;
 namespace node {
 namespace nsolid {
 namespace grpc {
-
-template <typename... Args>
-inline void Debug(Args&&... args) {
-  per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
-                     std::forward<Args>(args)...);
-}
 
 CommandStream::CommandStream(NSolidService::StubInterface* stub,
                              std::weak_ptr<CommandStreamObserver> observer,

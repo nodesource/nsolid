@@ -1,9 +1,13 @@
 #ifndef AGENTS_GRPC_SRC_GRPC_CLIENT_H_
 #define AGENTS_GRPC_SRC_GRPC_CLIENT_H_
 
+#include <cinttypes>
+
 #include "asserts-cpp/asserts.h"
 #include "../../src/profile_collector.h"
 #include "./proto/nsolid_service.grpc.pb.h"
+#include "google/protobuf/util/json_util.h"
+#include "grpc_utils.h"
 #include "grpcpp/grpcpp.h"
 #include "opentelemetry/version.h"
 
@@ -39,6 +43,7 @@ class GrpcAsyncCallData {
 
   EventType* event = nullptr;
   grpcagent::EventResponse* event_response = nullptr;
+  uint64_t start;
 
   GrpcAsyncCallData() = default;
   ~GrpcAsyncCallData() = default;
@@ -107,6 +112,10 @@ class GrpcClient {
       return -1;
     }
 
+    if (per_process::enabled_debug_list.enabled(
+          DebugCategory::NSOLID_GRPC_AGENT)) {
+      call_data->start = uv_hrtime();
+    }
     call_data->grpc_context.swap(context);
 
     // Call the correct async export method on the stub
@@ -115,6 +124,20 @@ class GrpcClient {
                                  call_data->event_response,
                                  [call_data](::grpc::Status status) {
         call_data->grpc_status = status;
+        if (per_process::enabled_debug_list.enabled(
+              DebugCategory::NSOLID_GRPC_AGENT) &&
+            call_data->start > 0) {
+          uint64_t latency = uv_hrtime() - call_data->start;
+          if (!call_data->grpc_status.ok()) {
+            DebugProtobufMsg("[out] [%" PRIu64 "] error code %d - %s ",
+                             *call_data->event,
+                             latency,
+                             call_data->grpc_status.error_code(),
+                             call_data->grpc_status.error_message().c_str());
+          } else {
+            DebugProtobufMsg("[out] [%" PRIu64 "]", *call_data->event, latency);
+          }
+        }
         call_data->result_callback(call_data->grpc_status,
                                    std::move(call_data->arena),
                                    *call_data->event,

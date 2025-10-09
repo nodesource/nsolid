@@ -40,6 +40,13 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
     bool write_done = true;
     bool write_done_called = false;
     grpcagent::Asset asset;
+    uint64_t write_start = 0;
+  };
+
+  struct StreamStats {
+    uint64_t stream_start = 0;
+    size_t write_count = 0;
+    size_t total_bytes = 0;
   };
 
  public:
@@ -69,6 +76,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
   ::grpc::ClientContext context_;
   grpcagent::EventResponse event_response_;
   WriteState write_state_;
+  StreamStats stream_stats_;
   TSQueue<grpcagent::Asset> assets_q_;
   nsuv::ns_mutex lock_;
 };
