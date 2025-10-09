@@ -1,6 +1,10 @@
 #include "asset_stream.h"
-#include "debug_utils-inl.h"
+
+#include <cinttypes>
+
 #include "asserts-cpp/asserts.h"
+#include "grpc_utils.h"
+#include "uv.h"
 
 using grpc::Status;
 using grpcagent::NSolidService;
@@ -8,12 +12,6 @@ using grpcagent::NSolidService;
 namespace node {
 namespace nsolid {
 namespace grpc {
-
-template <typename... Args>
-inline void Debug(Args&&... args) {
-  per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
-                     std::forward<Args>(args)...);
-}
 
 AssetStream::AssetStream(
     NSolidService::StubInterface* stub,
@@ -44,8 +42,21 @@ AssetStream::~AssetStream() {
 }
 
 void AssetStream::OnDone(const Status& s) {
-  if (!s.ok()) {
-    Debug("AssetStream::OnDone error: %d. %s:%s\n",
+  const bool debug_enabled =
+    per_process::enabled_debug_list.enabled(DebugCategory::NSOLID_GRPC_AGENT);
+  if (debug_enabled) {
+    uint64_t total_duration = 0;
+    if (stream_stats_.stream_start > 0) {
+      total_duration = uv_hrtime() - stream_stats_.stream_start;
+    }
+
+    Debug("[AssetStream] completion status=%s duration_ns=%" PRIu64
+          " writes=%zu total_bytes=%zu error_code=%d error_message=%s "
+          "error_details=%s\n",
+          s.ok() ? "ok" : "error",
+          total_duration,
+          stream_stats_.write_count,
+          stream_stats_.total_bytes,
           s.error_code(),
           s.error_message().c_str(),
           s.error_details().c_str());
@@ -64,8 +75,26 @@ void AssetStream::OnDone(const Status& s) {
 void AssetStream::OnWriteDone(bool ok/*ok*/) {
   nsuv::ns_mutex::scoped_lock lock(lock_);
   write_state_.write_done = true;
+
+  // Calculate and log latency for this write only when debug is enabled
+  if (per_process::enabled_debug_list.enabled(
+        DebugCategory::NSOLID_GRPC_AGENT) &&
+      write_state_.write_start > 0) {
+    uint64_t latency = uv_hrtime() - write_state_.write_start;
+    Debug("[out] [%" PRIu64 "] %s command=%s requestId=%s data.length=%zu\n",
+          latency,
+          ok ? "ok" : "not ok",
+          write_state_.asset.common().command().c_str(),
+          write_state_.asset.common().requestid().c_str(),
+          write_state_.asset.data().length());
+    write_state_.write_start = 0;
+
+    // Update stream statistics
+    stream_stats_.write_count++;
+    stream_stats_.total_bytes += write_state_.asset.data().length();
+  }
+
   if (!ok) {
-    Debug("AssetStream::OnWriteDone not ok\n");
     write_state_.done = true;
     if (!write_state_.writes_done) {
       write_state_.writes_done = true;
@@ -80,6 +109,14 @@ void AssetStream::OnWriteDone(bool ok/*ok*/) {
 void AssetStream::NextWrite() {
   if (!write_state_.done && write_state_.write_done) {
     if (assets_q_.dequeue(write_state_.asset)) {
+      if (per_process::enabled_debug_list.enabled(
+            DebugCategory::NSOLID_GRPC_AGENT)) {
+        // Capture stream start time on first write
+        if (stream_stats_.stream_start == 0) {
+          stream_stats_.stream_start = uv_hrtime();
+        }
+        write_state_.write_start = uv_hrtime();
+      }
       StartWrite(&write_state_.asset);
       write_state_.write_done = false;
     } else if (write_state_.write_done_called) {
