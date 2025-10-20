@@ -12,6 +12,7 @@
         'lib/bufref.c',
         'lib/bufq.c',
         'lib/cf-https-connect.c',
+        'lib/cf-ip-happy.c',
         'lib/cf-socket.c',
         'lib/cfilters.c',
         'lib/conncache.c',
