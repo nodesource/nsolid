@@ -67,8 +67,11 @@ void AssetStream::OnWriteDone(bool ok/*ok*/) {
   if (!ok) {
     Debug("AssetStream::OnWriteDone not ok\n");
     write_state_.done = true;
-    StartWritesDone();
-    RemoveHold();
+    if (!write_state_.writes_done) {
+      write_state_.writes_done = true;
+      StartWritesDone();
+      RemoveHold();
+    }
   } else {
     NextWrite();
   }
@@ -80,8 +83,11 @@ void AssetStream::NextWrite() {
       StartWrite(&write_state_.asset);
       write_state_.write_done = false;
     } else if (write_state_.write_done_called) {
-      StartWritesDone();
-      RemoveHold();
+      if (!write_state_.writes_done) {
+        write_state_.writes_done = true;
+        StartWritesDone();
+        RemoveHold();
+      }
     }
   }
 }

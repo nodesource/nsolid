@@ -79,8 +79,14 @@ void CommandStream::OnReadDone(bool ok) {
     Debug("CommandStream::OnReadDone not ok\n");
   }
 
-  StartWritesDone();
-  RemoveHold();
+  {
+    nsuv::ns_mutex::scoped_lock lock(lock_);
+    if (!write_state_.writes_done) {
+      write_state_.writes_done = true;
+      StartWritesDone();
+      RemoveHold();
+    }
+  }
 }
 
 void CommandStream::OnWriteDone(bool ok/*ok*/) {
@@ -88,8 +94,11 @@ void CommandStream::OnWriteDone(bool ok/*ok*/) {
   write_state_.write_done = true;
   if (!ok) {
     Debug("CommandStream::OnWriteDone not ok\n");
-    StartWritesDone();
-    RemoveHold();
+    if (!write_state_.writes_done) {
+      write_state_.writes_done = true;
+      StartWritesDone();
+      RemoveHold();
+    }
   } else {
     NextWrite();
   }

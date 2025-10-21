@@ -23,6 +23,7 @@ class CommandStream:
                                    grpcagent::CommandRequest> {
   struct WriteState {
     bool write_done = true;
+    bool writes_done = false;
     bool done = false;
     grpcagent::CommandResponse resp;
   };
