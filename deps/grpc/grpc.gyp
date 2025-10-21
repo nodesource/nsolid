@@ -765,6 +765,7 @@
         'src/core/lib/transport/transport.cc',
         'src/core/lib/transport/transport_op_string.cc',
         'src/core/lib/event_engine/cf_engine/cf_engine.cc',
+        'src/core/lib/event_engine/cf_engine/cfsocket_listener.cc',
         'src/core/lib/event_engine/cf_engine/cfstream_endpoint.cc',
         'src/core/lib/event_engine/cf_engine/dns_service_resolver.cc',
         'src/core/lib/event_engine/posix_engine/ev_epoll1_linux.cc',
