@@ -39,6 +39,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
     bool done = false;
     bool write_done = true;
     bool write_done_called = false;
+    bool writes_done = false;
     grpcagent::Asset asset;
   };
 
