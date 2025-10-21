@@ -128,6 +128,7 @@
         'lib/version.c',
         'lib/curlx/base64.c',
         'lib/curlx/dynbuf.c',
+        'lib/curlx/inet_ntop.c',
         'lib/curlx/inet_pton.c',
         'lib/curlx/multibyte.c',
         'lib/curlx/nonblock.c',
