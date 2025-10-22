@@ -12,6 +12,8 @@
 #include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
+#include "opentelemetry/sdk/trace/simple_processor.h"
+#include "opentelemetry/sdk/trace/tracer_provider.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/service_attributes.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
@@ -34,12 +36,16 @@ using opentelemetry::nostd::span;
 using opentelemetry::semconv::process::kProcessOwner;
 using opentelemetry::semconv::service::kServiceName;
 using LogsRecordable = opentelemetry::sdk::logs::Recordable;
+using opentelemetry::sdk::metrics::MeterProvider;
 using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::sdk::trace::Recordable;
+using opentelemetry::sdk::trace::SimpleSpanProcessor;
+using opentelemetry::sdk::trace::SpanProcessor;
+using opentelemetry::sdk::trace::TracerProvider;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClient;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
@@ -1218,8 +1224,10 @@ int GrpcAgent::config(const json& config) {
     }
 
     if (enable_otel) {
-      auto meter_provider =
-      std::make_shared<opentelemetry::sdk::metrics::MeterProvider>();
+      auto meter_provider = std::make_shared<MeterProvider>();
+      auto processor = std::unique_ptr<SpanProcessor>(
+        new SimpleSpanProcessor(std::move(trace_exporter_)));
+      auto trace_provider = std::make_shared<TracerProvider>(std::move(processor));
     }
   }
 
