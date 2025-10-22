@@ -1034,6 +1034,7 @@
       'type': 'static_library',
       'dependencies': [
         'grpc',
+        'grpc_otel_plugin',
         'upb',
         '../protobuf/abseil.gyp:abseil_proto',
         '../protobuf/utf8_range.gyp:utf8_range',
@@ -1103,6 +1104,24 @@
         'src/cpp/util/status.cc',
         'src/cpp/util/string_ref.cc',
         'src/cpp/util/time_cc.cc',
+      ],
+    },
+    {
+      'target_name': 'grpc_otel_plugin',
+      'type': 'static_library',
+      'dependencies': [
+        'upb',
+        '../protobuf/abseil.gyp:abseil_proto',
+      ],
+      'include_dirs': [
+        './',
+        './include',
+        './src/core/ext/upb-gen',
+        './src/core/ext/upbdefs-gen',
+        '../opentelemetry-cpp/api/include',
+      ],
+      'sources': [
+        'src/cpp/ext/otel/otel_plugin.cc',
       ],
     },
     {

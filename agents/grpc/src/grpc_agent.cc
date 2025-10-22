@@ -8,6 +8,8 @@
 #include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
 #include "absl/log/initialize.h"
+#include "grpcpp/ext/otel_plugin.h"
+#include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
@@ -66,6 +68,7 @@ constexpr size_t span_msg_q_min_size = 1000;
 const char* const kNSOLID_GRPC_INSECURE = "NSOLID_GRPC_INSECURE";
 const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
+const char* const kNSOLID_GRPC_OTEL = "NSOLID_GRPC_OTEL";
 
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
@@ -1036,7 +1039,6 @@ int GrpcAgent::config(const json& config) {
         per_process::system_environment->Get(kNSOLID_GRPC_INSECURE);
       // Only parse the insecure flag in non SaaS mode.
       if (insecure_str.has_value() && (!saas_ || saas_->testing)) {
-        // insecure = std::stoull(insecure_str.value());
         insecure = std::stoi(insecure_str.value());
       }
 
@@ -1203,6 +1205,21 @@ int GrpcAgent::config(const json& config) {
     auto it = config_.find("contCpuProfile");
     if (it != config_.end() && it->is_boolean()) {
       cont_cpu_profile_enabled_.store(*it, std::memory_order_release);
+    }
+  }
+
+  {
+    bool enable_otel = false;
+    auto enable_otel_str =
+      per_process::system_environment->Get(kNSOLID_GRPC_OTEL);
+    // Only parse the insecure flag in non SaaS mode.
+    if (enable_otel_str.has_value()) {
+      enable_otel = std::stoi(enable_otel_str.value());
+    }
+
+    if (enable_otel) {
+      auto meter_provider =
+      std::make_shared<opentelemetry::sdk::metrics::MeterProvider>();
     }
   }
 
