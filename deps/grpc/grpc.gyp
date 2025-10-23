@@ -278,6 +278,8 @@
         'src/core/ext/transport/chttp2/transport/varint.cc',
         'src/core/ext/transport/chttp2/transport/write_size_policy.cc',
         'src/core/ext/transport/chttp2/transport/writing.cc',
+        'src/core/ext/transport/inproc/inproc_transport.cc',
+        'src/core/ext/transport/inproc/legacy_inproc_transport.cc',
         'src/core/ext/upb-gen/envoy/admin/v3/certs.upb_minitable.c',
         'src/core/ext/upb-gen/envoy/admin/v3/clusters.upb_minitable.c',
         'src/core/ext/upb-gen/envoy/admin/v3/config_dump.upb_minitable.c',
@@ -1098,6 +1100,8 @@
         'src/cpp/server/server_posix.cc',
         'src/cpp/server/xds_server_builder.cc',
         'src/cpp/server/xds_server_credentials.cc',
+        'src/cpp/server/health/default_health_check_service.cc',
+        'src/cpp/server/health/health_check_service.cc',
         'src/cpp/thread_manager/thread_manager.cc',
         'src/cpp/util/byte_buffer_cc.cc',
         'src/cpp/util/error_details.cc',
@@ -1121,7 +1125,9 @@
         '../opentelemetry-cpp/api/include',
       ],
       'sources': [
+        'src/cpp/ext/otel/otel_client_call_tracer.cc',
         'src/cpp/ext/otel/otel_plugin.cc',
+        'src/cpp/ext/otel/otel_server_call_tracer.cc',
       ],
     },
     {

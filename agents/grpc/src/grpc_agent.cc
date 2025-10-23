@@ -1229,8 +1229,17 @@ int GrpcAgent::config(const json& config) {
     }
 
     if (enable_otel) {
-      auto meter_provider = std::make_shared<MeterProvider>();
-      // Now trace_provider_ owns the processor, keeping trace_processor_ valid
+      Debug("Enabling gRPC OpenTelemetry Plugin\n");
+      // auto meter_provider = std::make_shared<MeterProvider>();
+      auto status = ::grpc::OpenTelemetryPluginBuilder()
+                    .SetTracerProvider(tracer_provider_)
+                    .BuildAndRegisterGlobal();
+      if (!status.ok()) {
+        Debug("Failed to register gRPC OpenTelemetry Plugin: %s\n",
+              status.ToString().c_str());
+      } else {
+        Debug("gRPC OpenTelemetry Plugin registered successfully\n");
+      }
     }
   }
 
