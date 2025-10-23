@@ -7,6 +7,7 @@
         'sdk/src/common/base64.cc',
         'sdk/src/common/env_variables.cc',
         'sdk/src/common/global_log_handler.cc',
+        'sdk/src/common/random.cc',
         'sdk/src/logs/exporter.cc',
         'sdk/src/logs/readable_log_record.cc',
         'sdk/src/metrics/async_instruments.cc',
@@ -30,10 +31,18 @@
         'sdk/src/metrics/state/temporal_metric_storage.cc',
         'sdk/src/resource/resource.cc',
         'sdk/src/resource/resource_detector.cc',
+        'sdk/src/trace/batch_span_processor.cc',
         'sdk/src/trace/exporter.cc',
+        'sdk/src/trace/random_id_generator.cc',
+        'sdk/src/trace/span.cc',
+        'sdk/src/trace/tracer.cc',
+        'sdk/src/trace/tracer_config.cc',
+        'sdk/src/trace/tracer_context.cc',
+        'sdk/src/trace/tracer_provider.cc',
       ],
       'include_dirs': [
         'api/include',
+        'sdk',
         'sdk/include',
       ],
       'defines': [
@@ -69,6 +78,17 @@
         'GCC_SYMBOLS_PRIVATE_EXTERN': 'YES',  # -fvisibility=hidden,
         'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'    # -fexceptions
       },
+      'conditions': [
+        [ 'OS=="win"', {
+          'sources': [
+            'sdk/src/common/platform/fork_windows.cc'
+          ]
+        }, {
+          'sources': [
+            'sdk/src/common/platform/fork_unix.cc'
+          ]
+        }],
+      ],
     },
     {
       'target_name': 'otlp-http-exporter',
