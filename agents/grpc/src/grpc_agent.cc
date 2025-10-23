@@ -12,7 +12,7 @@
 #include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
-#include "opentelemetry/sdk/trace/simple_processor.h"
+#include "opentelemetry/sdk/trace/batch_span_processor.h"
 #include "opentelemetry/sdk/trace/tracer_provider.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/service_attributes.h"
@@ -42,8 +42,9 @@ using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
+using opentelemetry::sdk::trace::BatchSpanProcessor;
+using opentelemetry::sdk::trace::BatchSpanProcessorOptions;
 using opentelemetry::sdk::trace::Recordable;
-using opentelemetry::sdk::trace::SimpleSpanProcessor;
 using opentelemetry::sdk::trace::SpanProcessor;
 using opentelemetry::sdk::trace::TracerProvider;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClient;
@@ -1099,7 +1100,11 @@ int GrpcAgent::config(const json& config) {
           }
         }
 
-        trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options, client);
+        auto trace_exporter = std::make_unique<OtlpGrpcExporter>(options, client);
+        BatchSpanProcessorOptions batch_options;
+        trace_processor_ = new BatchSpanProcessor(std::move(trace_exporter), batch_options);
+        auto processor = std::unique_ptr<SpanProcessor>(trace_processor_);
+        tracer_provider_ = std::make_shared<TracerProvider>(std::move(processor));
       }
       {
         OtlpGrpcMetricExporterOptions options;
@@ -1160,7 +1165,7 @@ int GrpcAgent::config(const json& config) {
   if (trace_flags_ == 0 ||
       utils::find_any_fields_in_diff(diff, tracing_fields)) {
     trace_flags_ = 0;
-    if (trace_exporter_ != nullptr) {
+    if (tracer_provider_ != nullptr) {
       auto it = config_.find("tracingEnabled");
       if (it != config_.end()) {
         bool tracing_enabled = *it;
@@ -1225,9 +1230,7 @@ int GrpcAgent::config(const json& config) {
 
     if (enable_otel) {
       auto meter_provider = std::make_shared<MeterProvider>();
-      auto processor = std::unique_ptr<SpanProcessor>(
-        new SimpleSpanProcessor(std::move(trace_exporter_)));
-      auto trace_provider = std::make_shared<TracerProvider>(std::move(processor));
+      // Now trace_provider_ owns the processor, keeping trace_processor_ valid
     }
   }
 
@@ -1329,7 +1332,8 @@ void GrpcAgent::do_stop() {
 
   log_exporter_.reset();
   metrics_exporter_.reset();
-  trace_exporter_.reset();
+  tracer_provider_.reset();
+  trace_processor_ = nullptr;
   ready_ = false;
   span_collector_.reset();
   profile_collector_.reset();
@@ -1348,11 +1352,11 @@ void GrpcAgent::do_stop() {
   cont_profile_queue_.reset();
 }
 
-void GrpcAgent::got_spans(const UniqRecordables& recordables) {
+void GrpcAgent::got_spans(UniqRecordables& recordables) {
   Debug("# Spans Exporting: %ld\n", recordables.size());
-  auto result =
-      trace_exporter_->Export(const_cast<UniqRecordables&>(recordables));
-  Debug("# Result: %d\n", static_cast<int>(result));
+  for (auto& recordable : recordables) {
+    trace_processor_->OnEnd(std::move(recordable));
+  }
 }
 
 void GrpcAgent::got_asset_done_msg() {
@@ -2301,7 +2305,7 @@ void GrpcAgent::update_tracer(uint32_t flags) {
           return nullptr;
         }
 
-        auto recordable = agent->trace_exporter_->MakeRecordable();
+        auto recordable = agent->trace_processor_->MakeRecordable();
         otlp::fill_recordable(recordable.get(), span);
         return recordable;
       },

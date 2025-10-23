@@ -19,14 +19,16 @@
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace exporter {
 namespace otlp {
-class OtlpGrpcExporter;
+// class OtlpGrpcExporter;
 class OtlpGrpcLogRecordExporter;
 class OtlpGrpcMetricExporter;
 }
 }
 namespace sdk {
 namespace trace {
+class BatchSpanProcessor;
 class Recordable;
+class TracerProvider;
 }
 }
 OPENTELEMETRY_END_NAMESPACE
@@ -250,7 +252,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void got_continuous_profile(const ProfileCollector::ProfileQStor& stor);
 
-  void got_spans(const UniqRecordables& spans);
+  void got_spans(UniqRecordables& spans);
 
   void handle_command_request(CommandRequestStor&& req);
 
@@ -313,8 +315,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   // For the Tracing API
   uint32_t trace_flags_;
   std::shared_ptr<SpanCollector> span_collector_;
-  std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcExporter>
-    trace_exporter_;
+  std::shared_ptr<opentelemetry::sdk::trace::TracerProvider> tracer_provider_;
+  opentelemetry::sdk::trace::BatchSpanProcessor* trace_processor_ = nullptr;
   std::vector<std::unique_ptr<opentelemetry::sdk::trace::Recordable>>
     recordables_;
 
