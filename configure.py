@@ -2314,6 +2314,11 @@ configure_static(output)
 configure_inspector(output)
 configure_section_file(output)
 
+# Apply V8 patches if not already applied
+info('Applying V8 patches (idempotent)...')
+script = Path('deps/v8/apply-patches.sh').resolve()
+subprocess.run(['/usr/bin/env', 'bash', str(script)], check=True)
+
 # remove builtins that have been disabled
 if options.without_amaro:
     del shareable_builtins['amaro/dist/index']

@@ -1,0 +1,16 @@
+diff --git a/deps/v8/src/profiler/allocation-tracker.cc b/deps/v8/src/profiler/allocation-tracker.cc
+index eac8c082aee..be9a6fa8132 100644
+--- a/deps/v8/src/profiler/allocation-tracker.cc
++++ b/deps/v8/src/profiler/allocation-tracker.cc
+@@ -189,7 +189,10 @@ AllocationTracker::~AllocationTracker() {
+ 
+ 
+ void AllocationTracker::PrepareForSerialization() {
+-  for (UnresolvedLocation* location : unresolved_locations_) {
++  for (std::vector<UnresolvedLocation*>::size_type i = 0;
++       i < unresolved_locations_.size() /* size may grow in loop! */;
++       ++i) {
++    UnresolvedLocation* location = unresolved_locations_[i];
+     location->Resolve();
+     delete location;
+   }
