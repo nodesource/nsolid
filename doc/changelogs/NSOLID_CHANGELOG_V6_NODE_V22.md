@@ -1,0 +1,72 @@
+# N|Solid Changelog
+
+<!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
+
+## 2025-10-29, Version 22.21.1-nsolid-v6.0.2 'Jod'
+
+### Commits
+
+* \[[`76e7b850b1`](https://github.com/nodesource/nsolid/commit/76e7b850b1)] - **agents**: improve debug logging and fix win crash (Santiago Gimeno) [#376](https://github.com/nodesource/nsolid/pull/376)
+* \[[`b4449eefdd`](https://github.com/nodesource/nsolid/commit/b4449eefdd)] - **agents**: guard StartWritesDone() in grpc streams (Santiago Gimeno) [#379](https://github.com/nodesource/nsolid/pull/379)
+* \[[`f1f29831de`](https://github.com/nodesource/nsolid/commit/f1f29831de)] - **build,deps**: add v8 patch management system (Santiago Gimeno) [#381](https://github.com/nodesource/nsolid/pull/381)
+* \[[`25ec327a61`](https://github.com/nodesource/nsolid/commit/25ec327a61)] - **deps**: add missing files to grpc and curl gyp files (Santiago Gimeno) [#380](https://github.com/nodesource/nsolid/pull/380)
+* \[[`4841cdbd1f`](https://github.com/nodesource/nsolid/commit/4841cdbd1f)] - **deps**: add missing source file to libcurl gyp (Santiago Gimeno)
+* \[[`308fb1748f`](https://github.com/nodesource/nsolid/commit/308fb1748f)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#371](https://github.com/nodesource/nsolid/pull/371)
+* \[[`a08b35806d`](https://github.com/nodesource/nsolid/commit/a08b35806d)] - **deps**: update opentelemetry-cpp to 1.23.0 (Santiago Gimeno) [#371](https://github.com/nodesource/nsolid/pull/371)
+* \[[`9aad7d18dd`](https://github.com/nodesource/nsolid/commit/9aad7d18dd)] - **deps**: update libcurl to 8.16.0 (Santiago Gimeno) [#370](https://github.com/nodesource/nsolid/pull/370)
+* \[[`3ad39da1d1`](https://github.com/nodesource/nsolid/commit/3ad39da1d1)] - **deps**: update grpc to 1.75.0 (Santiago Gimeno) [#369](https://github.com/nodesource/nsolid/pull/369)
+* \[[`9595fa4695`](https://github.com/nodesource/nsolid/commit/9595fa4695)] - **doc**: explain NSOLID\_DISABLE\_PACKAGE\_SCAN better (Santiago Gimeno) [#362](https://github.com/nodesource/nsolid/pull/362)
+* \[[`b6416a9ca9`](https://github.com/nodesource/nsolid/commit/b6416a9ca9)] - **src**: clamp idle time to avoid underflow in metrics (Santiago Gimeno) [#372](https://github.com/nodesource/nsolid/pull/372)
+* \[[`60c5c58e76`](https://github.com/nodesource/nsolid/commit/60c5c58e76)] - **test**: fix flaky test-grpc-packages (Santiago Gimeno) [#368](https://github.com/nodesource/nsolid/pull/368)
+
+## 2025-09-17, Version 22.18.0-nsolid-v6.0.1 'Jod'
+
+### Commits
+
+* \[[`ae1497da1a`](https://github.com/nodesource/nsolid/commit/ae1497da1a)] - **src**: allow missing process title in metrics update (Santiago Gimeno) [#364](https://github.com/nodesource/nsolid/pull/364)
+* \[[`bd5af31a72`](https://github.com/nodesource/nsolid/commit/bd5af31a72)] - **src**: handle nameless user @ ProcessMetrics::Update (Santiago Gimeno) [#364](https://github.com/nodesource/nsolid/pull/364)
+
+## 2025-08-27, Version 22.18.0-nsolid-v6.0.0 'Jod'
+
+### Commits
+
+* \[[`f4e314ce8a`](https://github.com/nodesource/nsolid/commit/f4e314ce8a)] - **deps**: bump nsolid-cli to solve vulnerabilities (Minwoo) [nodesource/nsolid-private#14](https://github.com/nodesource/nsolid-private/pull/14)
+* \[[`584631271d`](https://github.com/nodesource/nsolid/commit/584631271d)] - **lib**: only use gRPC to connect to SaaS (Santiago Gimeno) [#354](https://github.com/nodesource/nsolid/pull/354)
+* \[[`240a1cfa0e`](https://github.com/nodesource/nsolid/commit/240a1cfa0e)] - **deps**: update grpc to 1.74.0 (Santiago Gimeno) [#350](https://github.com/nodesource/nsolid/pull/350)
+* \[[`97fb076e1d`](https://github.com/nodesource/nsolid/commit/97fb076e1d)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#345](https://github.com/nodesource/nsolid/pull/345)
+* \[[`d864541b46`](https://github.com/nodesource/nsolid/commit/d864541b46)] - **deps**: update to opentelemetry 1.22.0 (Santiago Gimeno) [#345](https://github.com/nodesource/nsolid/pull/345)
+* \[[`01455a73c7`](https://github.com/nodesource/nsolid/commit/01455a73c7)] - **agents**: enable compression in GrpcAgent (Santiago Gimeno) [#346](https://github.com/nodesource/nsolid/pull/346)
+* \[[`5c46fff446`](https://github.com/nodesource/nsolid/commit/5c46fff446)] - **build**: real fix for test-grpc-packages (Santiago Gimeno) [#353](https://github.com/nodesource/nsolid/pull/353)
+* \[[`ef5a0be2c0`](https://github.com/nodesource/nsolid/commit/ef5a0be2c0)] - **deps**: update protobuf to 32.0 (Santiago Gimeno) [#356](https://github.com/nodesource/nsolid/pull/356)
+* \[[`cd19746412`](https://github.com/nodesource/nsolid/commit/cd19746412)] - **build,deps,src**: bring back v8 abseil-cpp (Santiago Gimeno) [#349](https://github.com/nodesource/nsolid/pull/349)
+* \[[`7cd022975a`](https://github.com/nodesource/nsolid/commit/7cd022975a)] - **agents**: fix crash accessing cont prof queue (Santiago Gimeno) [#348](https://github.com/nodesource/nsolid/pull/348)
+* \[[`766a071519`](https://github.com/nodesource/nsolid/commit/766a071519)] - **build,test**: make test-grpc-packages pass again (Santiago Gimeno) [#352](https://github.com/nodesource/nsolid/pull/352)
+* \[[`ce20cc639c`](https://github.com/nodesource/nsolid/commit/ce20cc639c)] - **tools**: fix linting in update-protobuf.sh updater (Santiago Gimeno) [#347](https://github.com/nodesource/nsolid/pull/347)
+* \[[`b22a61cc32`](https://github.com/nodesource/nsolid/commit/b22a61cc32)] - **src**: add fast api call to get spanId and traceId (Santiago Gimeno) [#284](https://github.com/nodesource/nsolid/pull/284)
+* \[[`2624b5265e`](https://github.com/nodesource/nsolid/commit/2624b5265e)] - **src**: add fast api calls to push span strings (Santiago Gimeno) [#289](https://github.com/nodesource/nsolid/pull/289)
+* \[[`eb73b40d2b`](https://github.com/nodesource/nsolid/commit/eb73b40d2b)] - **deps**: update grpc to 1.73.1 (Santiago Gimeno) [#324](https://github.com/nodesource/nsolid/pull/324)
+* \[[`12646bdcc7`](https://github.com/nodesource/nsolid/commit/12646bdcc7)] - **deps**: update protobuf to 31.1 (Santiago Gimeno) [#325](https://github.com/nodesource/nsolid/pull/325)
+* \[[`35b0fc4115`](https://github.com/nodesource/nsolid/commit/35b0fc4115)] - **deps**: update libcurl to 8.15.0 (Santiago Gimeno) [#323](https://github.com/nodesource/nsolid/pull/323)
+* \[[`2492fc848c`](https://github.com/nodesource/nsolid/commit/2492fc848c)] - **tools**: add script to regenerate protofiles (Santiago Gimeno) [#326](https://github.com/nodesource/nsolid/pull/326)
+* \[[`308046b5ab`](https://github.com/nodesource/nsolid/commit/308046b5ab)] - **src**: add batching options to AsyncTSQueue (Santiago Gimeno) [#319](https://github.com/nodesource/nsolid/pull/319)
+* \[[`6b1737fbb3`](https://github.com/nodesource/nsolid/commit/6b1737fbb3)] - **src**: optimize async notifications in enqueue (Santiago Gimeno) [#318](https://github.com/nodesource/nsolid/pull/318)
+* \[[`4ba885fcfa`](https://github.com/nodesource/nsolid/commit/4ba885fcfa)] - **src**: add batched support callback in AsyncTSQueue (Santiago Gimeno) [#312](https://github.com/nodesource/nsolid/pull/312)
+* \[[`c13354ceef`](https://github.com/nodesource/nsolid/commit/c13354ceef)] - **deps**: build opentelemetry-cpp with c++20 (Santiago Gimeno) [#292](https://github.com/nodesource/nsolid/pull/292)
+* \[[`dd81b6d51c`](https://github.com/nodesource/nsolid/commit/dd81b6d51c)] - **deps**: update protobuf to 30.2 and grpc to 1.72.0 (Santiago Gimeno) [#303](https://github.com/nodesource/nsolid/pull/303)
+* \[[`bbf0d547c9`](https://github.com/nodesource/nsolid/commit/bbf0d547c9)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#322](https://github.com/nodesource/nsolid/pull/322)
+* \[[`76f28383f2`](https://github.com/nodesource/nsolid/commit/76f28383f2)] - **deps**: update opentelemetry-cpp to 1.21.0 (Santiago Gimeno) [#322](https://github.com/nodesource/nsolid/pull/322)
+* \[[`a0a2c709b2`](https://github.com/nodesource/nsolid/commit/a0a2c709b2)] - **agents**: optimize span collector message sending (Santiago Gimeno) [#287](https://github.com/nodesource/nsolid/pull/287)
+* \[[`63ce33e873`](https://github.com/nodesource/nsolid/commit/63ce33e873)] - **src**: fix thread-safety issues @ ContinuousProfiler (Santiago Gimeno) [#309](https://github.com/nodesource/nsolid/pull/309)
+* \[[`dcb7e63c3d`](https://github.com/nodesource/nsolid/commit/dcb7e63c3d)] - **deps**: update json to 3.12.0 (Santiago Gimeno) [#308](https://github.com/nodesource/nsolid/pull/308)
+* \[[`0d88dde546`](https://github.com/nodesource/nsolid/commit/0d88dde546)] - **deps**: update libcurl to 8.13.0 (Santiago Gimeno) [#307](https://github.com/nodesource/nsolid/pull/307)
+* \[[`d4cd85149f`](https://github.com/nodesource/nsolid/commit/d4cd85149f)] - **src**: store hasEbpfSupport metadata in info.proto (RafaelGSS) [#290](https://github.com/nodesource/nsolid/pull/290)
+* \[[`6d8741c4f2`](https://github.com/nodesource/nsolid/commit/6d8741c4f2)] - **agents**: support `contCpuProfile` command in the GRPC interface (Juan José Arboleda) [#297](https://github.com/nodesource/nsolid/pull/297)
+* \[[`4ae31aebaf`](https://github.com/nodesource/nsolid/commit/4ae31aebaf)] - **agents**: fix cont profiling timestamp calculation (Santiago Gimeno) [#302](https://github.com/nodesource/nsolid/pull/302)
+* \[[`dab3bc6326`](https://github.com/nodesource/nsolid/commit/dab3bc6326)] - **test**: add gRPC continuous profiling tests (Santiago Gimeno) [#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`4bb1a08bc8`](https://github.com/nodesource/nsolid/commit/4bb1a08bc8)] - **agents**: add continuous profiling to gRPC agent (Santiago Gimeno) [#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`8de82b1c3c`](https://github.com/nodesource/nsolid/commit/8de82b1c3c)] - **agents**: grow AssetStream to support cont profiling (Santiago Gimeno) [#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`24621190c1`](https://github.com/nodesource/nsolid/commit/24621190c1)] - **agents**: add ExportContinuousProfile rpc (Santiago Gimeno) [#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`c08fd673e0`](https://github.com/nodesource/nsolid/commit/c08fd673e0)] - **test**: add continuous profiling configuration tests (Santiago Gimeno) [#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`ddc7c6b190`](https://github.com/nodesource/nsolid/commit/ddc7c6b190)] - **src**: integrate ContinuousProfiler with EnvList (Santiago Gimeno) [#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`4cda17781c`](https://github.com/nodesource/nsolid/commit/4cda17781c)] - **lib**: add continuous CPU profiling configuration (Santiago Gimeno) [#282](https://github.com/nodesource/nsolid/pull/282)
+* \[[`90409488ff`](https://github.com/nodesource/nsolid/commit/90409488ff)] - **src**: implement ContinuousProfiler class (Santiago Gimeno) [#282](https://github.com/nodesource/nsolid/pull/282)
