@@ -104,7 +104,7 @@ changes:
     description: Added the new optional reason argument.
 -->
 
-* `reason`: {any}
+* `reason` {any}
 * Returns: {AbortSignal}
 
 Returns a new already aborted `AbortSignal`.
@@ -238,7 +238,7 @@ See {Blob}.
 added: v0.1.103
 -->
 
-* {Function}
+* Type: {Function}
 
 Used to handle binary data. See the [buffer section][].
 
@@ -319,6 +319,9 @@ added: v0.0.1
 <!-- YAML
 added: v18.0.0
 changes:
+ - version: v22.20.0
+   pr-url: https://github.com/nodejs/node/pull/59464
+   description: format now accepts `brotli` value.
  - version: v22.15.0
    pr-url: https://github.com/nodejs/node/pull/57510
    description: Marking the API stable.
@@ -332,7 +335,7 @@ A browser-compatible implementation of [`CompressionStream`][].
 added: v0.1.100
 -->
 
-* {Object}
+* Type: {Object}
 
 Used to print to stdout and stderr. See the [`console`][] section.
 
@@ -427,6 +430,9 @@ A browser-compatible implementation of {CustomEvent}.
 <!-- YAML
 added: v18.0.0
 changes:
+ - version: v22.20.0
+   pr-url: https://github.com/nodejs/node/pull/59464
+   description: format now accepts `brotli` value.
  - version: v22.15.0
    pr-url: https://github.com/nodejs/node/pull/57510
    description: Marking the API stable.
@@ -515,7 +521,7 @@ The dispatcher must be compatible with `undici`'s
 fetch(url, { dispatcher: new MyAgent() });
 ```
 
-It is possible to change the global dispatcher in Node.js installing `undici` and using
+It is possible to change the global dispatcher in Node.js by installing `undici` and using
 the `setGlobalDispatcher()` method. Calling this method will affect both `undici` and
 Node.js.
 
@@ -567,7 +573,7 @@ added: v0.1.27
 
 > Stability: 3 - Legacy. Use [`globalThis`][] instead.
 
-* {Object} The global namespace object.
+* Type: {Object} The global namespace object.
 
 In browsers, the top-level scope has traditionally been the global scope. This
 means that `var something` will define a new global variable, except within
@@ -666,7 +672,7 @@ A partial implementation of [`window.navigator`][].
 added: v21.0.0
 -->
 
-* {number}
+* Type: {number}
 
 The `navigator.hardwareConcurrency` read-only property returns the number of
 logical processors available to the current Node.js instance.
@@ -681,7 +687,7 @@ console.log(`This process is running on ${navigator.hardwareConcurrency} logical
 added: v21.2.0
 -->
 
-* {string}
+* Type: {string}
 
 The `navigator.language` read-only property returns a string representing the
 preferred language of the Node.js instance. The language will be determined by
@@ -702,7 +708,7 @@ console.log(`The preferred language of the Node.js instance has the tag '${navig
 added: v21.2.0
 -->
 
-* {Array<string>}
+* Type: {Array<string>}
 
 The `navigator.languages` read-only property returns an array of strings
 representing the preferred languages of the Node.js instance.
@@ -722,7 +728,7 @@ console.log(`The preferred languages are '${navigator.languages}'`);
 added: v21.2.0
 -->
 
-* {string}
+* Type: {string}
 
 The `navigator.platform` read-only property returns a string identifying the
 platform on which the Node.js instance is running.
@@ -737,7 +743,7 @@ console.log(`This process is running on ${navigator.platform}`);
 added: v21.1.0
 -->
 
-* {string}
+* Type: {string}
 
 The `navigator.userAgent` read-only property returns user agent
 consisting of the runtime name and major version number.
@@ -810,7 +816,7 @@ The [`perf_hooks.performance`][] object.
 added: v0.1.7
 -->
 
-* {Object}
+* Type: {Object}
 
 The process object. See the [`process` object][] section.
 
@@ -1132,7 +1138,7 @@ The WHATWG `URLSearchParams` class. See the [`URLSearchParams`][] section.
 added: v8.0.0
 -->
 
-* {Object}
+* Type: {Object}
 
 The object that acts as the namespace for all W3C
 [WebAssembly][webassembly-org] related functionality. See the

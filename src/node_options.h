@@ -121,6 +121,7 @@ class EnvironmentOptions : public Options {
   bool require_module = true;
   std::string dns_result_order;
   bool enable_source_maps = false;
+  bool experimental_addon_modules = false;
   bool experimental_eventsource = false;
   bool experimental_fetch = true;
   bool experimental_websocket = true;
@@ -130,7 +131,6 @@ class EnvironmentOptions : public Options {
   bool experimental_global_customevent = true;
   bool experimental_global_navigator = true;
   bool experimental_global_web_crypto = true;
-  bool experimental_wasm_modules = false;
   bool experimental_import_meta_resolve = false;
   std::string input_type;  // Value of --input-type
   std::string type;        // Value of --experimental-default-type
@@ -172,6 +172,7 @@ class EnvironmentOptions : public Options {
   bool cpu_prof = false;
   bool experimental_network_inspection = false;
   bool experimental_worker_inspection = false;
+  bool experimental_inspector_network_resource = false;
   std::string heap_prof_dir;
   std::string heap_prof_name;
   static const uint64_t kDefaultHeapProfInterval = 512 * 1024;
@@ -239,6 +240,7 @@ class EnvironmentOptions : public Options {
   bool force_repl = false;
 
   bool insecure_http_parser = false;
+  bool use_env_proxy = false;
 
   bool tls_min_v1_0 = false;
   bool tls_min_v1_1 = false;
@@ -282,6 +284,8 @@ class PerIsolateOptions : public Options {
   bool report_uncaught_exception = false;
   bool report_on_signal = false;
   bool experimental_shadow_realm = false;
+  std::string max_old_space_size_percentage;
+  std::string max_old_space_size;
   int64_t stack_trace_limit = 10;
   std::string report_signal = "SIGUSR2";
   bool build_snapshot = false;
@@ -289,6 +293,8 @@ class PerIsolateOptions : public Options {
   inline EnvironmentOptions* get_per_env_options();
   void CheckOptions(std::vector<std::string>* errors,
                     std::vector<std::string>* argv) override;
+  void HandleMaxOldSpaceSizePercentage(std::vector<std::string>* errors,
+                                       std::string* max_old_space_size);
 
   inline std::shared_ptr<PerIsolateOptions> Clone() const;
 

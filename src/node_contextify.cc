@@ -293,10 +293,10 @@ BaseObjectPtr<ContextifyContext> ContextifyContext::New(
                               options->allow_code_gen_wasm);
 
   Utf8Value name_val(env->isolate(), options->name);
-  ContextInfo info(*name_val);
+  ContextInfo info(name_val.ToString());
   if (!options->origin.IsEmpty()) {
     Utf8Value origin_val(env->isolate(), options->origin);
-    info.origin = *origin_val;
+    info.origin = origin_val.ToString();
   }
 
   BaseObjectPtr<ContextifyContext> result;
@@ -1641,6 +1641,12 @@ static const auto throws_only_in_cjs_error_messages =
         "await is only valid in async functions and "
         "the top level bodies of modules"};
 
+static const auto maybe_top_level_await_errors =
+    std::array<std::string_view, 2>{
+        "missing ) after argument list",  // example: `func(await 1);`
+        "SyntaxError: Unexpected"         // example: `if(await 1)`
+    };
+
 // If cached_data is provided, it would be used for the compilation and
 // the on-disk compilation cache from NODE_COMPILE_CACHE (if configured)
 // would be ignored.
@@ -1875,6 +1881,16 @@ bool ShouldRetryAsESM(Realm* realm,
       break;
     }
   }
+
+  for (const auto& error_message : maybe_top_level_await_errors) {
+    if (message_view.find(error_message) != std::string_view::npos) {
+      // If the error message is related to top-level await, we can try to
+      // compile it as ESM.
+      maybe_valid_in_esm = true;
+      break;
+    }
+  }
+
   if (!maybe_valid_in_esm) {
     return false;
   }

@@ -377,6 +377,7 @@
   V(table_string, "table")                                                     \
   V(target_string, "target")                                                   \
   V(thread_id_string, "threadId")                                              \
+  V(thread_name_string, "threadName")                                          \
   V(ticketkeycallback_string, "onticketkeycallback")                           \
   V(timeout_string, "timeout")                                                 \
   V(time_to_first_byte_string, "timeToFirstByte")                              \
@@ -461,6 +462,8 @@
   V(tcp_constructor_template, v8::FunctionTemplate)                            \
   V(tty_constructor_template, v8::FunctionTemplate)                            \
   V(write_wrap_template, v8::ObjectTemplate)                                   \
+  V(worker_cpu_profile_taker_template, v8::ObjectTemplate)                     \
+  V(worker_cpu_usage_taker_template, v8::ObjectTemplate)                       \
   V(worker_heap_snapshot_taker_template, v8::ObjectTemplate)                   \
   V(worker_heap_statistics_taker_template, v8::ObjectTemplate)                 \
   V(x509_constructor_template, v8::FunctionTemplate)

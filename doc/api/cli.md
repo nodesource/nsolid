@@ -36,8 +36,7 @@ If a file is found, its path will be passed to the
   point to be loaded with ECMAScript module loader, such as `--import` or
   [`--experimental-default-type=module`][].
 * The file has an `.mjs` extension.
-* The file has an `.mjs` or `.wasm` (with `--experimental-wasm-modules`)
-  extension.
+* The file has an `.mjs` or `.wasm` extension.
 * The file does not have a `.cjs` extension, and the nearest parent
   `package.json` file contains a top-level [`"type"`][] field with a value of
   `"module"`.
@@ -49,9 +48,11 @@ Otherwise, the file is loaded using the CommonJS module loader. See
 
 When loading, the [ES module loader][Modules loaders] loads the program
 entry point, the `node` command will accept as input only files with `.js`,
-`.mjs`, or `.cjs` extensions; with `.wasm` extensions when
-[`--experimental-wasm-modules`][] is enabled; and with no extension when
-[`--experimental-default-type=module`][] is passed.
+`.mjs`, `.cjs` or `.wasm` extensions; and with no extension when
+[`--experimental-default-type=module`][] is passed. With the following flags,
+additional file extensions are enabled:
+
+* [`--experimental-addon-modules`][] for files with `.node` extension.
 
 ## Options
 
@@ -499,13 +500,16 @@ $ ls *.cpuprofile
 CPU.20190409.202950.15293.0.0.cpuprofile
 ```
 
-If `--cpu-prof-name` is specified, the provided value will be used as-is; patterns such as
-`${hhmmss}` or `${pid}` are not supported.
+If `--cpu-prof-name` is specified, the provided value is used as a template
+for the file name. The following placeholder is supported and will be
+substituted at runtime:
+
+* `${pid}` — the current process ID
 
 ```console
 $ node --cpu-prof --cpu-prof-name 'CPU.${pid}.cpuprofile' index.js
 $ ls *.cpuprofile
-'CPU.${pid}.cpuprofile'
+CPU.15293.cpuprofile
 ```
 
 ### `--cpu-prof-dir`
@@ -579,9 +583,11 @@ property throw an exception with the code `ERR_PROTO_ACCESS`.
 
 <!-- YAML
 added: v22.14.0
+changes:
+  - version: v22.20.0
+    pr-url: https://github.com/nodejs/node/pull/59707
+    description: The option is no longer experimental.
 -->
-
-> Stability: 1.2 - Release candidate
 
 Disable the ability of starting a debugging session by sending a
 `SIGUSR1` signal to the process.
@@ -791,30 +797,33 @@ node --entry-url 'file.ts?query#hash'
 node --entry-url 'data:text/javascript,console.log("Hello")'
 ```
 
-### `--env-file-if-exists=config`
+### `--env-file-if-exists=file`
 
 <!-- YAML
 added: v22.9.0
+changes:
+  - version: v22.21.0
+    pr-url: https://github.com/nodejs/node/pull/59925
+    description: The `--env-file-if-exists` flag is no longer experimental.
 -->
-
-> Stability: 1.1 - Active development
 
 Behavior is the same as [`--env-file`][], but an error is not thrown if the file
 does not exist.
 
-### `--env-file=config`
+### `--env-file=file`
 
 <!-- YAML
 added: v20.6.0
 changes:
+  - version: v22.21.0
+    pr-url: https://github.com/nodejs/node/pull/59925
+    description: The `--env-file` flag is no longer experimental.
   - version:
     - v21.7.0
     - v20.12.0
     pr-url: https://github.com/nodejs/node/pull/51289
     description: Add support to multi-line values.
 -->
-
-> Stability: 1.1 - Active development
 
 Loads environment variables from a file relative to the current directory,
 making them available to applications on `process.env`. The [environment
@@ -891,6 +900,16 @@ and `"` are usable.
 
 It is possible to run code containing inline types unless the
 [`--no-experimental-strip-types`][] flag is provided.
+
+### `--experimental-addon-modules`
+
+<!-- YAML
+added: v22.20.0
+-->
+
+> Stability: 1.0 - Early development
+
+Enable experimental import support for `.node` addons.
 
 ### `--experimental-async-context-frame`
 
@@ -1012,8 +1031,7 @@ Node.js currently defaults to CommonJS to instead default to ECMAScript modules,
 with the exception of folders and subfolders below `node_modules`, for backward
 compatibility.
 
-Under `--experimental-default-type=module` and `--experimental-wasm-modules`,
-files with no extension will be treated as WebAssembly if they begin with the
+Files with no extension will be treated as WebAssembly if they begin with the
 WebAssembly magic number (`\0asm`); otherwise they will be treated as ES module
 JavaScript.
 
@@ -1045,6 +1063,17 @@ Enable experimental `import.meta.resolve()` parent URL support, which allows
 passing a second `parentURL` argument for contextual resolution.
 
 Previously gated the entire `import.meta.resolve` feature.
+
+### `--experimental-inspector-network-resource`
+
+<!-- YAML
+added:
+  - v22.19.0
+-->
+
+> Stability: 1.1 - Active Development
+
+Enable experimental support for inspector network resources.
 
 ### `--experimental-loader=module`
 
@@ -1185,7 +1214,7 @@ This feature requires `--allow-worker` if used with the [Permission Model][].
 added: v22.7.0
 -->
 
-> Stability: 1.1 - Active development
+> Stability: 1.2 - Release candidate
 
 Enables the transformation of TypeScript-only syntax into JavaScript code.
 Implies `--enable-source-maps`.
@@ -1218,14 +1247,6 @@ changes:
 -->
 
 Enable experimental WebAssembly System Interface (WASI) support.
-
-### `--experimental-wasm-modules`
-
-<!-- YAML
-added: v12.3.0
--->
-
-Enable experimental WebAssembly module support.
 
 ### `--experimental-webstorage`
 
@@ -1681,6 +1702,25 @@ changes:
 
 Specify the maximum size, in bytes, of HTTP headers. Defaults to 16 KiB.
 
+### `--max-old-space-size-percentage=percentage`
+
+Sets the maximum memory size of V8's old memory section as a percentage of available system memory.
+This flag takes precedence over `--max-old-space-size` when both are specified.
+
+The `percentage` parameter must be a number greater than 0 and up to 100, representing the percentage
+of available system memory to allocate to the V8 heap.
+
+**Note:** This flag utilizes `--max-old-space-size`, which may be unreliable on 32-bit platforms due to
+integer overflow issues.
+
+```bash
+# Using 50% of available system memory
+node --max-old-space-size-percentage=50 index.js
+
+# Using 75% of available system memory
+node --max-old-space-size-percentage=75 index.js
+```
+
 ### `--napi-modules`
 
 <!-- YAML
@@ -1813,7 +1853,7 @@ changes:
     description: Type stripping is enabled by default.
 -->
 
-> Stability: 1.1 - Active development
+> Stability: 1.2 - Release candidate
 
 Disable experimental type-stripping for TypeScript files.
 For more information, see the [TypeScript type-stripping][] documentation.
@@ -2945,6 +2985,21 @@ environment variables.
 
 See `SSL_CERT_DIR` and `SSL_CERT_FILE`.
 
+### `--use-env-proxy`
+
+<!-- YAML
+added: v22.21.0
+-->
+
+> Stability: 1.1 - Active Development
+
+When enabled, Node.js parses the `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`
+environment variables during startup, and tunnels requests over the
+specified proxy.
+
+This is equivalent to setting the [`NODE_USE_ENV_PROXY=1`][] environment variable.
+When both are set, `--use-env-proxy` takes precedence.
+
 ### `--use-largepages=mode`
 
 <!-- YAML
@@ -2968,7 +3023,9 @@ The following values are valid for `mode`:
 ### `--use-system-ca`
 
 <!-- YAML
-added: v23.8.0
+added:
+  - v23.8.0
+  - v22.15.0
 changes:
   - version: v23.9.0
     pr-url: https://github.com/nodejs/node/pull/57009
@@ -3096,6 +3153,8 @@ node --watch index.js
 added:
   - v22.18.0
 -->
+
+> Stability: 1.1 - Active Development
 
 Customizes the signal sent to the process on watch mode restarts.
 
@@ -3329,6 +3388,7 @@ one is included in the list below.
 * `--enable-source-maps`
 * `--entry-url`
 * `--experimental-abortcontroller`
+* `--experimental-addon-modules`
 * `--experimental-async-context-frame`
 * `--experimental-default-type`
 * `--experimental-detect-module`
@@ -3346,7 +3406,6 @@ one is included in the list below.
 * `--experimental-transform-types`
 * `--experimental-vm-modules`
 * `--experimental-wasi-unstable-preview1`
-* `--experimental-wasm-modules`
 * `--experimental-webstorage`
 * `--force-context-aware`
 * `--force-fips`
@@ -3370,6 +3429,7 @@ one is included in the list below.
 * `--inspect`
 * `--localstorage-file`
 * `--max-http-header-size`
+* `--max-old-space-size-percentage`
 * `--napi-modules`
 * `--network-family-autoselection-attempt-timeout`
 * `--no-addons`
@@ -3449,6 +3509,7 @@ one is included in the list below.
 * `--track-heap-objects`
 * `--unhandled-rejections`
 * `--use-bundled-ca`
+* `--use-env-proxy`
 * `--use-largepages`
 * `--use-openssl-ca`
 * `--use-system-ca`
@@ -3591,6 +3652,33 @@ Node.js makes no guarantees about the reporter format used or its stability.
 If `value` equals `'0'`, certificate validation is disabled for TLS connections.
 This makes TLS, and HTTPS by extension, insecure. The use of this environment
 variable is strongly discouraged.
+
+### `NODE_USE_ENV_PROXY=1`
+
+<!-- YAML
+added: v22.21.0
+-->
+
+> Stability: 1.1 - Active Development
+
+When enabled, Node.js parses the `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`
+environment variables during startup, and tunnels requests over the
+specified proxy.
+
+This can also be enabled using the [`--use-env-proxy`][] command-line flag.
+When both are set, `--use-env-proxy` takes precedence.
+
+### `NODE_USE_SYSTEM_CA=1`
+
+<!-- YAML
+added: v22.19.0
+-->
+
+Node.js uses the trusted CA certificates present in the system store along with
+the `--use-bundled-ca` option and the `NODE_EXTRA_CA_CERTS` environment variable.
+
+This can also be enabled using the [`--use-system-ca`][] command-line flag.
+When both are set, `--use-system-ca` takes precedence.
 
 ### `NODE_V8_COVERAGE=dir`
 
@@ -3912,11 +4000,11 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`--cpu-prof-dir`]: #--cpu-prof-dir
 [`--diagnostic-dir`]: #--diagnostic-dirdirectory
 [`--disable-sigusr1`]: #--disable-sigusr1
-[`--env-file-if-exists`]: #--env-file-if-existsconfig
-[`--env-file`]: #--env-fileconfig
+[`--env-file-if-exists`]: #--env-file-if-existsfile
+[`--env-file`]: #--env-filefile
+[`--experimental-addon-modules`]: #--experimental-addon-modules
 [`--experimental-default-type=module`]: #--experimental-default-typetype
 [`--experimental-sea-config`]: single-executable-applications.md#generating-single-executable-preparation-blobs
-[`--experimental-wasm-modules`]: #--experimental-wasm-modules
 [`--heap-prof-dir`]: #--heap-prof-dir
 [`--import`]: #--importmodule
 [`--no-experimental-strip-types`]: #--no-experimental-strip-types
@@ -3925,6 +4013,8 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`--print`]: #-p---print-script
 [`--redirect-warnings`]: #--redirect-warningsfile
 [`--require`]: #-r---require-module
+[`--use-env-proxy`]: #--use-env-proxy
+[`--use-system-ca`]: #--use-system-ca
 [`AsyncLocalStorage`]: async_context.md#class-asynclocalstorage
 [`Atomics.wait()`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Atomics/wait
 [`Buffer`]: buffer.md#class-buffer
@@ -3932,6 +4022,7 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`ERR_INVALID_TYPESCRIPT_SYNTAX`]: errors.md#err_invalid_typescript_syntax
 [`ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`]: errors.md#err_unsupported_typescript_syntax
 [`NODE_OPTIONS`]: #node_optionsoptions
+[`NODE_USE_ENV_PROXY=1`]: #node_use_env_proxy1
 [`NO_COLOR`]: https://no-color.org
 [`SlowBuffer`]: buffer.md#class-slowbuffer
 [`Web Storage`]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API

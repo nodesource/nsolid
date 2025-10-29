@@ -289,21 +289,27 @@ FSReqBase* GetReqWrap(const v8::FunctionCallbackInfo<v8::Value>& args,
                       int index,
                       bool use_bigint) {
   v8::Local<v8::Value> value = args[index];
+  FSReqBase* result = nullptr;
   if (value->IsObject()) {
-    return Unwrap<FSReqBase>(value.As<v8::Object>());
-  }
+    result = Unwrap<FSReqBase>(value.As<v8::Object>());
+  } else {
+    Realm* realm = Realm::GetCurrent(args);
+    BindingData* binding_data = realm->GetBindingData<BindingData>();
 
-  Realm* realm = Realm::GetCurrent(args);
-  BindingData* binding_data = realm->GetBindingData<BindingData>();
-
-  if (value->StrictEquals(realm->isolate_data()->fs_use_promises_symbol())) {
-    if (use_bigint) {
-      return FSReqPromise<AliasedBigInt64Array>::New(binding_data, use_bigint);
-    } else {
-      return FSReqPromise<AliasedFloat64Array>::New(binding_data, use_bigint);
+    if (value->StrictEquals(realm->isolate_data()->fs_use_promises_symbol())) {
+      if (use_bigint) {
+        result =
+            FSReqPromise<AliasedBigInt64Array>::New(binding_data, use_bigint);
+      } else {
+        result =
+            FSReqPromise<AliasedFloat64Array>::New(binding_data, use_bigint);
+      }
     }
   }
-  return nullptr;
+  if (result != nullptr) {
+    result->SetReturnValue(args);
+  }
+  return result;
 }
 
 // Returns nullptr if the operation fails from the start.
@@ -328,9 +334,7 @@ FSReqBase* AsyncDestCall(Environment* env, FSReqBase* req_wrap,
     } else if (strncmp(syscall, "close", 5) == 0) {
       env->envinst_->inc_fs_handles_closed();
     }
-    req_wrap->SetReturnValue(args);
   }
-
   return req_wrap;
 }
 

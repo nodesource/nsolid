@@ -1250,6 +1250,7 @@ $(TARBALL): release-only doc-only
 	$(RM) -r $(TARNAME)/tools/cpplint.py
 	$(RM) -r $(TARNAME)/tools/eslint
 	$(RM) -r $(TARNAME)/tools/eslint-rules
+	$(RM) -r $(TARNAME)/test/parallel/test-eslint-*
 	$(RM) -r $(TARNAME)/tools/license-builder.sh
 	$(RM) -r $(TARNAME)/tools/eslint/node_modules
 	$(RM) -r $(TARNAME)/tools/osx-*
@@ -1707,7 +1708,7 @@ HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 
 
 .PHONY: gen-openssl
 ifeq ($(HAS_DOCKER), 1)
-DOCKER_COMMAND ?= docker run -it -v $(PWD):/node
+DOCKER_COMMAND ?= docker run --rm -u $(shell id -u) -v $(PWD):/node
 IS_IN_WORKTREE = $(shell grep '^gitdir: ' $(PWD)/.git 2>/dev/null)
 GIT_WORKTREE_COMMON = $(shell git rev-parse --git-common-dir)
 DOCKER_COMMAND += $(if $(IS_IN_WORKTREE), -v $(GIT_WORKTREE_COMMON):$(GIT_WORKTREE_COMMON))

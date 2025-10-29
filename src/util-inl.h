@@ -159,43 +159,48 @@ constexpr ContainerOfHelper<Inner, Outer> ContainerOf(Inner Outer::*field,
 
 inline v8::Local<v8::String> OneByteString(v8::Isolate* isolate,
                                            const char* data,
-                                           int length) {
-  return v8::String::NewFromOneByte(isolate,
-                                    reinterpret_cast<const uint8_t*>(data),
-                                    v8::NewStringType::kNormal,
-                                    length).ToLocalChecked();
-}
-
-inline v8::Local<v8::String> OneByteString(v8::Isolate* isolate,
-                                           const signed char* data,
-                                           int length) {
-  return v8::String::NewFromOneByte(isolate,
-                                    reinterpret_cast<const uint8_t*>(data),
-                                    v8::NewStringType::kNormal,
-                                    length).ToLocalChecked();
-}
-
-inline v8::Local<v8::String> OneByteString(v8::Isolate* isolate,
-                                           const unsigned char* data,
-                                           int length) {
+                                           int length,
+                                           v8::NewStringType type) {
   return v8::String::NewFromOneByte(
-             isolate, data, v8::NewStringType::kNormal, length)
+             isolate, reinterpret_cast<const uint8_t*>(data), type, length)
       .ToLocalChecked();
 }
 
 inline v8::Local<v8::String> OneByteString(v8::Isolate* isolate,
-                                           std::string_view str) {
-  return OneByteString(isolate, str.data(), str.size());
+                                           const signed char* data,
+                                           int length,
+                                           v8::NewStringType type) {
+  return v8::String::NewFromOneByte(
+             isolate, reinterpret_cast<const uint8_t*>(data), type, length)
+      .ToLocalChecked();
+}
+
+inline v8::Local<v8::String> OneByteString(v8::Isolate* isolate,
+                                           const unsigned char* data,
+                                           int length,
+                                           v8::NewStringType type) {
+  return v8::String::NewFromOneByte(isolate, data, type, length)
+      .ToLocalChecked();
+}
+
+inline v8::Local<v8::String> OneByteString(v8::Isolate* isolate,
+                                           std::string_view str,
+                                           v8::NewStringType type) {
+  return OneByteString(isolate, str.data(), str.size(), type);
 }
 
 char ToLower(char c) {
   return std::tolower(c, std::locale::classic());
 }
 
-std::string ToLower(const std::string& in) {
-  std::string out(in.size(), 0);
-  for (size_t i = 0; i < in.size(); ++i)
-    out[i] = ToLower(in[i]);
+template <typename T>
+std::string ToLower(const T& in) {
+  auto it = std::cbegin(in);
+  auto end = std::cend(in);
+  std::string out(std::distance(it, end), 0);
+  size_t i;
+  for (i = 0; it != end; ++it, ++i) out[i] = ToLower(*it);
+  DCHECK_EQ(i, out.size());
   return out;
 }
 
@@ -203,10 +208,14 @@ char ToUpper(char c) {
   return std::toupper(c, std::locale::classic());
 }
 
-std::string ToUpper(const std::string& in) {
-  std::string out(in.size(), 0);
-  for (size_t i = 0; i < in.size(); ++i)
-    out[i] = ToUpper(in[i]);
+template <typename T>
+std::string ToUpper(const T& in) {
+  auto it = std::cbegin(in);
+  auto end = std::cend(in);
+  std::string out(std::distance(it, end), 0);
+  size_t i;
+  for (i = 0; it != end; ++it, ++i) out[i] = ToUpper(*it);
+  DCHECK_EQ(i, out.size());
   return out;
 }
 
@@ -598,7 +607,14 @@ constexpr bool FastStringKey::operator==(const FastStringKey& other) const {
   return name_ == other.name_;
 }
 
-constexpr FastStringKey::FastStringKey(std::string_view name)
+consteval FastStringKey::FastStringKey(std::string_view name)
+    : FastStringKey(name, 0) {}
+
+constexpr FastStringKey FastStringKey::AllowDynamic(std::string_view name) {
+  return FastStringKey(name, 0);
+}
+
+constexpr FastStringKey::FastStringKey(std::string_view name, int dummy)
     : name_(name), cached_hash_(HashImpl(name)) {}
 
 constexpr std::string_view FastStringKey::as_string_view() const {

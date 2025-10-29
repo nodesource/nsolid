@@ -38,7 +38,7 @@
 
     # Reset this number to 0 on major V8 upgrades.
     # Increment by one for each non-official patch applied to deps/v8.
-    'v8_embedder_string': '-node.27',
+    'v8_embedder_string': '-node.33',
 
     ##### V8 defaults for Node.js #####
 
@@ -545,7 +545,12 @@
                 'ldflags': [ '-m32' ],
               }],
               [ 'host_arch=="ppc64" and OS not in "aix os400"', {
-                'cflags': [ '-m64', '-mminimal-toc' ],
+                'conditions': [
+                  [ 'clang==0', {
+                    'cflags': [ '-mminimal-toc' ],
+                  }],
+                ],
+                'cflags': [ '-m64' ],
                 'ldflags': [ '-m64' ],
               }],
               [ 'host_arch=="s390x" and OS=="linux"', {
@@ -569,7 +574,12 @@
                 'ldflags': [ '-m32' ],
               }],
               [ 'target_arch=="ppc64" and OS not in "aix os400"', {
-                'cflags': [ '-m64', '-mminimal-toc' ],
+                'conditions': [
+                  [ 'clang==0', {
+                    'cflags': [ '-mminimal-toc' ],
+                  }],
+                ],
+                'cflags': [ '-m64' ],
                 'ldflags': [ '-m64' ],
               }],
               [ 'target_arch=="s390x" and OS=="linux"', {
