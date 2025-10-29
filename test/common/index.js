@@ -947,6 +947,17 @@ function expectRequiredModule(mod, expectation, checkESModule = true) {
   assert.deepStrictEqual(clone, { ...expectation });
 }
 
+function expectRequiredTLAError(err) {
+  const message = /require\(\) cannot be used on an ESM graph with top-level await/;
+  if (typeof err === 'string') {
+    assert.match(err, /ERR_REQUIRE_ASYNC_MODULE/);
+    assert.match(err, message);
+  } else {
+    assert.strictEqual(err.code, 'ERR_REQUIRE_ASYNC_MODULE');
+    assert.match(err.message, message);
+  }
+}
+
 const common = {
   allowGlobals,
   buildType,
@@ -956,6 +967,7 @@ const common = {
   defaultAutoSelectFamilyAttemptTimeout,
   expectsError,
   expectRequiredModule,
+  expectRequiredTLAError,
   expectWarning,
   getArrayBufferViews,
   getBufferSources,
