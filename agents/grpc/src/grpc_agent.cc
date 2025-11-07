@@ -4,7 +4,6 @@
 #include "nsolid/nsolid_api.h"
 #include "nsolid/continuous_profiler.h"
 #include "nsolid/nsolid_util.h"
-#include "../../otlp/src/otlp_common.h"
 #include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
 #include "absl/log/initialize.h"
@@ -263,7 +262,7 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
 
   ResourceMetrics data;
   data.resource_ = otlp::GetResource();
-  std::vector<MetricData> metrics;
+  otlp::MetricDataBatch metrics;
 
   // As this is the cached we're sending, we pass the same value for prev_stor.
   otlp::fill_proc_metrics(metrics, proc_metrics, proc_metrics, false);
@@ -272,7 +271,8 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
   }
 
   data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
+    std::vector<ScopeMetrics>{{ otlp::GetScope(),
+                                metrics.DumpMetricsAndReset() }};
   OtlpMetricUtils::PopulateResourceMetrics(
     data, metrics_event->mutable_body()->mutable_resource_metrics()->Add());
 }
@@ -433,6 +433,7 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         ready_(false),
                         exiting_(false),
                         trace_flags_(0),
+                        metrics_paused_(false),
                         proc_metrics_(),
                         proc_prev_stor_(),
                         config_(json::object()),
@@ -941,20 +942,23 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  ResourceMetrics data;
-  data.resource_ = otlp::GetResource();
-  std::vector<MetricData> metrics;
-
   ThreadMetricsStor stor;
   while (agent->thr_metrics_msg_q_.dequeue(stor)) {
-    otlp::fill_env_metrics(metrics, stor, false);
+    otlp::fill_env_metrics(agent->thr_metrics_batch_, stor, false);
     agent->thr_metrics_cache_.insert_or_assign(stor.thread_id, std::move(stor));
   }
 
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
-  auto result = agent->metrics_exporter_->Export(data);
-  Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+  if (agent->thr_metrics_batch_.ShouldFlush()) {
+    auto metric_data = agent->thr_metrics_batch_.DumpMetricsAndReset();
+    if (!metric_data.empty()) {
+      ResourceMetrics data;
+      data.resource_ = otlp::GetResource();
+      data.scope_metric_data_ =
+        std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
+      auto result = agent->metrics_exporter_->Export(data);
+      Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+    }
+  }
 }
 
 /*static*/void GrpcAgent::metrics_timer_cb_(nsuv::ns_timer*,
@@ -964,11 +968,40 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  agent->got_proc_metrics();
-  for (auto& item : agent->env_metrics_map_) {
+  agent->on_metrics_timer();
+}
+
+void GrpcAgent::on_metrics_timer() {
+  if (metrics_paused_) {
+    auto metric_data = proc_metrics_batch_.DumpMetricsAndReset();
+    if (!metric_data.empty()) {
+      ResourceMetrics data;
+      data.resource_ = otlp::GetResource();
+      data.scope_metric_data_ =
+        std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
+      auto result = metrics_exporter_->Export(data);
+      Debug("# ProcessMetrics Exported. Result: %d\n",
+            static_cast<int>(result));
+    }
+
+    metric_data = thr_metrics_batch_.DumpMetricsAndReset();
+    if (!metric_data.empty()) {
+      ResourceMetrics data;
+      data.resource_ = otlp::GetResource();
+      data.scope_metric_data_ =
+        std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
+      auto result = metrics_exporter_->Export(data);
+      Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+    }
+
+    return;
+  }
+
+  got_proc_metrics();
+  for (auto& item : env_metrics_map_) {
     // Retrieve metrics from the Metrics API. Ignore any return error since
     // there's nothing to be done.
-    item.second.metrics_->Update(thr_metrics_cb_, agent_wp);
+    item.second.metrics_->Update(thr_metrics_cb_, weak_from_this());
   }
 }
 
@@ -1178,6 +1211,17 @@ int GrpcAgent::config(const json& config) {
     update_tracer(trace_flags_);
   }
 
+  if (utils::find_any_fields_in_diff(diff, { "/metricsBatchSize" })) {
+    auto it = config_.find("metricsBatchSize");
+    if (it != config_.end()) {
+      size_t batch_size = it->get<size_t>();
+      if (batch_size > 0) {
+        proc_metrics_batch_.Resize(batch_size);
+        thr_metrics_batch_.Resize(batch_size);
+      }
+    }
+  }
+
   // If metrics timer is not active or if the diff contains metrics fields,
   // recalculate the metrics status. (stop/start/what period)
   if (!metrics_timer_.is_active() ||
@@ -1185,13 +1229,17 @@ int GrpcAgent::config(const json& config) {
     uint64_t period = 0;
     auto it = config_.find("pauseMetrics");
     if (it != config_.end()) {
-      bool pause = *it;
-      if (!pause) {
+      metrics_paused_ = *it;
+      if (!metrics_paused_) {
         it = config_.find("interval");
         if (it != config_.end()) {
           period = *it;
         }
       }
+    }
+
+    if (period == 0) {
+      period = 5000;
     }
 
     ret = setup_metrics_timer(period);
@@ -1389,15 +1437,21 @@ void GrpcAgent::got_logs() {
 void GrpcAgent::got_proc_metrics() {
   ASSERT_EQ(0, proc_metrics_.Update());
   ProcessMetrics::MetricsStor stor = proc_metrics_.Get();
-  std::vector<MetricData> metrics;
-  otlp::fill_proc_metrics(metrics, stor, proc_prev_stor_, false);
-  ResourceMetrics data;
-  data.resource_ = otlp::GetResource();
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
-  auto result = metrics_exporter_->Export(data);
-  Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
+  otlp::fill_proc_metrics(proc_metrics_batch_, stor, proc_prev_stor_, false);
   proc_prev_stor_ = stor;
+
+  if (proc_metrics_batch_.ShouldFlush()) {
+    auto metric_data = proc_metrics_batch_.DumpMetricsAndReset();
+    if (!metric_data.empty()) {
+      ResourceMetrics data;
+      data.resource_ = otlp::GetResource();
+      data.scope_metric_data_ =
+        std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
+      auto result = metrics_exporter_->Export(data);
+      Debug("# ProcessMetrics Exported. Result: %d\n",
+            static_cast<int>(result));
+    }
+  }
 }
 
 void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
@@ -1767,6 +1821,10 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
 
   if (body.has_assetsenabled()) {
       out["assetsEnabled"] = body.assetsenabled();
+  }
+
+  if (body.has_metricsbatchsize()) {
+      out["metricsBatchSize"] = body.metricsbatchsize();
   }
 
   DebugJSON("Reconfigure out: \n%s\n", out);

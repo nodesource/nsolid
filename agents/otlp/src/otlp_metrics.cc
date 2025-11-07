@@ -106,11 +106,13 @@ OTLPMetrics::~OTLPMetrics() {
 /*virtual*/
 void OTLPMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                    const ProcessMetricsStor& prev_stor) {
-  std::vector<MetricData> metrics;
+  MetricDataBatch metrics;
   fill_proc_metrics(metrics, stor, prev_stor);
   ResourceMetrics data;
   data.resource_ = GetResource();
-  data.scope_metric_data_ = std::vector<ScopeMetrics>{{scope_, metrics}};
+  data.scope_metric_data_ =
+    std::vector<ScopeMetrics>{{ otlp::GetScope(),
+                                metrics.DumpMetricsAndReset() }};
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
@@ -120,14 +122,14 @@ void OTLPMetrics::got_thr_metrics(
     const std::vector<MetricsExporter::ThrMetricsStor>& thr_metrics) {
   ResourceMetrics data;
   data.resource_ = GetResource();
-  std::vector<MetricData> metrics;
+  MetricDataBatch metrics;
 
   for (const auto& tm : thr_metrics) {
     fill_env_metrics(metrics, tm.stor);
   }
 
   data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{scope_, metrics}};
+    std::vector<ScopeMetrics>{{scope_, metrics.DumpMetricsAndReset()}};
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
 }

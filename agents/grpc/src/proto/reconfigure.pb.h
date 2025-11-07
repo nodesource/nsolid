@@ -230,6 +230,7 @@ class ReconfigureBody final : public ::google::protobuf::Message
     kTracingModulesBlacklistFieldNumber = 11,
     kContCpuProfileFieldNumber = 12,
     kAssetsEnabledFieldNumber = 13,
+    kMetricsBatchSizeFieldNumber = 14,
   };
   // repeated string tags = 9;
   int tags_size() const;
@@ -400,11 +401,22 @@ class ReconfigureBody final : public ::google::protobuf::Message
   void _internal_set_assetsenabled(bool value);
 
   public:
+  // optional uint32 metricsBatchSize = 14;
+  bool has_metricsbatchsize() const;
+  void clear_metricsbatchsize() ;
+  ::uint32_t metricsbatchsize() const;
+  void set_metricsbatchsize(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_metricsbatchsize() const;
+  void _internal_set_metricsbatchsize(::uint32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:grpcagent.ReconfigureBody)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 13,
+  static const ::google::protobuf::internal::TcParseTable<4, 14,
                                    0, 74,
                                    2>
       _table_;
@@ -439,6 +451,7 @@ class ReconfigureBody final : public ::google::protobuf::Message
     ::uint32_t tracingmodulesblacklist_;
     bool contcpuprofile_;
     bool assetsenabled_;
+    ::uint32_t metricsbatchsize_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1213,6 +1226,35 @@ inline bool ReconfigureBody::_internal_assetsenabled() const {
 inline void ReconfigureBody::_internal_set_assetsenabled(bool value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.assetsenabled_ = value;
+}
+
+// optional uint32 metricsBatchSize = 14;
+inline bool ReconfigureBody::has_metricsbatchsize() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
+  return value;
+}
+inline void ReconfigureBody::clear_metricsbatchsize() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.metricsbatchsize_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00002000U);
+}
+inline ::uint32_t ReconfigureBody::metricsbatchsize() const {
+  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.metricsBatchSize)
+  return _internal_metricsbatchsize();
+}
+inline void ReconfigureBody::set_metricsbatchsize(::uint32_t value) {
+  _internal_set_metricsbatchsize(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.metricsBatchSize)
+}
+inline ::uint32_t ReconfigureBody::_internal_metricsbatchsize() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.metricsbatchsize_;
+}
+inline void ReconfigureBody::_internal_set_metricsbatchsize(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.metricsbatchsize_ = value;
 }
 
 // -------------------------------------------------------------------

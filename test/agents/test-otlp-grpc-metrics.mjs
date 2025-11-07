@@ -486,23 +486,43 @@ if (process.argv[2] === 'child') {
         assert.strictEqual(metric.unit, unit);
       }
 
-      assert.strictEqual(metric[aggregation].dataPoints.length, 1);
-      const dataPoint = metric[aggregation].dataPoints[0];
+      const dataPoints = metric[aggregation].dataPoints;
+      validateArray(dataPoints, `${name}.dataPoints`);
+      assert.ok(dataPoints.length > 0);
+      let dataPoint;
+      // eslint-disable-next-line eqeqeq
+      if (context.threadId != undefined) {
+        const dataPointIndex = dataPoints.findIndex((dp) => {
+          if (!dp.attributes) {
+            return false;
+          }
+          return dp.attributes.some((a) => a.key === 'thread.id' && a.value.intValue === `${context.threadId}`);
+        });
+        assert.notStrictEqual(dataPointIndex,
+                              -1,
+                              `Metric ${name} missing datapoint for thread ${context.threadId}`);
+        dataPoint = dataPoints[dataPointIndex];
+        const nameIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.name');
+        assert(nameIndex > -1);
+        if (context.threadId === 0) { // main-thread
+          assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'main-thread');
+        } else {  // worker-thread
+          assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'worker-thread');
+        }
+        dataPoints.splice(dataPointIndex, 1);
+        if (dataPoints.length === 0) {
+          indicesToRemove.push(i);
+        }
+      } else {
+        assert.strictEqual(dataPoints.length, 1);
+        dataPoint = dataPoints[0];
+        indicesToRemove.push(i);
+      }
+
       // eslint-disable-next-line eqeqeq
       if (context.threadId != undefined) {
         const attrIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.id' && a.value.intValue === `${context.threadId}`);
-        if (attrIndex > -1) {
-          indicesToRemove.push(i);
-          const nameIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.name');
-          assert(nameIndex > -1);
-          if (context.threadId === 0) { // main-thread
-            assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'main-thread');
-          } else {  // worker-thread
-            assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'worker-thread');
-          }
-        }
-      } else {
-        indicesToRemove.push(i);
+        assert(attrIndex > -1);
       }
 
       const startTime = BigInt(dataPoint.startTimeUnixNano);
@@ -561,6 +581,7 @@ if (process.argv[2] === 'child') {
             context.procMetricsDone = true;
           } else if (context.state === State.ThreadMetrics) {
             context.threadList.shift();
+            context.threadId = null;
           }
           context.state = State.None;
         }
@@ -587,9 +608,11 @@ if (process.argv[2] === 'child') {
     if (hasThreadMetrics) {
       assert.ok(context.threadList.length > 0, 'No more threads available');
       context.state = State.ThreadMetrics;
+      context.threadId = context.threadList[0];
       context.expected = [...expectedThreadMetrics];
     } else {
       context.state = State.ProcMetrics;
+      context.threadId = null;
       context.expected = [...expectedProcMetrics];
     }
   }

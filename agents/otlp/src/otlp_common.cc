@@ -1,9 +1,13 @@
 #include "otlp_common.h"
 // NOLINTNEXTLINE(build/c++11)
+#include <algorithm>
+// NOLINTNEXTLINE(build/c++11)
 #include <chrono>
+#include <climits>
 #include <unordered_map>
 #include "asserts-cpp/asserts.h"
 #include "env-inl.h"
+#include "nsolid/nsolid_util.h"
 #include "nlohmann/json.hpp"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/incubating/service_attributes.h"
@@ -32,8 +36,10 @@ using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::InstrumentDescriptor;
 using opentelemetry::sdk::metrics::InstrumentType;
 using opentelemetry::sdk::metrics::InstrumentValueType;
+using opentelemetry::sdk::metrics::LastValuePointData;
 using opentelemetry::sdk::metrics::PointAttributes;
 using opentelemetry::sdk::metrics::PointDataAttributes;
+using opentelemetry::sdk::metrics::SummaryPointData;
 using opentelemetry::sdk::metrics::SumPointData;
 using opentelemetry::sdk::metrics::ValueType;
 using opentelemetry::sdk::resource::Resource;
@@ -72,68 +78,96 @@ static std::unique_ptr<Resource> resource_g =
 static bool isResourceInitialized_g = false;
 
 // NOLINTNEXTLINE(runtime/references)
-static void add_counter(std::vector<MetricData>& metrics,
+static void add_counter(MetricDataBatch& metrics_batch,
                         const time_point& start,
                         const time_point& end,
                         const char* name,
                         const char* unit,
-                        InstrumentValueType type,
+                        InstrumentValueType value_type,
                         ValueType value,
                         PointAttributes attrs = {}) {
   SumPointData sum_point_data;
   sum_point_data.value_ = value;
-  MetricData metric_data{
-    InstrumentDescriptor{ name, "", unit, InstrumentType::kCounter, type},
-    AggregationTemporality::kCumulative,
-    SystemTimestamp{ start },
-    SystemTimestamp{ end },
-    std::vector<PointDataAttributes>{{ attrs, sum_point_data }}
-  };
-  metrics.push_back(metric_data);
+  PointDataAttributes point_data_attributes { attrs, sum_point_data };
+  metrics_batch.AddDataPoint(start,
+                             end,
+                             name,
+                             unit,
+                             InstrumentType::kCounter,
+                             value_type,
+                             AggregationTemporality::kCumulative,
+                             std::move(point_data_attributes));
 }
 
 // NOLINTNEXTLINE(runtime/references)
-static void add_gauge(std::vector<MetricData>& metrics,
+static void add_gauge(MetricDataBatch& metrics_batch,
                       const time_point& start,
                       const time_point& end,
                       const char* name,
                       const char* unit,
-                      InstrumentValueType type,
+                      InstrumentValueType value_type,
                       ValueType value,
                       PointAttributes attrs = {}) {
-  opentelemetry::sdk::metrics::LastValuePointData lv_point_data;
+  LastValuePointData lv_point_data;
   lv_point_data.value_ = value;
-  MetricData metric_data{
-    InstrumentDescriptor{
-      name, "", unit, InstrumentType::kObservableGauge, type },
-    AggregationTemporality::kCumulative,
-    SystemTimestamp{ start },
-    SystemTimestamp{ end },
-    std::vector<PointDataAttributes>{{ attrs, lv_point_data }}
-  };
-  metrics.push_back(metric_data);
+  PointDataAttributes point_data_attributes { attrs, lv_point_data };
+  metrics_batch.AddDataPoint(start,
+                             end,
+                             name,
+                             unit,
+                             InstrumentType::kGauge,
+                             value_type,
+                             AggregationTemporality::kCumulative,
+                             std::move(point_data_attributes));
 }
 
 // NOLINTNEXTLINE(runtime/references)
-static void add_summary(std::vector<MetricData>& metrics,
+static void add_summary(MetricDataBatch& metrics_batch,
                         const time_point& start,
                         const time_point& end,
                         const char* name,
                         const char* unit,
-                        InstrumentValueType type,
+                        InstrumentValueType value_type,
                         std::unordered_map<double, ValueType>&& values,
                         PointAttributes attrs = {}) {
-  opentelemetry::sdk::metrics::SummaryPointData summary_point_data{};
+  SummaryPointData summary_point_data{};
   summary_point_data.quantile_values_ = std::move(values);
-  MetricData metric_data{
-    InstrumentDescriptor{
-      name, "", unit, InstrumentType::kSummary, type },
-    AggregationTemporality::kUnspecified,
-    SystemTimestamp{ start },
-    SystemTimestamp{ end },
-    std::vector<PointDataAttributes>{{ attrs, summary_point_data }}
-  };
-  metrics.push_back(metric_data);
+  PointDataAttributes point_data_attributes { attrs, summary_point_data };
+  metrics_batch.AddDataPoint(start,
+                             end,
+                             name,
+                             unit,
+                             InstrumentType::kSummary,
+                             value_type,
+                             AggregationTemporality::kUnspecified,
+                             std::move(point_data_attributes));
+}
+
+MetricDataBatch::MetricDataBatch(std::size_t limit): max_points_(limit) {
+}
+
+void MetricDataBatch::AddDataPoint(const time_point& start,
+                                   const time_point& end,
+                                   const char* name,
+                                   const char* unit,
+                                   InstrumentType type,
+                                   InstrumentValueType value_type,
+                                   AggregationTemporality temporality,
+                                   PointDataAttributes&& pdata_attrs) {
+  auto it = metric_indices_.find(name);
+  if (it == metric_indices_.end()) {
+    MetricData metric_data {
+      InstrumentDescriptor { name, "", unit, type, value_type },
+      temporality,
+      SystemTimestamp{ start },
+      SystemTimestamp{ end },
+      std::vector<PointDataAttributes>{std::move(pdata_attrs)}
+    };
+    metrics_.push_back(metric_data);
+    TrackMetricIndex(name, metrics_.size() - 1);
+  } else {
+    metrics_[it->second].point_data_attr_.push_back(std::move(pdata_attrs));
+  }
 }
 
 InstrumentationScope* GetScope() {
@@ -184,7 +218,7 @@ Resource* UpdateResource(ResourceAttributes&& attrs) {
 }
 
 // NOLINTNEXTLINE(runtime/references)
-void fill_proc_metrics(std::vector<MetricData>& metrics,
+void fill_proc_metrics(MetricDataBatch& metrics_batch,
                        const ProcessMetrics::MetricsStor& stor,
                        const ProcessMetrics::MetricsStor& prev_stor,
                        bool use_snake_case) {
@@ -216,7 +250,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
     switch (MetricsType::MType) {                                              \
       case MetricsType::ECounter:                                              \
       {                                                                        \
-        add_counter(metrics,                                                   \
+        add_counter(metrics_batch,                                             \
                     process_start,                                             \
                     end,                                                       \
                     use_snake_case ? #CName : #JSName,                         \
@@ -227,7 +261,7 @@ void fill_proc_metrics(std::vector<MetricData>& metrics,
       break;                                                                   \
       case MetricsType::EGauge:                                                \
       {                                                                        \
-        add_gauge(metrics,                                                     \
+        add_gauge(metrics_batch,                                               \
                   process_start,                                               \
                   end,                                                         \
                   use_snake_case ? #CName : #JSName,                           \
@@ -245,6 +279,8 @@ NSOLID_PROCESS_METRICS_UINT64(V)
 NSOLID_PROCESS_METRICS_DOUBLE(V)
 #undef V
 
+  metrics_batch.IncrementPoints();
+
   // Update Resource if needed:
   // Check if 'user' or 'title' are different from the previous metrics.
   if (prev_stor.user != stor.user || prev_stor.title != stor.title) {
@@ -258,7 +294,7 @@ NSOLID_PROCESS_METRICS_DOUBLE(V)
 }
 
 // NOLINTNEXTLINE(runtime/references)
-void fill_env_metrics(std::vector<MetricData>& metrics,
+void fill_env_metrics(MetricDataBatch& metrics_batch,
                       const ThreadMetrics::MetricsStor& stor,
                       bool use_snake_case) {
   time_point end{
@@ -294,7 +330,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
     switch (MetricsType::MType) {                                              \
       case MetricsType::ECounter:                                              \
       {                                                                        \
-        add_counter(metrics,                                                   \
+        add_counter(metrics_batch,                                             \
                     process_start,                                             \
                     end,                                                       \
                     use_snake_case ? #CName : #JSName,                         \
@@ -306,7 +342,7 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
       break;                                                                   \
       case MetricsType::EGauge:                                                \
       {                                                                        \
-        add_gauge(metrics,                                                     \
+        add_gauge(metrics_batch,                                               \
                   process_start,                                               \
                   end,                                                         \
                   use_snake_case ? #CName : #JSName,                           \
@@ -324,7 +360,7 @@ NSOLID_ENV_METRICS_NUMBERS(V)
 #undef V
 
   // Add the summary metrics separately.
-  add_summary(metrics,
+  add_summary(metrics_batch,
               process_start,
               end,
               use_snake_case ? "gc_dur_us" : "gcDurUs",
@@ -333,7 +369,7 @@ NSOLID_ENV_METRICS_NUMBERS(V)
               {{ 0.5, stor.gc_dur_us_median },
                { 0.99, stor.gc_dur_us99_ptile }},
               attrs);
-  add_summary(metrics,
+  add_summary(metrics_batch,
               process_start,
               end,
               "dns",
@@ -341,7 +377,7 @@ NSOLID_ENV_METRICS_NUMBERS(V)
               InstrumentValueType::kDouble,
               {{ 0.5, stor.dns_median }, { 0.99, stor.dns99_ptile }},
               attrs);
-  add_summary(metrics,
+  add_summary(metrics_batch,
               process_start,
               end,
               use_snake_case ? "http_client" : "httpClient",
@@ -350,7 +386,7 @@ NSOLID_ENV_METRICS_NUMBERS(V)
               {{ 0.5, stor.http_client_median },
                { 0.99, stor.http_client99_ptile }},
               attrs);
-  add_summary(metrics,
+  add_summary(metrics_batch,
               process_start,
               end,
               use_snake_case ? "http_server" : "httpServer",
@@ -359,6 +395,8 @@ NSOLID_ENV_METRICS_NUMBERS(V)
               {{ 0.5, stor.http_server_median },
                { 0.99, stor.http_server99_ptile }},
               attrs);
+
+  metrics_batch.IncrementPoints();
 }
 
 void fill_log_recordable(LogsRecordable* recordable,
