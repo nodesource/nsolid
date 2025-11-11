@@ -24,7 +24,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "src/core/call/metadata_batch.h"
 #include "src/core/ext/transport/chttp2/transport/frame.h"
@@ -33,6 +32,7 @@
 #include "src/core/ext/transport/chttp2/transport/http2_status.h"
 #include "src/core/lib/slice/slice.h"
 #include "src/core/lib/slice/slice_buffer.h"
+#include "src/core/util/grpc_check.h"
 #include "src/core/util/shared_bit_gen.h"
 
 // TODO(tjagtap) TODO(akshitpatel): [PH2][P3] : Write micro benchmarks for
@@ -88,7 +88,7 @@ class HeaderAssembler {
   // The payload of the Http2HeaderFrame will be cleared in this function.
   Http2Status AppendHeaderFrame(Http2HeaderFrame&& frame) {
     // Validate input frame
-    DCHECK_GT(frame.stream_id, 0u)
+    GRPC_DCHECK_GT(frame.stream_id, 0u)
         << "RFC9113 : HEADERS frames MUST be associated with a stream.";
 
     // Manage size constraints
@@ -145,7 +145,7 @@ class HeaderAssembler {
     ASSEMBLER_LOG << "ReadMetadata " << buffer_.Length() << " Bytes.";
 
     // Validate
-    DCHECK_EQ(is_ready_, true);
+    GRPC_DCHECK_EQ(is_ready_, true);
 
     // Generate the gRPC Metadata from buffer_
     // RFC9113 :  A receiver MUST terminate the connection with a connection
@@ -154,6 +154,14 @@ class HeaderAssembler {
     // connection error (Section 5.4.1) of type COMPRESSION_ERROR.
     Arena::PoolPtr<grpc_metadata_batch> metadata =
         Arena::MakePooledForOverwrite<grpc_metadata_batch>();
+    // TODO(tjagtap) : [PH2][P5] : Currently the transport does not enforce
+    // setting allow_true_binary_metadata_ sent to the peer.
+    // Ideally Hpack code must validate and enforce this setting but it is not
+    // doing so now. Given that this is complex code and also common between
+    // CHTTP2 and PH2, we must do this as a standalone project with an
+    // experiment of its own. For now we just honour allow_true_binary_metadata_
+    // while writing frames for the peer on the write path. We do not enforce it
+    // on the read path.
     parser.BeginFrame(
         /*grpc_metadata_batch*/ metadata.get(), max_header_list_size_soft_limit,
         max_header_list_size_hard_limit,
@@ -190,8 +198,12 @@ class HeaderAssembler {
   // This value MUST be checked before calling ReadMetadata()
   bool IsReady() const { return is_ready_; }
 
-  explicit HeaderAssembler(const uint32_t stream_id)
-      : header_in_progress_(false), is_ready_(false), stream_id_(stream_id) {}
+  explicit HeaderAssembler(const uint32_t stream_id,
+                           const bool allow_true_binary_metadata_acked)
+      : header_in_progress_(false),
+        is_ready_(false),
+        allow_true_binary_metadata_acked_(allow_true_binary_metadata_acked),
+        stream_id_(stream_id) {}
 
   ~HeaderAssembler() = default;
 
@@ -209,6 +221,7 @@ class HeaderAssembler {
 
   bool header_in_progress_;
   bool is_ready_;
+  GRPC_UNUSED const bool allow_true_binary_metadata_acked_;
   const uint32_t stream_id_;
   SliceBuffer buffer_;
 };
@@ -223,16 +236,17 @@ class HeaderDisassembler {
   bool PrepareForSending(Arena::PoolPtr<grpc_metadata_batch>&& metadata,
                          HPackCompressor& encoder) {
     // Validate disassembler state
-    DCHECK(!is_done_);
+    GRPC_DCHECK(!is_done_);
     // Prepare metadata for sending
-    return encoder.EncodeRawHeaders(*metadata.get(), buffer_);
+    return encoder.EncodeRawHeaders(*metadata.get(), buffer_,
+                                    allow_true_binary_metadata_peer_);
   }
 
   Http2Frame GetNextFrame(const uint32_t max_frame_length,
                           bool& out_end_headers) {
     if (buffer_.Length() == 0 || is_done_) {
-      DCHECK(false) << "Calling code must check size using HasMoreData() "
-                       "before GetNextFrame()";
+      GRPC_DCHECK(false) << "Calling code must check size using HasMoreData() "
+                            "before GetNextFrame()";
     }
     out_end_headers = buffer_.Length() <= max_frame_length;
     SliceBuffer temp;
@@ -260,11 +274,13 @@ class HeaderDisassembler {
   // A separate HeaderDisassembler object MUST be made for Initial Metadata and
   // Trailing Metadata
   explicit HeaderDisassembler(const uint32_t stream_id,
-                              const bool is_trailing_metadata)
+                              const bool is_trailing_metadata,
+                              const bool allow_true_binary_metadata_peer)
       : stream_id_(stream_id),
         end_stream_(is_trailing_metadata),
         did_send_header_frame_(false),
-        is_done_(false) {}
+        is_done_(false),
+        allow_true_binary_metadata_peer_(allow_true_binary_metadata_peer) {}
 
   ~HeaderDisassembler() = default;
 
@@ -280,7 +296,7 @@ class HeaderDisassembler {
   const bool end_stream_;
   bool did_send_header_frame_;
   bool is_done_;  // Protect against the same disassembler from being used twice
-
+  const bool allow_true_binary_metadata_peer_;
   SliceBuffer buffer_;
 };
 

@@ -23,6 +23,8 @@
 
 #include "src/core/call/call_spine.h"
 #include "src/core/call/metadata_info.h"
+#include "src/core/channelz/channelz.h"
+#include "src/core/ext/transport/chttp2/transport/flow_control.h"
 #include "src/core/ext/transport/chttp2/transport/frame.h"
 #include "src/core/lib/promise/mpsc.h"
 #include "src/core/lib/promise/party.h"
@@ -52,69 +54,95 @@ void InitLocalSettings(Http2Settings& settings, const bool is_client) {
 }
 
 void ReadSettingsFromChannelArgs(const ChannelArgs& channel_args,
-                                 Http2Settings& settings,
+                                 Http2Settings& local_settings,
+                                 chttp2::TransportFlowControl& flow_control,
                                  const bool is_client) {
   if (channel_args.Contains(GRPC_ARG_HTTP2_HPACK_TABLE_SIZE_DECODER)) {
-    settings.SetHeaderTableSize(
+    local_settings.SetHeaderTableSize(
         channel_args.GetInt(GRPC_ARG_HTTP2_HPACK_TABLE_SIZE_DECODER)
             .value_or(-1));
   }
 
   if (channel_args.Contains(GRPC_ARG_MAX_CONCURRENT_STREAMS)) {
     if (!is_client) {
-      settings.SetMaxConcurrentStreams(
+      local_settings.SetMaxConcurrentStreams(
           channel_args.GetInt(GRPC_ARG_MAX_CONCURRENT_STREAMS).value_or(-1));
     } else {
       // We do not allow the channel arg to alter our 0 setting for
-      // MAX_CONCURRENT_STREAMS for clients because we dont support PUSH_PROMISE
+      // MAX_CONCURRENT_STREAMS for clients because we don't support
+      // PUSH_PROMISE
       LOG(WARNING) << "ChannelArg GRPC_ARG_MAX_CONCURRENT_STREAMS is not "
                       "available on clients";
     }
   }
 
   if (channel_args.Contains(GRPC_ARG_HTTP2_STREAM_LOOKAHEAD_BYTES)) {
-    settings.SetInitialWindowSize(
-        channel_args.GetInt(GRPC_ARG_HTTP2_STREAM_LOOKAHEAD_BYTES)
-            .value_or(-1));
-    // TODO(tjagtap) [PH2][P2] : Also set this for flow control.
-    // Refer to read_channel_args() in chttp2_transport.cc for more details.
+    int value =
+        channel_args.GetInt(GRPC_ARG_HTTP2_STREAM_LOOKAHEAD_BYTES).value_or(-1);
+    if (value >= 0) {
+      local_settings.SetInitialWindowSize(value);
+      flow_control.set_target_initial_window_size(value);
+    }
   }
 
-  settings.SetMaxHeaderListSize(GetHardLimitFromChannelArgs(channel_args));
+  local_settings.SetMaxHeaderListSize(
+      GetHardLimitFromChannelArgs(channel_args));
 
   if (channel_args.Contains(GRPC_ARG_HTTP2_MAX_FRAME_SIZE)) {
-    settings.SetMaxFrameSize(
+    local_settings.SetMaxFrameSize(
         channel_args.GetInt(GRPC_ARG_HTTP2_MAX_FRAME_SIZE).value_or(-1));
   }
 
   if (channel_args
           .GetBool(GRPC_ARG_EXPERIMENTAL_HTTP2_PREFERRED_CRYPTO_FRAME_SIZE)
           .value_or(false)) {
-    settings.SetPreferredReceiveCryptoMessageSize(INT_MAX);
+    local_settings.SetPreferredReceiveCryptoMessageSize(INT_MAX);
   }
 
   if (channel_args.Contains(GRPC_ARG_HTTP2_ENABLE_TRUE_BINARY)) {
-    settings.SetAllowTrueBinaryMetadata(
+    local_settings.SetAllowTrueBinaryMetadata(
         channel_args.GetInt(GRPC_ARG_HTTP2_ENABLE_TRUE_BINARY).value_or(-1) !=
         0);
   }
 
-  settings.SetAllowSecurityFrame(
+  local_settings.SetAllowSecurityFrame(
       channel_args.GetBool(GRPC_ARG_SECURITY_FRAME_ALLOWED).value_or(false));
 
   GRPC_HTTP2_COMMON_DLOG
       << "Http2Settings: {"
-      << "header_table_size: " << settings.header_table_size()
-      << ", max_concurrent_streams: " << settings.max_concurrent_streams()
-      << ", initial_window_size: " << settings.initial_window_size()
-      << ", max_frame_size: " << settings.max_frame_size()
-      << ", max_header_list_size: " << settings.max_header_list_size()
+      << "header_table_size: " << local_settings.header_table_size()
+      << ", max_concurrent_streams: " << local_settings.max_concurrent_streams()
+      << ", initial_window_size: " << local_settings.initial_window_size()
+      << ", max_frame_size: " << local_settings.max_frame_size()
+      << ", max_header_list_size: " << local_settings.max_header_list_size()
       << ", preferred_receive_crypto_message_size: "
-      << settings.preferred_receive_crypto_message_size()
-      << ", enable_push: " << settings.enable_push()
+      << local_settings.preferred_receive_crypto_message_size()
+      << ", enable_push: " << local_settings.enable_push()
       << ", allow_true_binary_metadata: "
-      << settings.allow_true_binary_metadata()
-      << ", allow_security_frame: " << settings.allow_security_frame() << "}";
+      << local_settings.allow_true_binary_metadata()
+      << ", allow_security_frame: " << local_settings.allow_security_frame()
+      << "}";
+}
+
+RefCountedPtr<channelz::SocketNode> CreateChannelzSocketNode(
+    std::shared_ptr<grpc_event_engine::experimental::EventEngine::Endpoint>
+        event_engine_endpoint,
+    const ChannelArgs& args) {
+  if (args.GetBool(GRPC_ARG_ENABLE_CHANNELZ)
+          .value_or(GRPC_ENABLE_CHANNELZ_DEFAULT)) {
+    auto local_addr = grpc_event_engine::experimental::ResolvedAddressToString(
+        event_engine_endpoint->GetLocalAddress());
+    auto peer_addr = grpc_event_engine::experimental::ResolvedAddressToString(
+        event_engine_endpoint->GetPeerAddress());
+    GRPC_HTTP2_COMMON_DLOG << "CreateChannelzSocketNode: local_addr: "
+                           << local_addr.value_or("unknown")
+                           << " peer_addr: " << peer_addr.value_or("unknown");
+    return MakeRefCounted<channelz::SocketNode>(
+        local_addr.value_or("unknown"), peer_addr.value_or("unknown"),
+        absl::StrCat("http2", " ", peer_addr.value_or("unknown")),
+        args.GetObjectRef<channelz::SocketNode::Security>());
+  }
+  return nullptr;
 }
 
 }  // namespace http2

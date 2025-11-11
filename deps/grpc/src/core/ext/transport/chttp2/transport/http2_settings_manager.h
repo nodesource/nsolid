@@ -22,6 +22,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <queue>
 
 #include "absl/functional/function_ref.h"
 #include "absl/strings/string_view.h"
@@ -29,6 +30,7 @@
 #include "src/core/ext/transport/chttp2/transport/frame.h"
 #include "src/core/ext/transport/chttp2/transport/http2_settings.h"
 #include "src/core/ext/transport/chttp2/transport/http2_status.h"
+#include "src/core/lib/channel/channel_args.h"
 #include "src/core/util/useful.h"
 
 namespace grpc_core {
@@ -79,6 +81,13 @@ class Http2SettingsManager {
   // Call when we receive an ACK from our peer.
   // This function is not idempotent.
   GRPC_MUST_USE_RESULT bool AckLastSend();
+
+  GRPC_MUST_USE_RESULT bool IsPreviousSettingsPromiseResolved() const {
+    return did_previous_settings_promise_resolve_;
+  }
+  void SetPreviousSettingsPromiseResolved(const bool value) {
+    did_previous_settings_promise_resolve_ = value;
+  }
 
  private:
   struct CountUpdates {
@@ -135,6 +144,8 @@ class Http2SettingsManager {
   Http2Settings local_;
   Http2Settings sent_;
   Http2Settings acked_;
+
+  bool did_previous_settings_promise_resolve_ = true;
 };
 
 }  // namespace grpc_core
