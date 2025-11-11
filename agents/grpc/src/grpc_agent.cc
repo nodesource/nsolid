@@ -8,7 +8,6 @@
 #include "../../src/span_collector.h"
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
-#include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/service_attributes.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
@@ -17,8 +16,6 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_factory.h"
-#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
-#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 
 using std::chrono::duration_cast;
@@ -49,8 +46,6 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporterOptions;
-using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
-using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
 using nsolid_grpc_async =
@@ -955,8 +950,7 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
       data.resource_ = otlp::GetResource();
       data.scope_metric_data_ =
         std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
-      auto result = agent->metrics_exporter_->Export(data);
-      Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+      agent->metrics_exporter_->enqueue(std::move(data));
     }
   }
 }
@@ -979,9 +973,7 @@ void GrpcAgent::on_metrics_timer() {
       data.resource_ = otlp::GetResource();
       data.scope_metric_data_ =
         std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
-      auto result = metrics_exporter_->Export(data);
-      Debug("# ProcessMetrics Exported. Result: %d\n",
-            static_cast<int>(result));
+      metrics_exporter_->enqueue(std::move(data));
     }
 
     metric_data = thr_metrics_batch_.DumpMetricsAndReset();
@@ -990,10 +982,10 @@ void GrpcAgent::on_metrics_timer() {
       data.resource_ = otlp::GetResource();
       data.scope_metric_data_ =
         std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
-      auto result = metrics_exporter_->Export(data);
-      Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+      metrics_exporter_->enqueue(std::move(data));
     }
 
+    metrics_exporter_->flush();
     return;
   }
 
@@ -1150,8 +1142,18 @@ int GrpcAgent::config(const json& config) {
           options.credentials = opts.credentials;
         }
 
-        metrics_exporter_ =
-          std::make_unique<OtlpGrpcMetricExporter>(options, client);
+        // Get metrics buffer size from config, default to 100
+        size_t buffer_size = 100;
+        auto it = config_.find("metricsBufferSize");
+        if (it != config_.end()) {
+          buffer_size = it->get<size_t>();
+        }
+
+        metrics_exporter_ = std::make_unique<GrpcMetricsExporter>(&loop_,
+                                                                  options,
+                                                                  client,
+                                                                  buffer_size);
+        metrics_exporter_->init();
       }
       {
         OtlpGrpcLogRecordExporterOptions options;
@@ -1222,6 +1224,17 @@ int GrpcAgent::config(const json& config) {
     }
   }
 
+  if (utils::find_any_fields_in_diff(diff, { "/metricsBufferSize" })) {
+    auto it = config_.find("metricsBufferSize");
+    if (it != config_.end()) {
+      size_t buffer_size = it->get<size_t>();
+      if (buffer_size > 0 && metrics_exporter_) {
+        // Resize the metrics buffer instead of recreating the exporter
+        metrics_exporter_->resize_buffer(buffer_size);
+      }
+    }
+  }
+
   // If metrics timer is not active or if the diff contains metrics fields,
   // recalculate the metrics status. (stop/start/what period)
   if (!metrics_timer_.is_active() ||
@@ -1235,6 +1248,8 @@ int GrpcAgent::config(const json& config) {
         if (it != config_.end()) {
           period = *it;
         }
+      } else {
+        period = 5000;
       }
     }
 
@@ -1356,6 +1371,7 @@ void GrpcAgent::do_stop() {
   }
 
   log_exporter_.reset();
+  otlp_grpc_client_.reset();
   metrics_exporter_.reset();
   trace_exporter_.reset();
   ready_ = false;
@@ -1447,9 +1463,7 @@ void GrpcAgent::got_proc_metrics() {
       data.resource_ = otlp::GetResource();
       data.scope_metric_data_ =
         std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
-      auto result = metrics_exporter_->Export(data);
-      Debug("# ProcessMetrics Exported. Result: %d\n",
-            static_cast<int>(result));
+      metrics_exporter_->enqueue(std::move(data));
     }
   }
 }
@@ -1825,6 +1839,9 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
 
   if (body.has_metricsbatchsize()) {
       out["metricsBatchSize"] = body.metricsbatchsize();
+  }
+  if (body.has_metricsbuffersize()) {
+      out["metricsBufferSize"] = body.metricsbuffersize();
   }
 
   DebugJSON("Reconfigure out: \n%s\n", out);

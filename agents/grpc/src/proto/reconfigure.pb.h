@@ -231,6 +231,7 @@ class ReconfigureBody final : public ::google::protobuf::Message
     kContCpuProfileFieldNumber = 12,
     kAssetsEnabledFieldNumber = 13,
     kMetricsBatchSizeFieldNumber = 14,
+    kMetricsBufferSizeFieldNumber = 15,
   };
   // repeated string tags = 9;
   int tags_size() const;
@@ -412,11 +413,22 @@ class ReconfigureBody final : public ::google::protobuf::Message
   void _internal_set_metricsbatchsize(::uint32_t value);
 
   public:
+  // optional uint32 metricsBufferSize = 15;
+  bool has_metricsbuffersize() const;
+  void clear_metricsbuffersize() ;
+  ::uint32_t metricsbuffersize() const;
+  void set_metricsbuffersize(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_metricsbuffersize() const;
+  void _internal_set_metricsbuffersize(::uint32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:grpcagent.ReconfigureBody)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 14,
+  static const ::google::protobuf::internal::TcParseTable<4, 15,
                                    0, 74,
                                    2>
       _table_;
@@ -452,6 +464,7 @@ class ReconfigureBody final : public ::google::protobuf::Message
     bool contcpuprofile_;
     bool assetsenabled_;
     ::uint32_t metricsbatchsize_;
+    ::uint32_t metricsbuffersize_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1255,6 +1268,35 @@ inline ::uint32_t ReconfigureBody::_internal_metricsbatchsize() const {
 inline void ReconfigureBody::_internal_set_metricsbatchsize(::uint32_t value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.metricsbatchsize_ = value;
+}
+
+// optional uint32 metricsBufferSize = 15;
+inline bool ReconfigureBody::has_metricsbuffersize() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
+  return value;
+}
+inline void ReconfigureBody::clear_metricsbuffersize() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.metricsbuffersize_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00004000U);
+}
+inline ::uint32_t ReconfigureBody::metricsbuffersize() const {
+  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.metricsBufferSize)
+  return _internal_metricsbuffersize();
+}
+inline void ReconfigureBody::set_metricsbuffersize(::uint32_t value) {
+  _internal_set_metricsbuffersize(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.metricsBufferSize)
+}
+inline ::uint32_t ReconfigureBody::_internal_metricsbuffersize() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.metricsbuffersize_;
+}
+inline void ReconfigureBody::_internal_set_metricsbuffersize(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.metricsbuffersize_ = value;
 }
 
 // -------------------------------------------------------------------

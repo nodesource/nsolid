@@ -16,6 +16,7 @@
 
 #include "uv.h"
 #include "nlohmann/json.hpp"
+#include "util.h"
 
 using string_vector = std::vector<std::string>;
 using json = nlohmann::json;

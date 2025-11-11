@@ -24,7 +24,13 @@ class GRPCServer extends EventEmitter {
   }
 
   start(cb, port = null) {
-    const args = port ? [port.toString()] : [];
+    const args = [ '--port' ];
+    if (port) {
+      args.push(port.toString());
+    } else {
+      args.push('0');
+    }
+
     if (this.#opts.tls) {
       args.push('--tls');
     }
