@@ -30,7 +30,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -53,6 +52,7 @@
 #include "src/core/load_balancing/health_check_client_internal.h"
 #include "src/core/load_balancing/subchannel_interface.h"
 #include "src/core/util/debug_location.h"
+#include "src/core/util/grpc_check.h"
 #include "src/core/util/orphanable.h"
 #include "src/core/util/ref_counted_ptr.h"
 #include "src/core/util/sync.h"
@@ -104,7 +104,7 @@ void HealthProducer::HealthChecker::OnConnectivityStateChangeLocked(
       state_ = GRPC_CHANNEL_CONNECTING;
       status_ = absl::OkStatus();
     } else {
-      CHECK(state_ == GRPC_CHANNEL_CONNECTING);
+      GRPC_CHECK(state_ == GRPC_CHANNEL_CONNECTING);
     }
     // Start the health watch stream.
     StartHealthStreamLocked();
@@ -295,7 +295,7 @@ class HealthProducer::ConnectivityWatcher final
 // HealthProducer
 //
 
-void HealthProducer::Start(RefCountedPtr<Subchannel> subchannel) {
+void HealthProducer::Start(WeakRefCountedPtr<Subchannel> subchannel) {
   GRPC_TRACE_LOG(health_check_client, INFO)
       << "HealthProducer " << this << ": starting with subchannel "
       << subchannel.get();
@@ -419,7 +419,7 @@ void HealthWatcher::SetSubchannel(Subchannel* subchannel) {
   // This needs to be done outside of the lambda passed to
   // GetOrAddDataProducer() to avoid deadlocking by re-acquiring the
   // subchannel lock while already holding it.
-  if (created) producer_->Start(subchannel->Ref());
+  if (created) producer_->Start(subchannel->WeakRef());
   // Register ourself with the producer.
   producer_->AddWatcher(this, health_check_service_name_);
   GRPC_TRACE_LOG(health_check_client, INFO)

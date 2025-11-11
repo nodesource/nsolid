@@ -1764,11 +1764,11 @@ bool Symbolize(const void *pc, char *out, int out_size) {
 ABSL_NAMESPACE_END
 }  // namespace absl
 
-extern "C" bool AbslInternalGetFileMappingHint(const void **start,
+/*extern "C" bool AbslInternalGetFileMappingHint(const void **start,
                                                const void **end, uint64_t *offset,
                                                const char **filename) {
   return absl::debugging_internal::GetFileMappingHint(start, end, offset,
                                                       filename);
-}
+}*/
 
 #undef ABSL_INTERNAL_HAVE_PPC64_ELFV1_ABI
