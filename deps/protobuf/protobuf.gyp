@@ -120,6 +120,7 @@
         'include_dirs': [
           'src',
           './third_party/abseil-cpp',
+          './third_party/utf8_range',
         ],
       },
     },
