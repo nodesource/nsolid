@@ -1,71 +1,17 @@
 'use strict';
 
 const common = require('../');
-const assert = require('node:assert');
 const { EventEmitter } = require('node:events');
 const { fork } = require('node:child_process');
 const { randomUUID } = require('node:crypto');
 const path = require('node:path');
 
 const {
-  validateArray,
-  validateObject,
-  validateString,
-} = require('internal/validators');
-
-function checkExitData(data, metadata, agentId, expectedData) {
-  console.dir(data, { depth: null });
-  validateString(data.common.requestId, 'common.requestId');
-  assert.strictEqual(data.common.command, 'exit');
-  // From here check at least that all the fields are present
-  validateObject(data.common.recorded, 'recorded');
-  const recSeconds = BigInt(data.common.recorded.seconds);
-  assert.ok(recSeconds);
-  const recNanoSecs = BigInt(data.common.recorded.nanoseconds);
-  assert.ok(recNanoSecs);
-  validateObject(data.body, 'body');
-  // also the body fields
-  assert.strictEqual(data.body.code, expectedData.code);
-  assert.strictEqual(data.body.profile, expectedData.profile);
-  if (expectedData.error === null) {
-    assert.strictEqual(data.body.error, null);
-  } else {
-    assert.ok(data.body.error);
-    assert.strictEqual(data.body.error.message, expectedData.error.message);
-    validateString(data.body.error.stack, 'error.stack');
-  }
-
-  validateArray(metadata['user-agent'], 'metadata.user-agent');
-  validateString(metadata['user-agent'][0], 'metadata.user-agent[0]');
-  assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
-}
-
-function checkResource(resource, agentId, config, metrics) {
-  validateArray(resource.attributes, 'attributes');
-
-  const expectedAttributes = {
-    'telemetry.sdk.version': process.versions.opentelemetry,
-    'telemetry.sdk.language': 'cpp',
-    'telemetry.sdk.name': 'opentelemetry',
-    'service.instance.id': agentId,
-    'service.name': config.app,
-    'service.version': config.appVersion,
-  };
-
-  if (metrics) {
-    expectedAttributes['process.title'] = metrics.title;
-    expectedAttributes['process.owner'] = metrics.user;
-  }
-
-  assert.strictEqual(resource.attributes.length, Object.keys(expectedAttributes).length);
-
-  resource.attributes.forEach((attribute) => {
-    assert.strictEqual(attribute.value.stringValue, expectedAttributes[attribute.key]);
-    delete expectedAttributes[attribute.key];
-  });
-
-  assert.strictEqual(Object.keys(expectedAttributes).length, 0);
-}
+  checkExitData,
+  checkResource,
+  checkOTLPMetricsData,
+  hasThreadAttributes,
+} = require('./validators.js');
 
 
 class GRPCServer extends EventEmitter {
@@ -77,12 +23,11 @@ class GRPCServer extends EventEmitter {
     this.#opts = opts || {};
   }
 
-  start(cb) {
-    const args = [];
+  start(cb, port = null) {
+    const args = port ? [port.toString()] : [];
     if (this.#opts.tls) {
       args.push('--tls');
     }
-
     const opts = {
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     };
@@ -660,6 +605,8 @@ class TestClient {
 module.exports = {
   checkExitData,
   checkResource,
+  checkOTLPMetricsData,
+  hasThreadAttributes,
   GRPCServer,
   TestClient,
 };
