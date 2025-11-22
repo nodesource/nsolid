@@ -28,16 +28,16 @@ async function runBufferSizeTest({ getEnv, bufferSize }) {
       const config = await child.config({ app: 'buffer_test_app', interval });
       const metrics = await child.metrics();
 
-      grpcServer.on('metrics', async (data) => {
+      grpcServer.on('metrics', async ({ request }) => {
         metricsReceived++;
         console.log(`Received OTLP metrics export #${metricsReceived}`);
 
         // Check if this is thread metrics or process metrics
-        const scopeMetrics = data.resourceMetrics[0].scopeMetrics[0];
+        const scopeMetrics = request.resourceMetrics[0].scopeMetrics[0];
         const firstMetric = scopeMetrics.metrics[0];
         const isThreadMetrics = hasThreadAttributes(firstMetric);
 
-        checkOTLPMetricsData(data.resourceMetrics, agentId, config, metrics, 1, isThreadMetrics);
+        checkOTLPMetricsData(request.resourceMetrics, agentId, config, metrics, 1, isThreadMetrics);
 
         if (metricsReceived >= targetMetrics) {
           console.log(`Buffer size test complete! Received ${metricsReceived} metrics with buffer size ${bufferSize}`);

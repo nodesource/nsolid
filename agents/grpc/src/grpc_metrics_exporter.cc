@@ -1,6 +1,7 @@
 #include "grpc_metrics_exporter.h"
 #include "grpc_client.h"
 
+#include "../../otlp/src/otlp_common.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 
@@ -52,7 +53,8 @@ void GrpcMetricsExporter::init() {
 GrpcMetricsExporter::~GrpcMetricsExporter() {
 }
 
-void GrpcMetricsExporter::enqueue(ResourceMetrics&& metrics) {
+void GrpcMetricsExporter::enqueue(
+    std::vector<otlp::BatchedMetricData>&& metrics) {
   metrics_q_.push(std::move(metrics));
   if (!in_flight_) {
     export_current();
@@ -78,7 +80,8 @@ void GrpcMetricsExporter::export_current() {
 
   auto* request =
     google::protobuf::Arena::Create<ExportMetricsServiceRequest>(arena.get());
-  OtlpMetricUtils::PopulateRequest(data, request);
+
+  otlp::PopulateRequest(data, otlp::GetResource(), otlp::GetScope(), request);
 
   auto context = OtlpGrpcClient::MakeClientContext(options_);
   ::grpc::Status immediate =

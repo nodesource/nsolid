@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustSucceed } from '../common/index.mjs';
+import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import {
   checkOTLPMetricsData,
@@ -31,16 +31,16 @@ async function runRetryTest({ getEnv }) {
       const config = await child.config({ app: 'my_app_name', interval });
       const metrics = await child.metrics();
 
-      grpcServer.on('metrics', async (data) => {
+      grpcServer.on('metrics', mustCall(async ({ request }) => {
         metricsReceived++;
         console.log(`Received OTLP metrics export #${metricsReceived}`);
 
         // Check if this is thread metrics or process metrics
-        const scopeMetrics = data.resourceMetrics[0].scopeMetrics[0];
+        const scopeMetrics = request.resourceMetrics[0].scopeMetrics[0];
         const firstMetric = scopeMetrics.metrics[0];
         const isThreadMetrics = hasThreadAttributes(firstMetric);
 
-        checkOTLPMetricsData(data.resourceMetrics, agentId, config, metrics, 1, isThreadMetrics);
+        checkOTLPMetricsData(request.resourceMetrics, agentId, config, metrics, 1, isThreadMetrics);
 
         // When first metrics arrive, kill the server
         if (!serverKilled && metricsReceived >= 2) {
@@ -78,7 +78,7 @@ async function runRetryTest({ getEnv }) {
             metricsReceived,
           });
         }
-      });
+      }));
 
       // Timeout fallback
       const timeoutId = setTimeout(async () => {

@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 
+#include "../../otlp/src/batched_metric_data.h"
 #include "nsolid/async_ts_queue.h"
 #include "nsolid/nsolid_util.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
@@ -45,7 +46,7 @@ class GrpcMetricsExporter:
 
   void init();
 
-  void enqueue(opentelemetry::sdk::metrics::ResourceMetrics&& metrics);
+  void enqueue(std::vector<otlp::BatchedMetricData>&& metrics);
 
   void flush();
 
@@ -63,7 +64,7 @@ class GrpcMetricsExporter:
   opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions options_;
   std::shared_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcClient> client_;
   std::unique_ptr<MetricsServiceStub> metrics_service_stub_;
-  utils::RingBuffer<opentelemetry::sdk::metrics::ResourceMetrics> metrics_q_;
+  utils::RingBuffer<std::vector<otlp::BatchedMetricData>> metrics_q_;
   bool in_flight_;
   std::shared_ptr<AsyncTSQueue<::grpc::Status>> metrics_completion_q_;
 };

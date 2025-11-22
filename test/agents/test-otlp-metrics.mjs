@@ -500,9 +500,10 @@ if (process.argv[2] === 'child') {
           }
           return dp.attributes.some((a) => a.key === 'thread.id' && a.value.intValue === `${context.threadId}`);
         });
-        assert.notStrictEqual(dataPointIndex,
-                              -1,
-                              `Metric ${name} missing datapoint for thread ${context.threadId}`);
+        if (dataPointIndex === -1) {
+          // With batching, not all threads may have metrics in every batch
+          continue;
+        }
         dataPoint = dataPoints[dataPointIndex];
         const nameIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.name');
         assert(nameIndex > -1);
@@ -553,6 +554,25 @@ if (process.argv[2] === 'child') {
 
     for (let i = indicesToRemove.length - 1; i >= 0; --i) {
       metrics.splice(indicesToRemove[i], 1);
+    }
+
+    // Log thread_ids present in this batch
+    const threadIdsInBatch = new Set();
+    metrics.forEach((metric) => {
+      const aggregation = metric.data;
+      if (metric[aggregation]?.dataPoints) {
+        metric[aggregation].dataPoints.forEach((dp) => {
+          if (dp.attributes) {
+            const threadIdAttr = dp.attributes.find((a) => a.key === 'thread.id');
+            if (threadIdAttr) {
+              threadIdsInBatch.add(threadIdAttr.value.intValue);
+            }
+          }
+        });
+      }
+    });
+    if (threadIdsInBatch.size > 0) {
+      console.log(`Batch contains metrics for threads: [${Array.from(threadIdsInBatch).join(', ')}]`);
     }
   }
 

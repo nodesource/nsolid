@@ -7,8 +7,10 @@
 #include <vector>
 
 #include "nsolid.h"
+#include "batched_metric_data.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/resource/resource.h"
+#include "opentelemetry/proto/collector/metrics/v1/metrics_service.pb.h"
 
 // Class pre-declaration
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -45,7 +47,7 @@ namespace nsolid {
 namespace otlp {
 
 class MetricDataBatch {
-  using MetricVector = std::vector<opentelemetry::sdk::metrics::MetricData>;
+  using MetricVector = std::vector<BatchedMetricData>;
   using MetricIndexMap = std::unordered_map<std::string, std::size_t>;
 
  public:
@@ -66,7 +68,7 @@ class MetricDataBatch {
     MetricVector metrics = std::move(metrics_);
     Reset();
     return metrics;
-  };
+  }
 
   void IncrementPoints(std::size_t count = 1) {
     total_points_ += count;
@@ -126,6 +128,17 @@ void fill_log_recordable(OPENTELEMETRY_NAMESPACE::sdk::logs::Recordable*,
 void fill_recordable(OPENTELEMETRY_NAMESPACE::sdk::trace::Recordable*,
                      const Tracer::SpanStor&);
 
+void PopulateRequest(
+  const std::vector<BatchedMetricData>& metrics,
+  const opentelemetry::sdk::resource::Resource* resource,
+  const opentelemetry::sdk::instrumentationscope::InstrumentationScope*,
+  opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceRequest*);
+
+opentelemetry::sdk::metrics::MetricData
+  BatchedMetricToMetricData(const BatchedMetricData& bm);
+
+std::vector<opentelemetry::sdk::metrics::MetricData>
+  ConvertBatchedToMetricData(const std::vector<BatchedMetricData>& batched);
 
 }  // namespace otlp
 }  // namespace nsolid

@@ -10,8 +10,9 @@
 #include "nsolid/nsolid_util.h"
 #include "nlohmann/json.hpp"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
-#include "opentelemetry/semconv/incubating/service_attributes.h"
+#include "opentelemetry/exporters/otlp/otlp_populate_attribute_utils.h"
 #include "opentelemetry/semconv/incubating/thread_attributes.h"
+#include "opentelemetry/semconv/incubating/service_attributes.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/logs/recordable.h"
 #include "opentelemetry/sdk/trace/recordable.h"
@@ -27,12 +28,14 @@ using std::chrono::microseconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
+using google::protobuf::RepeatedPtrField;
 using opentelemetry::common::SystemTimestamp;
+using opentelemetry::proto::common::v1::KeyValue;
+using opentelemetry::proto::collector::metrics::v1::ExportMetricsServiceRequest;
 using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
 using LogsRecordable = opentelemetry::sdk::logs::Recordable;
 using opentelemetry::sdk::common::OwnedAttributeType;
 using opentelemetry::sdk::metrics::AggregationTemporality;
-using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::InstrumentDescriptor;
 using opentelemetry::sdk::metrics::InstrumentType;
 using opentelemetry::sdk::metrics::InstrumentValueType;
@@ -45,18 +48,10 @@ using opentelemetry::sdk::metrics::ValueType;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::sdk::trace::Recordable;
-using opentelemetry::trace::SpanContext;
-using opentelemetry::trace::SpanId;
-using opentelemetry::trace::SpanKind;
-using opentelemetry::trace::TraceFlags;
-using opentelemetry::trace::TraceId;
-using opentelemetry::trace::propagation::detail::HexToBinary;
-using opentelemetry::semconv::process::kProcessOwner;
-using opentelemetry::semconv::service::kServiceName;
-using opentelemetry::semconv::service::kServiceInstanceId;
-using opentelemetry::semconv::service::kServiceVersion;
-using opentelemetry::semconv::thread::kThreadId;
-using opentelemetry::semconv::thread::kThreadName;
+using OtlpPopulateAttributeUtils =
+    opentelemetry::exporter::otlp::OtlpPopulateAttributeUtils;
+
+namespace proto = opentelemetry::proto;
 
 namespace node {
 namespace nsolid {
@@ -73,9 +68,43 @@ static std::vector<std::string> discarded_metrics = {
   "thread_id", "timestamp"
 };
 
-static std::unique_ptr<Resource> resource_g =
-  std::make_unique<Resource>(Resource::GetEmpty());
+static auto resource_g = std::make_unique<Resource>(Resource::GetEmpty());
 static bool isResourceInitialized_g = false;
+
+// Helper to serialize attributes
+void SerializeAttributes(const PointAttributes& attrs,
+                         RepeatedPtrField<KeyValue>* proto_attrs) {
+  for (const auto& attr : attrs) {
+    OtlpPopulateAttributeUtils::PopulateAttribute(
+        proto_attrs->Add(), attr.first, attr.second, false);
+  }
+}
+
+opentelemetry::sdk::metrics::MetricData BatchedMetricToMetricData(
+    const BatchedMetricData& bm) {
+  opentelemetry::sdk::metrics::MetricData md;
+  md.instrument_descriptor = bm.instrument_descriptor;
+  md.aggregation_temporality = bm.aggregation_temporality;
+  if (!bm.point_data_attr_.empty()) {
+    md.start_ts = bm.point_data_attr_[0].start_ts;
+    md.end_ts = bm.point_data_attr_[0].end_ts;
+    for (const auto& p : bm.point_data_attr_) {
+      md.point_data_attr_.push_back({ p.attributes, p.point_data });
+    }
+  }
+  return md;
+}
+
+// Helper to convert vector<BatchedMetricData> to vector<MetricData>
+std::vector<opentelemetry::sdk::metrics::MetricData>
+    ConvertBatchedToMetricData(const std::vector<BatchedMetricData>& batched) {
+  std::vector<opentelemetry::sdk::metrics::MetricData> metric_data;
+  metric_data.reserve(batched.size());
+  for (const auto& bm : batched) {
+    metric_data.push_back(BatchedMetricToMetricData(bm));
+  }
+  return metric_data;
+}
 
 // NOLINTNEXTLINE(runtime/references)
 static void add_counter(MetricDataBatch& metrics_batch,
@@ -154,19 +183,24 @@ void MetricDataBatch::AddDataPoint(const time_point& start,
                                    InstrumentValueType value_type,
                                    AggregationTemporality temporality,
                                    PointDataAttributes&& pdata_attrs) {
+  TimedPointDataAttributes timed_point_data_attrs {
+    SystemTimestamp{ start },
+    SystemTimestamp{ end },
+    std::move(pdata_attrs.attributes),
+    std::move(pdata_attrs.point_data)
+  };
   auto it = metric_indices_.find(name);
   if (it == metric_indices_.end()) {
-    MetricData metric_data {
+    BatchedMetricData metric_data {
       InstrumentDescriptor { name, "", unit, type, value_type },
       temporality,
-      SystemTimestamp{ start },
-      SystemTimestamp{ end },
-      std::vector<PointDataAttributes>{std::move(pdata_attrs)}
+      std::vector<TimedPointDataAttributes>{std::move(timed_point_data_attrs)}
     };
     metrics_.push_back(metric_data);
     TrackMetricIndex(name, metrics_.size() - 1);
   } else {
-    metrics_[it->second].point_data_attr_.push_back(std::move(pdata_attrs));
+    metrics_[it->second].point_data_attr_.
+      push_back(std::move(timed_point_data_attrs));
   }
 }
 
@@ -183,6 +217,9 @@ Resource* GetResource() {
     ASSERT(!config.is_discarded());
     auto it = config.find("app");
     ASSERT(it != config.end());
+    using opentelemetry::semconv::service::kServiceName;
+    using opentelemetry::semconv::service::kServiceInstanceId;
+    using opentelemetry::semconv::service::kServiceVersion;
     ResourceAttributes attrs({
       {kServiceName, it->get<std::string>()},
       {kServiceInstanceId, nsolid::GetAgentId()}
@@ -206,6 +243,7 @@ Resource* UpdateResource(ResourceAttributes&& attrs) {
   // value "unknown_service". (See Resource::Create() method in the SDK).
   auto resource = GetResource();
   auto attributes = resource->GetAttributes();
+  using opentelemetry::semconv::service::kServiceName;
   if (attributes.find(kServiceName) != attributes.end() &&
       attrs.find(kServiceName) == attrs.end()) {
     attrs.SetAttribute(kServiceName,
@@ -284,6 +322,7 @@ NSOLID_PROCESS_METRICS_DOUBLE(V)
   // Update Resource if needed:
   // Check if 'user' or 'title' are different from the previous metrics.
   if (prev_stor.user != stor.user || prev_stor.title != stor.title) {
+    using opentelemetry::semconv::process::kProcessOwner;
     ResourceAttributes attrs = {
       { kProcessOwner, stor.user },
       { "process.title", stor.title },
@@ -304,6 +343,8 @@ void fill_env_metrics(MetricDataBatch& metrics_batch,
   InstrumentValueType type;
   ValueType value;
 
+  using opentelemetry::semconv::thread::kThreadId;
+  using opentelemetry::semconv::thread::kThreadName;
   PointAttributes attrs = {
     { kThreadId, static_cast<int64_t>(stor.thread_id) },
     { kThreadName, stor.thread_name },
@@ -421,6 +462,7 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
   recordable->SetDuration(
     nanoseconds(static_cast<uint64_t>((s.end - s.start) * 1e6)));
 
+  using opentelemetry::trace::propagation::detail::HexToBinary;
   uint8_t span_buf[kSpanIdSize / 2];
   HexToBinary(s.span_id, span_buf, sizeof(span_buf));
 
@@ -430,6 +472,11 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
   uint8_t trace_buf[kTraceIdSize / 2];
   HexToBinary(s.trace_id, trace_buf, sizeof(trace_buf));
 
+  using opentelemetry::trace::SpanContext;
+  using opentelemetry::trace::SpanId;
+  using opentelemetry::trace::SpanKind;
+  using opentelemetry::trace::TraceFlags;
+  using opentelemetry::trace::TraceId;
   SpanContext ctx(TraceId(trace_buf), SpanId(span_buf), TraceFlags(0), false);
 
   SpanId parent_id(parent_buf);
@@ -547,6 +594,93 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
   recordable->SetAttribute("nsolid.span_type", s.type);
 
   recordable->SetResource(*GetResource());
+}
+
+void PopulateRequest(const std::vector<BatchedMetricData>& metrics,
+                     const Resource* resource,
+                     const InstrumentationScope* scope,
+                     ExportMetricsServiceRequest* request) {
+  if (!request) return;
+
+  auto* resource_metrics = request->add_resource_metrics();
+
+  // Populate resource
+  if (resource) {
+    OtlpPopulateAttributeUtils::PopulateAttribute(
+      resource_metrics->mutable_resource(), *resource);
+    resource_metrics->set_schema_url(resource->GetSchemaURL());
+  }
+
+  // Scope
+  auto* scope_metrics = resource_metrics->add_scope_metrics();
+  if (scope) {
+    auto* proto_scope = scope_metrics->mutable_scope();
+    proto_scope->set_name(scope->GetName());
+    proto_scope->set_version(scope->GetVersion());
+    OtlpPopulateAttributeUtils::PopulateAttribute(proto_scope, *scope);
+    scope_metrics->set_schema_url(scope->GetSchemaURL());
+  }
+
+  // Metrics
+  for (const auto& batched_metric : metrics) {
+    auto* proto_metric = scope_metrics->add_metrics();
+    proto_metric->set_name(batched_metric.instrument_descriptor.name_);
+    proto_metric->set_unit(batched_metric.instrument_descriptor.unit_);
+    proto_metric->set_description("");
+    auto type = batched_metric.instrument_descriptor.type_;
+    auto value_type = batched_metric.instrument_descriptor.value_type_;
+    // Type
+    if (type == InstrumentType::kCounter) {
+      auto* sum = proto_metric->mutable_sum();
+      sum->set_aggregation_temporality(
+          static_cast<proto::metrics::v1::AggregationTemporality>(
+              batched_metric.aggregation_temporality));
+      sum->set_is_monotonic(true);
+      for (const auto& point : batched_metric.point_data_attr_) {
+        auto* dp = sum->add_data_points();
+        dp->set_start_time_unix_nano(point.start_ts.time_since_epoch().count());
+        dp->set_time_unix_nano(point.end_ts.time_since_epoch().count());
+        // Attributes
+        SerializeAttributes(point.attributes, dp->mutable_attributes());
+        // Value
+        auto sum_data = std::get<SumPointData>(point.point_data);
+        if (value_type == InstrumentValueType::kInt) {
+          dp->set_as_int(std::get<int64_t>(sum_data.value_));
+        } else {
+          dp->set_as_double(std::get<double>(sum_data.value_));
+        }
+      }
+    } else if (type == InstrumentType::kGauge) {
+      auto* gauge = proto_metric->mutable_gauge();
+      for (const auto& point : batched_metric.point_data_attr_) {
+        auto* dp = gauge->add_data_points();
+        dp->set_time_unix_nano(point.end_ts.time_since_epoch().count());
+        SerializeAttributes(point.attributes, dp->mutable_attributes());
+        auto gauge_data = std::get<LastValuePointData>(point.point_data);
+        if (value_type == InstrumentValueType::kInt) {
+          dp->set_as_int(std::get<int64_t>(gauge_data.value_));
+        } else {
+          dp->set_as_double(std::get<double>(gauge_data.value_));
+        }
+      }
+    } else if (type == InstrumentType::kSummary) {
+      auto* summary = proto_metric->mutable_summary();
+      for (const auto& point : batched_metric.point_data_attr_) {
+        auto* dp = summary->add_data_points();
+        dp->set_start_time_unix_nano(point.start_ts.time_since_epoch().count());
+        dp->set_time_unix_nano(point.end_ts.time_since_epoch().count());
+        SerializeAttributes(point.attributes, dp->mutable_attributes());
+        auto summary_data = std::get<SummaryPointData>(point.point_data);
+        dp->set_sum(std::get<double>(summary_data.quantile_values_.at(0.5)));
+        dp->set_count(1);
+        for (const auto& q : summary_data.quantile_values_) {
+          auto* quantile = dp->add_quantile_values();
+          quantile->set_quantile(q.first);
+          quantile->set_value(std::get<double>(q.second));
+        }
+      }
+    }
+  }
 }
 
 }  // namespace otlp

@@ -108,11 +108,13 @@ void OTLPMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                    const ProcessMetricsStor& prev_stor) {
   MetricDataBatch metrics;
   fill_proc_metrics(metrics, stor, prev_stor);
+  auto batched = metrics.DumpMetricsAndReset();
+  auto metric_data = ConvertBatchedToMetricData(batched);
   ResourceMetrics data;
   data.resource_ = GetResource();
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{ otlp::GetScope(),
-                                metrics.DumpMetricsAndReset() }};
+                                std::move(metric_data) }};
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
@@ -128,8 +130,11 @@ void OTLPMetrics::got_thr_metrics(
     fill_env_metrics(metrics, tm.stor);
   }
 
+  auto batched = metrics.DumpMetricsAndReset();
+  auto metric_data = ConvertBatchedToMetricData(batched);
+
   data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{scope_, metrics.DumpMetricsAndReset()}};
+    std::vector<ScopeMetrics>{{scope_, std::move(metric_data)}};
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
 }

@@ -203,6 +203,7 @@ function checkOTLPMetricsData(resourceMetrics,
       }
 
       const threadIds = new Set();
+      const timestamps = new Set();
       for (const dataPoint of dataPoints) {
         validateArray(dataPoint.attributes, `${name}.attributes`);
         const threadIdAttr = dataPoint.attributes.find((a) => a.key === 'thread.id');
@@ -210,6 +211,7 @@ function checkOTLPMetricsData(resourceMetrics,
         threadIds.add(threadIdAttr.value.intValue);
         const threadNameAttr = dataPoint.attributes.find((a) => a.key === 'thread.name');
         assert.ok(threadNameAttr, `thread.name attribute missing for ${name}`);
+        timestamps.add(dataPoint.timeUnixNano);
         if (metric.data === 'summary') {
           validateArray(dataPoint.quantileValues, `${name}.quantileValues`);
           assert.strictEqual(dataPoint.quantileValues.length, 2);
@@ -231,7 +233,7 @@ function checkOTLPMetricsData(resourceMetrics,
         }
       }
       assert.ok(threadIds.size > 0, `No thread IDs recorded for ${name}`);
-      assert.ok(threadIds.has('0'), `Missing main thread datapoint for ${name}`);
+      assert.strictEqual(timestamps.size, dataPoints.length, `Timestamps should be unique for thread metric ${name}`);
     }
   } else {
     console.log(`Checking process metrics (${metrics.length} metrics)`);
@@ -256,6 +258,10 @@ function checkOTLPMetricsData(resourceMetrics,
         assert.strictEqual(dataPoints.length, expectedBatchSize,
                            `Process metric ${expectedMetric[0]} should have exactly ${expectedBatchSize} datapoints, but got ${dataPoints.length}`);
       }
+
+      // Ensure timestamps are unique for each datapoint in the metric
+      const timestamps = new Set(dataPoints.map((dp) => dp.timeUnixNano));
+      assert.strictEqual(timestamps.size, dataPoints.length, `Timestamps should be unique for process metric ${expectedMetric[0]}`);
 
       const dataPoint = dataPoints[0];
       assert.strictEqual(dataPoint.attributes.length, 0);

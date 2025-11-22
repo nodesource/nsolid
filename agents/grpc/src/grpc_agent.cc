@@ -265,9 +265,15 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
     otlp::fill_env_metrics(metrics, env_metrics_stor, false);
   }
 
+  auto batched = metrics.DumpMetricsAndReset();
+  std::vector<opentelemetry::sdk::metrics::MetricData> metric_data;
+  for (const auto& bm : batched) {
+    metric_data.push_back(otlp::BatchedMetricToMetricData(bm));
+  }
+
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{ otlp::GetScope(),
-                                metrics.DumpMetricsAndReset() }};
+                                std::move(metric_data) }};
   OtlpMetricUtils::PopulateResourceMetrics(
     data, metrics_event->mutable_body()->mutable_resource_metrics()->Add());
 }
@@ -946,11 +952,7 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   if (agent->thr_metrics_batch_.ShouldFlush()) {
     auto metric_data = agent->thr_metrics_batch_.DumpMetricsAndReset();
     if (!metric_data.empty()) {
-      ResourceMetrics data;
-      data.resource_ = otlp::GetResource();
-      data.scope_metric_data_ =
-        std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
-      agent->metrics_exporter_->enqueue(std::move(data));
+      agent->metrics_exporter_->enqueue(std::move(metric_data));
     }
   }
 }
@@ -969,24 +971,15 @@ void GrpcAgent::on_metrics_timer() {
   if (metrics_paused_) {
     auto metric_data = proc_metrics_batch_.DumpMetricsAndReset();
     if (!metric_data.empty()) {
-      ResourceMetrics data;
-      data.resource_ = otlp::GetResource();
-      data.scope_metric_data_ =
-        std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
-      metrics_exporter_->enqueue(std::move(data));
+      metrics_exporter_->enqueue(std::move(metric_data));
     }
 
     metric_data = thr_metrics_batch_.DumpMetricsAndReset();
     if (!metric_data.empty()) {
-      ResourceMetrics data;
-      data.resource_ = otlp::GetResource();
-      data.scope_metric_data_ =
-        std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
-      metrics_exporter_->enqueue(std::move(data));
+      metrics_exporter_->enqueue(std::move(metric_data));
     }
 
     metrics_exporter_->flush();
-    return;
   }
 
   got_proc_metrics();
@@ -1459,11 +1452,7 @@ void GrpcAgent::got_proc_metrics() {
   if (proc_metrics_batch_.ShouldFlush()) {
     auto metric_data = proc_metrics_batch_.DumpMetricsAndReset();
     if (!metric_data.empty()) {
-      ResourceMetrics data;
-      data.resource_ = otlp::GetResource();
-      data.scope_metric_data_ =
-        std::vector<ScopeMetrics>{{ otlp::GetScope(), std::move(metric_data) }};
-      metrics_exporter_->enqueue(std::move(data));
+      metrics_exporter_->enqueue(std::move(metric_data));
     }
   }
 }
