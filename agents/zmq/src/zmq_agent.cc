@@ -15,8 +15,6 @@
 namespace node {
 namespace nsolid {
 
-using std::chrono::system_clock;
-using std::chrono::time_point;
 using nlohmann::json;
 using string_vector = std::vector<std::string>;
 using ZmqCommandHandleRes = std::pair<ZmqCommandHandle*, int>;
@@ -1077,7 +1075,7 @@ int ZmqAgent::send_command_message(const char* command,
                                    const char* request_id,
                                    const char* body) {
   const char* real_body = body ? (strlen(body) ? body : "\"\"") : "null";
-  auto recorded = create_recorded(system_clock::now());
+  auto recorded = create_recorded();
   int r;
   if (request_id == nullptr) {
     r = snprintf(msg_buf_,
@@ -1517,15 +1515,10 @@ void ZmqAgent::env_metrics_cb(SharedThreadMetrics metrics, ZmqAgent* agent) {
   ASSERT_EQ(0, agent->metrics_msg_.send());
 }
 
-std::pair<int64_t, int64_t>
-ZmqAgent::create_recorded(const time_point<system_clock>& ts) const {
-  using std::chrono::duration_cast;
-  using std::chrono::seconds;
-  using std::chrono::nanoseconds;
-
-  system_clock::duration dur = ts.time_since_epoch();
-  return { duration_cast<seconds>(dur).count(),
-           duration_cast<nanoseconds>(dur % seconds(1)).count() };
+std::pair<int64_t, int64_t> ZmqAgent::create_recorded() const {
+  uint64_t ns = utils::current_timestamp_ns();
+  return { static_cast<int64_t>(ns / 1000000000),
+           static_cast<int64_t>(ns % 1000000000) };
 }
 
 ZmqAgent::ZmqCommandError ZmqAgent::create_command_error(
@@ -1573,7 +1566,7 @@ ZmqAgent::ZmqCommandError ZmqAgent::create_command_error(
 
 void ZmqAgent::send_error_message(const std::string& msg,
                                   uint32_t code) {
-  auto recorded = create_recorded(system_clock::now());
+  auto recorded = create_recorded();
   int r = snprintf(msg_buf_,
                    msg_size_,
                    MSG_5,
@@ -1614,7 +1607,7 @@ void ZmqAgent::send_error_message(const std::string& msg,
 int ZmqAgent::send_error_command_message(const std::string& req_id,
                                          const std::string& command,
                                          const ZmqCommandError& err) {
-  auto recorded = create_recorded(system_clock::now());
+  auto recorded = create_recorded();
   int r = snprintf(msg_buf_,
                    msg_size_,
                    MSG_4,

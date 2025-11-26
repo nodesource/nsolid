@@ -22,8 +22,6 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 
-using std::chrono::system_clock;
-using std::chrono::time_point;
 using google::protobuf::Arena;
 using google::protobuf::ArenaOptions;
 using json = nlohmann::json;
@@ -78,15 +76,10 @@ JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)) {
 }
 
-std::pair<int64_t, int64_t>
-create_recorded(const time_point<system_clock>& ts) {
-  using std::chrono::duration_cast;
-  using std::chrono::seconds;
-  using std::chrono::nanoseconds;
-
-  system_clock::duration dur = ts.time_since_epoch();
-  return { duration_cast<seconds>(dur).count(),
-           duration_cast<nanoseconds>(dur % seconds(1)).count() };
+std::pair<int64_t, int64_t> create_recorded() {
+  uint64_t ns = utils::current_timestamp_ns();
+  return { static_cast<int64_t>(ns / 1000000000),
+           static_cast<int64_t>(ns % 1000000000) };
 }
 
 ErrorStor fill_error_stor(const ErrorType& type) {
@@ -124,7 +117,7 @@ void PopulateCommon(grpcagent::CommonResponse* common,
                     const std::string& command,
                     const char* req_id) {
   common->set_command(command);
-  auto recorded = create_recorded(system_clock::now());
+  auto recorded = create_recorded();
   grpcagent::Time* time = common->mutable_recorded();
   time->set_seconds(recorded.first);
   time->set_nanoseconds(recorded.second);
@@ -1494,8 +1487,6 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
 
 void GrpcAgent::got_continuous_profile(
     const ProfileCollector::ProfileQStor& stor) {
-  static double performance_process_start_timestamp =
-    performance::performance_process_start_timestamp / 1e3;
   google::protobuf::Struct metadata;
   uint64_t thread_id;
   uint64_t start_timestamp;
@@ -1541,12 +1532,9 @@ void GrpcAgent::got_continuous_profile(
   // Check if the profile is complete
   bool profileStreamComplete = stor.profile.length() == 0;
   if (profileStreamComplete) {
-    uint64_t now = uv_hrtime() - performance::performance_process_start;
-    uint64_t start = start_timestamp - performance::performance_process_start;
-    double start_ts =
-        performance_process_start_timestamp + start / 1e6;
-    double end_ts = performance_process_start_timestamp + now / 1e6;
-    uint64_t duration = (now - start) / 1e6;
+    double end_ts = utils::current_timestamp_ms();
+    uint64_t duration = (uv_hrtime() - start_timestamp) / 1000000;
+    double start_ts = end_ts - duration;
     // Create complete profile
     grpcagent::Asset asset;
     PopulateCommon(asset.mutable_common(),

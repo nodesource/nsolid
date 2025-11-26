@@ -4,8 +4,6 @@
 #include <nsolid/nsolid_api.h>
 #include <nsolid/nsolid_util.h>
 #include <zmq.h>
-// NOLINTNEXTLINE(build/c++11)
-#include <chrono>
 #include <memory>
 #include <set>
 #include <string>
@@ -534,8 +532,7 @@ class ZmqAgent {
 
   void do_stop();
 
-  std::pair<int64_t, int64_t> create_recorded(
-      const std::chrono::time_point<std::chrono::system_clock>&) const;
+  std::pair<int64_t, int64_t> create_recorded() const;
 
   ZmqCommandError create_command_error(const std::string& command,
                                        int err) const;

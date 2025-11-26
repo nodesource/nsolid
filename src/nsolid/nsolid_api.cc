@@ -282,10 +282,7 @@ void EnvInst::GetThreadMetrics(ThreadMetrics::MetricsStor* stor) {
   CHECK_NE(env(), nullptr);
 
   stor->current_hrtime_ = uv_hrtime();
-  // TODO(trevnorris): Does this work instead of calling ms_since_epoch?
-  // stor->timestamp = (stor->current_hrtime_ - env()->time_origin()) / 1e6 +
-  //     env()->time_origin_timestamp() / 1e3;
-  stor->timestamp = utils::ms_since_epoch();
+  stor->timestamp = utils::current_timestamp_ms();
   stor->thread_id = thread_id();
   stor->thread_name = GetThreadName();
   stor->active_handles = event_loop()->active_handles;
@@ -1434,8 +1431,7 @@ void EnvInst::send_datapoint(MetricsStream::Type type,
                              double value) {
   double ts = 0;
   if (has_metrics_stream_hooks_) {
-    ts = (PERFORMANCE_NOW() - env()->time_origin()) / 1e6 +
-         env()->time_origin_timestamp() / 1e3;
+    ts = utils::current_timestamp_ms();
   }
 
   EnvList::Inst()->datapoints_q_.Enqueue({ thread_id_, ts, type, value });
@@ -2233,13 +2229,11 @@ static void WriteLog(const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[1]->IsUint32());
   String::Utf8Value s(args.GetIsolate(), args[0]);
   std::string ss = *s;
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
   // TODO(trevnorris): Allow tracing through this at some point?
   EnvList::Inst()->WriteLogLine(GetLocalEnvInst(args.GetIsolate()),
                                 { ss,
                                   args[1].As<v8::Uint32>()->Value(),
-                                  nanoseconds,
+                                  utils::current_timestamp_ns(),
                                   "",
                                   "",
                                   0});

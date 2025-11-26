@@ -250,8 +250,7 @@ int ProcessMetrics::Update() {
   uv_mutex_lock(&stor_lock_);
   stor_.title = title;
   stor_.user = user;
-  stor_.timestamp = duration_cast<milliseconds>(
-    system_clock::now().time_since_epoch()).count();
+  stor_.timestamp = utils::current_timestamp_ms();
   stor_.uptime =
     (uv_hrtime() - node::per_process::node_start_time) / NANOS_PER_SEC;
   stor_.system_uptime = static_cast<uint64_t>(system_uptime);

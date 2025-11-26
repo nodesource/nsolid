@@ -201,7 +201,7 @@ void TracerImpl::addSpanItem(const SpanItem& item) {
 
 void TracerImpl::endPendingSpans() {
   int r = nsolid::QueueCallback(+[](TracerImpl* tracer) {
-    double now = GetCurrentTimeInMicroseconds() / 1000;
+    double now = utils::current_timestamp_ms();
     for (auto& item : tracer->pending_spans_) {
       auto& span = item.second;
       span.stor_.end_reason = Tracer::kSpanEndExit;
@@ -280,7 +280,7 @@ void TracerImpl::update_flags() {
 
 void TracerImpl::expired_span_cb_(Span span, TracerImpl* tracer) {
   span.stor_.end_reason = Tracer::kSpanEndExpired;
-  span.stor_.end = GetCurrentTimeInMicroseconds() / 1000;
+  span.stor_.end = utils::current_timestamp_ms();
   span.stor_.attrs.pop_back();
   span.stor_.attrs += "}";
   tracer->trace_hook_list_.for_each([&](auto& stor) {

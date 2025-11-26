@@ -16,6 +16,7 @@
 
 #include "uv.h"
 #include "nlohmann/json.hpp"
+#include "node_perf_common.h"
 
 using string_vector = std::vector<std::string>;
 using json = nlohmann::json;
@@ -128,12 +129,17 @@ inline const std::string generate_unique_id() {
 }
 
 
-inline uint64_t ms_since_epoch() {
-  using std::chrono::duration_cast;
-  using std::chrono::milliseconds;
-  using std::chrono::system_clock;
-  system_clock::duration dur = system_clock::now().time_since_epoch();
-  return duration_cast<milliseconds>(dur).count();
+inline uint64_t current_timestamp_ns() {
+  // Offset = epoch_ns_at_start - hrtime_at_start
+  // So: epoch_ns_now = offset + hrtime_now
+  static uint64_t offset =
+    static_cast<uint64_t>(performance::performance_process_start_timestamp *
+                          1000) - performance::performance_process_start;
+  return offset + uv_hrtime();
+}
+
+inline double current_timestamp_ms() {
+  return static_cast<double>(current_timestamp_ns()) / 1000000;
 }
 
 
