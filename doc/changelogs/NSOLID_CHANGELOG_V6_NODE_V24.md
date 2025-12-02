@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-12-02, Version 24.11.1-nsolid-v6.1.0 'Krypton'
+
+### Commits
+
+* \[[`8a9612b57a`](https://github.com/nodesource/nsolid/commit/8a9612b57a)] - Merge tag 'v24.11.1' into node-v24.11.1-nsolid-v6.1.0-release (Santiago Gimeno)
+* \[[`75faeaa214`](https://github.com/nodesource/nsolid/commit/75faeaa214)] - **agents**: add runtime control for asset collection (Santiago Gimeno) [#377](https://github.com/nodesource/nsolid/pull/377)
+
 ## 2025-10-29, Version 24.11.0-nsolid-v6.0.2 'Krypton'
 
 ### Commits
