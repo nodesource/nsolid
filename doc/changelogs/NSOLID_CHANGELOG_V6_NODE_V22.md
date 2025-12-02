@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-12-02, Version 22.21.1-nsolid-v6.1.0 'Jod'
+
+### Commits
+
+* \[[`efb9e0c8af`](https://github.com/nodesource/nsolid/commit/efb9e0c8af)] - **agents**: add runtime control for asset collection (Santiago Gimeno) [#377](https://github.com/nodesource/nsolid/pull/377)
+
 ## 2025-10-29, Version 22.21.1-nsolid-v6.0.2 'Jod'
 
 ### Commits
