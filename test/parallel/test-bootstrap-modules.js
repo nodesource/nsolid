@@ -110,14 +110,15 @@ expected.beforePreExec = new Set([
   'NativeModule internal/modules/typescript',
   'NativeModule internal/data_url',
   'NativeModule internal/mime',
-]);
-
-expected.atRunTime = new Set([
+  'NativeModule internal/modules/esm/utils',
+  'Internal Binding worker',
   'NativeModule internal/modules/run_main',
   'NativeModule internal/net',
   'NativeModule internal/dns/utils',
+]);
+
+expected.atRunTime = new Set([
   'NativeModule internal/process/pre_execution',
-  'NativeModule internal/modules/esm/utils',
   'NativeModule internal/async_local_storage/async_context_frame',
   'Internal Binding nsolid_statsd_agent',
   'Internal Binding nsolid_zmq_agent',
@@ -190,7 +191,7 @@ if (common.hasIntl) {
 if (process.features.inspector) {
   expected.beforePreExec.add('Internal Binding inspector');
   expected.beforePreExec.add('NativeModule internal/util/inspector');
-  expected.atRunTime.add('NativeModule internal/inspector_async_hook');
+  expected.beforePreExec.add('NativeModule internal/inspector_async_hook');
 }
 
 // This is loaded if the test is run with NODE_V8_COVERAGE.
