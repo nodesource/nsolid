@@ -2,6 +2,14 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-12-02, Version 20.19.6-nsolid-v6.1.0 'Iron'
+
+### Commits
+
+* \[[`9c93bfc8cf`](https://github.com/nodesource/nsolid/commit/9c93bfc8cf)] - **lib**: fix getConfig returning null for false values (Santiago Gimeno)
+* \[[`332f713a61`](https://github.com/nodesource/nsolid/commit/332f713a61)] - Merge tag 'v20.19.6' into node-v20.19.6-nsolid-v6.1.0-release (Santiago Gimeno)
+* \[[`c226f8d60c`](https://github.com/nodesource/nsolid/commit/c226f8d60c)] - **agents**: add runtime control for asset collection (Santiago Gimeno) [#377](https://github.com/nodesource/nsolid/pull/377)
+
 ## 2025-10-29, Version 20.19.5-nsolid-v6.0.2 'Iron'
 
 ### Commits
