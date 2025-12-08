@@ -2,6 +2,13 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-12-08, Version 20.19.6-nsolid-v6.1.1 'Iron'
+
+### Commits
+
+* \[[`cd13160307`](https://github.com/nodesource/nsolid/commit/cd13160307)] - **deps**: update to cross-spawn\@7.0.6 in npm (Santiago Gimeno)
+* \[[`f8e4ffa1d9`](https://github.com/nodesource/nsolid/commit/f8e4ffa1d9)] - **deps**: update to glob\@10.5.0 in npm (Santiago Gimeno)
+
 ## 2025-12-02, Version 20.19.6-nsolid-v6.1.0 'Iron'
 
 ### Commits
