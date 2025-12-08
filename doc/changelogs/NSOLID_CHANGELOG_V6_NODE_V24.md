@@ -2,6 +2,10 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-12-08, Version 24.11.1-nsolid-v6.1.1 'Krypton'
+
+### Commits
+
 ## 2025-12-02, Version 24.11.1-nsolid-v6.1.0 'Krypton'
 
 ### Commits
