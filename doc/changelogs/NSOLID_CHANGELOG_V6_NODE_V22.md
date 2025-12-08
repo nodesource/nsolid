@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2025-12-08, Version 22.21.1-nsolid-v6.1.1 'Jod'
+
+### Commits
+
+* \[[`7a22d5fcca`](https://github.com/nodesource/nsolid/commit/7a22d5fcca)] - **deps**: update to glob\@10.5.0 in npm (Santiago Gimeno)
+
 ## 2025-12-02, Version 22.21.1-nsolid-v6.1.0 'Jod'
 
 ### Commits
