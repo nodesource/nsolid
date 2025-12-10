@@ -580,6 +580,7 @@ void StatsDAgent::do_stop() {
 }
 
 void StatsDAgent::run_(nsuv::ns_thread*, WeakStatsDAgent agent_wp) {
+  USE(uv_thread_setname("NSolidStatsDAgent"));
   SharedStatsDAgent agent = agent_wp.lock();
   if (agent == nullptr) {
     return;
