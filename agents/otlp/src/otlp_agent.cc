@@ -241,6 +241,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 
 /*static*/ void OTLPAgent::run_(nsuv::ns_thread*, OTLPAgent* agent) {
+  USE(uv_thread_setname("NSolidOTLPAgent"));
   agent->do_start();
   do {
     ASSERT_EQ(0, uv_run(&agent->loop_, UV_RUN_DEFAULT));
