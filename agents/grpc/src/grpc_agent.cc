@@ -704,6 +704,7 @@ int GrpcAgent::start_heap_snapshot_from_js(
     return;
   }
 
+  USE(uv_thread_setname("NSolidGrpcAgent"));
   agent->do_start();
   do {
     ASSERT_EQ(0, uv_run(&agent->loop_, UV_RUN_DEFAULT));

@@ -1645,6 +1645,7 @@ void EnvList::removed_env_cb_(ns_async*, EnvList* envlist) {
 
 void EnvList::env_list_routine_(ns_thread*, EnvList* envlist) {
   int er;
+  USE(uv_thread_setname("NSolidThread"));
   er = envlist->blocked_loop_timer_.start(
       blocked_loop_timer_cb_, blocked_loop_interval, blocked_loop_interval);
   CHECK_EQ(er, 0);

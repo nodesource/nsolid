@@ -809,6 +809,7 @@ const string_vector ZmqAgent::metrics_fields = {"/interval",
                                                 "/pauseMetrics"};
 
 void ZmqAgent::run(nsuv::ns_thread*, ZmqAgent* agent) {
+  USE(uv_thread_setname("NSolidZmqAgent"));
   agent->do_start();
   do {
     ASSERT_EQ(0, uv_run(&agent->loop_, UV_RUN_DEFAULT));
