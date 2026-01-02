@@ -51,6 +51,8 @@
         'defines': [
           'NDEBUG',
         ],
+	'cflags': ['-g',
+	],
       },
     },
   },
@@ -1116,6 +1118,9 @@
       'dependencies': [
         'upb',
         '../protobuf/abseil.gyp:abseil_proto',
+      ],
+      'defines': [
+        'OPENTELEMETRY_STL_VERSION=2020',
       ],
       'include_dirs': [
         './',

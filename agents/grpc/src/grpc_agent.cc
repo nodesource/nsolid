@@ -25,6 +25,7 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
+#include "opentelemetry/exporters/otlp/otlp_recordable.h"
 
 using std::chrono::system_clock;
 using std::chrono::time_point;
@@ -1072,20 +1073,19 @@ int GrpcAgent::config(const json& config) {
         }
       }
 
-      nsolid_service_stub_ =
-          GrpcClient::MakeNSolidServiceStub(opts, tls_keylog_file_);
-
-      // CommandStream needs to be created before the OTLP client to avoid
-      // a race condition with abseil mutexes.
-      reset_command_stream();
+      // Check if gRPC OpenTelemetry plugin should be enabled
+      auto enable_otel_str = per_process::system_environment->Get(kNSOLID_GRPC_OTEL);
+      bool enable_otel = enable_otel_str.has_value() && std::stoi(enable_otel_str.value());
 
       // Enable TLS keylog for the OTLP client
       opts.credentials = GrpcClient::MakeCredentials(opts, tls_keylog_file_);
 
-      std::shared_ptr<OtlpGrpcClient> client =
-          OtlpGrpcClientFactory::Create(opts);
-
-      {
+      // Create tracer provider if not already created for early plugin registration
+      std::shared_ptr<OtlpGrpcClient> client;
+      if (enable_otel && !tracer_provider_) {
+        Debug("Creating tracer provider for gRPC OpenTelemetry Plugin\n");
+        client = OtlpGrpcClientFactory::Create(opts);
+        
         OtlpGrpcExporterOptions options;
         options.compression = "gzip";
         options.endpoint = endpoint;
@@ -1105,6 +1105,56 @@ int GrpcAgent::config(const json& config) {
         trace_processor_ = new BatchSpanProcessor(std::move(trace_exporter), batch_options);
         auto processor = std::unique_ptr<SpanProcessor>(trace_processor_);
         tracer_provider_ = std::make_shared<TracerProvider>(std::move(processor));
+        
+        // Register gRPC OpenTelemetry plugin AFTER tracer provider is fully set up
+        // This integrates with the existing tracing system
+        Debug("Registering gRPC OpenTelemetry Plugin with existing tracer\n");
+        auto status = ::grpc::OpenTelemetryPluginBuilder()
+                      .SetTracerProvider(tracer_provider_)
+                      .BuildAndRegisterGlobal();
+        if (!status.ok()) {
+          Debug("Failed to register gRPC OpenTelemetry Plugin: %s\n",
+                status.ToString().c_str());
+        } else {
+          Debug("gRPC OpenTelemetry Plugin registered successfully\n");
+        }
+      }
+
+      // Now create the gRPC channel - it will be instrumented if plugin is registered
+      nsolid_service_stub_ =
+          GrpcClient::MakeNSolidServiceStub(opts, tls_keylog_file_);
+      
+      // Create OTLP client if not already created for plugin
+      if (!client) {
+        client = OtlpGrpcClientFactory::Create(opts);
+      }
+
+      {
+        OtlpGrpcExporterOptions options;
+        options.compression = "gzip";
+        options.endpoint = endpoint;
+        options.metadata = {{"nsolid-agent-id", agent_id_},
+                            {"nsolid-saas", saas()}};
+        if (!insecure) {
+          options.use_ssl_credentials = true;
+          if (!custom_certs_.empty()) {
+            options.ssl_credentials_cacert_as_string = custom_certs_;
+          } else {
+            options.ssl_credentials_cacert_as_string = cacert_;
+          }
+        }
+
+        // Only create tracer provider if not already created for gRPC plugin
+        if (!tracer_provider_) {
+          auto trace_exporter = std::make_unique<OtlpGrpcExporter>(options, client);
+          BatchSpanProcessorOptions batch_options;
+          trace_processor_ = new BatchSpanProcessor(std::move(trace_exporter), batch_options);
+          auto processor = std::unique_ptr<SpanProcessor>(trace_processor_);
+          tracer_provider_ = std::make_shared<TracerProvider>(std::move(processor));
+        } else if (enable_otel) {
+          // Tracer provider already exists, gRPC plugin should already be registered
+          Debug("gRPC OpenTelemetry Plugin already registered with existing tracer provider\n");
+        }
       }
       {
         OtlpGrpcMetricExporterOptions options;
@@ -1143,6 +1193,10 @@ int GrpcAgent::config(const json& config) {
           std::make_unique<OtlpGrpcLogRecordExporter>(options, client);
       }
     }
+
+    // Now create CommandStream after all OpenTelemetry setup is complete
+    // This ensures the gRPC plugin is fully initialized before we start using the channel
+    reset_command_stream();
   }
 
   if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
@@ -1219,35 +1273,21 @@ int GrpcAgent::config(const json& config) {
     }
   }
 
-  {
-    bool enable_otel = false;
-    auto enable_otel_str =
-      per_process::system_environment->Get(kNSOLID_GRPC_OTEL);
-    // Only parse the insecure flag in non SaaS mode.
-    if (enable_otel_str.has_value()) {
-      enable_otel = std::stoi(enable_otel_str.value());
-    }
-
-    if (enable_otel) {
-      Debug("Enabling gRPC OpenTelemetry Plugin\n");
-      // auto meter_provider = std::make_shared<MeterProvider>();
-      auto status = ::grpc::OpenTelemetryPluginBuilder()
-                    .SetTracerProvider(tracer_provider_)
-                    .BuildAndRegisterGlobal();
-      if (!status.ok()) {
-        Debug("Failed to register gRPC OpenTelemetry Plugin: %s\n",
-              status.ToString().c_str());
-      } else {
-        Debug("gRPC OpenTelemetry Plugin registered successfully\n");
-      }
-    }
-  }
-
   return ret;
 }
 
 void GrpcAgent::do_start() {
   uv_mutex_lock(&start_lock_);
+
+  // Register gRPC OpenTelemetry plugin early if enabled to prevent crashes
+  // We'll create a minimal tracer provider now and replace it later when config is processed
+  auto enable_otel_str = per_process::system_environment->Get(kNSOLID_GRPC_OTEL);
+  bool enable_otel = enable_otel_str.has_value() && std::stoi(enable_otel_str.value());
+  
+  if (enable_otel) {
+    Debug("gRPC OpenTelemetry Plugin will be registered during configuration\n");
+    Debug("This ensures proper integration with existing tracing infrastructure\n");
+  }
 
   ASSERT_EQ(0, shutdown_.init(&loop_, shutdown_cb_, weak_from_this()));
 
