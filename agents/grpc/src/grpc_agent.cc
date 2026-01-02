@@ -1081,11 +1081,38 @@ int GrpcAgent::config(const json& config) {
       opts.credentials = GrpcClient::MakeCredentials(opts, tls_keylog_file_);
 
       // Create tracer provider if not already created for early plugin registration
+      // If gRPC OpenTelemetry is enabled, we use a deferred processor approach:
+      // 1. Create TracerProvider with NO processor
+      // 2. Register gRPC OTel plugin with that provider
+      // 3. Create OTLP client (its channel will be instrumented)
+      // 4. Create exporter and processor using the instrumented client
+      // 5. Add processor to the existing TracerProvider
+      // This ensures ALL gRPC traffic (including OTLP exports) is instrumented.
       std::shared_ptr<OtlpGrpcClient> client;
       if (enable_otel && !tracer_provider_) {
-        Debug("Creating tracer provider for gRPC OpenTelemetry Plugin\n");
+        Debug("Creating TracerProvider without processor for gRPC OTel plugin\n");
+        
+        // Step 1: Create TracerProvider with empty processor vector
+        std::vector<std::unique_ptr<SpanProcessor>> empty_processors;
+        tracer_provider_ = std::make_shared<TracerProvider>(std::move(empty_processors));
+        
+        // Step 2: Register gRPC OpenTelemetry plugin BEFORE creating any channels
+        Debug("Registering gRPC OpenTelemetry Plugin\n");
+        auto status = ::grpc::OpenTelemetryPluginBuilder()
+                      .SetTracerProvider(tracer_provider_)
+                      .BuildAndRegisterGlobal();
+        if (!status.ok()) {
+          Debug("Failed to register gRPC OpenTelemetry Plugin: %s\n",
+                status.ToString().c_str());
+        } else {
+          Debug("gRPC OpenTelemetry Plugin registered successfully\n");
+        }
+        
+        // Step 3: Create OTLP client - its channel will now be instrumented!
+        Debug("Creating instrumented OTLP client\n");
         client = OtlpGrpcClientFactory::Create(opts);
         
+        // Step 4: Create exporter and processor
         OtlpGrpcExporterOptions options;
         options.compression = "gzip";
         options.endpoint = endpoint;
@@ -1104,20 +1131,10 @@ int GrpcAgent::config(const json& config) {
         BatchSpanProcessorOptions batch_options;
         trace_processor_ = new BatchSpanProcessor(std::move(trace_exporter), batch_options);
         auto processor = std::unique_ptr<SpanProcessor>(trace_processor_);
-        tracer_provider_ = std::make_shared<TracerProvider>(std::move(processor));
         
-        // Register gRPC OpenTelemetry plugin AFTER tracer provider is fully set up
-        // This integrates with the existing tracing system
-        Debug("Registering gRPC OpenTelemetry Plugin with existing tracer\n");
-        auto status = ::grpc::OpenTelemetryPluginBuilder()
-                      .SetTracerProvider(tracer_provider_)
-                      .BuildAndRegisterGlobal();
-        if (!status.ok()) {
-          Debug("Failed to register gRPC OpenTelemetry Plugin: %s\n",
-                status.ToString().c_str());
-        } else {
-          Debug("gRPC OpenTelemetry Plugin registered successfully\n");
-        }
+        // Step 5: Add processor to the existing TracerProvider
+        Debug("Adding processor to TracerProvider\n");
+        tracer_provider_->AddProcessor(std::move(processor));
       }
 
       // Now create the gRPC channel - it will be instrumented if plugin is registered
@@ -1151,9 +1168,6 @@ int GrpcAgent::config(const json& config) {
           trace_processor_ = new BatchSpanProcessor(std::move(trace_exporter), batch_options);
           auto processor = std::unique_ptr<SpanProcessor>(trace_processor_);
           tracer_provider_ = std::make_shared<TracerProvider>(std::move(processor));
-        } else if (enable_otel) {
-          // Tracer provider already exists, gRPC plugin should already be registered
-          Debug("gRPC OpenTelemetry Plugin already registered with existing tracer provider\n");
         }
       }
       {
