@@ -62,6 +62,7 @@
       'defines': [
         'BUILDING_LIBCURL',
         'ENABLE_ASYNC_EXPORT',
+        'ENABLE_OTLP_GRPC_CREDENTIAL_PREVIEW',
       ],
       'dependencies': [
         '../protobuf/protobuf.gyp:protobuf',
@@ -73,6 +74,7 @@
       'direct_dependent_settings': {
         'defines': [
           'ENABLE_ASYNC_EXPORT',
+          'ENABLE_OTLP_GRPC_CREDENTIAL_PREVIEW',
         ],
         'include_dirs': [
           'api/include',

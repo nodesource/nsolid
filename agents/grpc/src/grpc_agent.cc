@@ -64,6 +64,7 @@ constexpr size_t span_msg_q_min_size = 1000;
 
 const char* const kNSOLID_GRPC_INSECURE = "NSOLID_GRPC_INSECURE";
 const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
+const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
 
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
@@ -455,6 +456,17 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
     for (size_t i = 0; i < GetRootCertsCount(); i++) {
       cacert_ += GetRootCerts()[i];
       cacert_ += "\n";
+    }
+  }
+
+  std::string keylog;
+  if (per_process::system_environment->Get(kNSOLID_GRPC_KEYLOG).To(&keylog)) {
+    if (!keylog.empty() && keylog != "0") {
+      tls_keylog_file_ = "./nsolid-tls-keylog-" +
+                         std::to_string(uv_os_getpid()) + ".log";
+      uv_fs_t req;
+      uv_fs_unlink(nullptr, &req, tls_keylog_file_.c_str(), nullptr);
+      uv_fs_req_cleanup(&req);
     }
   }
 }
@@ -1049,10 +1061,15 @@ int GrpcAgent::config(const json& config) {
         }
       }
 
-      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(opts);
+      nsolid_service_stub_ =
+          GrpcClient::MakeNSolidServiceStub(opts, tls_keylog_file_);
+
       // CommandStream needs to be created before the OTLP client to avoid
       // a race condition with abseil mutexes.
       reset_command_stream();
+
+      // Enable TLS keylog for the OTLP client
+      opts.credentials = GrpcClient::MakeCredentials(opts, tls_keylog_file_);
 
       std::shared_ptr<OtlpGrpcClient> client =
           OtlpGrpcClientFactory::Create(opts);
