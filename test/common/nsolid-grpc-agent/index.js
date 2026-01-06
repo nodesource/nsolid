@@ -68,18 +68,24 @@ function checkResource(resource, agentId, config, metrics) {
 
 
 class GRPCServer extends EventEmitter {
+  #opts;
   #server;
-  constructor() {
+  constructor(opts) {
     super();
     this.#server = null;
+    this.#opts = opts || {};
   }
 
   start(cb) {
     const args = [];
+    if (this.#opts.tls) {
+      args.push('--tls');
+    }
+
     const opts = {
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     };
-    this.#server = fork(path.join(__dirname, 'server.mjs') + '', args, opts);
+    this.#server = fork(path.join(__dirname, 'server.mjs'), args, opts);
     this.#server.on('message', (message) => {
       console.log('message', message);
       switch (message.type) {

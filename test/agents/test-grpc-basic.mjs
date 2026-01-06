@@ -1,5 +1,6 @@
 // Flags: --expose-internals
 import { mustCall, mustSucceed } from '../common/index.mjs';
+import fixtures from '../common/fixtures.js';
 import assert from 'node:assert';
 import {
   checkExitData,
@@ -13,9 +14,9 @@ const tests = [];
 
 tests.push({
   name: 'should work if agent is killed with signal',
-  test: async (getEnv) => {
+  test: async (getEnv, isSecure) => {
     return new Promise((resolve) => {
-      const grpcServer = new GRPCServer();
+      const grpcServer = new GRPCServer({ tls: isSecure });
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('exit', mustCall((data) => {
           checkExitData(data.msg, data.metadata, agentId, { code: SIGTERM, error: null, profile: '' });
@@ -23,7 +24,7 @@ tests.push({
           resolve();
         }));
 
-        const env = getEnv(port);
+        const env = getEnv(port, isSecure);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -39,9 +40,9 @@ tests.push({
 
 tests.push({
   name: 'should work if agent exits gracefully without error',
-  test: async (getEnv) => {
+  test: async (getEnv, isSecure) => {
     return new Promise((resolve) => {
-      const grpcServer = new GRPCServer();
+      const grpcServer = new GRPCServer({ tls: isSecure });
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('exit', mustCall((data) => {
           checkExitData(data.msg, data.metadata, agentId, { code: 0, error: null, profile: '' });
@@ -49,7 +50,7 @@ tests.push({
           resolve();
         }));
 
-        const env = getEnv(port);
+        const env = getEnv(port, isSecure);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -68,9 +69,9 @@ tests.push({
 
 tests.push({
   name: 'should work if agent exits gracefully with error code',
-  test: async (getEnv) => {
+  test: async (getEnv, isSecure) => {
     return new Promise((resolve) => {
-      const grpcServer = new GRPCServer();
+      const grpcServer = new GRPCServer({ tls: isSecure });
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('exit', mustCall((data) => {
           checkExitData(data.msg, data.metadata, agentId, { code: 1, error: null, profile: '' });
@@ -78,7 +79,7 @@ tests.push({
           resolve();
         }));
 
-        const env = getEnv(port);
+        const env = getEnv(port, isSecure);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -97,9 +98,9 @@ tests.push({
 
 tests.push({
   name: 'should work if agent exits with exception',
-  test: async (getEnv) => {
+  test: async (getEnv, isSecure) => {
     return new Promise((resolve) => {
-      const grpcServer = new GRPCServer();
+      const grpcServer = new GRPCServer({ tls: isSecure });
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('exit', mustCall((data) => {
           const error = { message: 'Uncaught Error: error', stack: '' };
@@ -108,7 +109,7 @@ tests.push({
           resolve();
         }));
 
-        const env = getEnv(port);
+        const env = getEnv(port, isSecure);
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -127,28 +128,41 @@ tests.push({
 
 const testConfigs = [
   {
-    getEnv: (port) => {
-      return {
+    getEnv: (port, isSecure) => {
+      const env = {
         NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-        NSOLID_GRPC_INSECURE: 1,
         NSOLID_GRPC: `localhost:${port}`,
       };
+      if (!isSecure) {
+        env.NSOLID_GRPC_INSECURE = 1;
+      } else {
+        env.NSOLID_GRPC_CERTS = fixtures.path('keys', 'selfsigned-no-keycertsign', 'cert.pem');
+      }
+      return env;
     },
   },
   {
-    getEnv: (port) => {
-      return {
+    getEnv: (port, isSecure) => {
+      const env = {
         NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
-        NSOLID_GRPC_INSECURE: 1,
         NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
       };
+      if (!isSecure) {
+        env.NSOLID_GRPC_INSECURE = 1;
+      } else {
+        env.NSOLID_GRPC_CERTS = fixtures.path('keys', 'selfsigned-no-keycertsign', 'cert.pem');
+      }
+      return env;
     },
   },
 ];
 
+const isSecureOpts = [false, true];
 for (const testConfig of testConfigs) {
   for (const { name, test } of tests) {
-    console.log(`[basic] ${name}`);
-    await test(testConfig.getEnv);
+    for (const isSecure of isSecureOpts) {
+      console.log(`[basic] ${name} ${isSecure ? 'secure' : 'insecure'}`);
+      await test(testConfig.getEnv, isSecure);
+    }
   }
 }
