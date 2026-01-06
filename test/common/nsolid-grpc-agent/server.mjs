@@ -1,7 +1,19 @@
 import assert from 'node:assert';
 import path from 'node:path';
+import { parseArgs } from 'node:util';
 import grpc from '@grpc/grpc-js';
 import protoLoader from '@grpc/proto-loader';
+
+import fixtures from '../fixtures.js';
+
+const options = {
+  tls: {
+    type: 'boolean',
+    default: false,
+  },
+};
+
+const args = parseArgs({ options });
 
 const logsServiceProtoPath = 'opentelemetry/proto/collector/logs/v1/logs_service.proto';
 const metricsServiceProtoPath = 'opentelemetry/proto/collector/metrics/v1/metrics_service.proto';
@@ -211,7 +223,20 @@ async function startServer(cb) {
     },
   });
 
-  const credentials = grpc.ServerCredentials.createInsecure();
+  let credentials;
+  if (args.values.tls) {
+    const key =
+      fixtures.readKey(path.join('selfsigned-no-keycertsign', 'key.pem'));
+    const cert =
+      fixtures.readKey(path.join('selfsigned-no-keycertsign', 'cert.pem'));
+    credentials = grpc.ServerCredentials.createSsl(null, [{
+      cert_chain: cert,
+      private_key: key,
+    }], false); // False means no client-side authentication
+  } else {
+    credentials = grpc.ServerCredentials.createInsecure();
+  }
+
   return new Promise((resolve, reject) => {
     server.bindAsync('localhost:0', credentials, (err, port) => {
       server.start();
