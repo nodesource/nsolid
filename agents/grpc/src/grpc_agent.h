@@ -367,6 +367,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   std::unique_ptr<CommandStream> command_stream_;
   std::string cacert_;
   std::string custom_certs_;
+  std::string tls_keylog_file_;
 
   // For the gRPC server
   nsuv::ns_async command_msg_;

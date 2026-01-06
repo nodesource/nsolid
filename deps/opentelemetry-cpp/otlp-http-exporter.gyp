@@ -62,6 +62,7 @@
       'defines': [
         'BUILDING_LIBCURL',
         'ENABLE_ASYNC_EXPORT',
+        'ENABLE_OTLP_GRPC_CREDENTIAL_PREVIEW',
         'OPENTELEMETRY_STL_VERSION=2020',
       ],
       'dependencies': [
@@ -74,6 +75,7 @@
       'direct_dependent_settings': {
         'defines': [
           'ENABLE_ASYNC_EXPORT',
+          'ENABLE_OTLP_GRPC_CREDENTIAL_PREVIEW',
           'OPENTELEMETRY_STL_VERSION=2020',
         ],
         'include_dirs': [

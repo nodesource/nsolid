@@ -60,7 +60,15 @@ class GrpcClient {
    * Create gRPC channel.
    */
   static std::shared_ptr<::grpc::Channel>
-    MakeChannel(const OtlpGrpcClientOptions& options);
+    MakeChannel(const OtlpGrpcClientOptions& options,
+                const std::string& tls_keylog_file = "");
+
+  /**
+   * Create gRPC channel credentials.
+   */
+  static std::shared_ptr<::grpc::ChannelCredentials>
+    MakeCredentials(const OtlpGrpcClientOptions& options,
+                    const std::string& tls_keylog_file);
 
   /**
    * Create gRPC client context to call RPC.
@@ -72,7 +80,8 @@ class GrpcClient {
    * Create N|Solid service stub to communicate with the N|Solid Console.
    */
   static std::unique_ptr<grpcagent::NSolidService::StubInterface>
-    MakeNSolidServiceStub(const OtlpGrpcClientOptions& options);
+    MakeNSolidServiceStub(const OtlpGrpcClientOptions& options,
+                          const std::string& tls_keylog_file);
 
   /**
    * Generic DelegateAsyncExport for any event type.
