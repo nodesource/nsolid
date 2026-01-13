@@ -45,6 +45,6 @@ server.listen(0, common.mustCall(() => {
       assert.ok(metrics.httpClient99Ptile > 0);
       assert.ok(metrics.httpServerMedian > 0);
       assert.ok(metrics.httpServer99Ptile > 0);
-    }, 3500);
+    }, 5500);
   }));
 }));

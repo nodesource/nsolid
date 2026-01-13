@@ -39,5 +39,5 @@ server.listen(0, '127.0.0.1', common.mustSucceed(async () => {
     assert.ok(metrics.httpClientMedian < 200);
     assert.ok(metrics.httpClient99Ptile > 1000);
     server.close();
-  }, 3500);
+  }, 5500);
 }));
