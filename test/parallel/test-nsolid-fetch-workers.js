@@ -18,7 +18,7 @@ if (!isMainThread) {
       const metrics = nsolid.metrics();
       assert.ok(metrics.httpClientMedian > 0);
       assert.ok(metrics.httpClient99Ptile > 0);
-    }, 3500);
+    }, 5500);
   });
   return;
 }

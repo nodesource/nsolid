@@ -32,7 +32,7 @@ class StatsDEndpoint;
 
 static const nlohmann::json default_agent_config = {
   { "statsdBucket", "nsolid.${env}.${app}.${hostname}.${shortId}" },
-  { "interval", 3000 },
+  { "interval", 5000 },
   { "pauseMetrics", false }
 };
 
@@ -227,7 +227,7 @@ class StatsDAgent: public std::enable_shared_from_this<StatsDAgent> {
   //    "statsd": undefined,
   //    "statsdBucket": 'nsolid.${env}.${app}.${hostname}.${shortId}',
   //    "statsdTags": [],
-  //    "interval": 3000,
+  //    "interval": 5000,
   //    "pauseMetrics": false,
   // }
   int config(const nlohmann::json& message);

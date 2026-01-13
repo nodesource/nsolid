@@ -69,7 +69,7 @@ static const nlohmann::json default_agent_config = {
     {"heartbeat", 1000},
     {"HWM", 1000},
     {"bulkHWM", 1000},
-    {"interval", 3000},
+    {"interval", 5000},
     {"pauseMetrics", false}};
 
 // Wrapper holding a zmq context
@@ -394,7 +394,7 @@ class ZmqAgent {
   //    "heartbeat": 1000,
   //    "HWM": 1000,
   //    "bulkHWM", 1000,
-  //    "interval": 3000,
+  //    "interval": 5000,
   //    "pauseMetrics": false
   //
   // The current supported configuration allows to:
