@@ -1074,6 +1074,7 @@ int GrpcAgent::config(const json& config) {
 
       // Enable TLS keylog for the OTLP client
       opts.credentials = GrpcClient::MakeCredentials(opts, tls_keylog_file_);
+      opts.use_ssl_credentials = false;
 
       std::shared_ptr<OtlpGrpcClient> client =
           OtlpGrpcClientFactory::Create(opts);
@@ -1086,12 +1087,7 @@ int GrpcAgent::config(const json& config) {
                             {"nsolid-saas", saas()}};
         options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
-          options.use_ssl_credentials = true;
-          if (!custom_certs_.empty()) {
-            options.ssl_credentials_cacert_as_string = custom_certs_;
-          } else {
-            options.ssl_credentials_cacert_as_string = cacert_;
-          }
+          options.credentials = opts.credentials;
         }
 
         trace_exporter_ = std::make_unique<OtlpGrpcExporter>(options, client);
@@ -1104,12 +1100,7 @@ int GrpcAgent::config(const json& config) {
                             {"nsolid-saas", saas()}};
         options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
-          options.use_ssl_credentials = true;
-          if (!custom_certs_.empty()) {
-            options.ssl_credentials_cacert_as_string = custom_certs_;
-          } else {
-            options.ssl_credentials_cacert_as_string = cacert_;
-          }
+          options.credentials = opts.credentials;
         }
 
         metrics_exporter_ =
@@ -1123,12 +1114,7 @@ int GrpcAgent::config(const json& config) {
                             {"nsolid-saas", saas()}};
         options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
-          options.use_ssl_credentials = true;
-          if (!custom_certs_.empty()) {
-            options.ssl_credentials_cacert_as_string = custom_certs_;
-          } else {
-            options.ssl_credentials_cacert_as_string = cacert_;
-          }
+          options.credentials = opts.credentials;
         }
 
         log_exporter_ =
