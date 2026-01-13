@@ -86,7 +86,7 @@ static void calculatePtiles(std::vector<double>* vals, double* med, double* nn);
 // any thread have been blocked longer than the threadshold passed to
 // OnBlockedLoopHook().
 constexpr uint64_t blocked_loop_interval = 100;
-uint64_t gen_ptiles_interval = 3000;
+uint64_t gen_ptiles_interval = 5000;
 constexpr uint64_t datapoints_q_interval = 100;
 constexpr size_t datapoints_q_max_size = 100;
 
