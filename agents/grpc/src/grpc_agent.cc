@@ -22,6 +22,9 @@
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "opentelemetry/trace/semantic_conventions.h"
 
+using std::chrono::duration_cast;
+using std::chrono::nanoseconds;
+using std::chrono::seconds;
 using std::chrono::system_clock;
 using std::chrono::time_point;
 using google::protobuf::Arena;
@@ -74,12 +77,13 @@ const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4GB
 const int PUB_KEY_SIZE = 40;
 const int CONSOLE_ID_SIZE = 36;
 
+const seconds DEFAULT_GRPC_TIMEOUT = seconds{ 60 };
+
 template <typename... Args>
 inline void Debug(Args&&... args) {
   per_process::Debug(DebugCategory::NSOLID_GRPC_AGENT,
                      std::forward<Args>(args)...);
 }
-
 
 inline void DebugJSON(const char* str, const json& msg) {
   if (UNLIKELY(per_process::enabled_debug_list.enabled(
@@ -94,10 +98,6 @@ JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
 
 std::pair<int64_t, int64_t>
 create_recorded(const time_point<system_clock>& ts) {
-  using std::chrono::duration_cast;
-  using std::chrono::seconds;
-  using std::chrono::nanoseconds;
-
   system_clock::duration dur = ts.time_since_epoch();
   return { duration_cast<seconds>(dur).count(),
            duration_cast<nanoseconds>(dur % seconds(1)).count() };
@@ -1025,6 +1025,7 @@ int GrpcAgent::config(const json& config) {
       opts.endpoint = endpoint;
       opts.metadata = {{"nsolid-agent-id", agent_id_},
                        {"nsolid-saas", saas()}};
+      opts.timeout = DEFAULT_GRPC_TIMEOUT;
       // Make sure the client is initialized. We set it to the same
       // default value as ax_concurrent_requests as the exporters.
       opts.max_concurrent_requests = 64;
@@ -1051,6 +1052,7 @@ int GrpcAgent::config(const json& config) {
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
+        options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
           options.use_ssl_credentials = true;
           if (!custom_certs_.empty()) {
@@ -1068,6 +1070,7 @@ int GrpcAgent::config(const json& config) {
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
+        options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
           options.use_ssl_credentials = true;
           if (!custom_certs_.empty()) {
@@ -1086,6 +1089,7 @@ int GrpcAgent::config(const json& config) {
         options.endpoint = endpoint;
         options.metadata = {{"nsolid-agent-id", agent_id_},
                             {"nsolid-saas", saas()}};
+        options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
           options.use_ssl_credentials = true;
           if (!custom_certs_.empty()) {
