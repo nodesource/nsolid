@@ -2,6 +2,23 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-01-14, Version 22.22.0-nsolid-v6.2.0 'Jod'
+
+### Commits
+
+* \[[`f2ec4c986f`](https://github.com/nodesource/nsolid/commit/f2ec4c986f)] - Merge tag 'v22.22.0' into node-v22.22.0-nsolid-v6.2.0-release (Santiago Gimeno)
+* \[[`45feced1be`](https://github.com/nodesource/nsolid/commit/45feced1be)] - **agents**: fix otel-cpp warning when setting creds (Santiago Gimeno)
+* \[[`e8ca6d5b03`](https://github.com/nodesource/nsolid/commit/e8ca6d5b03)] - **agents**: increase gRPC timeout from 10 to 60 secs (Santiago Gimeno)
+* \[[`acf760fee1`](https://github.com/nodesource/nsolid/commit/acf760fee1)] - **agents**: add option to dump grpc keylog file (Santiago Gimeno) [#406](https://github.com/nodesource/nsolid/pull/406)
+* \[[`2264f16dff`](https://github.com/nodesource/nsolid/commit/2264f16dff)] - **deps**: update to protobuf v33.2 (Santiago Gimeno) [#398](https://github.com/nodesource/nsolid/pull/398)
+* \[[`ba8b92c7a0`](https://github.com/nodesource/nsolid/commit/ba8b92c7a0)] - **deps**: update grpc to 1.76.0 (Santiago Gimeno) [#390](https://github.com/nodesource/nsolid/pull/390)
+* \[[`c8b596228c`](https://github.com/nodesource/nsolid/commit/c8b596228c)] - **deps**: update to protobuf v33.0 (Santiago Gimeno) [#389](https://github.com/nodesource/nsolid/pull/389)
+* \[[`3b17fecc1c`](https://github.com/nodesource/nsolid/commit/3b17fecc1c)] - **deps**: update libcurl to 8.17.0 (Santiago Gimeno) [#388](https://github.com/nodesource/nsolid/pull/388)
+* \[[`84bdbbc864`](https://github.com/nodesource/nsolid/commit/84bdbbc864)] - **lib,src**: set default metrics interval to 5 secs (Santiago Gimeno)
+* \[[`a5e0bf021a`](https://github.com/nodesource/nsolid/commit/a5e0bf021a)] - **src**: fix null pointer deref error in SetWeak cb (Santiago Gimeno)
+* \[[`a62d486ae1`](https://github.com/nodesource/nsolid/commit/a62d486ae1)] - **src**: set name to nsolid threads (Santiago Gimeno) [#401](https://github.com/nodesource/nsolid/pull/401)
+* \[[`3b569e8b2a`](https://github.com/nodesource/nsolid/commit/3b569e8b2a)] - **test**: add grpc tests testing TLS connections (Santiago Gimeno) [#406](https://github.com/nodesource/nsolid/pull/406)
+
 ## 2025-12-08, Version 22.21.1-nsolid-v6.1.1 'Jod'
 
 ### Commits
