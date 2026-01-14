@@ -65,7 +65,7 @@ setupNSolid(common.mustCall(() => {
   // Set span to the context so it’s propagated
   activeContext = api.trace.setSpan(activeContext, span);
   activeContext = activeContext.setValue('my_key', 'my_value');
-  api.context.with(activeContext, () => {
+  api.context.with(activeContext, common.mustCall(() => {
     // All that runs from here has activeContext as active context
     const ctxt = api.context.active();
     const childSpan = tracer.startSpan('child', {}, ctxt);
@@ -76,15 +76,15 @@ setupNSolid(common.mustCall(() => {
     childSpan.setAttribute('child_key', 'child_value');
     childSpan.end();
     span.end();
-  });
+  }));
 
   api.context.disable();
 
-  api.context.with(activeContext, () => {
+  api.context.with(activeContext, common.mustCall(() => {
     // All that runs from here has activeContext as active context
     const ctxt = api.context.active();
     assert.strictEqual(ctxt, api.ROOT_CONTEXT);
-  });
+  }));
 
   // Give a little time to reach out to the nsolid thread.
   setTimeout(() => {}, 100);

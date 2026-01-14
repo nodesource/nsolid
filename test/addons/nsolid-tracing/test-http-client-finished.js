@@ -71,14 +71,14 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
     http.request({
       port,
     })
-    .on('response', (res) => {
+    .on('response', common.mustCall((res) => {
       res.on('readable', () => {
         res.destroy();
       });
       finished(res, common.mustCall(() => {
         server.close();
       }));
-    })
+    }))
     .end();
   }));
 }));

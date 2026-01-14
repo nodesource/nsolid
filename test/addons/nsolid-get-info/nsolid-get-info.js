@@ -1,6 +1,6 @@
 'use strict';
 
-const { buildType, skip } = require('../../common');
+const { buildType, mustCallAtLeast, skip } = require('../../common');
 const assert = require('assert');
 const bindingPath = require.resolve(`./build/${buildType}/binding`);
 const binding = require(bindingPath);
@@ -89,14 +89,14 @@ if (process.platform === 'linux') {
 }
 
 function checkPropsInObject(obj, expected) {
-  Object.keys(expected).forEach((k) => {
+  Object.keys(expected).forEach(mustCallAtLeast((k) => {
     const fns = expectedInfoFormat[k];
     if (Array.isArray(fns)) {
       assert.ok(fns.some((fn) => fn(obj[k])));
     } else if (isObject(fns)) {
       checkPropsInObject(obj[k], fns);
     }
-  });
+  }, 1));
 }
 
 checkPropsInObject(info, expectedInfoFormat);

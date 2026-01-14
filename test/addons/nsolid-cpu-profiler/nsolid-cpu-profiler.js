@@ -43,7 +43,7 @@ er = binding.startCpuProfiler(threadId, 10000);
 assert.strictEqual(er, 0);
 er = binding.stopCpuProfiler(threadId);
 assert.strictEqual(er, 0);
-setTimeout(() => {
+setTimeout(mustCall(() => {
   checkLastProfile();
 
   // Check error codes for invalid calls.
@@ -54,7 +54,7 @@ setTimeout(() => {
 
   er = binding.stopCpuProfiler(threadId);
   assert.strictEqual(er, 0);
-  setTimeout(() => {
+  setTimeout(mustCall(() => {
     checkLastProfile();
     er = binding.stopCpuProfiler(threadId);
     assert.strictEqual(er, UV_ENOENT);
@@ -62,15 +62,15 @@ setTimeout(() => {
     er = binding.startCpuProfiler(threadId, 10);
     assert.strictEqual(er, 0);
 
-    setTimeout(() => {
+    setTimeout(mustCall(() => {
       // The CPU profile should have ended by now.
       er = binding.stopCpuProfiler(threadId);
       assert.strictEqual(er, UV_ENOENT);
       checkLastProfile();
       testWorker();
-    }, 500);
-  }, 500);
-}, 500);
+    }), 500);
+  }), 500);
+}), 500);
 
 function testWorker() {
   const worker = new Worker(__filename, { argv: [process.pid] });
@@ -85,10 +85,10 @@ function testWorker() {
 
     er = binding.stopCpuProfiler(worker.threadId);
     assert.strictEqual(er, 0);
-    setTimeout(() => {
+    setTimeout(mustCall(() => {
       checkLastProfile();
       er = binding.startCpuProfiler(threadId, 2000);
       assert.strictEqual(er, 0);
-    }, 2000);
+    }), 2000);
   }));
 }

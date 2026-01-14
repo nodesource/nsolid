@@ -1,6 +1,6 @@
 'use strict';
 
-const { buildType, skip } = require('../../common');
+const { buildType, mustCall, skip } = require('../../common');
 const assert = require('assert');
 const bindingPath = require.resolve(`./build/${buildType}/binding`);
 const binding = require(bindingPath);
@@ -26,10 +26,10 @@ function spawnWorker() {
     return;
   }
   const w = new Worker(__filename, { argv: [process.pid] });
-  w.on('online', () => {
+  w.on('online', mustCall(() => {
     // Add 1 for the main thread.
     assert.strictEqual(binding.checkEnvCount(), workerList.length + 1);
     spawnWorker();
-  });
+  }));
   workerList.push(w);
 }

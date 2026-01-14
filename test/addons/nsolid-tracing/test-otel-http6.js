@@ -110,11 +110,11 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
     }
   });
 
-  server.listen(0, '127.0.0.1', () => {
+  server.listen(0, '127.0.0.1', common.mustCall(() => {
     port = server.address().port;
     setupTracesCheck(port, addresses);
     const client = net.connect(port, common.mustCall(() => {
       client.write('GET /1 HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n');
     }));
-  });
+  }));
 }));

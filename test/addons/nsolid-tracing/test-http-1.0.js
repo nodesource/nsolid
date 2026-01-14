@@ -55,7 +55,7 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
   }));
 
   let server_response = '';
-  server.listen(0, () => {
+  server.listen(0, common.mustCall(() => {
     const port = server.address().port;
     setupTracesCheck(port, addresses);
     const c = net.createConnection(port);
@@ -76,5 +76,5 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
       const m = server_response.split('\r\n\r\n');
       assert.strictEqual(m[1], body);
     }));
-  });
+  }));
 }));

@@ -150,32 +150,35 @@ const tests = [
 let counter = 0;
 
 function runTest({ args, listener, command, ret, err, status }, done) {
-  nsolid.on(listener, (request) => {
-    if (ret) {
-      request.return(ret.sent);
-      if (err) {
-        assert.throws(
-          () => {
-            request.throw(err.sent);
-          },
-          {
-            message: `custom command \`${listener}\` (${requestId}) \
-already returned`,
-            code: 'ERR_NSOLID_CUSTOM_COMMAND_ALREADY_RETURNED',
-          },
-        );
+  if (status === UV_EINVAL || status === UV_ENOENT) {
+    nsolid.on(listener, common.mustNotCall());
+  } else {
+    nsolid.on(listener, common.mustCall((request) => {
+      if (ret) {
+        request.return(ret.sent);
+        if (err) {
+          assert.throws(
+            () => {
+              request.throw(err.sent);
+            },
+            {
+              message: `custom command \`${listener}\` (${requestId}) already returned`,
+              code: 'ERR_NSOLID_CUSTOM_COMMAND_ALREADY_RETURNED',
+            },
+          );
+        }
+      } else if (err) {
+        request.throw(err.sent);
       }
-    } else if (err) {
-      request.throw(err.sent);
-    }
-  });
+    }));
+  }
 
   const requestId = `${nsolid.id}${++counter}`;
   assert.strictEqual(binding.customCommand(
     requestId,
     command,
     args,
-    (reqId, cmd, st, error, value) => {
+    common.mustCall((reqId, cmd, st, error, value) => {
       assert.strictEqual(cmd, command);
       assert.strictEqual(requestId, reqId);
       assert.strictEqual(st, status);
@@ -214,8 +217,7 @@ already returned`,
       }
 
       assert.ok(false);
-    },
-  ), 0);
+    })), 0);
 
   assert.strictEqual(binding.customCommand(requestId,
                                            command,
@@ -224,7 +226,7 @@ already returned`,
                      UV_EEXIST);
 }
 
-setTimeout(() => {
+setTimeout(common.mustCall(() => {
   let index = 0;
   function doRun() {
     if (index < tests.length) {
@@ -237,7 +239,7 @@ setTimeout(() => {
   }
 
   doRun();
-}, 100);
+}), 100);
 
 // To keep the process alive.
 const interval = setInterval(() => {}, 1000);

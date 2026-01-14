@@ -83,9 +83,9 @@ function testWorker() {
 
     er = binding.stopTrackingHeapObjects(worker.threadId);
     assert.strictEqual(er, 0);
-    setTimeout(() => {
+    setTimeout(mustCall(() => {
       er = binding.startTrackingHeapObjects(threadId, false, false, 2000);
       assert.strictEqual(er, 0);
-    }, 2000);
+    }), 2000);
   }));
 }

@@ -72,11 +72,11 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
     res.end();
   }));
 
-  server.listen(0, () => {
+  server.listen(0, common.mustCall(() => {
     const port = server.address().port;
     setupTracesCheck(port, addresses);
     const res = common.mustCall((res) => {
-      res.on('data', (chunk) => {
+      res.on('data', common.mustCallAtLeast((chunk) => {
         size += chunk.length;
         assert(!req.aborted, 'got data after abort');
         if (size > maxSize) {
@@ -84,12 +84,12 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
           assert.strictEqual(req.aborted, true);
           size = maxSize;
         }
-      });
+      }), 1);
 
       req.on('abort', common.mustCall(() => assert.strictEqual(size, maxSize)));
       assert.strictEqual(req.aborted, false);
     });
 
     const req = http.get(`http://localhost:${port}`, res);
-  });
+  }));
 }));

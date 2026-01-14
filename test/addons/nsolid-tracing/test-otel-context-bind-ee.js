@@ -68,7 +68,7 @@ setupNSolid(common.mustCall(() => {
 
   const ee = new EventEmitter();
   api.context.bind(activeContext, ee);
-  ee.on('my_event', (val) => {
+  ee.on('my_event', common.mustCall((val) => {
     assert.strictEqual(val, 'my_data');
     // All that runs from here has activeContext as active context
     const ctxt = api.context.active();
@@ -80,7 +80,7 @@ setupNSolid(common.mustCall(() => {
     childSpan.setAttribute('child_key', 'child_value');
     childSpan.end();
     span.end();
-  });
+  }));
 
   setTimeout(() => {
     ee.emit('my_event', 'my_data');

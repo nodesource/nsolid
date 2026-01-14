@@ -28,9 +28,9 @@ process.on('beforeExit', mustCall(() => {
 const workers = [];
 for (let i = 0; i < 10; i++) {
   const worker = new Worker(__filename, { argv: [process.pid] });
-  worker.on('exit', (code) => {
+  worker.on('exit', mustCall((code) => {
     assert.strictEqual(code, 0);
-  });
+  }));
   worker.on('message', mustCall((msg) => {
     assert.strictEqual(msg, 'init');
     binding.getMetrics(worker.threadId);

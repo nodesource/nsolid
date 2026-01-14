@@ -110,7 +110,7 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
     res.end('hello world');
   }, 2));
 
-  server.listen(0, () => {
+  server.listen(0, common.mustCall(() => {
     const port = server.address().port;
     setupTracesCheck(port, addresses);
     const agent = new Agent({ keepAlive: true });
@@ -149,5 +149,5 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
       agent.destroy();
       server.close();
     }
-  });
+  }));
 }));

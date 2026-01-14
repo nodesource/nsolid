@@ -83,9 +83,9 @@ function testWorker() {
 
     er = binding.stopSampling(worker.threadId);
     assert.strictEqual(er, 0);
-    setTimeout(() => {
+    setTimeout(mustCall(() => {
       er = binding.startSampling(threadId, 2000);
       assert.strictEqual(er, 0);
-    }, 2000);
+    }), 2000);
   }));
 }

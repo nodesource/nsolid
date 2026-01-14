@@ -15,7 +15,7 @@ for (let i = 0; i < 10; i++) {
   worker.on('online', () => {
     binding.runEventLoop(worker.threadId);
   });
-  worker.on('exit', (code) => {
+  worker.on('exit', common.mustCall((code) => {
     assert.strictEqual(code, 0);
-  });
+  }));
 }

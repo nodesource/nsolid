@@ -1,7 +1,7 @@
 // Flags: --dns-result-order=ipv4first
 'use strict';
 
-const { buildType, mustSucceed, skip } = require('../../common');
+const { buildType, mustCall, mustSucceed, skip } = require('../../common');
 const assert = require('assert');
 const bindingPath = require.resolve(`./build/${buildType}/binding`);
 const { getMetricsStreamStart,
@@ -107,8 +107,7 @@ function test() {
 
   getMetricsStreamStart(flags, metricsListener);
 
-  const server = createHttpServer(0, (err) => {
-    assert.ifError(err);
+  const server = createHttpServer(0, mustSucceed(() => {
     let stopCalled = false;
 
     bc.onmessage = (event) => {
@@ -120,7 +119,6 @@ function test() {
     const interval = setInterval(() => {
       if (dns_count_recv === 20) {
         // Done with dns reqs, check http metrics
-        assert.ifError(err);
         if (http_tx_metrics_recv.length < 60) {
           if (http_tx_metrics_recv.length === 3 * http_req_sent) {
             http_req_sent++;
@@ -162,7 +160,7 @@ function test() {
         }));
       }
     }, 80);
-  });
+  }));
 }
 
 if (isMainThread) {
@@ -170,9 +168,9 @@ if (isMainThread) {
   for (let i = 0; i < WORKERS; i++) {
     const worker = new Worker(__filename, { argv: [process.pid] });
     worker.on('message', messageHandler);
-    worker.on('exit', (code) => {
+    worker.on('exit', mustCall((code) => {
       assert.strictEqual(code, 0);
-    });
+    }));
   }
 }
 

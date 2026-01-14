@@ -16,10 +16,10 @@ if (!isMainThread && +process.argv[2] !== process.pid)
 if (!isMainThread) {
   const metrics = binding.getProcMetrics();
   assert.ok(typeof metrics === 'string' && JSON.parse(metrics));
-  parentPort.on('message', (msg) => {
+  parentPort.on('message', mustCall((msg) => {
     assert.strictEqual(msg, 'exit');
     process.exit(0);
-  });
+  }));
   return;
 }
 

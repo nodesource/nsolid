@@ -17,7 +17,7 @@ setTimeout(() => {}, 200);
 
 for (let i = 0; i < 5; i++) {
   const worker = new Worker(__filename);
-  worker.on('exit', (code) => {
+  worker.on('exit', common.mustCall((code) => {
     assert.strictEqual(code, 0);
-  });
+  }));
 }

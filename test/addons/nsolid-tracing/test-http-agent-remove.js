@@ -4,7 +4,7 @@ const common = require('../../common');
 const { checkTracesOnExit } = require('../../common/nsolid-traces');
 const { setupNSolid } = require('./utils');
 const http = require('http');
-const { strictEqual } = require('assert');
+const assert = require('assert');
 const bindingPath = require.resolve(`./build/${common.buildType}/binding`);
 const binding = require(bindingPath);
 
@@ -72,7 +72,7 @@ setupNSolid(common.mustSucceed(({ addresses }) => {
     }, common.mustCall(() => {
       const { socket } = req;
       socket.emit('agentRemove');
-      strictEqual(socket._httpMessage, req);
+      assert.strictEqual(socket._httpMessage, req);
       socket.destroy();
       server.close();
     }));

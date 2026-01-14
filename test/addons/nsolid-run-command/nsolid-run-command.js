@@ -27,14 +27,14 @@ if (!isMainThread) {
     assert.strictEqual(msg, 'ready');
     assert.strictEqual(binding.getInterruptCntr(), 0);
     assert.strictEqual(binding.getInterruptOnlyCntr(), 0);
-    setTimeout(() => {
+    setTimeout(common.mustCall(() => {
       binding.runInterrupt(worker.threadId);
       binding.runInterruptOnly(worker.threadId);
-      setTimeout(() => {
+      setTimeout(common.mustCall(() => {
         assert.strictEqual(binding.getInterruptCntr(), 1);
         assert.strictEqual(binding.getInterruptOnlyCntr(), 0);
         worker.postMessage('clearTimeout');
-      }, 100);
-    }, 100);
+      }), 100);
+    }), 100);
   }));
 }

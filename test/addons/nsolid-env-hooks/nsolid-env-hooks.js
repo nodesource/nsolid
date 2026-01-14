@@ -12,7 +12,7 @@ if (!isMainThread) {
 
 for (let i = 0; i < 10; i++) {
   const worker = new Worker(__filename);
-  worker.on('exit', (code) => {
+  worker.on('exit', common.mustCall((code) => {
     assert.strictEqual(code, 0);
-  });
+  }));
 }
