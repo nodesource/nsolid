@@ -148,6 +148,7 @@
         'src/core/channelz/channelz.cc',
         'src/core/channelz/channelz_registry.cc',
         'src/core/channelz/property_list.cc',
+        'src/core/channelz/text_encode.cc',
         # 'src/core/channelz/zviz/data.cc',
         # 'src/core/channelz/zviz/entity.cc',
         # 'src/core/channelz/zviz/environment.cc',
