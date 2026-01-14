@@ -2,6 +2,25 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-01-14, Version 24.13.0-nsolid-v6.2.0 'Krypton'
+
+### Commits
+
+* \[[`666670a76b`](https://github.com/nodesource/nsolid/commit/666670a76b)] - Merge tag 'v24.13.0' into node-v24.13.0-nsolid-v6.1.2-release (Santiago Gimeno)
+* \[[`fd7c44ee33`](https://github.com/nodesource/nsolid/commit/fd7c44ee33)] - **agents**: fix otel-cpp warning when setting creds (Santiago Gimeno)
+* \[[`67b4bce062`](https://github.com/nodesource/nsolid/commit/67b4bce062)] - **agents**: increase gRPC timeout from 10 to 60 secs (Santiago Gimeno)
+* \[[`7d4cbcaef1`](https://github.com/nodesource/nsolid/commit/7d4cbcaef1)] - **agents**: add option to dump grpc keylog file (Santiago Gimeno) [#406](https://github.com/nodesource/nsolid/pull/406)
+* \[[`751b622cd2`](https://github.com/nodesource/nsolid/commit/751b622cd2)] - **deps**: update to protobuf v33.2 (Santiago Gimeno) [#398](https://github.com/nodesource/nsolid/pull/398)
+* \[[`fcab1898d3`](https://github.com/nodesource/nsolid/commit/fcab1898d3)] - **deps**: update grpc to 1.76.0 (Santiago Gimeno) [#390](https://github.com/nodesource/nsolid/pull/390)
+* \[[`1f41f13e5e`](https://github.com/nodesource/nsolid/commit/1f41f13e5e)] - **deps**: update to protobuf v33.0 (Santiago Gimeno)
+* \[[`e6ed2d1e88`](https://github.com/nodesource/nsolid/commit/e6ed2d1e88)] - **deps**: update to protobuf v33.0 (Santiago Gimeno) [#389](https://github.com/nodesource/nsolid/pull/389)
+* \[[`eb0e4988c6`](https://github.com/nodesource/nsolid/commit/eb0e4988c6)] - **deps**: update libcurl to 8.17.0 (Santiago Gimeno) [#388](https://github.com/nodesource/nsolid/pull/388)
+* \[[`c3d5f95aaa`](https://github.com/nodesource/nsolid/commit/c3d5f95aaa)] - **lib,src**: set default metrics interval to 5 secs (Santiago Gimeno)
+* \[[`2de22bbc07`](https://github.com/nodesource/nsolid/commit/2de22bbc07)] - **src**: fix null pointer deref error in SetWeak cb (Santiago Gimeno)
+* \[[`ba6c1d0a3c`](https://github.com/nodesource/nsolid/commit/ba6c1d0a3c)] - **src**: set name to nsolid threads (Santiago Gimeno) [#401](https://github.com/nodesource/nsolid/pull/401)
+* \[[`cb8bd50ca7`](https://github.com/nodesource/nsolid/commit/cb8bd50ca7)] - **test**: fix linting issues after v24.13.0 rebase (Santiago Gimeno)
+* \[[`8116ecd9b4`](https://github.com/nodesource/nsolid/commit/8116ecd9b4)] - **test**: add grpc tests testing TLS connections (Santiago Gimeno) [#406](https://github.com/nodesource/nsolid/pull/406)
+
 ## 2025-12-08, Version 24.11.1-nsolid-v6.1.1 'Krypton'
 
 ### Commits
