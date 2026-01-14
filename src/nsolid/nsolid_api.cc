@@ -1905,8 +1905,10 @@ void EnvInst::CustomCommandReqWeakCallback(
   EnvInst* envinst = GetEnvLocalInst(info.GetIsolate());
   std::unique_ptr<CustomCommandGlobalReq> req(info.GetParameter());
   CHECK_NOT_NULL(req);
-  ns_mutex::scoped_lock lock(envinst->custom_command_stor_map_lock_);
-  envinst->custom_command_stor_map_.erase(req->req_id);
+  if (envinst) {
+    ns_mutex::scoped_lock lock(envinst->custom_command_stor_map_lock_);
+    envinst->custom_command_stor_map_.erase(req->req_id);
+  }
 }
 
 
