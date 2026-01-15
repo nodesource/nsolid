@@ -231,6 +231,7 @@ class InfoBody final :
     kMainFieldNumber = 8,
     kNodeEnvFieldNumber = 9,
     kPlatformFieldNumber = 11,
+    kAppVersionFieldNumber = 17,
     kCpuCoresFieldNumber = 3,
     kPidFieldNumber = 10,
     kProcessStartFieldNumber = 12,
@@ -404,6 +405,24 @@ class InfoBody final :
   std::string* _internal_mutable_platform();
   public:
 
+  // optional string appVersion = 17;
+  bool has_appversion() const;
+  private:
+  bool _internal_has_appversion() const;
+  public:
+  void clear_appversion();
+  const std::string& appversion() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_appversion(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_appversion();
+  PROTOBUF_NODISCARD std::string* release_appversion();
+  void set_allocated_appversion(std::string* appversion);
+  private:
+  const std::string& _internal_appversion() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_appversion(const std::string& value);
+  std::string* _internal_mutable_appversion();
+  public:
+
   // uint32 cpuCores = 3;
   void clear_cpucores();
   uint32_t cpucores() const;
@@ -457,6 +476,8 @@ class InfoBody final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::HasBits<1> _has_bits_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> tags_;
     ::PROTOBUF_NAMESPACE_ID::internal::MapField<
         InfoBody_VersionsEntry_DoNotUse,
@@ -472,12 +493,12 @@ class InfoBody final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr main_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr nodeenv_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr platform_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr appversion_;
     uint32_t cpucores_;
     uint32_t pid_;
     uint64_t processstart_;
     uint64_t totalmem_;
     uint32_t kernelversion_;
-    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
   friend struct ::TableStruct_info_2eproto;
@@ -1324,6 +1345,74 @@ inline void InfoBody::_internal_set_kernelversion(uint32_t value) {
 inline void InfoBody::set_kernelversion(uint32_t value) {
   _internal_set_kernelversion(value);
   // @@protoc_insertion_point(field_set:grpcagent.InfoBody.kernelVersion)
+}
+
+// optional string appVersion = 17;
+inline bool InfoBody::_internal_has_appversion() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
+  return value;
+}
+inline bool InfoBody::has_appversion() const {
+  return _internal_has_appversion();
+}
+inline void InfoBody::clear_appversion() {
+  _impl_.appversion_.ClearToEmpty();
+  _impl_._has_bits_[0] &= ~0x00000001u;
+}
+inline const std::string& InfoBody::appversion() const {
+  // @@protoc_insertion_point(field_get:grpcagent.InfoBody.appVersion)
+  return _internal_appversion();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void InfoBody::set_appversion(ArgT0&& arg0, ArgT... args) {
+ _impl_._has_bits_[0] |= 0x00000001u;
+ _impl_.appversion_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:grpcagent.InfoBody.appVersion)
+}
+inline std::string* InfoBody::mutable_appversion() {
+  std::string* _s = _internal_mutable_appversion();
+  // @@protoc_insertion_point(field_mutable:grpcagent.InfoBody.appVersion)
+  return _s;
+}
+inline const std::string& InfoBody::_internal_appversion() const {
+  return _impl_.appversion_.Get();
+}
+inline void InfoBody::_internal_set_appversion(const std::string& value) {
+  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_.appversion_.Set(value, GetArenaForAllocation());
+}
+inline std::string* InfoBody::_internal_mutable_appversion() {
+  _impl_._has_bits_[0] |= 0x00000001u;
+  return _impl_.appversion_.Mutable(GetArenaForAllocation());
+}
+inline std::string* InfoBody::release_appversion() {
+  // @@protoc_insertion_point(field_release:grpcagent.InfoBody.appVersion)
+  if (!_internal_has_appversion()) {
+    return nullptr;
+  }
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  auto* p = _impl_.appversion_.Release();
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.appversion_.IsDefault()) {
+    _impl_.appversion_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  return p;
+}
+inline void InfoBody::set_allocated_appversion(std::string* appversion) {
+  if (appversion != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+  _impl_.appversion_.SetAllocated(appversion, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.appversion_.IsDefault()) {
+    _impl_.appversion_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.InfoBody.appVersion)
 }
 
 // -------------------------------------------------------------------

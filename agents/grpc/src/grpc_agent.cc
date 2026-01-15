@@ -201,6 +201,9 @@ void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
     if (info.find("app") != info.end()) {
       body->set_app(info["app"].get<std::string>());
     }
+    if (info.find("appVersion") != info.end()) {
+      body->set_appversion(info["appVersion"].get<std::string>());
+    }
     if (info.find("arch") != info.end()) {
       body->set_arch(info["arch"].get<std::string>());
     }

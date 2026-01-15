@@ -34,7 +34,9 @@ struct InfoBody_VersionsEntry_DoNotUseDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 InfoBody_VersionsEntry_DoNotUseDefaultTypeInternal _InfoBody_VersionsEntry_DoNotUse_default_instance_;
 PROTOBUF_CONSTEXPR InfoBody::InfoBody(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.tags_)*/{}
+    /*decltype(_impl_._has_bits_)*/{}
+  , /*decltype(_impl_._cached_size_)*/{}
+  , /*decltype(_impl_.tags_)*/{}
   , /*decltype(_impl_.versions_)*/{::_pbi::ConstantInitialized()}
   , /*decltype(_impl_.app_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.arch_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
@@ -45,12 +47,12 @@ PROTOBUF_CONSTEXPR InfoBody::InfoBody(
   , /*decltype(_impl_.main_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.nodeenv_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.platform_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.appversion_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.cpucores_)*/0u
   , /*decltype(_impl_.pid_)*/0u
   , /*decltype(_impl_.processstart_)*/uint64_t{0u}
   , /*decltype(_impl_.totalmem_)*/uint64_t{0u}
-  , /*decltype(_impl_.kernelversion_)*/0u
-  , /*decltype(_impl_._cached_size_)*/{}} {}
+  , /*decltype(_impl_.kernelversion_)*/0u} {}
 struct InfoBodyDefaultTypeInternal {
   PROTOBUF_CONSTEXPR InfoBodyDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
@@ -90,7 +92,7 @@ const uint32_t TableStruct_info_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
   PROTOBUF_FIELD_OFFSET(::grpcagent::InfoBody_VersionsEntry_DoNotUse, value_),
   0,
   1,
-  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::grpcagent::InfoBody, _impl_._has_bits_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::InfoBody, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
@@ -112,6 +114,24 @@ const uint32_t TableStruct_info_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
   PROTOBUF_FIELD_OFFSET(::grpcagent::InfoBody, _impl_.totalmem_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::InfoBody, _impl_.versions_),
   PROTOBUF_FIELD_OFFSET(::grpcagent::InfoBody, _impl_.kernelversion_),
+  PROTOBUF_FIELD_OFFSET(::grpcagent::InfoBody, _impl_.appversion_),
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  ~0u,
+  0,
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grpcagent::InfoEvent, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -123,8 +143,8 @@ const uint32_t TableStruct_info_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, 8, -1, sizeof(::grpcagent::InfoBody_VersionsEntry_DoNotUse)},
-  { 10, -1, -1, sizeof(::grpcagent::InfoBody)},
-  { 32, -1, -1, sizeof(::grpcagent::InfoEvent)},
+  { 10, 33, -1, sizeof(::grpcagent::InfoBody)},
+  { 50, -1, -1, sizeof(::grpcagent::InfoEvent)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -134,7 +154,7 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 
 const char descriptor_table_protodef_info_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\ninfo.proto\022\tgrpcagent\032\014common.proto\"\352\002"
+  "\n\ninfo.proto\022\tgrpcagent\032\014common.proto\"\222\003"
   "\n\010InfoBody\022\013\n\003app\030\001 \001(\t\022\014\n\004arch\030\002 \001(\t\022\020\n"
   "\010cpuCores\030\003 \001(\r\022\020\n\010cpuModel\030\004 \001(\t\022\020\n\010exe"
   "cPath\030\005 \001(\t\022\020\n\010hostname\030\006 \001(\t\022\n\n\002id\030\007 \001("
@@ -142,9 +162,10 @@ const char descriptor_table_protodef_info_2eproto[] PROTOBUF_SECTION_VARIABLE(pr
   "\n \001(\r\022\020\n\010platform\030\013 \001(\t\022\024\n\014processStart\030"
   "\014 \001(\004\022\014\n\004tags\030\r \003(\t\022\020\n\010totalMem\030\016 \001(\004\0223\n"
   "\010versions\030\017 \003(\0132!.grpcagent.InfoBody.Ver"
-  "sionsEntry\022\025\n\rkernelVersion\030\020 \001(\r\032/\n\rVer"
-  "sionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\002"
-  "8\001\"Y\n\tInfoEvent\022)\n\006common\030\001 \001(\0132\031.grpcag"
+  "sionsEntry\022\025\n\rkernelVersion\030\020 \001(\r\022\027\n\napp"
+  "Version\030\021 \001(\tH\000\210\001\001\032/\n\rVersionsEntry\022\013\n\003k"
+  "ey\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001B\r\n\013_appVersi"
+  "on\"Y\n\tInfoEvent\022)\n\006common\030\001 \001(\0132\031.grpcag"
   "ent.CommonResponse\022!\n\004body\030\002 \001(\0132\023.grpca"
   "gent.InfoBodyb\006proto3"
   ;
@@ -153,7 +174,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_info_2eproto_deps[1
 };
 static ::_pbi::once_flag descriptor_table_info_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_info_2eproto = {
-    false, false, 501, descriptor_table_protodef_info_2eproto,
+    false, false, 541, descriptor_table_protodef_info_2eproto,
     "info.proto",
     &descriptor_table_info_2eproto_once, descriptor_table_info_2eproto_deps, 1, 3,
     schemas, file_default_instances, TableStruct_info_2eproto::offsets,
@@ -186,6 +207,10 @@ void InfoBody_VersionsEntry_DoNotUse::MergeFrom(const InfoBody_VersionsEntry_DoN
 
 class InfoBody::_Internal {
  public:
+  using HasBits = decltype(std::declval<InfoBody>()._impl_._has_bits_);
+  static void set_has_appversion(HasBits* has_bits) {
+    (*has_bits)[0] |= 1u;
+  }
 };
 
 InfoBody::InfoBody(::PROTOBUF_NAMESPACE_ID::Arena* arena,
@@ -201,7 +226,9 @@ InfoBody::InfoBody(const InfoBody& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   InfoBody* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.tags_){from._impl_.tags_}
+      decltype(_impl_._has_bits_){from._impl_._has_bits_}
+    , /*decltype(_impl_._cached_size_)*/{}
+    , decltype(_impl_.tags_){from._impl_.tags_}
     , /*decltype(_impl_.versions_)*/{}
     , decltype(_impl_.app_){}
     , decltype(_impl_.arch_){}
@@ -212,12 +239,12 @@ InfoBody::InfoBody(const InfoBody& from)
     , decltype(_impl_.main_){}
     , decltype(_impl_.nodeenv_){}
     , decltype(_impl_.platform_){}
+    , decltype(_impl_.appversion_){}
     , decltype(_impl_.cpucores_){}
     , decltype(_impl_.pid_){}
     , decltype(_impl_.processstart_){}
     , decltype(_impl_.totalmem_){}
-    , decltype(_impl_.kernelversion_){}
-    , /*decltype(_impl_._cached_size_)*/{}};
+    , decltype(_impl_.kernelversion_){}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   _this->_impl_.versions_.MergeFrom(from._impl_.versions_);
@@ -293,6 +320,14 @@ InfoBody::InfoBody(const InfoBody& from)
     _this->_impl_.platform_.Set(from._internal_platform(), 
       _this->GetArenaForAllocation());
   }
+  _impl_.appversion_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.appversion_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (from._internal_has_appversion()) {
+    _this->_impl_.appversion_.Set(from._internal_appversion(), 
+      _this->GetArenaForAllocation());
+  }
   ::memcpy(&_impl_.cpucores_, &from._impl_.cpucores_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.kernelversion_) -
     reinterpret_cast<char*>(&_impl_.cpucores_)) + sizeof(_impl_.kernelversion_));
@@ -304,7 +339,9 @@ inline void InfoBody::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.tags_){arena}
+      decltype(_impl_._has_bits_){}
+    , /*decltype(_impl_._cached_size_)*/{}
+    , decltype(_impl_.tags_){arena}
     , /*decltype(_impl_.versions_)*/{::_pbi::ArenaInitialized(), arena}
     , decltype(_impl_.app_){}
     , decltype(_impl_.arch_){}
@@ -315,12 +352,12 @@ inline void InfoBody::SharedCtor(
     , decltype(_impl_.main_){}
     , decltype(_impl_.nodeenv_){}
     , decltype(_impl_.platform_){}
+    , decltype(_impl_.appversion_){}
     , decltype(_impl_.cpucores_){0u}
     , decltype(_impl_.pid_){0u}
     , decltype(_impl_.processstart_){uint64_t{0u}}
     , decltype(_impl_.totalmem_){uint64_t{0u}}
     , decltype(_impl_.kernelversion_){0u}
-    , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.app_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
@@ -358,6 +395,10 @@ inline void InfoBody::SharedCtor(
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.platform_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.appversion_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.appversion_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 InfoBody::~InfoBody() {
@@ -384,6 +425,7 @@ inline void InfoBody::SharedDtor() {
   _impl_.main_.Destroy();
   _impl_.nodeenv_.Destroy();
   _impl_.platform_.Destroy();
+  _impl_.appversion_.Destroy();
 }
 
 void InfoBody::ArenaDtor(void* object) {
@@ -411,14 +453,20 @@ void InfoBody::Clear() {
   _impl_.main_.ClearToEmpty();
   _impl_.nodeenv_.ClearToEmpty();
   _impl_.platform_.ClearToEmpty();
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
+    _impl_.appversion_.ClearNonDefaultToEmpty();
+  }
   ::memset(&_impl_.cpucores_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.kernelversion_) -
       reinterpret_cast<char*>(&_impl_.cpucores_)) + sizeof(_impl_.kernelversion_));
+  _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
 const char* InfoBody::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
@@ -581,6 +629,16 @@ const char* InfoBody::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
         } else
           goto handle_unusual;
         continue;
+      // optional string appVersion = 17;
+      case 17:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 138)) {
+          auto str = _internal_mutable_appversion();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "grpcagent.InfoBody.appVersion"));
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -597,6 +655,7 @@ const char* InfoBody::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
     CHK_(ptr != nullptr);
   }  // while
 message_done:
+  _impl_._has_bits_.Or(has_bits);
   return ptr;
 failure:
   ptr = nullptr;
@@ -770,6 +829,16 @@ uint8_t* InfoBody::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(16, this->_internal_kernelversion(), target);
   }
 
+  // optional string appVersion = 17;
+  if (_internal_has_appversion()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_appversion().data(), static_cast<int>(this->_internal_appversion().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "grpcagent.InfoBody.appVersion");
+    target = stream->WriteStringMaybeAliased(
+        17, this->_internal_appversion(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -866,6 +935,14 @@ size_t InfoBody::ByteSizeLong() const {
         this->_internal_platform());
   }
 
+  // optional string appVersion = 17;
+  cached_has_bits = _impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_appversion());
+  }
+
   // uint32 cpuCores = 3;
   if (this->_internal_cpucores() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_cpucores());
@@ -940,6 +1017,9 @@ void InfoBody::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTO
   if (!from._internal_platform().empty()) {
     _this->_internal_set_platform(from._internal_platform());
   }
+  if (from._internal_has_appversion()) {
+    _this->_internal_set_appversion(from._internal_appversion());
+  }
   if (from._internal_cpucores() != 0) {
     _this->_internal_set_cpucores(from._internal_cpucores());
   }
@@ -974,6 +1054,7 @@ void InfoBody::InternalSwap(InfoBody* other) {
   auto* lhs_arena = GetArenaForAllocation();
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   _impl_.tags_.InternalSwap(&other->_impl_.tags_);
   _impl_.versions_.InternalSwap(&other->_impl_.versions_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
@@ -1011,6 +1092,10 @@ void InfoBody::InternalSwap(InfoBody* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.platform_, lhs_arena,
       &other->_impl_.platform_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.appversion_, lhs_arena,
+      &other->_impl_.appversion_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(InfoBody, _impl_.kernelversion_)

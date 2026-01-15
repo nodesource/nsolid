@@ -46,6 +46,7 @@ if (process.argv[2] === 'child') {
     // also the body fields
     assert.ok(info.body.app);
     assert.strictEqual(info.body.app, nsolidConfig.appName || 'untitled application');
+    assert.strictEqual(info.body.appVersion, nsolidConfig.appVersion);
     assert.ok(info.body.arch);
     assert.ok(info.body.cpuCores);
     assert.ok(info.body.cpuModel);
