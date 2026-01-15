@@ -75,6 +75,7 @@ function checkInfoData(info, requestId, agentId, nsolidConfig = {}) {
   // also the body fields
   assert.ok(info.body.app);
   assert.strictEqual(info.body.app, nsolidConfig.appName || 'untitled application');
+  assert.strictEqual(info.body.appVersion, '1.0.0');
   assert.ok(info.body.arch);
   assert.ok(info.body.cpuCores);
   assert.ok(info.body.cpuModel);
