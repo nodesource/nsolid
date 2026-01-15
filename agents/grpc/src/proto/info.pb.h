@@ -274,6 +274,7 @@ class InfoBody final : public ::google::protobuf::Message
     kMainFieldNumber = 8,
     kNodeEnvFieldNumber = 9,
     kPlatformFieldNumber = 11,
+    kAppVersionFieldNumber = 17,
     kCpuCoresFieldNumber = 3,
     kPidFieldNumber = 10,
     kProcessStartFieldNumber = 12,
@@ -438,6 +439,22 @@ class InfoBody final : public ::google::protobuf::Message
   ::std::string* PROTOBUF_NONNULL _internal_mutable_platform();
 
   public:
+  // optional string appVersion = 17;
+  bool has_appversion() const;
+  void clear_appversion() ;
+  const ::std::string& appversion() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_appversion(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_appversion();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_appversion();
+  void set_allocated_appversion(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_appversion() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_appversion(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_appversion();
+
+  public:
   // uint32 cpuCores = 3;
   void clear_cpucores() ;
   ::uint32_t cpucores() const;
@@ -507,8 +524,8 @@ class InfoBody final : public ::google::protobuf::Message
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 16,
-                                   1, 107,
+  static const ::google::protobuf::internal::TcParseTable<5, 17,
+                                   1, 117,
                                    2>
       _table_;
 
@@ -539,6 +556,7 @@ class InfoBody final : public ::google::protobuf::Message
     ::google::protobuf::internal::ArenaStringPtr main_;
     ::google::protobuf::internal::ArenaStringPtr nodeenv_;
     ::google::protobuf::internal::ArenaStringPtr platform_;
+    ::google::protobuf::internal::ArenaStringPtr appversion_;
     ::uint32_t cpucores_;
     ::uint32_t pid_;
     ::uint64_t processstart_;
@@ -921,7 +939,7 @@ inline void InfoBody::clear_cpucores() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cpucores_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000400U);
+                  0x00000800U);
 }
 inline ::uint32_t InfoBody::cpucores() const {
   // @@protoc_insertion_point(field_get:grpcagent.InfoBody.cpuCores)
@@ -929,7 +947,7 @@ inline ::uint32_t InfoBody::cpucores() const {
 }
 inline void InfoBody::set_cpucores(::uint32_t value) {
   _internal_set_cpucores(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
   // @@protoc_insertion_point(field_set:grpcagent.InfoBody.cpuCores)
 }
 inline ::uint32_t InfoBody::_internal_cpucores() const {
@@ -1336,7 +1354,7 @@ inline void InfoBody::clear_pid() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.pid_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000800U);
+                  0x00001000U);
 }
 inline ::uint32_t InfoBody::pid() const {
   // @@protoc_insertion_point(field_get:grpcagent.InfoBody.pid)
@@ -1344,7 +1362,7 @@ inline ::uint32_t InfoBody::pid() const {
 }
 inline void InfoBody::set_pid(::uint32_t value) {
   _internal_set_pid(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
   // @@protoc_insertion_point(field_set:grpcagent.InfoBody.pid)
 }
 inline ::uint32_t InfoBody::_internal_pid() const {
@@ -1426,7 +1444,7 @@ inline void InfoBody::clear_processstart() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.processstart_ = ::uint64_t{0u};
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00001000U);
+                  0x00002000U);
 }
 inline ::uint64_t InfoBody::processstart() const {
   // @@protoc_insertion_point(field_get:grpcagent.InfoBody.processStart)
@@ -1434,7 +1452,7 @@ inline ::uint64_t InfoBody::processstart() const {
 }
 inline void InfoBody::set_processstart(::uint64_t value) {
   _internal_set_processstart(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
   // @@protoc_insertion_point(field_set:grpcagent.InfoBody.processStart)
 }
 inline ::uint64_t InfoBody::_internal_processstart() const {
@@ -1523,7 +1541,7 @@ inline void InfoBody::clear_totalmem() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.totalmem_ = ::uint64_t{0u};
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00002000U);
+                  0x00004000U);
 }
 inline ::uint64_t InfoBody::totalmem() const {
   // @@protoc_insertion_point(field_get:grpcagent.InfoBody.totalMem)
@@ -1531,7 +1549,7 @@ inline ::uint64_t InfoBody::totalmem() const {
 }
 inline void InfoBody::set_totalmem(::uint64_t value) {
   _internal_set_totalmem(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
   // @@protoc_insertion_point(field_set:grpcagent.InfoBody.totalMem)
 }
 inline ::uint64_t InfoBody::_internal_totalmem() const {
@@ -1554,7 +1572,7 @@ inline void InfoBody::clear_versions() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.versions_.Clear();
   ClearHasBitForRepeated(_impl_._has_bits_[0],
-                  0x00008000U);
+                  0x00010000U);
 }
 inline const ::google::protobuf::Map<::std::string, ::std::string>& InfoBody::_internal_versions() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
@@ -1570,7 +1588,7 @@ inline ::google::protobuf::Map<::std::string, ::std::string>* PROTOBUF_NONNULL I
 }
 inline ::google::protobuf::Map<::std::string, ::std::string>* PROTOBUF_NONNULL InfoBody::mutable_versions()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00008000U);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00010000U);
   // @@protoc_insertion_point(field_mutable_map:grpcagent.InfoBody.versions)
   return _internal_mutable_versions();
 }
@@ -1580,7 +1598,7 @@ inline void InfoBody::clear_kernelversion() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.kernelversion_ = 0u;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00004000U);
+                  0x00008000U);
 }
 inline ::uint32_t InfoBody::kernelversion() const {
   // @@protoc_insertion_point(field_get:grpcagent.InfoBody.kernelVersion)
@@ -1588,7 +1606,7 @@ inline ::uint32_t InfoBody::kernelversion() const {
 }
 inline void InfoBody::set_kernelversion(::uint32_t value) {
   _internal_set_kernelversion(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
   // @@protoc_insertion_point(field_set:grpcagent.InfoBody.kernelVersion)
 }
 inline ::uint32_t InfoBody::_internal_kernelversion() const {
@@ -1598,6 +1616,75 @@ inline ::uint32_t InfoBody::_internal_kernelversion() const {
 inline void InfoBody::_internal_set_kernelversion(::uint32_t value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.kernelversion_ = value;
+}
+
+// optional string appVersion = 17;
+inline bool InfoBody::has_appversion() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
+  return value;
+}
+inline void InfoBody::clear_appversion() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.appversion_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000400U);
+}
+inline const ::std::string& InfoBody::appversion() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:grpcagent.InfoBody.appVersion)
+  return _internal_appversion();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void InfoBody::set_appversion(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  _impl_.appversion_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:grpcagent.InfoBody.appVersion)
+}
+inline ::std::string* PROTOBUF_NONNULL InfoBody::mutable_appversion()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  ::std::string* _s = _internal_mutable_appversion();
+  // @@protoc_insertion_point(field_mutable:grpcagent.InfoBody.appVersion)
+  return _s;
+}
+inline const ::std::string& InfoBody::_internal_appversion() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.appversion_.Get();
+}
+inline void InfoBody::_internal_set_appversion(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.appversion_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL InfoBody::_internal_mutable_appversion() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.appversion_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE InfoBody::release_appversion() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:grpcagent.InfoBody.appVersion)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000400U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000400U);
+  auto* released = _impl_.appversion_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.appversion_.Set("", GetArena());
+  }
+  return released;
+}
+inline void InfoBody::set_allocated_appversion(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000400U);
+  }
+  _impl_.appversion_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.appversion_.IsDefault()) {
+    _impl_.appversion_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.InfoBody.appVersion)
 }
 
 // -------------------------------------------------------------------
