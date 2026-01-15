@@ -21,6 +21,7 @@ message InfoBody {
   uint64 totalMem = 14;
   map<string, string> versions = 15;
   uint32 kernelVersion = 16;
+  optional string appVersion = 17;
 }
 
 message InfoEvent {
