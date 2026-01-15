@@ -9,6 +9,7 @@
       '../../../deps/nsuv/include/',
       '../../../deps/protobuf/src',
       '../../../deps/protobuf/third_party/abseil-cpp',
+        '../../../deps/protobuf/third_party/utf8_range',
       '../../../agents/statsd/src/',
     ],
     'target_defaults': {
