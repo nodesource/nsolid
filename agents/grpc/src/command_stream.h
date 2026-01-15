@@ -59,6 +59,7 @@ class CommandStream:
   TSQueue<grpcagent::CommandResponse> response_q_;
   nsuv::ns_mutex lock_;
   uv_cond_t on_done_cond_;
+  bool cancelling_for_destruction_ = false;
 };
 
 }  // namespace grpc
