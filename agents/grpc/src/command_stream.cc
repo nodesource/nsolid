@@ -31,6 +31,7 @@ CommandStream::~CommandStream() {
   nsuv::ns_mutex::scoped_lock lock(lock_);
   // try cancel and wait until OnDone is called
   if (!write_state_.done) {
+    cancelling_for_destruction_ = true;
     context_.TryCancel();
     do {
       uv_cond_wait(&on_done_cond_, lock_.base());
@@ -53,12 +54,11 @@ void CommandStream::OnDone(const Status& s) {
     nsuv::ns_mutex::scoped_lock lock(lock_);
     write_state_.done = true;
     uv_cond_signal(&on_done_cond_);
-    if (!obs) {
+    if (!obs || cancelling_for_destruction_) {
       return;
     }
   }
 
-  // Don't notify the observer if the stream was cancelled (destroyed)
   obs->on_command_stream_done(s);
 }
 
