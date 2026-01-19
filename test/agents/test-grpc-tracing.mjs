@@ -204,7 +204,7 @@ tests.push({
           if (phase === 'done')
             return;
 
-          mergeResourceSpans(spans, resourceSpans);
+          mergeResourceSpans(spans.request, resourceSpans);
 
           if (phase === 'initial' &&
               resourceSpans.length === 1 &&
@@ -273,7 +273,7 @@ tests.push({
           if (phase === 'done')
             return;
 
-          mergeResourceSpans(spans, resourceSpans);
+          mergeResourceSpans(spans.request, resourceSpans);
 
           if (phase === 'initial' &&
               resourceSpans.length === 1 &&

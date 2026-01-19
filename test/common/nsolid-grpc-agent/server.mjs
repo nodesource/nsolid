@@ -1,5 +1,6 @@
 import assert from 'node:assert';
 import path from 'node:path';
+import { setTimeout } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 import grpc from '@grpc/grpc-js';
 import protoLoader from '@grpc/proto-loader';
@@ -26,6 +27,44 @@ const includeDirs = [path.resolve(import.meta.dirname,
 
 const commandCallMap = new Map();
 
+// Fault injection state
+const faultInjections = new Map(); // service -> { status, remaining }
+const delayInjections = new Map(); // service -> delayMs
+
+// Helper to check and inject fault for unary calls
+function checkAndInjectFault(serviceName, callback) {
+  const fault = faultInjections.get(serviceName);
+  if (fault && fault.remaining > 0) {
+    fault.remaining--;
+    const status = grpc.status[fault.status] || grpc.status.UNAVAILABLE;
+    console.log(`Injecting fault for ${serviceName}`, { code: status, message: `Injected fault: ${fault.status}` });
+    callback({ code: status, message: `Injected fault: ${fault.status}` });
+    return true;
+  }
+  return false;
+}
+
+// Helper to check and inject fault for streaming calls
+function checkAndInjectFaultStreaming(serviceName, call) {
+  const fault = faultInjections.get(serviceName);
+  if (fault && fault.remaining > 0) {
+    fault.remaining--;
+    const status = grpc.status[fault.status] || grpc.status.UNAVAILABLE;
+    call.destroy({ code: status, message: `Injected fault: ${fault.status}` });
+    return true;
+  }
+  return false;
+}
+
+// Helper to inject delay for unary calls
+async function injectDelay(serviceName, callback) {
+  const delay = delayInjections.get(serviceName);
+  if (delay) {
+    await setTimeout(delay);
+  }
+  callback();
+}
+
 // Create a local server to receive data from
 async function startServer(cb) {
   const server = new grpc.Server();
@@ -44,8 +83,11 @@ async function startServer(cb) {
     Export: (data, callback) => {
       console.dir(data.request, { depth: null });
       // console.log('Logs received');
-      callback(null, { message: 'Logs received' });
-      cb(null, 'logs', data.request);
+      if (checkAndInjectFault('ExportLogs', callback)) return;
+      injectDelay('ExportLogs', () => {
+        callback(null, { message: 'Logs received' });
+        cb(null, 'logs', data.request);
+      });
     },
   });
 
@@ -55,8 +97,12 @@ async function startServer(cb) {
     Export: (data, callback) => {
       // console.dir(data, { depth: null });
       console.log('Metrics received');
-      callback(null, { message: 'Metrics received' });
-      cb(null, 'metrics', data.request);
+      if (checkAndInjectFault('ExportMetrics', callback)) return;
+      injectDelay('ExportMetrics', () => {
+        callback(null, { message: 'Metrics received' });
+        console.dir(data.metadata, { depth: null });
+        cb(null, 'metrics', { request: data.request, metadata: data.metadata });
+      });
     },
   });
 
@@ -64,8 +110,11 @@ async function startServer(cb) {
   const packageObjectTrace = grpc.loadPackageDefinition(packageDefinitionTrace);
   server.addService(packageObjectTrace.opentelemetry.proto.collector.trace.v1.TraceService.service, {
     Export: (data, callback) => {
-      callback(null, { message: 'Trace received' });
-      cb(null, 'spans', data.request);
+      if (checkAndInjectFault('ExportSpans', callback)) return;
+      injectDelay('ExportSpans', () => {
+        callback(null, { message: 'Trace received' });
+        cb(null, 'spans', { request: data.request, metadata: data.metadata });
+      });
     },
   });
 
@@ -91,6 +140,7 @@ async function startServer(cb) {
     ExportAsset: async (call) => {
       console.log('ExportAsset');
       console.dir(call.metadata, { depth: null });
+      if (checkAndInjectFaultStreaming('ExportAsset', call)) return;
       const asset = {
         common: null,
         threadId: null,
@@ -122,19 +172,26 @@ async function startServer(cb) {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'loop_blocked',
-                     data: { msg: call.request, metadata: call.metadata } });
+      if (checkAndInjectFault('ExportBlockedLoop', callback)) return;
+      injectDelay('ExportBlockedLoop', () => {
+        callback(null, {});
+        process.send({ type: 'loop_blocked',
+                       data: { msg: call.request, metadata: call.metadata } });
+      });
     },
     ExportCommandError: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
+      if (checkAndInjectFault('ExportCommandError', callback)) return;
+      injectDelay('ExportCommandError', () => {
+        callback(null, {});
+      });
     },
     ExportContinuousProfile: async (call) => {
       console.log('ExportContinuousProfile');
       console.dir(call.metadata, { depth: null });
+      if (checkAndInjectFaultStreaming('ExportContinuousProfile', call)) return;
       const asset = {
         common: null,
         threadId: null,
@@ -169,57 +226,81 @@ async function startServer(cb) {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'exit', data: { msg: call.request, metadata: call.metadata } });
+      if (checkAndInjectFault('ExportExit', callback)) return;
+      injectDelay('ExportExit', () => {
+        callback(null, {});
+        process.send({ type: 'exit', data: { msg: call.request, metadata: call.metadata } });
+      });
     },
     ExportInfo: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'info', data: { msg: call.request, metadata: call.metadata } });
+      if (checkAndInjectFault('ExportInfo', callback)) return;
+      injectDelay('ExportInfo', () => {
+        callback(null, {});
+        process.send({ type: 'info', data: { msg: call.request, metadata: call.metadata } });
+      });
     },
     ExportMetrics: (call, callback) => {
       // Extract data from the request object
-      console.dir(call.request, { depth: null });
-      console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'metrics_cmd', data: { msg: call.request, metadata: call.metadata } });
+    //  console.dir(call.request, { depth: null });
+    //  console.dir(call.metadata, { depth: null });
+      if (checkAndInjectFault('ExportMetricsCmd', callback)) return;
+      injectDelay('ExportMetricsCmd', () => {
+        callback(null, {});
+        process.send({ type: 'metrics_cmd', data: { msg: call.request, metadata: call.metadata } });
+      });
     },
     ExportPackages: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'packages', data: { msg: call.request, metadata: call.metadata } });
+      if (checkAndInjectFault('ExportPackages', callback)) return;
+      injectDelay('ExportPackages', () => {
+        callback(null, {});
+        process.send({ type: 'packages', data: { msg: call.request, metadata: call.metadata } });
+      });
     },
     ExportReconfigure: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'reconfigure', data: { msg: call.request, metadata: call.metadata } });
+      if (checkAndInjectFault('ExportReconfigure', callback)) return;
+      injectDelay('ExportReconfigure', () => {
+        callback(null, {});
+        process.send({ type: 'reconfigure', data: { msg: call.request, metadata: call.metadata } });
+      });
     },
     ExportSourceCode: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'source_code', data: { msg: call.request, metadata: call.metadata } });
+      if (checkAndInjectFault('ExportSourceCode', callback)) return;
+      injectDelay('ExportSourceCode', () => {
+        callback(null, {});
+        process.send({ type: 'source_code', data: { msg: call.request, metadata: call.metadata } });
+      });
     },
     ExportStartupTimes: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'startup_times', data: { msg: call.request, metadata: call.metadata } });
+      if (checkAndInjectFault('ExportStartupTimes', callback)) return;
+      injectDelay('ExportStartupTimes', () => {
+        callback(null, {});
+        process.send({ type: 'startup_times', data: { msg: call.request, metadata: call.metadata } });
+      });
     },
     ExportUnblockedLoop: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
-      process.send({ type: 'loop_unblocked', data: { msg: call.request, metadata: call.metadata } });
+      if (checkAndInjectFault('ExportUnblockedLoop', callback)) return;
+      injectDelay('ExportUnblockedLoop', () => {
+        callback(null, {});
+        process.send({ type: 'loop_unblocked', data: { msg: call.request, metadata: call.metadata } });
+      });
     },
   });
 
@@ -272,6 +353,15 @@ process.on('message', (message) => {
     sendSourceCode(message.agentId, message.requestId, message.options);
   } else if (message.type === 'startup_times') {
     sendStartupTimes(message.agentId, message.requestId);
+  } else if (message.type === 'inject_failure') {
+    // Inject failure for a service: { service, status, count }
+    faultInjections.set(message.service, { status: message.status || 'UNAVAILABLE', remaining: message.count || 1 });
+  } else if (message.type === 'inject_delay') {
+    // Inject delay for a service: { service, delay }
+    delayInjections.set(message.service, message.delay || 0);
+  } else if (message.type === 'clear_faults') {
+    faultInjections.clear();
+    delayInjections.clear();
   } else if (message.type === 'close') {
     server.forceShutdown();
     process.exit(0);
