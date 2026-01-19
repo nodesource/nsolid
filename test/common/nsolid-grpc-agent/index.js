@@ -216,11 +216,13 @@ class GRPCServer extends EventEmitter {
       if (this.#server) {
         const requestId = randomUUID();
         this.#server.send({ type: 'info', agentId, requestId });
-        this.#server.once('message', (msg) => {
-          if (msg.type === 'info') {
+        const msgListener = (msg) => {
+          if (msg.type === 'info' && msg.data.msg.common.requestId === requestId) {
+            this.#server.off('message', msgListener);
             resolve({ requestId, data: msg.data });
           }
-        });
+        };
+        this.#server.on('message', msgListener);
       } else {
         resolve(null);
       }
@@ -232,11 +234,13 @@ class GRPCServer extends EventEmitter {
       if (this.#server) {
         const requestId = randomUUID();
         this.#server.send({ type: 'metrics', agentId, requestId });
-        this.#server.on('message', (msg) => {
-          if (msg.type === 'metrics_cmd') {
+        const msgListener = (msg) => {
+          if (msg.type === 'metrics_cmd' && msg.data.msg.common.requestId === requestId) {
+            this.#server.off('message', msgListener);
             resolve({ requestId, data: msg.data });
           }
-        });
+        };
+        this.#server.on('message', msgListener);
       } else {
         resolve(null);
       }
@@ -310,6 +314,42 @@ class GRPCServer extends EventEmitter {
         resolve(null);
       }
     });
+  }
+
+  injectFailure(service, status = 'UNAVAILABLE', count = 1) {
+    if (this.#server) {
+      this.#server.send({ type: 'inject_failure', service, status, count });
+    }
+  }
+
+  injectDelay(service, delayMs = 0) {
+    if (this.#server) {
+      this.#server.send({ type: 'inject_delay', service, delay: delayMs });
+    }
+  }
+
+  async attempts(service) {
+    return new Promise((resolve) => {
+      if (this.#server) {
+        const messageHandler = (msg) => {
+          if (msg.type === 'attempts' && msg.data.service === service) {
+            this.#server.removeListener('message', messageHandler);
+            resolve(msg.data);
+          }
+        };
+
+        this.#server.on('message', messageHandler);
+        this.#server.send({ type: 'get_attempts', service });
+      } else {
+        resolve({ service, total: 0, lastPreviousRpcAttempts: 0 });
+      }
+    });
+  }
+
+  clearFaults() {
+    if (this.#server) {
+      this.#server.send({ type: 'clear_faults' });
+    }
   }
 
   close() {
