@@ -73,6 +73,40 @@ std::shared_ptr<Channel>
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
   grpc_arguments.SetInt(GRPC_ARG_HTTP2_MAX_PINGS_WITHOUT_DATA, 0);
 
+  static const auto kServiceConfigJson = std::string_view{R"(
+  {
+    "methodConfig": [
+      {
+        "name": [{}],
+        "retryPolicy": {
+          "maxAttempts": %0000000000u,
+          "initialBackoff": "%0000000000.1fs",
+          "maxBackoff": "%0000000000.1fs",
+          "backoffMultiplier": %0000000000.1f,
+          "retryableStatusCodes": [
+            "UNAVAILABLE"
+          ]
+        }
+      }
+    ]
+  })"};
+
+  // Allocate string with buffer large enough to hold the formatted json config
+  auto service_config = std::string(kServiceConfigJson.size(), '\0');
+  float initial_backoff = options.retry_policy_initial_backoff.count();
+  float max_backoff = options.retry_policy_max_backoff.count();
+  float backoff_multiplier = options.retry_policy_backoff_multiplier;
+  std::snprintf(
+    service_config.data(),
+    service_config.size(),
+    kServiceConfigJson.data(),
+    options.retry_policy_max_attempts,
+    std::min(std::max(initial_backoff, 0.f), 999999999.f),
+    std::min(std::max(max_backoff, 0.f), 999999999.f),
+    std::min(std::max(backoff_multiplier, 0.f), 999999999.f));
+
+  grpc_arguments.SetServiceConfigJSON(service_config);
+
   return CreateCustomChannel(options.endpoint,
                              MakeCredentials(options, tls_keylog_file),
                              grpc_arguments);
