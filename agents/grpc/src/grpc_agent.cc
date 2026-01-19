@@ -80,6 +80,12 @@ const int CONSOLE_ID_SIZE = 36;
 
 const seconds DEFAULT_GRPC_TIMEOUT = seconds{ 60 };
 
+// Retry policy configuration
+constexpr size_t retry_max_attempts = 5;
+constexpr auto retry_initial_backoff = std::chrono::milliseconds(500);
+constexpr auto retry_max_backoff = std::chrono::seconds(5);
+constexpr float retry_backoff_multiplier = 2.0f;
+
 JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)) {
 }
@@ -1067,6 +1073,11 @@ int GrpcAgent::config(const json& config) {
           opts.ssl_credentials_cacert_as_string = cacert_;
         }
       }
+
+      opts.retry_policy_max_attempts = retry_max_attempts;
+      opts.retry_policy_initial_backoff = retry_initial_backoff;
+      opts.retry_policy_max_backoff = retry_max_backoff;
+      opts.retry_policy_backoff_multiplier = retry_backoff_multiplier;
 
       nsolid_service_stub_ =
           GrpcClient::MakeNSolidServiceStub(opts, tls_keylog_file_);
