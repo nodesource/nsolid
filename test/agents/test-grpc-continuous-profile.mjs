@@ -179,17 +179,17 @@ tests.push({
           profileCount++;
         });
 
-        await setTimeout(250);
+        await setTimeout(500);
         assert.ok(profileCount >= 1);
 
         await child.config({ assetsEnabled: false });
         const countAfterDisable = profileCount;
 
-        await setTimeout(250);
+        await setTimeout(500);
         assert.ok(profileCount - countAfterDisable <= 1);
 
         await child.config({ assetsEnabled: true });
-        await setTimeout(250);
+        await setTimeout(500);
         assert.ok(profileCount > countAfterDisable);
 
         await child.shutdown(0);
@@ -220,17 +220,19 @@ tests.push({
           profileCount++;
         });
 
-        await setTimeout(250);
+        await setTimeout(500);
         assert.ok(profileCount >= 1);
 
         await child.disableAssets();
         const countAfterDisable = profileCount;
 
-        await setTimeout(250);
+        await setTimeout(500);
+        console.log('profileCount after disableAssets:', profileCount, 'countAfterDisable:', countAfterDisable);
         assert.ok(profileCount - countAfterDisable <= 1);
 
         await child.enableAssets();
-        await setTimeout(250);
+        await setTimeout(500);
+        console.log('profileCount after enableAssets:', profileCount, 'countAfterDisable:', countAfterDisable);
         assert.ok(profileCount > countAfterDisable);
 
         const currentConfig = await child.config();
@@ -345,6 +347,8 @@ tests.push({
 
         // Start TestClient without continuous profiling
         const env = getEnv(port);
+        delete env.NSOLID_CONT_CPU_PROFILE;
+        delete env.NSOLID_CONT_CPU_PROFILE;
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
@@ -361,7 +365,9 @@ tests.push({
           threadId: 0,
         };
 
-        await grpcServer.cpuProfile(agentId, options);
+        const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
+        assert.ok(data);
+        assert.ok(requestId);
 
         grpcServer.on('profile', async (data) => {
           // This is a continuous profile
