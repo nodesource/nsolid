@@ -165,13 +165,16 @@ def nsolid_cli_files(options, action):
 def nsolid_strict_files(options, action):
   target_path = 'lib/node_modules/ncm-ng/'
 
-  for dirname, subdirs, basenames in os.walk('deps/ncm-ng', topdown=True):
+  def safe_action(paths, destination):
     try:
-      subdirs[:] = filter('test'.__ne__, subdirs) # skip test suites
-      paths = [os.path.join(dirname, basename) for basename in basenames]
-      action(options, paths, target_path + dirname[11:] + '/')
+      action(options, paths, destination)
     except:
       pass
+
+  for dirname, subdirs, basenames in os.walk('deps/ncm-ng', topdown=True):
+    subdirs[:] = filter('test'.__ne__, subdirs) # skip test suites
+    paths = [os.path.join(dirname, basename) for basename in basenames]
+    safe_action(paths, target_path + dirname[11:] + '/')
 
   # create/remove symlink
   link_path = abspath(options.install_path, 'bin/ncm-agent')
