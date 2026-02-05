@@ -50,6 +50,7 @@ function checkResource(resource, agentId, config, metrics) {
     'telemetry.sdk.name': 'opentelemetry',
     'service.instance.id': agentId,
     'service.name': config.app,
+    'service.version': config.appVersion,
   };
 
   if (metrics) {
