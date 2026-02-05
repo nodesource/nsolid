@@ -335,7 +335,7 @@ const {
 //   }
 
 const expectedPackageNames = [
-  '@grpc/grpc-js', '@grpc/proto-loader', '@js-sdsl/ordered-map', '@protobufjs/aspromise',
+  'nsolid-grpc-agent', '@grpc/grpc-js', '@grpc/proto-loader', '@js-sdsl/ordered-map', '@protobufjs/aspromise',
   '@protobufjs/base64', '@protobufjs/codegen', '@protobufjs/eventemitter', '@protobufjs/fetch',
   '@protobufjs/float', '@protobufjs/inquire', '@protobufjs/path', '@protobufjs/pool', '@protobufjs/utf8',
   '@types/node', 'ansi-regex', 'ansi-styles', 'cliui', 'color-convert', 'color-name', 'emoji-regex',
@@ -363,7 +363,11 @@ function checkPackagesData(msg, metadata, requestId, agentId) {
     validateString(pkg.main, 'pkg.main');
     validateArray(pkg.dependencies, 'pkg.dependencies');
     validateBoolean(pkg.required, 'pkg.required');
-    assert.strictEqual(pkg.required, false);
+    if (pkg.name !== 'nsolid-grpc-agent') {
+      assert.strictEqual(pkg.required, false);
+    } else {
+      assert.strictEqual(pkg.required, true);
+    }
   }
 
   assert.ok(packages.body.packages.length <= expectedPackageNames.length);

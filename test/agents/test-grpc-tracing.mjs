@@ -4,6 +4,7 @@ import assert from 'node:assert';
 import { threadId } from 'node:worker_threads';
 import {
   checkExitData,
+  checkResource,
   GRPCServer,
   TestClient,
 } from '../common/nsolid-grpc-agent/index.js';
@@ -12,11 +13,6 @@ import validators from 'internal/validators';
 const {
   validateArray,
 } = validators;
-
-function checkResource(resource) {
-  validateArray(resource.attributes, 'resource.attributes');
-  assert.strictEqual(resource.attributes.length, 5);
-}
 
 // traceId: {
 //   type: 'Buffer',
@@ -207,6 +203,7 @@ tests.push({
         };
         const child = new TestClient(['-t', 'http'], opts);
         const agentId = await child.id();
+        const config = await child.config();
         const resourceSpans = [];
         grpcServer.on('spans', mustCallAtLeast(async (spans) => {
           mergeResourceSpans(spans, resourceSpans);
@@ -217,7 +214,7 @@ tests.push({
             console.dir(resourceSpans, { depth: null });
             const resourceSpan = resourceSpans[0];
             const scopeSpans = resourceSpan.scopeSpans[0].spans;
-            checkResource(resourceSpan.resource);
+            checkResource(resourceSpan.resource, agentId, config);
             checkHttpSpans(scopeSpans, threadId, 0);
             resolve();
           }
@@ -253,6 +250,7 @@ tests.push({
         };
         const child = new TestClient(['-t', 'custom'], opts);
         const agentId = await child.id();
+        const config = await child.config();
         const resourceSpans = [];
         grpcServer.on('spans', mustCallAtLeast(async (spans) => {
           mergeResourceSpans(spans, resourceSpans);
@@ -263,7 +261,7 @@ tests.push({
             console.dir(resourceSpans, { depth: null });
             const resourceSpan = resourceSpans[0];
             const scopeSpans = resourceSpan.scopeSpans[0].spans;
-            checkResource(resourceSpan.resource);
+            checkResource(resourceSpan.resource, agentId, config);
             checkCustomSpans(scopeSpans, threadId, 0);
             resolve();
           }
