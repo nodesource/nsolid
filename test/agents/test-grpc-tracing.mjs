@@ -5,6 +5,7 @@ import { threadId } from 'node:worker_threads';
 import { setTimeout as delay } from 'node:timers/promises';
 import {
   checkExitData,
+  checkResource,
   GRPCServer,
   TestClient,
 } from '../common/nsolid-grpc-agent/index.js';
@@ -13,11 +14,6 @@ import validators from 'internal/validators';
 const {
   validateArray,
 } = validators;
-
-function checkResource(resource) {
-  validateArray(resource.attributes, 'resource.attributes');
-  assert.strictEqual(resource.attributes.length, 5);
-}
 
 // traceId: {
 //   type: 'Buffer',
@@ -201,6 +197,7 @@ tests.push({
         };
         const child = new TestClient(['-t', 'http'], opts);
         const agentId = await child.id();
+        const config = await child.config();
         const resourceSpans = [];
         let phase = 'initial';
         grpcServer.on('spans', mustCallAtLeast(async (spans) => {
@@ -216,7 +213,7 @@ tests.push({
             console.dir(resourceSpans, { depth: null });
             const resourceSpan = resourceSpans[0];
             const scopeSpans = resourceSpan.scopeSpans[0].spans;
-            checkResource(resourceSpan.resource);
+            checkResource(resourceSpan.resource, agentId, config);
             checkHttpSpans(scopeSpans, threadId, 0);
 
             resourceSpans.length = 0;
@@ -237,7 +234,7 @@ tests.push({
             console.dir(resourceSpans, { depth: null });
             const resourceSpan = resourceSpans[0];
             const scopeSpans = resourceSpan.scopeSpans[0].spans;
-            checkResource(resourceSpan.resource);
+            checkResource(resourceSpan.resource, agentId, config);
             checkHttpSpans(scopeSpans, threadId, 0);
 
             phase = 'done';
@@ -269,6 +266,7 @@ tests.push({
         };
         const child = new TestClient(['-t', 'custom'], opts);
         const agentId = await child.id();
+        const config = await child.config();
         const resourceSpans = [];
         let phase = 'initial';
         grpcServer.on('spans', mustCallAtLeast(async (spans) => {
@@ -284,7 +282,7 @@ tests.push({
             console.dir(resourceSpans, { depth: null });
             const resourceSpan = resourceSpans[0];
             const scopeSpans = resourceSpan.scopeSpans[0].spans;
-            checkResource(resourceSpan.resource);
+            checkResource(resourceSpan.resource, agentId, config);
             checkCustomSpans(scopeSpans, threadId, 0);
 
             resourceSpans.length = 0;
@@ -305,7 +303,7 @@ tests.push({
             console.dir(resourceSpans, { depth: null });
             const resourceSpan = resourceSpans[0];
             const scopeSpans = resourceSpan.scopeSpans[0].spans;
-            checkResource(resourceSpan.resource);
+            checkResource(resourceSpan.resource, agentId, config);
             checkCustomSpans(scopeSpans, threadId, 0);
 
             phase = 'done';
