@@ -16,7 +16,7 @@
 
 #ifdef _WIN32
 
-// #  include <Windows.h>
+// #  include <windows.h>
 
 #  include <winsock2.h>
 
@@ -700,7 +700,7 @@ public:
   /// <summary>
   /// Thread Loop for async events processing
   /// </summary>
-  virtual void onThread() override
+  void onThread() override
   {
     LOG_INFO("Reactor: Thread started");
     while (!shouldTerminate())

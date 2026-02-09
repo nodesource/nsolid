@@ -9,7 +9,9 @@
 
 #include "opentelemetry/sdk/configuration/batch_span_processor_configuration.h"
 #include "opentelemetry/sdk/configuration/configuration.h"
+#include "opentelemetry/sdk/configuration/grpc_tls_configuration.h"
 #include "opentelemetry/sdk/configuration/headers_configuration.h"
+#include "opentelemetry/sdk/configuration/http_tls_configuration.h"
 #include "opentelemetry/sdk/configuration/jaeger_remote_sampler_configuration.h"
 #include "opentelemetry/sdk/configuration/otlp_file_span_exporter_configuration.h"
 #include "opentelemetry/sdk/configuration/otlp_grpc_span_exporter_configuration.h"
@@ -22,7 +24,6 @@
 #include "opentelemetry/sdk/configuration/trace_id_ratio_based_sampler_configuration.h"
 #include "opentelemetry/sdk/configuration/tracer_provider_configuration.h"
 #include "opentelemetry/sdk/configuration/yaml_configuration_parser.h"
-#include "opentelemetry/sdk/configuration/zipkin_span_exporter_configuration.h"
 
 static std::unique_ptr<opentelemetry::sdk::configuration::Configuration> DoParse(
     const std::string &yaml)
@@ -34,7 +35,7 @@ static std::unique_ptr<opentelemetry::sdk::configuration::Configuration> DoParse
 TEST(YamlTrace, no_processors)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
 )";
 
@@ -45,7 +46,7 @@ tracer_provider:
 TEST(YamlTrace, empty_processors)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
 )";
@@ -57,7 +58,7 @@ tracer_provider:
 TEST(YamlTrace, many_processors)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -77,7 +78,7 @@ tracer_provider:
 TEST(YamlTrace, simple_processor)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -102,7 +103,7 @@ tracer_provider:
 TEST(YamlTrace, default_batch_processor)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - batch:
@@ -131,7 +132,7 @@ tracer_provider:
 TEST(YamlTrace, batch_processor)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - batch:
@@ -164,7 +165,7 @@ tracer_provider:
 TEST(YamlTrace, default_otlp_http)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -189,9 +190,7 @@ tracer_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::OtlpHttpSpanExporterConfiguration *>(
           exporter);
   ASSERT_EQ(otlp_http->endpoint, "somewhere");
-  ASSERT_EQ(otlp_http->certificate_file, "");
-  ASSERT_EQ(otlp_http->client_key_file, "");
-  ASSERT_EQ(otlp_http->client_certificate_file, "");
+  ASSERT_EQ(otlp_http->tls, nullptr);
   ASSERT_EQ(otlp_http->headers, nullptr);
   ASSERT_EQ(otlp_http->headers_list, "");
   ASSERT_EQ(otlp_http->compression, "");
@@ -202,16 +201,17 @@ tracer_provider:
 TEST(YamlTrace, otlp_http)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
         exporter:
           otlp_http:
             endpoint: "somewhere"
-            certificate_file: "certificate_file"
-            client_key_file: "client_key_file"
-            client_certificate_file: "client_certificate_file"
+            tls:
+              ca_file: "ca_file"
+              key_file: "key_file"
+              cert_file: "cert_file"
             headers:
               - name: foo
                 value: "123"
@@ -239,9 +239,10 @@ tracer_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::OtlpHttpSpanExporterConfiguration *>(
           exporter);
   ASSERT_EQ(otlp_http->endpoint, "somewhere");
-  ASSERT_EQ(otlp_http->certificate_file, "certificate_file");
-  ASSERT_EQ(otlp_http->client_key_file, "client_key_file");
-  ASSERT_EQ(otlp_http->client_certificate_file, "client_certificate_file");
+  ASSERT_NE(otlp_http->tls, nullptr);
+  ASSERT_EQ(otlp_http->tls->ca_file, "ca_file");
+  ASSERT_EQ(otlp_http->tls->key_file, "key_file");
+  ASSERT_EQ(otlp_http->tls->cert_file, "cert_file");
   ASSERT_NE(otlp_http->headers, nullptr);
   ASSERT_EQ(otlp_http->headers->kv_map.size(), 2);
   ASSERT_EQ(otlp_http->headers->kv_map["foo"], "123");
@@ -255,7 +256,7 @@ tracer_provider:
 TEST(YamlTrace, default_otlp_grpc)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -280,29 +281,28 @@ tracer_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::OtlpGrpcSpanExporterConfiguration *>(
           exporter);
   ASSERT_EQ(otlp_grpc->endpoint, "somewhere");
-  ASSERT_EQ(otlp_grpc->certificate_file, "");
-  ASSERT_EQ(otlp_grpc->client_key_file, "");
-  ASSERT_EQ(otlp_grpc->client_certificate_file, "");
+  ASSERT_EQ(otlp_grpc->tls, nullptr);
   ASSERT_EQ(otlp_grpc->headers, nullptr);
   ASSERT_EQ(otlp_grpc->headers_list, "");
   ASSERT_EQ(otlp_grpc->compression, "");
   ASSERT_EQ(otlp_grpc->timeout, 10000);
-  ASSERT_EQ(otlp_grpc->insecure, false);
 }
 
 TEST(YamlTrace, otlp_grpc)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
         exporter:
           otlp_grpc:
             endpoint: "somewhere"
-            certificate_file: "certificate_file"
-            client_key_file: "client_key_file"
-            client_certificate_file: "client_certificate_file"
+            tls:
+              ca_file: "ca_file"
+              key_file: "key_file"
+              cert_file: "cert_file"
+              insecure: true
             headers:
               - name: foo
                 value: "123"
@@ -311,7 +311,6 @@ tracer_provider:
             headers_list: "baz=789"
             compression: "compression"
             timeout: 5000
-            insecure: true
 )";
 
   auto config = DoParse(yaml);
@@ -330,9 +329,11 @@ tracer_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::OtlpGrpcSpanExporterConfiguration *>(
           exporter);
   ASSERT_EQ(otlp_grpc->endpoint, "somewhere");
-  ASSERT_EQ(otlp_grpc->certificate_file, "certificate_file");
-  ASSERT_EQ(otlp_grpc->client_key_file, "client_key_file");
-  ASSERT_EQ(otlp_grpc->client_certificate_file, "client_certificate_file");
+  ASSERT_NE(otlp_grpc->tls, nullptr);
+  ASSERT_EQ(otlp_grpc->tls->ca_file, "ca_file");
+  ASSERT_EQ(otlp_grpc->tls->key_file, "key_file");
+  ASSERT_EQ(otlp_grpc->tls->cert_file, "cert_file");
+  ASSERT_EQ(otlp_grpc->tls->insecure, true);
   ASSERT_NE(otlp_grpc->headers, nullptr);
   ASSERT_EQ(otlp_grpc->headers->kv_map.size(), 2);
   ASSERT_EQ(otlp_grpc->headers->kv_map["foo"], "123");
@@ -340,13 +341,12 @@ tracer_provider:
   ASSERT_EQ(otlp_grpc->headers_list, "baz=789");
   ASSERT_EQ(otlp_grpc->compression, "compression");
   ASSERT_EQ(otlp_grpc->timeout, 5000);
-  ASSERT_EQ(otlp_grpc->insecure, true);
 }
 
 TEST(YamlTrace, default_otlp_file)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -375,7 +375,7 @@ tracer_provider:
 TEST(YamlTrace, otlp_file)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -405,7 +405,7 @@ tracer_provider:
 TEST(YamlTrace, otlp_console)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -427,73 +427,10 @@ tracer_provider:
   ASSERT_NE(exporter, nullptr);
 }
 
-TEST(YamlTrace, default_otlp_zipkin)
-{
-  std::string yaml = R"(
-file_format: xx.yy
-tracer_provider:
-  processors:
-    - simple:
-        exporter:
-          zipkin:
-            endpoint: "zipkin"
-)";
-
-  auto config = DoParse(yaml);
-  ASSERT_NE(config, nullptr);
-  ASSERT_NE(config->tracer_provider, nullptr);
-  ASSERT_EQ(config->tracer_provider->processors.size(), 1);
-  auto *processor = config->tracer_provider->processors[0].get();
-  ASSERT_NE(processor, nullptr);
-  auto *simple =
-      reinterpret_cast<opentelemetry::sdk::configuration::SimpleSpanProcessorConfiguration *>(
-          processor);
-  ASSERT_NE(simple->exporter, nullptr);
-  auto *exporter = simple->exporter.get();
-  ASSERT_NE(exporter, nullptr);
-  auto *zipkin =
-      reinterpret_cast<opentelemetry::sdk::configuration::ZipkinSpanExporterConfiguration *>(
-          exporter);
-  ASSERT_EQ(zipkin->endpoint, "zipkin");
-  ASSERT_EQ(zipkin->timeout, 10000);
-}
-
-TEST(YamlTrace, otlp_zipkin)
-{
-  std::string yaml = R"(
-file_format: xx.yy
-tracer_provider:
-  processors:
-    - simple:
-        exporter:
-          zipkin:
-            endpoint: "zipkin"
-            timeout: 5000
-)";
-
-  auto config = DoParse(yaml);
-  ASSERT_NE(config, nullptr);
-  ASSERT_NE(config->tracer_provider, nullptr);
-  ASSERT_EQ(config->tracer_provider->processors.size(), 1);
-  auto *processor = config->tracer_provider->processors[0].get();
-  ASSERT_NE(processor, nullptr);
-  auto *simple =
-      reinterpret_cast<opentelemetry::sdk::configuration::SimpleSpanProcessorConfiguration *>(
-          processor);
-  ASSERT_NE(simple->exporter, nullptr);
-  auto *exporter = simple->exporter.get();
-  ASSERT_NE(exporter, nullptr);
-  auto *zipkin =
-      reinterpret_cast<opentelemetry::sdk::configuration::ZipkinSpanExporterConfiguration *>(
-          exporter);
-  ASSERT_EQ(zipkin->endpoint, "zipkin");
-  ASSERT_EQ(zipkin->timeout, 5000);
-}
-
 TEST(YamlTrace, no_limits)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -510,7 +447,7 @@ tracer_provider:
 TEST(YamlTrace, default_limits)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -534,7 +471,7 @@ tracer_provider:
 TEST(YamlTrace, limits)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -564,7 +501,7 @@ tracer_provider:
 TEST(YamlTrace, no_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -581,7 +518,7 @@ tracer_provider:
 TEST(YamlTrace, empty_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -597,7 +534,7 @@ tracer_provider:
 TEST(YamlTrace, many_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -615,7 +552,7 @@ tracer_provider:
 TEST(YamlTrace, always_off_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -634,7 +571,7 @@ tracer_provider:
 TEST(YamlTrace, always_on_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -653,7 +590,7 @@ tracer_provider:
 TEST(YamlTrace, jaeger_remote_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -683,7 +620,7 @@ tracer_provider:
 TEST(YamlTrace, default_parent_based_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -711,7 +648,7 @@ tracer_provider:
 TEST(YamlTrace, parent_based_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -749,7 +686,7 @@ tracer_provider:
 TEST(YamlTrace, default_trace_id_ratio_based_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
@@ -773,7 +710,7 @@ tracer_provider:
 TEST(YamlTrace, trace_id_ratio_based_sampler)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-trace"
 tracer_provider:
   processors:
     - simple:
