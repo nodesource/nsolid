@@ -9,7 +9,9 @@
 
 #include "opentelemetry/sdk/configuration/batch_log_record_processor_configuration.h"
 #include "opentelemetry/sdk/configuration/configuration.h"
+#include "opentelemetry/sdk/configuration/grpc_tls_configuration.h"
 #include "opentelemetry/sdk/configuration/headers_configuration.h"
+#include "opentelemetry/sdk/configuration/http_tls_configuration.h"
 #include "opentelemetry/sdk/configuration/log_record_limits_configuration.h"
 #include "opentelemetry/sdk/configuration/log_record_processor_configuration.h"
 #include "opentelemetry/sdk/configuration/logger_provider_configuration.h"
@@ -30,7 +32,7 @@ static std::unique_ptr<opentelemetry::sdk::configuration::Configuration> DoParse
 TEST(YamlLogs, no_processors)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
 )";
 
@@ -41,7 +43,7 @@ logger_provider:
 TEST(YamlLogs, empty_processors)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
 )";
@@ -53,7 +55,7 @@ logger_provider:
 TEST(YamlLogs, many_processors)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -73,7 +75,7 @@ logger_provider:
 TEST(YamlLogs, simple_processor)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -98,7 +100,7 @@ logger_provider:
 TEST(YamlLogs, default_batch_processor)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - batch:
@@ -127,7 +129,7 @@ logger_provider:
 TEST(YamlLogs, batch_processor)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - batch:
@@ -160,7 +162,7 @@ logger_provider:
 TEST(YamlLogs, default_otlp_http)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -185,9 +187,7 @@ logger_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::OtlpHttpLogRecordExporterConfiguration *>(
           exporter);
   ASSERT_EQ(otlp_http->endpoint, "somewhere");
-  ASSERT_EQ(otlp_http->certificate_file, "");
-  ASSERT_EQ(otlp_http->client_key_file, "");
-  ASSERT_EQ(otlp_http->client_certificate_file, "");
+  ASSERT_EQ(otlp_http->tls, nullptr);
   ASSERT_EQ(otlp_http->headers, nullptr);
   ASSERT_EQ(otlp_http->headers_list, "");
   ASSERT_EQ(otlp_http->compression, "");
@@ -198,16 +198,17 @@ logger_provider:
 TEST(YamlLogs, otlp_http)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
         exporter:
           otlp_http:
             endpoint: "somewhere"
-            certificate_file: "certificate_file"
-            client_key_file: "client_key_file"
-            client_certificate_file: "client_certificate_file"
+            tls:
+              ca_file: "ca_file"
+              key_file: "key_file"
+              cert_file: "cert_file"
             headers:
               - name: foo
                 value: "123"
@@ -235,9 +236,10 @@ logger_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::OtlpHttpLogRecordExporterConfiguration *>(
           exporter);
   ASSERT_EQ(otlp_http->endpoint, "somewhere");
-  ASSERT_EQ(otlp_http->certificate_file, "certificate_file");
-  ASSERT_EQ(otlp_http->client_key_file, "client_key_file");
-  ASSERT_EQ(otlp_http->client_certificate_file, "client_certificate_file");
+  ASSERT_NE(otlp_http->tls, nullptr);
+  ASSERT_EQ(otlp_http->tls->ca_file, "ca_file");
+  ASSERT_EQ(otlp_http->tls->key_file, "key_file");
+  ASSERT_EQ(otlp_http->tls->cert_file, "cert_file");
   ASSERT_NE(otlp_http->headers, nullptr);
   ASSERT_EQ(otlp_http->headers->kv_map.size(), 2);
   ASSERT_EQ(otlp_http->headers->kv_map["foo"], "123");
@@ -251,7 +253,7 @@ logger_provider:
 TEST(YamlLogs, default_otlp_grpc)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -276,29 +278,28 @@ logger_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::OtlpGrpcLogRecordExporterConfiguration *>(
           exporter);
   ASSERT_EQ(otlp_grpc->endpoint, "somewhere");
-  ASSERT_EQ(otlp_grpc->certificate_file, "");
-  ASSERT_EQ(otlp_grpc->client_key_file, "");
-  ASSERT_EQ(otlp_grpc->client_certificate_file, "");
+  ASSERT_EQ(otlp_grpc->tls, nullptr);
   ASSERT_EQ(otlp_grpc->headers, nullptr);
   ASSERT_EQ(otlp_grpc->headers_list, "");
   ASSERT_EQ(otlp_grpc->compression, "");
   ASSERT_EQ(otlp_grpc->timeout, 10000);
-  ASSERT_EQ(otlp_grpc->insecure, false);
 }
 
 TEST(YamlLogs, otlp_grpc)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
         exporter:
           otlp_grpc:
             endpoint: "somewhere"
-            certificate_file: "certificate_file"
-            client_key_file: "client_key_file"
-            client_certificate_file: "client_certificate_file"
+            tls:
+              ca_file: "ca_file"
+              key_file: "key_file"
+              cert_file: "cert_file"
+              insecure: true
             headers:
               - name: foo
                 value: "123"
@@ -307,7 +308,6 @@ logger_provider:
             headers_list: "baz=789"
             compression: "compression"
             timeout: 5000
-            insecure: true
 )";
 
   auto config = DoParse(yaml);
@@ -326,9 +326,11 @@ logger_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::OtlpGrpcLogRecordExporterConfiguration *>(
           exporter);
   ASSERT_EQ(otlp_grpc->endpoint, "somewhere");
-  ASSERT_EQ(otlp_grpc->certificate_file, "certificate_file");
-  ASSERT_EQ(otlp_grpc->client_key_file, "client_key_file");
-  ASSERT_EQ(otlp_grpc->client_certificate_file, "client_certificate_file");
+  ASSERT_NE(otlp_grpc->tls, nullptr);
+  ASSERT_EQ(otlp_grpc->tls->ca_file, "ca_file");
+  ASSERT_EQ(otlp_grpc->tls->key_file, "key_file");
+  ASSERT_EQ(otlp_grpc->tls->cert_file, "cert_file");
+  ASSERT_EQ(otlp_grpc->tls->insecure, true);
   ASSERT_NE(otlp_grpc->headers, nullptr);
   ASSERT_EQ(otlp_grpc->headers->kv_map.size(), 2);
   ASSERT_EQ(otlp_grpc->headers->kv_map["foo"], "123");
@@ -336,13 +338,12 @@ logger_provider:
   ASSERT_EQ(otlp_grpc->headers_list, "baz=789");
   ASSERT_EQ(otlp_grpc->compression, "compression");
   ASSERT_EQ(otlp_grpc->timeout, 5000);
-  ASSERT_EQ(otlp_grpc->insecure, true);
 }
 
 TEST(YamlLogs, default_otlp_file)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -371,7 +372,7 @@ logger_provider:
 TEST(YamlLogs, otlp_file)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -401,7 +402,7 @@ logger_provider:
 TEST(YamlLogs, otlp_console)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -426,7 +427,7 @@ logger_provider:
 TEST(YamlLogs, no_limits)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -443,7 +444,7 @@ logger_provider:
 TEST(YamlLogs, default_limits)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:
@@ -463,7 +464,7 @@ logger_provider:
 TEST(YamlLogs, limits)
 {
   std::string yaml = R"(
-file_format: xx.yy
+file_format: "1.0-logs"
 logger_provider:
   processors:
     - simple:

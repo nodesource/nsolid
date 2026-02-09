@@ -366,6 +366,29 @@ static constexpr const char *kK8sNodeUid = "k8s.node.uid";
 static constexpr const char *kK8sPodAnnotation = "k8s.pod.annotation";
 
 /**
+  Specifies the hostname of the Pod.
+  <p>
+  The K8s Pod spec has an optional hostname field, which can be used to specify a hostname.
+  Refer to <a
+  href="https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-hostname-and-subdomain-field">K8s
+  docs</a> for more information about this field. <p> This attribute aligns with the @code hostname
+  @endcode field of the <a
+  href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#podspec-v1-core">K8s
+  PodSpec</a>.
+ */
+static constexpr const char *kK8sPodHostname = "k8s.pod.hostname";
+
+/**
+  IP address allocated to the Pod.
+  <p>
+  This attribute aligns with the @code podIP @endcode field of the
+  <a
+  href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#podstatus-v1-core">K8s
+  PodStatus</a>.
+ */
+static constexpr const char *kK8sPodIp = "k8s.pod.ip";
+
+/**
   The label placed on the Pod, the @code <key> @endcode being the label name, the value being the
   label value. <p> Examples: <ul> <li>A label @code app @endcode with value @code my-app @endcode
   SHOULD be recorded as the @code k8s.pod.label.app @endcode attribute with value @code "my-app"
@@ -390,6 +413,33 @@ OPENTELEMETRY_DEPRECATED static constexpr const char *kK8sPodLabels = "k8s.pod.l
   The name of the Pod.
  */
 static constexpr const char *kK8sPodName = "k8s.pod.name";
+
+/**
+  The start timestamp of the Pod.
+  <p>
+  Date and time at which the object was acknowledged by the Kubelet.
+  This is before the Kubelet pulled the container image(s) for the pod.
+  <p>
+  This attribute aligns with the @code startTime @endcode field of the
+  <a
+  href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#podstatus-v1-core">K8s
+  PodStatus</a>, in ISO 8601 (RFC 3339 compatible) format.
+ */
+static constexpr const char *kK8sPodStartTime = "k8s.pod.start_time";
+
+/**
+  The phase for the pod. Corresponds to the @code phase @endcode field of the: <a
+  href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core">K8s
+  PodStatus</a>
+ */
+static constexpr const char *kK8sPodStatusPhase = "k8s.pod.status.phase";
+
+/**
+  The reason for the pod state. Corresponds to the @code reason @endcode field of the: <a
+  href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core">K8s
+  PodStatus</a>
+ */
+static constexpr const char *kK8sPodStatusReason = "k8s.pod.status.reason";
 
 /**
   The UID of the Pod.
@@ -450,7 +500,7 @@ static constexpr const char *kK8sResourcequotaName = "k8s.resourcequota.name";
   string (e.g., count/deployments.apps, count/pods), or, for certain core Kubernetes resources, just
   the resource name (e.g., pods, services, configmaps). Both forms are supported by Kubernetes for
   object count quotas. See <a
-  href="https://kubernetes.io/docs/concepts/policy/resource-quotas/#object-count-quota">Kubernetes
+  href="https://kubernetes.io/docs/concepts/policy/resource-quotas/#quota-on-object-count">Kubernetes
   Resource Quotas documentation</a> for more details.
  */
 static constexpr const char *kK8sResourcequotaResourceName = "k8s.resourcequota.resource_name";
@@ -632,6 +682,72 @@ static constexpr const char *kPidPressure = "PIDPressure";
 static constexpr const char *kNetworkUnavailable = "NetworkUnavailable";
 
 }  // namespace K8sNodeConditionTypeValues
+
+namespace K8sPodStatusPhaseValues
+{
+/**
+  The pod has been accepted by the system, but one or more of the containers has not been started.
+  This includes time before being bound to a node, as well as time spent pulling images onto the
+  host.
+ */
+static constexpr const char *kPending = "Pending";
+
+/**
+  The pod has been bound to a node and all of the containers have been started. At least one
+  container is still running or is in the process of being restarted.
+ */
+static constexpr const char *kRunning = "Running";
+
+/**
+  All containers in the pod have voluntarily terminated with a container exit code of 0, and the
+  system is not going to restart any of these containers.
+ */
+static constexpr const char *kSucceeded = "Succeeded";
+
+/**
+  All containers in the pod have terminated, and at least one container has terminated in a failure
+  (exited with a non-zero exit code or was stopped by the system).
+ */
+static constexpr const char *kFailed = "Failed";
+
+/**
+  For some reason the state of the pod could not be obtained, typically due to an error in
+  communicating with the host of the pod.
+ */
+static constexpr const char *kUnknown = "Unknown";
+
+}  // namespace K8sPodStatusPhaseValues
+
+namespace K8sPodStatusReasonValues
+{
+/**
+  The pod is evicted.
+ */
+static constexpr const char *kEvicted = "Evicted";
+
+/**
+  The pod is in a status because of its node affinity
+ */
+static constexpr const char *kNodeAffinity = "NodeAffinity";
+
+/**
+  The reason on a pod when its state cannot be confirmed as kubelet is unresponsive on the node it
+  is (was) running.
+ */
+static constexpr const char *kNodeLost = "NodeLost";
+
+/**
+  The node is shutdown
+ */
+static constexpr const char *kShutdown = "Shutdown";
+
+/**
+  The pod was rejected admission to the node because of an error during admission that could not be
+  categorized.
+ */
+static constexpr const char *kUnexpectedAdmissionError = "UnexpectedAdmissionError";
+
+}  // namespace K8sPodStatusReasonValues
 
 namespace K8sVolumeTypeValues
 {
