@@ -216,6 +216,7 @@ clean: ## Remove build artifacts.
 	$(MAKE) testclean
 	$(MAKE) test-addons-clean
 	$(MAKE) test-agents-prereqs-clean
+	$(MAKE) test-integrations-prereqs-clean
 	$(MAKE) bench-addons-clean
 
 .PHONY: testclean
@@ -237,6 +238,8 @@ distclean: ## Remove all build and test artifacts.
 	$(RM) -r deps/icu4c*.tgz deps/icu4c*.zip deps/icu-tmp
 	$(RM) tools/perfetto/trace_processor_shell
 	$(RM) $(BINARYTAR).* $(TARBALL).*
+	$(MAKE) test-agents-prereqs-clean
+	$(MAKE) test-integrations-prereqs-clean
 
 .PHONY: check
 check: test
@@ -321,7 +324,7 @@ v8: ## Build deps/v8.
 		tools/make-v8.sh $(V8_ARCH).$(BUILDTYPE_LOWER) $(V8_BUILD_OPTIONS)
 
 .PHONY: jstest
-jstest: build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests build-ffi-tests test-agents-prereqs ## Run addon tests and JS tests.
+jstest: build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests build-ffi-tests test-agents-prereqs test-integrations-prereqs ## Runs addon tests and JS tests.
 	NSOLID_DELAY_INIT="" \
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) --mode=$(BUILDTYPE_LOWER) \
 		$(TEST_CI_ARGS) \
@@ -644,7 +647,7 @@ test-ci-native: | benchmark/napi/.buildstamp test/addons/.buildstamp test/js-nat
 .PHONY: test-ci-js
 # This target should not use a native compiler at all
 # Related CI job: node-test-commit-arm-fanned
-test-ci-js: | clear-stalled ## Build and test JavaScript with building anything else.
+test-ci-js: | clear-stalled test-integrations-prereqs ## Build and test JavaScript with building anything else.
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) -p tap --logfile test.tap \
 		--mode=$(BUILDTYPE_LOWER) --flaky-tests=$(FLAKY_TESTS) \
 		--skip-tests=$(CI_SKIP_TESTS) \
@@ -659,7 +662,7 @@ test-ci-js: | clear-stalled ## Build and test JavaScript with building anything 
 .PHONY: test-ci
 # Related CI jobs: most CI tests, excluding node-test-commit-arm-fanned
 test-ci: LOGLEVEL := info ## Build and test everything (CI).
-test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests build-ffi-tests doc-only test-agents-prereqs
+test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests build-ffi-tests doc-only test-agents-prereqs test-integrations-prereqs
 	out/Release/cctest --gtest_output=xml:out/junit/cctest.xml
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) -p tap --logfile test.tap \
 		--mode=$(BUILDTYPE_LOWER) --flaky-tests=$(FLAKY_TESTS) \
@@ -1838,6 +1841,18 @@ test-agents-prereqs:
 test-agents-prereqs-clean:
 	$(RM) -r test/common/nsolid-zmq-agent/node_modules
 	$(RM) -r test/common/nsolid-otlp-agent/node_modules
+
+.PHONY: test-integrations-prereqs
+test-integrations-prereqs:
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install --ignore-scripts --prefix test/integrations/express/v4 --no-save --no-package-lock
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install --ignore-scripts --prefix test/integrations/express/v5 --no-save --no-package-lock
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install --ignore-scripts --prefix test/integrations/fastify/v5 --no-save --no-package-lock
+
+.PHONY: test-integrations-prereqs-clean
+test-integrations-prereqs-clean:
+	$(RM) -r test/integrations/express/v4/node_modules
+	$(RM) -r test/integrations/express/v5/node_modules
+	$(RM) -r test/integrations/fastify/v5/node_modules
 
 HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 1 || echo 0)
 
