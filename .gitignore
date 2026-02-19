@@ -181,3 +181,6 @@ compile_commands.json
 # Ignore asserts-cpp and nlohmann paths in src/
 src/asserts-cpp/
 src/nlohmann/
+
+test/integrations/express/*/node_modules/
+test/integrations/fastify/*/node_modules/
