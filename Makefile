@@ -1695,6 +1695,18 @@ test-agents-prereqs-clean:
 	$(RM) -r test/common/nsolid-zmq-agent/node_modules
 	$(RM) -r test/common/nsolid-otlp-agent/node_modules
 
+.PHONY: test-integrations-prereqs
+test-integrations-prereqs:
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install express@4 --prefix test/integrations/express/v4 --no-save --no-package-lock
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install express@5 --prefix test/integrations/express/v5 --no-save --no-package-lock
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install fastify@5 --prefix test/integrations/fastify/v5 --no-save --no-package-lock
+
+.PHONY: test-integrations-prereqs-clean
+test-integrations-prereqs-clean:
+	$(RM) -r test/integrations/express/v4/node_modules
+	$(RM) -r test/integrations/express/v5/node_modules
+	$(RM) -r test/integrations/fastify/v5/node_modules
+
 HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 1 || echo 0)
 
 .PHONY: gen-openssl
