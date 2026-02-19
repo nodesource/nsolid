@@ -28,6 +28,9 @@
 // We can export it via ADDONS_PREREQS in the Makefile and link against it with
 // our native module builds that depend on it
 #include "nlohmann/json.hpp"
+#include "opentelemetry/sdk/metrics/aggregation/base2_exponential_histogram_aggregation.h"
+#include "opentelemetry/sdk/metrics/data/metric_data.h"
+#include "opentelemetry/sdk/metrics/state/attributes_hashmap.h"
 
 
 namespace node {
@@ -209,8 +212,10 @@ class EnvInst {
                             const char* value,
                             bool is_return);
 
-  void PushClientBucket(double value);
-  void PushServerBucket(double value);
+  void PushClientBucket(double value,
+                        MetricsStream::HttpDatapointAttrs&& attrs);
+  void PushServerBucket(double value,
+                        MetricsStream::HttpDatapointAttrs&& attrs);
   void PushDnsBucket(double value);
 
   std::string GetModuleInfo();
@@ -273,6 +278,13 @@ class EnvInst {
   bool can_call_into_js() const;
   uint32_t* get_trace_flags() { return &trace_flags_; }
 
+  // Returns the last harvested HTTP client/server latency histogram points,
+  // keyed by attribute combination. Updated every metrics interval.
+  std::shared_ptr<const std::vector<opentelemetry::sdk::metrics::PointDataAttributes>>
+    http_client_histogram_points() const { return http_client_hist_points_; }
+  std::shared_ptr<const std::vector<opentelemetry::sdk::metrics::PointDataAttributes>>
+    http_server_histogram_points() const { return http_server_hist_points_; }
+
   std::atomic<bool> metrics_paused = { false };
 
   // Track the values of JSMetricsFields.
@@ -327,8 +339,12 @@ class EnvInst {
   static void custom_command_(SharedEnvInst envinst_sp,
                               const std::string req_id);
 
-  void add_metric_datapoint_(MetricsStream::Type, double);
-  void send_datapoint(MetricsStream::Type, double);
+  void add_metric_datapoint_(MetricsStream::Type type,
+                              double value,
+                              MetricsStream::DatapointAttrs attrs = {});
+  void send_datapoint(MetricsStream::Type type,
+                      double value,
+                      MetricsStream::DatapointAttrs attrs = {});
 
   static void get_event_loop_stats_(EnvInst* envinst,
                                     ThreadMetrics::MetricsStor* stor);
@@ -398,6 +414,16 @@ class EnvInst {
   std::vector<double> dns_bucket_;
   std::vector<double> client_bucket_;
   std::vector<double> server_bucket_;
+  std::unique_ptr<opentelemetry::sdk::metrics::AttributesHashMap>
+    http_client_hashmap_ = std::make_unique<
+      opentelemetry::sdk::metrics::AttributesHashMap>(100);
+  std::unique_ptr<opentelemetry::sdk::metrics::AttributesHashMap>
+    http_server_hashmap_ = std::make_unique<
+      opentelemetry::sdk::metrics::AttributesHashMap>(100);
+  std::shared_ptr<const std::vector<opentelemetry::sdk::metrics::PointDataAttributes>>
+    http_client_hist_points_;
+  std::shared_ptr<const std::vector<opentelemetry::sdk::metrics::PointDataAttributes>>
+    http_server_hist_points_;
   std::atomic<double> dns_median_ = { 0 };
   std::atomic<double> dns99_ptile_ = { 0 };
   std::atomic<double> http_client_median_ = { 0 };

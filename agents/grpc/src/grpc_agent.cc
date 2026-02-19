@@ -263,6 +263,16 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
   otlp::fill_proc_metrics(metrics, proc_metrics, proc_metrics, false);
   for (const auto& [env_id, env_metrics_stor] : env_metrics) {
     otlp::fill_env_metrics(metrics, env_metrics_stor, false);
+    // Add exponential histogram metrics for HTTP latency.
+    auto envinst_sp = EnvInst::GetInst(env_metrics_stor.thread_id);
+    if (envinst_sp != nullptr) {
+      otlp::fill_http_histograms(
+        metrics,
+        env_metrics_stor,
+        envinst_sp->http_client_histogram_points(),
+        envinst_sp->http_server_histogram_points(),
+        false);
+    }
   }
 
   data.scope_metric_data_ =
@@ -939,9 +949,17 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   data.resource_ = otlp::GetResource();
   std::vector<MetricData> metrics;
 
-  ThreadMetricsStor stor;
-  while (agent->thr_metrics_msg_q_.dequeue(stor)) {
+  ExtMetricsStor ext_stor;
+  while (agent->thr_metrics_msg_q_.dequeue(ext_stor)) {
+    auto& stor = ext_stor.stor;
     otlp::fill_env_metrics(metrics, stor, false);
+    // Add exponential histogram metrics for HTTP latency.
+    otlp::fill_http_histograms(
+      metrics,
+      stor,
+      ext_stor.http_client_points,
+      ext_stor.http_server_points,
+      false);
     agent->thr_metrics_cache_.insert_or_assign(stor.thread_id, std::move(stor));
   }
 
@@ -991,8 +1009,18 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->thr_metrics_msg_q_.enqueue(metrics->Get()) == 1) {
-    ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
+  uint64_t thread_id = metrics->thread_id();
+  auto envinst_sp = EnvInst::GetInst(thread_id);
+  if (envinst_sp != nullptr) {
+    ExtMetricsStor ext_stor{
+      metrics->Get(),
+      envinst_sp->http_client_histogram_points(),
+      envinst_sp->http_server_histogram_points()
+    };
+
+    if (agent->thr_metrics_msg_q_.enqueue(std::move(ext_stor)) == 1) {
+      ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
+    }
   }
 }
 

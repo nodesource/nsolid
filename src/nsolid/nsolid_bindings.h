@@ -24,8 +24,20 @@ class BindingData : public SnapshotableObject {
 
   static void SlowPushClientBucket(
       const v8::FunctionCallbackInfo<v8::Value>& args);
-  static void FastPushClientBucket(v8::Local<v8::Object> receiver, double val);
-  static void PushClientBucketImpl(BindingData* data, double val);
+  static void FastPushClientBucket(v8::Local<v8::Object> receiver,
+                                   double val,
+                                   uint32_t method,
+                                   uint32_t status_code,
+                                   const v8::FastOneByteString& server_address,
+                                   uint32_t server_port,
+                                   uint32_t protocol_version);
+  static void PushClientBucketImpl(BindingData* data,
+                                   double val,
+                                   uint32_t method,
+                                   uint32_t status_code,
+                                   const std::string& server_address,
+                                   uint32_t server_port,
+                                   uint32_t protocol_version);
 
   static void SlowPushDnsBucket(
       const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -34,8 +46,20 @@ class BindingData : public SnapshotableObject {
 
   static void SlowPushServerBucket(
       const v8::FunctionCallbackInfo<v8::Value>& args);
-  static void FastPushServerBucket(v8::Local<v8::Object> receiver, double val);
-  static void PushServerBucketImpl(BindingData* data, double val);
+  static void FastPushServerBucket(v8::Local<v8::Object> receiver,
+                                   double val,
+                                   uint32_t method,
+                                   uint32_t status_code,
+                                   uint32_t url_scheme,
+                                   uint32_t protocol_version,
+                                   const v8::FastOneByteString& route);
+  static void PushServerBucketImpl(BindingData* data,
+                                   double val,
+                                   uint32_t method,
+                                   uint32_t status_code,
+                                   uint32_t url_scheme,
+                                   uint32_t protocol_version,
+                                   const std::string& route);
 
   static void SlowPushSpanDataDouble(
       const v8::FunctionCallbackInfo<v8::Value>& args);

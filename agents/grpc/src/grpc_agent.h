@@ -1,13 +1,15 @@
 #ifndef AGENTS_GRPC_SRC_GRPC_AGENT_H_
 #define AGENTS_GRPC_SRC_GRPC_AGENT_H_
 
-#include <nsolid.h>
-#include <nsolid/async_ts_queue.h>
-#include <nsolid/thread_safe.h>
+#include "nsolid.h"
+#include "nsolid/async_ts_queue.h"
+#include "nsolid/thread_safe.h"
 #include <memory>
+#include <vector>
 #include "grpcpp/grpcpp.h"
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "opentelemetry/version.h"
+#include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "../../src/profile_collector.h"
 #include "asset_stream.h"
@@ -37,6 +39,14 @@ namespace nsolid {
 class SpanCollector;
 
 namespace grpc {
+
+struct ExtMetricsStor {
+  ThreadMetrics::MetricsStor stor;
+  std::shared_ptr<const std::vector<opentelemetry::sdk::metrics::PointDataAttributes>>
+    http_client_points;
+  std::shared_ptr<const std::vector<opentelemetry::sdk::metrics::PointDataAttributes>>
+    http_server_points;
+};
 
 // predeclarations
 struct AssetStor;
@@ -324,7 +334,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   ProcessMetrics::MetricsStor proc_prev_stor_;
   std::map<uint64_t, JSThreadMetrics> env_metrics_map_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
+  TSQueue<ExtMetricsStor> thr_metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter>
     metrics_exporter_;

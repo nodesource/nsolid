@@ -35,6 +35,8 @@
         'sdk/src/common/global_log_handler.cc',
         'sdk/src/logs/exporter.cc',
         'sdk/src/logs/readable_log_record.cc',
+        'sdk/src/metrics/aggregation/base2_exponential_histogram_aggregation.cc',
+        'sdk/src/metrics/aggregation/base2_exponential_histogram_indexer.cc',
         'sdk/src/metrics/data/circular_buffer.cc',
         'sdk/src/resource/resource.cc',
         'sdk/src/resource/resource_detector.cc',
