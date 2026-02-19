@@ -1190,6 +1190,15 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
       update_continuous_profiler(contCpuProfile, contCpuProfileInterval);
     }
 
+    it = config.find("interval");
+    if (it != config.end() && !it->is_null()) {
+      uint64_t interval = it->get<uint64_t>();
+      gen_ptiles_interval = interval;
+      int er = gen_ptiles_timer_.start(
+        gen_ptiles_cb_, gen_ptiles_interval, gen_ptiles_interval);
+      CHECK_EQ(er, 0);
+    }
+
     it = config.find("otlp");
     if (it != config.end() && !it->is_null()) {
       otlp::OTLPAgent::Inst()->start();
@@ -2844,13 +2853,6 @@ static void ResumeMetrics(const FunctionCallbackInfo<Value>& args) {
 }
 
 
-static void SetMetricsInterval(const FunctionCallbackInfo<Value>& args) {
-  CHECK(args[0]->IsNumber());
-  double interval = args[0].As<Number>()->Value();
-  gen_ptiles_interval = static_cast<uint64_t>(interval);
-}
-
-
 static void OnCustomCommand(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   CHECK(args[0]->IsFunction());
@@ -3262,7 +3264,6 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "getKernelVersion", GetKernelVersion);
   SetMethod(context, target, "pauseMetrics", PauseMetrics);
   SetMethod(context, target, "resumeMetrics", ResumeMetrics);
-  SetMethod(context, target, "setMetricsInterval", SetMetricsInterval);
   SetMethod(context, target, "onCustomCommand", OnCustomCommand);
   SetMethod(context, target, "customCommandResponse", CustomCommandResponse);
   SetMethod(context,
@@ -3399,7 +3400,6 @@ void BindingData::RegisterExternalReferences(
   registry->Register(GetKernelVersion);
   registry->Register(PauseMetrics);
   registry->Register(ResumeMetrics);
-  registry->Register(SetMetricsInterval);
   registry->Register(OnCustomCommand);
   registry->Register(CustomCommandResponse);
   registry->Register(AttachRequestToCustomCommand);
