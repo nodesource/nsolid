@@ -184,3 +184,6 @@ src/nlohmann/
 
 test/integrations/express/*/node_modules/
 test/integrations/fastify/*/node_modules/
+test/integrations/pino/*/node_modules/
+test/integrations/winston/*/node_modules/
+

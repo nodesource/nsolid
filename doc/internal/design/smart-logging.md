@@ -15,11 +15,10 @@ N|Solid employs two main strategies to intercept logs from popular user-land lib
    - For modern logging libraries that publish to Node's native `diagnostics_channel`, N|Solid simply subscribes to those channels (e.g., `tracing:pino_asJson:end`).
    - This provides the finalized log string as well as the raw arguments and severity, allowing us to capture the exact output with zero monkey-patching.
 
-2. **CommonJS Loader Interception (Winston & Older Pino):**
+2. **CommonJS Loader Interception (Winston):**
    - For libraries that do not use `diagnostics_channel`, N|Solid intercepts the module at load time via `Module.prototype.load` in `lib/internal/modules/cjs/loader.js`.
    - **Winston:** We intercept `winston.createLogger` to automatically inject an invisible, N|Solid-specific Transport into the logger instance. This avoids fragile prototype patching while still intercepting all logs cleanly.
-   - **Pino (< 9.1):** We wrap the `pino.write` Symbol method on the exported prototype.
-   - *Note on ESM:* Because Winston and Pino are published as CJS modules, Node's internal ESM translator routes their loading through the CJS loader. This means the CJS loader hook successfully intercepts them even for users writing pure ESM (`import winston from 'winston'`).
+   - *Note on ESM:* Because Winston is published as a CJS module, Node's internal ESM translator routes its loading through the CJS loader. This means the CJS loader hook successfully intercepts it even for users writing pure ESM (`import winston from 'winston'`).
 
 3. **Serialization Bypass:** Prevent the logger from immediately stringifying or formatting the log if it is destined for the buffer, saving CPU cycles on discarded logs.
 
