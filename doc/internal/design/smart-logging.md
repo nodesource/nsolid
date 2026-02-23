@@ -8,9 +8,20 @@ This feature introduces a runtime-level solution in N|Solid to buffer high-fidel
 ## 2. Core Architecture
 The solution combines an efficient C++ in-memory ring buffer with Node.js `AsyncLocalStorage` (ALS) to group logs by their execution context (e.g., an HTTP request). 
 
-### 2.1 Log Interception
-- **Monkey-patching or Core Hooks:** Intercept standard streams (`process.stdout`/`process.stderr`) or hook directly into popular logging frameworks (Pino, Winston) at the `lib/` layer.
-- **Serialization Bypass:** Prevent the logger from immediately stringifying or formatting the log if it is destined for the buffer, saving CPU cycles on discarded logs.
+### 2.1 Log Interception Strategies
+N|Solid employs two main strategies to intercept logs from popular user-land libraries (Pino, Winston) without requiring users to modify their application code:
+
+1. **Native `diagnostics_channel` Integration (Pino v9.1+):**
+   - For modern logging libraries that publish to Node's native `diagnostics_channel`, N|Solid simply subscribes to those channels (e.g., `tracing:pino_asJson:end`).
+   - This provides the finalized log string as well as the raw arguments and severity, allowing us to capture the exact output with zero monkey-patching.
+
+2. **CommonJS Loader Interception (Winston & Older Pino):**
+   - For libraries that do not use `diagnostics_channel`, N|Solid intercepts the module at load time via `Module.prototype.load` in `lib/internal/modules/cjs/loader.js`.
+   - **Winston:** We intercept `winston.createLogger` to automatically inject an invisible, N|Solid-specific Transport into the logger instance. This avoids fragile prototype patching while still intercepting all logs cleanly.
+   - **Pino (< 9.1):** We wrap the `pino.write` Symbol method on the exported prototype.
+   - *Note on ESM:* Because Winston and Pino are published as CJS modules, Node's internal ESM translator routes their loading through the CJS loader. This means the CJS loader hook successfully intercepts them even for users writing pure ESM (`import winston from 'winston'`).
+
+3. **Serialization Bypass:** Prevent the logger from immediately stringifying or formatting the log if it is destined for the buffer, saving CPU cycles on discarded logs.
 
 ### 2.2 Context Tracking
 - Use `AsyncLocalStorage` to assign a unique, lightweight execution ID to incoming requests or transactions.
@@ -47,12 +58,13 @@ The decision to flush a context's logs can be wired to multiple N|Solid anomaly 
 4. **Manual Intervention:** A dynamic trigger from the N|Solid Console to capture the next `N` requests or dump the current global buffer.
 
 ## 5. Implementation Phases
-1. **Phase 1: Global Black Box (Crash-focused)**
-   - Implement the `mmap`-backed C++ ring buffer without ALS context.
+1. **Phase 1: Integration & Interception (Ecosystem)**
+   - Leverage the existing N|Solid C++ logging API to capture logs.
+   - Implement `diagnostics_channel` subscriptions for Pino v9.1+.
+   - Implement CJS loader hooks to auto-inject an N|Solid Transport into Winston.
+2. **Phase 2: Global Black Box (Crash-focused)**
+   - Implement the `mmap`-backed C++ ring buffer to store the intercepted logs in memory without ALS context.
    - Flush the entire buffer on `uncaughtException` or manual N|Solid Console trigger.
-2. **Phase 2: Context-Aware Filtering (Request-focused)**
-   - Integrate ALS context tracking.
+3. **Phase 3: Context-Aware Filtering (Request-focused)**
+   - Integrate ALS context tracking to group intercepted logs.
    - Implement tail-based evaluation (discard on success, flush on failure).
-3. **Phase 3: Integration & Ecosystem**
-   - Direct plugins for Pino/Winston.
-   - Configuration UI in the N|Solid Console.
