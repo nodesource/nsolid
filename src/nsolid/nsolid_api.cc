@@ -956,6 +956,11 @@ EnvList::EnvList(): info_(nlohmann::json()) {
   er = thread_.create(env_list_routine_, this);
   CHECK_EQ(er, 0);
   continuous_profiler_ = std::make_shared<ContinuousProfiler>(&thread_loop_);
+
+  size_t mmap_size = 50 * 1024 * 1024; // 50MB
+  log_buffer_mem_ = std::make_unique<uint8_t[]>(mmap_size);
+  memset(log_buffer_mem_.get(), 0, mmap_size);
+  log_buffer_ = std::make_unique<NSolidLogBuffer>(log_buffer_mem_.get(), mmap_size);
 }
 
 
@@ -1568,6 +1573,19 @@ void EnvList::DoExit(bool on_signal) {
     return;
   }
 
+  // Flush the Smart Logging Ring Buffer on crash/exit
+  if (log_buffer_) {
+    auto extracted_logs = log_buffer_->ExtractAll();
+    for (const auto& log : extracted_logs) {
+      // For PoC, we flush to stderr. 
+      // In a production scenario, this might pipe to the N|Solid Console.
+      fprintf(stderr, "[NSOLID_CRASH_LOG] ts:%llu sev:%d msg:%s\n",
+              static_cast<unsigned long long>(log.timestamp),
+              log.severity,
+              log.msg.c_str());
+    }
+  }
+
   // Stop profiling in the main thread if any in progress, but only if not due
   // to a terminating signal. Don't try to stop profiling inside a signal
   // handler because terrible things can happen, like crashes because the signal
@@ -1713,6 +1731,16 @@ void EnvList::log_written_cb_(ns_async*, EnvList* envlist) {
   // Process written logs
   std::pair<SharedEnvInst, LogWriteInfo> log_line;
   while (envlist->on_log_write_q_.dequeue(log_line)) {
+    // Add to Smart Logging Ring Buffer
+    if (envlist->log_buffer_) {
+      envlist->log_buffer_->Push(
+        log_line.second.timestamp,
+        0, // execution_id (Context-aware tracking will be Phase 3)
+        log_line.second.severity,
+        log_line.second.msg
+      );
+    }
+
     envlist->on_log_write_hook_list_.for_each([&log_line](auto& stor) {
       stor.cb(log_line.first, log_line.second, stor.data.get());
     });
