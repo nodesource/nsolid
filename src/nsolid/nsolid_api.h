@@ -19,7 +19,6 @@
 #include "nsolid.h"
 #include "nsuv-inl.h"
 #include "nsolid_heap_snapshot.h"
-#include "nsolid_log_buffer.h"
 #include "nsolid_trace.h"
 #include "nsolid_util.h"
 #include "spinlock.h"
@@ -759,10 +758,6 @@ class EnvList {
 
   // ContinuousProfiler instance
   std::shared_ptr<ContinuousProfiler> continuous_profiler_;
-
-  // Smart Logging Ring Buffer
-  std::unique_ptr<uint8_t[]> log_buffer_mem_;
-  std::unique_ptr<NSolidLogBuffer> log_buffer_;
 };
 
 

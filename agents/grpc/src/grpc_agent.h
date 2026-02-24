@@ -2,6 +2,7 @@
 #define AGENTS_GRPC_SRC_GRPC_AGENT_H_
 
 #include "nsolid.h"
+#include "nsolid/nsolid_log_buffer.h"
 #include "nsolid/async_ts_queue.h"
 #include "nsolid/thread_safe.h"
 #include <memory>
@@ -253,6 +254,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   void got_blocked_loop(BlockedLoopStor&& stor);
 
   void got_logs();
+  void flush_buffered_logs();
 
   void got_proc_metrics();
 
@@ -356,6 +358,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   TSQueue<LogInfoStor> log_msg_q_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporter>
     log_exporter_;
+  std::vector<uint8_t> log_buffer_mem_;
+  std::unique_ptr<NSolidLogBuffer> log_buffer_;
 
   // Profiling
   std::atomic<bool> assets_enabled_;

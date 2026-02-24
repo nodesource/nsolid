@@ -72,6 +72,7 @@ const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
 
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
+const size_t kGrpcLogBufferSize = 50 * 1024 * 1024;
 
 const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4GB
 
@@ -443,6 +444,7 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         agent_id_(GetAgentId()),
                         auth_retries_(0),
                         unauthorized_(false),
+                        log_buffer_mem_(kGrpcLogBufferSize, 0),
                         assets_enabled_(true),
                         cont_cpu_profile_enabled_(false),
                         profile_on_exit_(false) {
@@ -452,6 +454,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
   ASSERT_EQ(0, uv_cond_init(&stop_cond_));
   ASSERT_EQ(0, uv_mutex_init(&stop_lock_));
   ASSERT_EQ(0, profile_state_lock_.init(true));
+  log_buffer_ = std::make_unique<NSolidLogBuffer>(log_buffer_mem_.data(),
+                                                  log_buffer_mem_.size());
   absl::InitializeLog();
   // gpr_set_log_function([](gpr_log_func_args* args) {
   //   Debug("gRPC: %s\n", args->message);
@@ -896,6 +900,10 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
+  if (agent->exiting_.load(std::memory_order_relaxed)) {
+    return;
+  }
+
   if (agent->log_msg_q_.enqueue({ GetThreadId(envinst),
                                   std::move(info) }) == 1) {
     ASSERT_EQ(0, agent->log_msg_.send());
@@ -1324,6 +1332,8 @@ void GrpcAgent::do_stop() {
     send_exit();
   }
 
+  flush_buffered_logs();
+
   log_exporter_.reset();
   metrics_exporter_.reset();
   trace_exporter_.reset();
@@ -1392,6 +1402,14 @@ void GrpcAgent::got_logs() {
   std::vector<std::unique_ptr<LogsRecordable>> recordables;
   LogInfoStor stor;
   while (log_msg_q_.dequeue(stor)) {
+    if (log_buffer_) {
+      log_buffer_->Push(
+        stor.info.timestamp,
+        0,
+        stor.info.severity,
+        stor.info.msg);
+    }
+
     auto recordable = log_exporter_->MakeRecordable();
     otlp::fill_log_recordable(recordable.get(), stor.info);
     recordables.push_back(std::move(recordable));
@@ -1401,6 +1419,30 @@ void GrpcAgent::got_logs() {
   Debug("# Logs Exported: %ld. Result: %d\n",
         recordables.size(),
         static_cast<int>(result));
+}
+
+
+void GrpcAgent::flush_buffered_logs() {
+  if (!log_buffer_) {
+    return;
+  }
+
+  LogInfoStor stor;
+  while (log_msg_q_.dequeue(stor)) {
+    log_buffer_->Push(
+      stor.info.timestamp,
+      0,
+      stor.info.severity,
+      stor.info.msg);
+  }
+
+  auto extracted_logs = log_buffer_->ExtractAll();
+  for (const auto& log : extracted_logs) {
+    fprintf(stderr, "[NSOLID_CRASH_LOG] ts:%llu sev:%d msg:%s\n",
+            static_cast<unsigned long long>(log.timestamp),
+            log.severity,
+            log.msg.c_str());
+  }
 }
 
 void GrpcAgent::got_proc_metrics() {
