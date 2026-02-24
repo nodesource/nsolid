@@ -272,6 +272,13 @@ process.on('message', (message) => {
     sendSourceCode(message.agentId, message.requestId, message.options);
   } else if (message.type === 'startup_times') {
     sendStartupTimes(message.agentId, message.requestId);
+  } else if (message.type === 'dump_logs') {
+    sendDumpLogs(message.agentId, message.requestId).then(() => {
+      process.send({
+        type: 'dump_logs',
+        data: { requestId: message.requestId },
+      });
+    });
   } else if (message.type === 'close') {
     server.forceShutdown();
     process.exit(0);
@@ -362,4 +369,8 @@ async function sendSourceCode(agentId, requestId, options) {
 
 async function sendStartupTimes(agentId, requestId) {
   return sendCommand('startup_times', agentId, requestId);
+}
+
+async function sendDumpLogs(agentId, requestId) {
+  return sendCommand('dump_logs', agentId, requestId);
 }

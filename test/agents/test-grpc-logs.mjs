@@ -1,6 +1,7 @@
 // Flags: --expose-internals
 import { mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { setTimeout } from 'node:timers/promises';
 import { threadId } from 'node:worker_threads';
 import {
   GRPCServer,
@@ -52,7 +53,7 @@ async function assertNoLogExportsAfterCleanExit(child, getLogEvents) {
   assert.strictEqual(code, 0);
   assert.strictEqual(signal, null);
 
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await setTimeout(200);
   assert.strictEqual(getLogEvents().length, 0);
 }
 
@@ -67,7 +68,7 @@ async function assertCrashLogsAfterErrorExit(
   assert.strictEqual(code, 1);
   assert.strictEqual(signal, null);
 
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await setTimeout(200);
   const logEvents = getLogEvents();
   assert.ok(logEvents.length >= 1);
   const messages = extractLogMessages(logEvents);
@@ -115,6 +116,47 @@ tests.push({
         const wid = workers[0];
         await sendSampleLogs(child, wid);
         await assertNoLogExportsAfterCleanExit(child, getLogEvents);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should flush buffered logs when dump_logs command is received',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const getLogEvents = createLogsCollector(grpcServer);
+
+        const env = getEnv(port);
+        const opts = { env };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+
+        await sendSampleLogs(child, threadId);
+        await setTimeout(200);
+        assert.strictEqual(getLogEvents().length, 0);
+
+        await grpcServer.dumpLogs(agentId);
+        await setTimeout(200);
+
+        const logEvents = getLogEvents();
+        assert.ok(logEvents.length >= 1);
+        const messages = extractLogMessages(logEvents);
+        for (const [, message] of sampleLogs) {
+          assert.ok(messages.includes(message), `missing dump log for: ${message}`);
+        }
+
+        const exportedEventsCount = logEvents.length;
+        const { code, signal } = await child.shutdown(0);
+        assert.strictEqual(code, 0);
+        assert.strictEqual(signal, null);
+        await setTimeout(200);
+        assert.strictEqual(getLogEvents().length, exportedEventsCount);
+
         grpcServer.close();
         resolve();
       }));
