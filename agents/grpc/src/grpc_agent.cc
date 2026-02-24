@@ -1429,6 +1429,39 @@ void GrpcAgent::flush_buffered_logs() {
   }
 
   auto extracted_logs = log_buffer_->ExtractAll();
+  if (extracted_logs.empty()) {
+    return;
+  }
+
+  bool exported = false;
+  if (log_exporter_) {
+    std::vector<std::unique_ptr<LogsRecordable>> recordables;
+    recordables.reserve(extracted_logs.size());
+    for (const auto& log : extracted_logs) {
+      LogWriteInfo info{};
+      info.timestamp = log.timestamp;
+      info.severity = log.severity;
+      info.msg = log.msg;
+
+      auto recordable = log_exporter_->MakeRecordable();
+      otlp::fill_log_recordable(recordable.get(), info);
+      recordables.push_back(std::move(recordable));
+    }
+
+    auto result = log_exporter_->Export(recordables);
+    bool flushed = log_exporter_->ForceFlush(DEFAULT_GRPC_TIMEOUT);
+    exported =
+      result == opentelemetry::sdk::common::ExportResult::kSuccess && flushed;
+    Debug("# Crash logs Exported: %ld. Result: %d. Flushed: %d\n",
+          recordables.size(),
+          static_cast<int>(result),
+          flushed);
+  }
+
+  if (exported) {
+    return;
+  }
+
   for (const auto& log : extracted_logs) {
     fprintf(stderr, "[NSOLID_CRASH_LOG] ts:%llu sev:%d msg:%s\n",
             static_cast<unsigned long long>(log.timestamp),
