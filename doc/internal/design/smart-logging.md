@@ -1,69 +1,82 @@
-# N|Solid Smart Logging: Context-Aware Ring Buffer
+# N|Solid Smart Logging: Current Implementation and Roadmap
 
 ## 1. Motivation
-Organizations spend massive amounts of money ingesting, indexing, and storing logs. However, upwards of 99% of these logs represent healthy system behavior and are never queried. When an incident occurs (e.g., an HTTP 500, a latency spike, or a crash), developers need high-fidelity `debug` and `trace` logs to diagnose the issue, but these are often disabled in production due to cost.
+Organizations spend significant amounts of money ingesting and storing logs, while most entries represent healthy behavior that is never queried. At the same time, incident debugging needs high-fidelity logs (`debug`/`trace`) that are often disabled in production due to cost.
 
-This feature introduces a runtime-level solution in N|Solid to buffer high-fidelity logs in memory and conditionally flush them only when an anomaly is detected, drastically reducing logging costs while preserving critical diagnostic data.
+Smart Logging addresses this by buffering logs in runtime memory and exporting them only when diagnostically useful.
 
-## 2. Core Architecture
-The solution combines an efficient C++ in-memory ring buffer with Node.js `AsyncLocalStorage` (ALS) to group logs by their execution context (e.g., an HTTP request). 
+## 2. Current Implementation (Today)
 
-### 2.1 Log Interception Strategies
-N|Solid employs two main strategies to intercept logs from popular user-land libraries (Pino, Winston) without requiring users to modify their application code:
+### 2.1 Interception and ingestion
+N|Solid captures logs from userland loggers through the existing runtime integration points (Pino/Winston interception path) and forwards them to the native log pipeline.
 
-1. **Native `diagnostics_channel` Integration (Pino v9.1+):**
-   - For modern logging libraries that publish to Node's native `diagnostics_channel`, N|Solid simply subscribes to those channels (e.g., `tracing:pino_asJson:end`).
-   - This provides the finalized log string as well as the raw arguments and severity, allowing us to capture the exact output with zero monkey-patching.
+### 2.2 Ownership and threading model
+- The smart log ring buffer is now owned by the **gRPC agent thread** (`GrpcAgent`).
+- `EnvList` no longer owns or flushes the smart log buffer.
+- Log writes still enter through the log hook path, then are queued to `GrpcAgent`.
 
-2. **CommonJS Loader Interception (Winston):**
-   - For libraries that do not use `diagnostics_channel`, N|Solid intercepts the module at load time via `Module.prototype.load` in `lib/internal/modules/cjs/loader.js`.
-   - **Winston:** We intercept `winston.createLogger` to automatically inject an invisible, N|Solid-specific Transport into the logger instance. This avoids fragile prototype patching while still intercepting all logs cleanly.
-   - *Note on ESM:* Because Winston is published as a CJS module, Node's internal ESM translator routes its loading through the CJS loader. This means the CJS loader hook successfully intercepts it even for users writing pure ESM (`import winston from 'winston'`).
+### 2.3 Buffer behavior
+- `GrpcAgent::got_logs()` appends log entries to a fixed-size C++ ring buffer.
+- Buffer entries are overwritten in FIFO order when capacity is reached.
+- This keeps memory bounded and avoids V8 GC pressure for buffered log payloads.
 
-3. **Serialization Bypass:** Prevent the logger from immediately stringifying or formatting the log if it is destined for the buffer, saving CPU cycles on discarded logs.
+### 2.4 Current export behavior (known gap)
+- Logs are currently exported in real time when `got_logs()` processes them.
+- On shutdown (`GrpcAgent::do_stop()`), buffered logs are drained and flushed (currently via stderr crash-log output).
 
-### 2.2 Context Tracking
-- Use `AsyncLocalStorage` to assign a unique, lightweight execution ID to incoming requests or transactions.
-- Every intercepted log is tagged with this execution ID before being pushed to the buffer.
+This means we already have the buffering substrate, but still need to tighten **when** logs are sent upstream.
 
-### 2.3 The Ring Buffer (C++ Layer)
-- **Memory Management:** To avoid V8 Garbage Collection pressure, logs are pushed across the C++ boundary into a fixed-size, pre-allocated ring buffer in `src/`.
-- **Partitioning:** The buffer is logically partitioned or indexed by the execution ID, allowing fast retrieval or deletion of all logs associated with a specific request.
+## 3. Agreed Next Changes
 
-### 2.4 Tail-Based Evaluation (The Trigger)
-When the execution context ends (e.g., the HTTP response is sent), N|Solid evaluates the outcome:
-- **Success (e.g., HTTP 200, Latency < 500ms):** The logs associated with the execution ID are instantly discarded from the ring buffer. (Optional: keep a 1% statistical sample).
-- **Failure (e.g., HTTP 5xx, Exception, Timeout):** The logs for the execution ID are extracted from the buffer, formatted, and flushed to the standard logging pipeline or the N|Solid Console.
+### 3.1 Selective log delivery to Console
+Move from "send every log" to "send only when needed":
 
-## 3. Resilience & Safety (Memory and Crashes)
-To ensure the logging mechanism does not cause out-of-memory errors or lose data during hard crashes, we employ strict safety controls.
+1. **Crash / error-exit trigger**
+   - On abnormal termination, extract buffered logs and send to Console.
+2. **Manual Console trigger**
+   - Add a command path to request a log-buffer dump on demand.
 
-### 3.1 Memory Controls
-- **Fixed-Size Pre-allocation:** The C++ ring buffer is allocated with a strict maximum size (e.g., 50MB) at process startup. Once full, the oldest entries are overwritten, ensuring the memory footprint never grows.
-- **V8 GC Pressure Relief:** Keeping the buffer in C++ hides the log strings from the V8 Garbage Collector, avoiding expensive GC pauses.
-- **Per-Context Limits:** To prevent a single rogue request from flooding the buffer, a per-execution ID byte/line limit is enforced.
+Normal healthy traffic should remain buffered/evicted without continuous upstream shipping.
 
-### 3.2 Crash Survival via Memory-Mapped Files (mmap)
-To survive unexpected process terminations (e.g., C++ segfaults, OOM kills):
-- **Cross-Platform `mmap`:** The C++ ring buffer is backed by a memory-mapped file on disk. This leverages OS-level virtual memory management.
-- **Libuv Integration:** We use `libuv`'s built-in file mapping support (`UV_FS_O_FILEMAP` on Windows, standard POSIX `mmap` on Unix/macOS) to ensure 100% cross-platform compatibility.
-- **Recovery:** If the process crashes unexpectedly, the OS guarantees the pages are written to the `mmap` file. Upon restart (or via an external N|Solid Agent), the exact "black box" logs from the moment of the crash can be recovered and transmitted.
+### 3.2 New configuration: `NSOLID_LOG_BUFFER`
+Add a new environment variable to control ring-buffer capacity:
 
-## 4. Trigger Conditions
-The decision to flush a context's logs can be wired to multiple N|Solid anomaly detectors:
-1. **Application Errors:** Unhandled rejections, uncaught exceptions, or specific HTTP status codes.
-2. **Performance Degradation:** Request latency exceeding a configured threshold.
-3. **Resource Spikes:** Event Loop Utilization (ELU) spikes or memory threshold breaches during the request lifecycle.
-4. **Manual Intervention:** A dynamic trigger from the N|Solid Console to capture the next `N` requests or dump the current global buffer.
+- **Name:** `NSOLID_LOG_BUFFER`
+- **Default:** `50M`
+- **Recommended format:** `<number>[K|M|G]` (case-insensitive)
+  - examples: `1048576`, `1M`, `64M`, `1G`
+- **Behavior on invalid value:** fallback to default (`50M`) and emit debug warning.
 
-## 5. Implementation Phases
-1. **Phase 1: Integration & Interception (Ecosystem)**
-   - Leverage the existing N|Solid C++ logging API to capture logs.
-   - Implement `diagnostics_channel` subscriptions for Pino v9.1+.
-   - Implement CJS loader hooks to auto-inject an N|Solid Transport into Winston.
-2. **Phase 2: Global Black Box (Crash-focused)**
-   - Implement the `mmap`-backed C++ ring buffer to store the intercepted logs in memory without ALS context.
-   - Flush the entire buffer on `uncaughtException` or manual N|Solid Console trigger.
-3. **Phase 3: Context-Aware Filtering (Request-focused)**
-   - Integrate ALS context tracking to group intercepted logs.
-   - Implement tail-based evaluation (discard on success, flush on failure).
+This enables runtime tuning for different deployment profiles (small edge nodes vs large services).
+
+## 4. Target Trigger Conditions
+As the selective-delivery work lands, these triggers define when buffered logs should be exported:
+
+1. **Application errors:** uncaught exception / unhandled rejection / fatal exit path.
+2. **Manual intervention:** explicit command from N|Solid Console to dump buffered logs.
+
+Future trigger types (latency/resource anomalies) remain planned and can be added incrementally.
+
+## 5. Roadmap (Preserved Improvements)
+
+### 5.1 Context-aware grouping (ALS)
+- Use `AsyncLocalStorage` to attach an execution ID to logs.
+- Group and selectively extract/discard by execution context.
+
+### 5.2 Tail-based evaluation
+- Discard buffered logs for successful requests.
+- Export logs for failing/slow requests.
+
+### 5.3 Crash durability (`mmap`) 
+- Evolve ring-buffer backing to memory-mapped storage for stronger crash recovery.
+- Keep cross-platform behavior consistent across Unix/macOS/Windows.
+
+## 6. Phased Status
+1. **Phase 1: Integration & interception**
+   - In place.
+2. **Phase 2: Global black-box buffer (GrpcAgent-owned)**
+   - In place (buffering path moved to `GrpcAgent`).
+3. **Phase 2.1: Selective Console delivery + command trigger + configurable size**
+   - Next implementation step.
+4. **Phase 3: Context-aware filtering (ALS + tail-based decisions)**
+   - Planned.
