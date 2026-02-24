@@ -1743,6 +1743,9 @@ void GrpcAgent::handle_command_request(CommandRequestStor&& req) {
     send_startup_times_event(request.requestid().c_str());
   } else if (cmd == "dump_logs") {
     flush_buffered_logs();
+    if (log_buffer_) {
+      log_buffer_->Clear();
+    }
   } else {
     Debug("Unknown command: %s\n", cmd.c_str());
   }
