@@ -1332,7 +1332,9 @@ void GrpcAgent::do_stop() {
     send_exit();
   }
 
-  flush_buffered_logs();
+  if (GetExitCode() != 0) {
+    flush_buffered_logs();
+  }
 
   log_exporter_.reset();
   metrics_exporter_.reset();
@@ -1399,7 +1401,6 @@ void GrpcAgent::got_blocked_loop(BlockedLoopStor&& stor) {
 }
 
 void GrpcAgent::got_logs() {
-  std::vector<std::unique_ptr<LogsRecordable>> recordables;
   LogInfoStor stor;
   while (log_msg_q_.dequeue(stor)) {
     if (log_buffer_) {
@@ -1409,16 +1410,7 @@ void GrpcAgent::got_logs() {
         stor.info.severity,
         stor.info.msg);
     }
-
-    auto recordable = log_exporter_->MakeRecordable();
-    otlp::fill_log_recordable(recordable.get(), stor.info);
-    recordables.push_back(std::move(recordable));
   }
-
-  auto result = log_exporter_->Export(recordables);
-  Debug("# Logs Exported: %ld. Result: %d\n",
-        recordables.size(),
-        static_cast<int>(result));
 }
 
 
