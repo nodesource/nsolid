@@ -196,6 +196,8 @@ function checkScopeMetrics(scopeMetrics) {
       if (dataPoint.quantileValues[1].value) {
         validateNumber(dataPoint.quantileValues[1].value, `${name}.quantileValues[1].value`);
       }
+
+      assert.ok(dataPoint.quantileValues[0].value >= dataPoint.quantileValues[1].value, `p99 ${name} should be >= p50 ${name}`);
     } else {
       assert.strictEqual(dataPoint.value, expectedMetric[2]);
       if (type === 'asInt') {
@@ -235,9 +237,13 @@ async function runTest({ getEnv }) {
         stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
         env,
       };
-      const child = new TestClient([], opts);
+      const child = new TestClient(['-t', 'http'], opts);
       const agentId = await child.id();
-      const config = await child.config({ app: 'my_app_name', interval: 100 });
+      const config = await child.config({ app: 'my_app_name' });
+      for (let i = 0; i < 10; i++) {
+        await child.trace('http');
+      }
+
       grpcServer.once('metrics', mustCall(async () => {
         const metrics = await child.metrics();
         assert.strictEqual(config.app, 'my_app_name');
@@ -258,7 +264,6 @@ const testConfigs = [
         NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
         NSOLID_GRPC_INSECURE: 1,
         NSOLID_GRPC: `localhost:${port}`,
-        NSOLID_INTERVAL: 10000,
       };
     },
   },
@@ -268,7 +273,6 @@ const testConfigs = [
         NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
         NSOLID_GRPC_INSECURE: 1,
         NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
-        NSOLID_INTERVAL: 10000,
       };
     },
   },
