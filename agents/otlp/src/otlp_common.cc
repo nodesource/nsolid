@@ -353,8 +353,8 @@ NSOLID_ENV_METRICS_NUMBERS(V)
               use_snake_case ? "http_client" : "httpClient",
               kNSMSecs,
               InstrumentValueType::kDouble,
-              {{ 0.5, stor.http_client99_ptile },
-               { 0.99, stor.http_client_median }},
+              {{ 0.5, stor.http_client_median },
+               { 0.99, stor.http_client99_ptile }},
               attrs);
   add_summary(metrics,
               process_start(),
