@@ -870,14 +870,16 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     EnvInst::Scope scp(envinst);
     if (scp.Success()) {
       bool creation = std::get<1>(tup);
+      uint64_t thread_id = GetThreadId(envinst);
       if (creation) {
         auto pair = agent->env_metrics_map_.emplace(
           std::piecewise_construct,
-          std::forward_as_tuple(GetThreadId(envinst)),
+          std::forward_as_tuple(thread_id),
           std::forward_as_tuple(envinst));
         ASSERT(pair.second);
       } else {
-        agent->env_metrics_map_.erase(GetThreadId(envinst));
+        agent->env_metrics_map_.erase(thread_id);
+        agent->thr_metrics_cache_.erase(thread_id);
       }
     }
   }
