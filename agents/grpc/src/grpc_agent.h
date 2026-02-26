@@ -1,19 +1,22 @@
 #ifndef AGENTS_GRPC_SRC_GRPC_AGENT_H_
 #define AGENTS_GRPC_SRC_GRPC_AGENT_H_
 
-#include <nsolid.h>
-#include <nsolid/async_ts_queue.h>
-#include <nsolid/thread_safe.h>
 #include <memory>
-#include "grpcpp/grpcpp.h"
-#include "./proto/nsolid_service.grpc.pb.h"
-#include "opentelemetry/version.h"
-#include "opentelemetry/sdk/trace/recordable.h"
+#include <vector>
 #include "../../src/profile_collector.h"
+#include "./proto/nsolid_service.grpc.pb.h"
 #include "asset_stream.h"
 #include "command_stream.h"
 #include "grpc_client.h"
 #include "grpc_errors.h"
+#include "grpcpp/grpcpp.h"
+#include "nsolid.h"
+#include "nsolid/async_ts_queue.h"
+#include "nsolid/nsolid_metrics.h"
+#include "nsolid/thread_safe.h"
+#include "opentelemetry/sdk/metrics/data/metric_data.h"
+#include "opentelemetry/sdk/trace/recordable.h"
+#include "opentelemetry/version.h"
 
 // Class pre-declaration
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -49,6 +52,11 @@ using UniqRecordable =
 using UniqRecordables = std::vector<UniqRecordable>;
 using SharedGrpcAgent = std::shared_ptr<GrpcAgent>;
 using WeakGrpcAgent = std::weak_ptr<GrpcAgent>;
+
+struct ExtMetricsStor {
+  ThreadMetrics::MetricsStor stor;
+  std::vector<HttpHistogramSnapshot> http_histogram_snapshots;
+};
 
 struct JSThreadMetrics {
   explicit JSThreadMetrics(SharedEnvInst envinst);
@@ -333,7 +341,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   ProcessMetrics::MetricsStor proc_prev_stor_;
   std::map<uint64_t, JSThreadMetrics> env_metrics_map_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
+  TSQueue<ExtMetricsStor> thr_metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter>
     metrics_exporter_;
