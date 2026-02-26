@@ -6,6 +6,7 @@
 #define NSOLID_EXTERN_PRIVATE NODE_EXTERN
 
 #include <atomic>
+#include <deque>
 #include <functional>
 #include <list>
 #include <map>
@@ -28,6 +29,7 @@
 // We can export it via ADDONS_PREREQS in the Makefile and link against it with
 // our native module builds that depend on it
 #include "nlohmann/json.hpp"
+#include "nsolid/nsolid_metrics.h"
 
 
 namespace node {
@@ -110,7 +112,6 @@ class EnvInst {
   NSOLID_DELETE_DEFAULT_CONSTRUCTORS(EnvInst)
 
   struct CmdQueueStor;
-
   using user_cb_sig = void(*)(SharedEnvInst, void*);
   using voided_cb_sig = void(*)(CmdQueueStor*);
   using optional_string = std::pair<bool, std::string>;
@@ -209,8 +210,10 @@ class EnvInst {
                             const char* value,
                             bool is_return);
 
-  void PushClientBucket(double value);
-  void PushServerBucket(double value);
+  void PushClientBucket(double value,
+                        MetricsStream::HttpDatapointAttrs&& attrs);
+  void PushServerBucket(double value,
+                        MetricsStream::HttpDatapointAttrs&& attrs);
   void PushDnsBucket(double value);
 
   std::string GetModuleInfo();
@@ -274,6 +277,14 @@ class EnvInst {
   uint32_t* get_trace_flags() { return &trace_flags_; }
   double* trace_sample_rate() { return &trace_sample_rate_; }
 
+  // Returns the last harvested HTTP client/server latency histogram points,
+  // keyed by attribute combination. Updated every metrics interval.
+  SharedPointDataAttributes
+    http_client_histogram_points() const { return http_client_hist_points_; }
+  SharedPointDataAttributes
+    http_server_histogram_points() const { return http_server_hist_points_; }
+  std::vector<HttpHistogramSnapshot> TakeHttpHistogramSnapshots();
+
   std::atomic<bool> metrics_paused = { false };
 
   // Track the values of JSMetricsFields.
@@ -328,8 +339,12 @@ class EnvInst {
   static void custom_command_(SharedEnvInst envinst_sp,
                               const std::string req_id);
 
-  void add_metric_datapoint_(MetricsStream::Type, double);
-  void send_datapoint(MetricsStream::Type, double);
+  void add_metric_datapoint_(MetricsStream::Type type,
+                              double value,
+                              MetricsStream::DatapointAttrs attrs = {});
+  void send_datapoint(MetricsStream::Type type,
+                      double value,
+                      MetricsStream::DatapointAttrs attrs = {});
 
   static void get_event_loop_stats_(EnvInst* envinst,
                                     ThreadMetrics::MetricsStor* stor);
@@ -399,6 +414,17 @@ class EnvInst {
   std::vector<double> dns_bucket_;
   std::vector<double> client_bucket_;
   std::vector<double> server_bucket_;
+  UniqueAttributesHashMap
+    http_client_hashmap_ =
+      std::make_unique<AttributesHashMap>(kHttpHistogramCardinalityLimit);
+  UniqueAttributesHashMap
+    http_server_hashmap_ =
+      std::make_unique<AttributesHashMap>(kHttpHistogramCardinalityLimit);
+  SharedPointDataAttributes http_client_hist_points_;
+  SharedPointDataAttributes http_server_hist_points_;
+  std::deque<HttpHistogramSnapshot> http_histogram_snapshots_;
+  nsuv::ns_mutex http_histogram_snapshots_lock_;
+  uint64_t http_histogram_window_end_ms_ = 0;
   std::atomic<double> dns_median_ = { 0 };
   std::atomic<double> dns99_ptile_ = { 0 };
   std::atomic<double> http_client_median_ = { 0 };
@@ -550,6 +576,7 @@ class EnvList {
   // argument
   void UpdateConfig(const nlohmann::json& config);
   void UpdateConfig(const std::string& config);
+  void SetHttpHistogramConsumerActive(bool active);
 
   void DoExit(bool on_signal);
   void SetupExitHandlers();
@@ -657,7 +684,9 @@ class EnvList {
   static void removed_env_cb_(nsuv::ns_async*, EnvList* envlist);
   static void env_list_routine_(nsuv::ns_thread*, EnvList* envlist);
   static void blocked_loop_timer_cb_(nsuv::ns_timer*);
-  static void gen_ptiles_cb_(nsuv::ns_timer*);
+  static void metrics_window_cb_(nsuv::ns_timer*);
+  static void update_metrics_window_timer_(void*);
+  void update_http_histogram_snapshots_(EnvInst*, uint64_t window_end_ms);
   static void raw_metrics_timer_cb_(nsuv::ns_timer*);
   static void promise_tracking_(SharedEnvInst envinst_sp, bool track);
   static void enable_promise_tracking_(SharedEnvInst envinst_sp, void*);
@@ -719,9 +748,10 @@ class EnvList {
   // blocked.
   nsuv::ns_timer blocked_loop_timer_;
   std::atomic<uint64_t> min_blocked_threshold_ = { UINT64_MAX };
-  // TODO(trevnorris): Temporary until Console supports streaming metrics
-  nsuv::ns_timer gen_ptiles_timer_;
-  std::atomic<uint64_t> gen_ptiles_interval_ = { 5000 };
+  // Close HTTP/DNS metrics windows at the configured collection interval.
+  nsuv::ns_timer metrics_window_timer_;
+  std::atomic<uint64_t> metrics_window_interval_ = { 5000 };
+  std::atomic<bool> http_histogram_consumer_active_ = { false };
   // exit data
   std::atomic<bool> exiting_ = { false };
   std::atomic<int> exit_code_;
