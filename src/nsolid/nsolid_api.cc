@@ -79,6 +79,85 @@ using v8::WeakCallbackInfo;
 using v8::WeakCallbackType;
 
 
+using opentelemetry::sdk::metrics::Aggregation;
+using opentelemetry::sdk::metrics::AttributesHashMap;
+using opentelemetry::sdk::metrics::Base2ExponentialHistogramAggregation;
+using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
+using opentelemetry::sdk::metrics::MetricAttributes;
+using opentelemetry::sdk::metrics::PointDataAttributes;
+
+static const char* HttpMethodToString(MetricsStream::HttpMethod m) {
+  switch (m) {
+    case MetricsStream::HttpMethod::kGet:     return "GET";
+    case MetricsStream::HttpMethod::kHead:    return "HEAD";
+    case MetricsStream::HttpMethod::kPost:    return "POST";
+    case MetricsStream::HttpMethod::kPut:     return "PUT";
+    case MetricsStream::HttpMethod::kDelete:  return "DELETE";
+    case MetricsStream::HttpMethod::kConnect: return "CONNECT";
+    case MetricsStream::HttpMethod::kOptions: return "OPTIONS";
+    case MetricsStream::HttpMethod::kTrace:   return "TRACE";
+    case MetricsStream::HttpMethod::kPatch:   return "PATCH";
+    case MetricsStream::HttpMethod::kOther:   return "_OTHER";
+  }
+  return "_OTHER";
+}
+
+static const char* HttpProtocolVersionToString(
+    MetricsStream::HttpProtocolVersion v) {
+  switch (v) {
+    case MetricsStream::HttpProtocolVersion::k10:    return "1.0";
+    case MetricsStream::HttpProtocolVersion::k11:    return "1.1";
+    case MetricsStream::HttpProtocolVersion::k2:    return  "2";
+    case MetricsStream::HttpProtocolVersion::kOther: return "";
+  }
+  return "";
+}
+
+static const char* HttpUrlSchemeToString(MetricsStream::HttpUrlScheme s) {
+  switch (s) {
+    case MetricsStream::HttpUrlScheme::kHttp:  return "http";
+    case MetricsStream::HttpUrlScheme::kHttps: return "https";
+    case MetricsStream::HttpUrlScheme::kOther: return "";
+  }
+  return "";
+}
+
+// Build OTel MetricAttributes from HttpDatapointAttrs for attribute-keyed
+// histogram aggregation.
+static MetricAttributes BuildMetricAttributes(
+    const MetricsStream::HttpDatapointAttrs& http,
+    MetricsStream::Type type) {
+  MetricAttributes attrs;
+  attrs.insert({"http.request.method",
+                std::string(HttpMethodToString(http.method))});
+  if (http.status_code != 0) {
+    attrs.insert({"http.response.status_code",
+                  static_cast<int64_t>(http.status_code)});
+  }
+  const char* version = HttpProtocolVersionToString(http.protocol_version);
+  if (version[0] != '\0') {
+    attrs.insert({"network.protocol.version", std::string(version)});
+  }
+  if (type == MetricsStream::Type::kHttpClient) {
+    if (!http.server_address.empty()) {
+      attrs.insert({"server.address", http.server_address});
+    }
+    if (http.server_port != 0) {
+      attrs.insert({"server.port", static_cast<int64_t>(http.server_port)});
+    }
+  } else {
+    const char* scheme = HttpUrlSchemeToString(http.url_scheme);
+    if (scheme[0] != '\0') {
+      attrs.insert({"url.scheme", std::string(scheme)});
+    }
+    // Add http.route for server-side metrics when route template is available
+    if (!http.route.empty()) {
+      attrs.insert({"http.route", http.route});
+    }
+  }
+  return attrs;
+}
+
 static void calculateHttpDnsPtiles(
     std::vector<double>& bucket,  // NOLINT(runtime/references)
     std::atomic<double>& median,  // NOLINT(runtime/references)
@@ -216,13 +295,19 @@ int EnvInst::RunCommand(SharedEnvInst envinst_sp,
 
 
 
-void EnvInst::PushClientBucket(double value) {
-  send_datapoint(MetricsStream::Type::kHttpClient, value);
+void EnvInst::PushClientBucket(double value,
+                               MetricsStream::HttpDatapointAttrs&& attrs) {
+  send_datapoint(MetricsStream::Type::kHttpClient,
+                 value,
+                 std::move(attrs));
 }
 
 
-void EnvInst::PushServerBucket(double value) {
-  send_datapoint(MetricsStream::Type::kHttpServer, value);
+void EnvInst::PushServerBucket(double value,
+                               MetricsStream::HttpDatapointAttrs&& attrs) {
+  send_datapoint(MetricsStream::Type::kHttpServer,
+                 value,
+                 std::move(attrs));
 }
 
 
@@ -1500,7 +1585,7 @@ void EnvList::datapoint_cb_(std::queue<MetricsStream::Datapoint>&& q) {
     MetricsStream::Datapoint& dp = q.front();
     auto envinst_sp = EnvInst::GetInst(dp.thread_id);
     if (envinst_sp != nullptr)
-      envinst_sp->add_metric_datapoint_(dp.type, dp.value);
+      envinst_sp->add_metric_datapoint_(dp.type, dp.value, dp.attrs);
 
     bucket.emplace_back(std::move(dp));
     q.pop();
@@ -1520,14 +1605,16 @@ void EnvList::datapoint_cb_(std::queue<MetricsStream::Datapoint>&& q) {
 
 
 void EnvInst::send_datapoint(MetricsStream::Type type,
-                             double value) {
+                             double value,
+                             MetricsStream::DatapointAttrs attrs) {
   double ts = 0;
   if (has_metrics_stream_hooks_) {
     ts = (PERFORMANCE_NOW() - env()->time_origin()) / 1e6 +
          env()->time_origin_timestamp() / 1e3;
   }
 
-  EnvList::Inst()->datapoints_q_.Enqueue({ thread_id_, ts, type, value });
+  EnvList::Inst()->datapoints_q_.Enqueue(
+      { thread_id_, ts, type, value, std::move(attrs) });
 }
 
 
@@ -1851,6 +1938,32 @@ void EnvList::gen_ptiles_cb_(ns_timer* timer) {
     calculateHttpDnsPtiles(envinst_sp->server_bucket_,
                            envinst_sp->http_server_median_,
                            envinst_sp->http_server99_ptile_);
+
+    // Harvest per-attribute exponential histogram points and reset hashmaps.
+    auto harvest = [](std::unique_ptr<AttributesHashMap>& hashmap,
+                      std::shared_ptr<PointDataAttributesVector>& points_ptr) {
+      auto new_points = std::make_shared<PointDataAttributesVector>();
+      hashmap->GetAllEnteries(
+          [&new_points](const MetricAttributes& attrs,
+                        Aggregation& agg) -> bool {
+            auto point = agg.ToPoint();
+            auto* hist = opentelemetry::nostd::get_if<
+                Base2ExponentialHistogramPointData>(&point);
+            if (hist) {
+              new_points->push_back({ attrs, std::move(*hist) });
+            }
+            return true;
+          });
+      points_ptr = std::move(new_points);
+      // Reset for the next interval.
+      hashmap = std::make_unique<AttributesHashMap>(
+          kHttpHistogramCardinalityLimit);
+    };
+
+    harvest(envinst_sp->http_client_hashmap_,
+            envinst_sp->http_client_hist_points_);
+    harvest(envinst_sp->http_server_hashmap_,
+            envinst_sp->http_server_hist_points_);
   }
 
   // Restart timer if interval changed.
@@ -2071,8 +2184,20 @@ void EnvInst::CustomCommandReqWeakCallback(
 }
 
 
-void EnvInst::add_metric_datapoint_(MetricsStream::Type type, double value) {
+void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
+                                    double value,
+                                    MetricsStream::DatapointAttrs attrs) {
   DCHECK(utils::are_threads_equal(uv_thread_self(), EnvList::Inst()->thread()));
+  auto aggregate_into_hashmap = [&value](
+      AttributesHashMap* hashmap,
+      MetricAttributes&& metric_attrs) {
+    auto factory = []() -> std::unique_ptr<Aggregation> {
+      return std::make_unique<Base2ExponentialHistogramAggregation>();
+    };
+    auto* agg = hashmap->GetOrSetDefault(std::move(metric_attrs), factory);
+    agg->Aggregate(value);
+  };
+
   switch (type) {
     case MetricsStream::Type::kDns:
     {
@@ -2082,11 +2207,23 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type, double value) {
     case MetricsStream::Type::kHttpClient:
     {
       client_bucket_.push_back(value);
+      auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
+      if (http) {
+        aggregate_into_hashmap(
+            http_client_hashmap_.get(),
+            BuildMetricAttributes(*http, type));
+      }
     }
     break;
     case MetricsStream::Type::kHttpServer:
     {
       server_bucket_.push_back(value);
+      auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
+      if (http) {
+        aggregate_into_hashmap(
+            http_server_hashmap_.get(),
+            BuildMetricAttributes(*http, type));
+      }
     }
     break;
     case MetricsStream::Type::kGcForced:
@@ -2354,19 +2491,58 @@ static void WriteLog(const FunctionCallbackInfo<Value>& args) {
 void BindingData::SlowPushClientBucket(
     const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsNumber());
+  DCHECK(args[1]->IsUint32());
+  DCHECK(args[2]->IsUint32());
+  DCHECK(args[3]->IsString());
+  DCHECK(args[4]->IsUint32());
+  DCHECK(args[5]->IsUint32());
+  Utf8Value server_address(args.GetIsolate(), args[3]);
   PushClientBucketImpl(PrincipalRealm::GetBindingData<BindingData>(args),
-                       args[0].As<Number>()->Value());
+                       args[0].As<Number>()->Value(),
+                       args[1].As<Uint32>()->Value(),
+                       args[2].As<Uint32>()->Value(),
+                       std::string(*server_address, server_address.length()),
+                       args[4].As<Uint32>()->Value(),
+                       args[5].As<Uint32>()->Value());
 }
 
 
-void BindingData::FastPushClientBucket(v8::Local<v8::Object> receiver,
-                                       double val) {
-  PushClientBucketImpl(FromJSObject<BindingData>(receiver), val);
+void BindingData::FastPushClientBucket(
+    v8::Local<v8::Object> receiver,
+    double val,
+    uint32_t method,
+    uint32_t status_code,
+    const v8::FastOneByteString& server_address,
+    uint32_t server_port,
+    uint32_t protocol_version) {
+  PushClientBucketImpl(
+      FromJSObject<BindingData>(receiver),
+      val,
+      method,
+      status_code,
+      std::string(server_address.data, server_address.length),
+      server_port,
+      protocol_version);
 }
 
 
-void BindingData::PushClientBucketImpl(BindingData* data, double val) {
-  data->env()->envinst_->PushClientBucket(val);
+void BindingData::PushClientBucketImpl(BindingData* data,
+                                       double val,
+                                       uint32_t method,
+                                       uint32_t status_code,
+                                       const std::string& server_address,
+                                       uint32_t server_port,
+                                       uint32_t protocol_version) {
+  MetricsStream::HttpDatapointAttrs attrs{
+    static_cast<MetricsStream::HttpMethod>(method),
+    static_cast<uint16_t>(status_code),
+    server_address,
+    static_cast<uint16_t>(server_port),
+    MetricsStream::HttpUrlScheme::kOther,
+    static_cast<MetricsStream::HttpProtocolVersion>(protocol_version),
+    std::string()
+  };
+  data->env()->envinst_->PushClientBucket(val, std::move(attrs));
 }
 
 
@@ -2392,19 +2568,62 @@ void BindingData::PushDnsBucketImpl(BindingData* data, double val) {
 void BindingData::SlowPushServerBucket(
     const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsNumber());
+  DCHECK(args[1]->IsUint32());
+  DCHECK(args[2]->IsUint32());
+  DCHECK(args[3]->IsUint32());
+  DCHECK(args[4]->IsUint32());
+  Isolate* isolate = args.GetIsolate();
+  std::string route;
+  if (args[5]->IsString()) {
+    Local<String> route_s = args[5].As<String>();
+    route = *node::Utf8Value(isolate, route_s);
+  }
   PushServerBucketImpl(PrincipalRealm::GetBindingData<BindingData>(args),
-                       args[0].As<Number>()->Value());
+                       args[0].As<Number>()->Value(),
+                       args[1].As<Uint32>()->Value(),
+                       args[2].As<Uint32>()->Value(),
+                       args[3].As<Uint32>()->Value(),
+                       args[4].As<Uint32>()->Value(),
+                       route);
 }
 
 
-void BindingData::FastPushServerBucket(v8::Local<v8::Object> receiver,
-                                       double val) {
-  PushServerBucketImpl(FromJSObject<BindingData>(receiver), val);
+void BindingData::FastPushServerBucket(
+    v8::Local<v8::Object> receiver,
+    double val,
+    uint32_t method,
+    uint32_t status_code,
+    uint32_t url_scheme,
+    uint32_t protocol_version,
+    const FastOneByteString& route) {
+  PushServerBucketImpl(
+      FromJSObject<BindingData>(receiver),
+      val,
+      method,
+      status_code,
+      url_scheme,
+      protocol_version,
+      std::string(route.data, route.length));
 }
 
 
-void BindingData::PushServerBucketImpl(BindingData* data, double val) {
-  data->env()->envinst_->PushServerBucket(val);
+void BindingData::PushServerBucketImpl(BindingData* data,
+                                       double val,
+                                       uint32_t method,
+                                       uint32_t status_code,
+                                       uint32_t url_scheme,
+                                       uint32_t protocol_version,
+                                       const std::string& route) {
+  MetricsStream::HttpDatapointAttrs attrs{
+    static_cast<MetricsStream::HttpMethod>(method),
+    static_cast<uint16_t>(status_code),
+    "",
+    0,
+    static_cast<MetricsStream::HttpUrlScheme>(url_scheme),
+    static_cast<MetricsStream::HttpProtocolVersion>(protocol_version),
+    route
+  };
+  data->env()->envinst_->PushServerBucket(val, std::move(attrs));
 }
 
 
@@ -3429,6 +3648,44 @@ void BindingData::Initialize(Local<Object> target,
   NSOLID_SPAN_ATTRS(V)
 #undef V
 
+#define NSOLID_EXPORT_CONST(Name, ValueExpr)                                   \
+  consts_enum->Set(context,                                                    \
+                   OneByteString(isolate, #Name),                              \
+                   Integer::New(isolate,                                       \
+                                static_cast<int>(ValueExpr))).Check();
+
+#define NSOLID_HTTP_METHOD_CONSTS(V)                                           \
+  V(kHttpMethodGet, MetricsStream::HttpMethod::kGet)                           \
+  V(kHttpMethodHead, MetricsStream::HttpMethod::kHead)                         \
+  V(kHttpMethodPost, MetricsStream::HttpMethod::kPost)                         \
+  V(kHttpMethodPut, MetricsStream::HttpMethod::kPut)                           \
+  V(kHttpMethodDelete, MetricsStream::HttpMethod::kDelete)                     \
+  V(kHttpMethodConnect, MetricsStream::HttpMethod::kConnect)                   \
+  V(kHttpMethodOptions, MetricsStream::HttpMethod::kOptions)                   \
+  V(kHttpMethodTrace, MetricsStream::HttpMethod::kTrace)                       \
+  V(kHttpMethodPatch, MetricsStream::HttpMethod::kPatch)                       \
+  V(kHttpMethodOther, MetricsStream::HttpMethod::kOther)
+
+#define NSOLID_HTTP_VERSION_CONSTS(V)                                          \
+  V(kHttpVersion10, MetricsStream::HttpProtocolVersion::k10)                   \
+  V(kHttpVersion11, MetricsStream::HttpProtocolVersion::k11)                   \
+  V(kHttpVersion20, MetricsStream::HttpProtocolVersion::k2)                    \
+  V(kHttpVersionOther, MetricsStream::HttpProtocolVersion::kOther)
+
+#define NSOLID_HTTP_SCHEME_CONSTS(V)                                           \
+  V(kHttpSchemeHttp, MetricsStream::HttpUrlScheme::kHttp)                      \
+  V(kHttpSchemeHttps, MetricsStream::HttpUrlScheme::kHttps)                    \
+  V(kHttpSchemeOther, MetricsStream::HttpUrlScheme::kOther)
+
+  NSOLID_HTTP_METHOD_CONSTS(NSOLID_EXPORT_CONST)
+  NSOLID_HTTP_VERSION_CONSTS(NSOLID_EXPORT_CONST)
+  NSOLID_HTTP_SCHEME_CONSTS(NSOLID_EXPORT_CONST)
+
+#undef NSOLID_HTTP_SCHEME_CONSTS
+#undef NSOLID_HTTP_VERSION_CONSTS
+#undef NSOLID_HTTP_METHOD_CONSTS
+#undef NSOLID_EXPORT_CONST
+
   consts_enum->Set(context,
                    OneByteString(isolate, "kTraceFieldCount"),
                    Integer::New(isolate, EnvInst::kFieldCount)).Check();
@@ -3457,6 +3714,18 @@ void BindingData::Initialize(Local<Object> target,
       OneByteString(isolate, "nsolid_span_id_s"),
       Symbol::New(
         isolate, OneByteString(isolate, "nsolid_span_id"))).Check();
+
+  target->Set(
+      context,
+      OneByteString(isolate, "nsolid_route_s"),
+      Symbol::New(
+        isolate, OneByteString(isolate, "nsolid_route"))).Check();
+
+  target->Set(
+      context,
+      OneByteString(isolate, "nsolid_net_prot_s"),
+      Symbol::New(
+        isolate, OneByteString(isolate, "nsolid_net_prot"))).Check();
 }
 
 

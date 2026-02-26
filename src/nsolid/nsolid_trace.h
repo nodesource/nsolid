@@ -70,9 +70,10 @@ namespace tracing {
 
 #define NSOLID_SPAN_HTTP_ATTRS_STRINGS(V)                                      \
   V(kSpanHttpMethod, std::string, method, http.method)                         \
-  V(kSpanHttpProtocolVersion, std::string, version, network.protocol.version)  \
+  V(kSpanHttpProtocolVersion, std::string, version, network.protocol.version)    \
   V(kSpanHttpReqUrl, std::string, req_url, http.url)                           \
-  V(kSpanHttpStatusMessage, std::string, status_text, http.status_text)
+  V(kSpanHttpStatusMessage, std::string, status_text, http.status_text)          \
+  V(kSpanHttpRoute, std::string, route, http.route)
 
 #define NSOLID_SPAN_HTTP_ATTRS_NUMBERS(V)                                      \
   V(kSpanHttpStatusCode, uint64_t, status_code, http.status_code)
