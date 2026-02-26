@@ -10,10 +10,12 @@
 #include "env-inl.h"
 #include "nlohmann/json.hpp"
 #include "nsuv-inl.h"
+#include "opentelemetry/metrics/sync_instruments.h"
 #include "opentelemetry/sdk/common/env_variables.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/logs/recordable.h"
 #include "opentelemetry/sdk/trace/recordable.h"
+#include "opentelemetry/semconv/http_metrics.h"
 #include "opentelemetry/semconv/incubating/deployment_attributes.h"
 #include "opentelemetry/semconv/incubating/host_attributes.h"
 #include "opentelemetry/semconv/incubating/os_attributes.h"
@@ -38,10 +40,11 @@ using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
 using LogsRecordable = opentelemetry::sdk::logs::Recordable;
 using opentelemetry::sdk::common::OwnedAttributeType;
 using opentelemetry::sdk::metrics::AggregationTemporality;
-using opentelemetry::sdk::metrics::MetricData;
+using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
 using opentelemetry::sdk::metrics::InstrumentDescriptor;
 using opentelemetry::sdk::metrics::InstrumentType;
 using opentelemetry::sdk::metrics::InstrumentValueType;
+using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::PointAttributes;
 using opentelemetry::sdk::metrics::PointDataAttributes;
 using opentelemetry::sdk::metrics::SumPointData;
@@ -49,18 +52,15 @@ using opentelemetry::sdk::metrics::ValueType;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::sdk::trace::Recordable;
-using opentelemetry::trace::SpanContext;
-using opentelemetry::trace::SpanId;
-using opentelemetry::trace::SpanKind;
-using opentelemetry::trace::TraceFlags;
-using opentelemetry::trace::TraceId;
 using opentelemetry::semconv::deployment::kDeploymentEnvironmentName;
 using opentelemetry::semconv::host::kHostArch;
 using opentelemetry::semconv::host::kHostCpuModelName;
 using opentelemetry::semconv::host::kHostName;
+using opentelemetry::semconv::http::kMetricHttpClientRequestDuration;
+using opentelemetry::semconv::http::kMetricHttpServerRequestDuration;
+using opentelemetry::semconv::http::unitMetricHttpClientRequestDuration;
+using opentelemetry::semconv::http::unitMetricHttpServerRequestDuration;
 using opentelemetry::semconv::os::kOsType;
-using opentelemetry::trace::propagation::detail::HexToBinary;
-using opentelemetry::trace::propagation::detail::IsValidHex;
 using opentelemetry::semconv::process::kProcessCreationTime;
 using opentelemetry::semconv::process::kProcessExecutablePath;
 using opentelemetry::semconv::process::kProcessOwner;
@@ -69,11 +69,18 @@ using opentelemetry::semconv::process::kProcessRuntimeDescription;
 using opentelemetry::semconv::process::kProcessRuntimeName;
 using opentelemetry::semconv::process::kProcessRuntimeVersion;
 using opentelemetry::semconv::process::kProcessTitle;
-using opentelemetry::semconv::service::kServiceName;
 using opentelemetry::semconv::service::kServiceInstanceId;
+using opentelemetry::semconv::service::kServiceName;
 using opentelemetry::semconv::service::kServiceVersion;
 using opentelemetry::semconv::thread::kThreadId;
 using opentelemetry::semconv::thread::kThreadName;
+using opentelemetry::trace::SpanContext;
+using opentelemetry::trace::SpanId;
+using opentelemetry::trace::SpanKind;
+using opentelemetry::trace::TraceFlags;
+using opentelemetry::trace::TraceId;
+using opentelemetry::trace::propagation::detail::HexToBinary;
+using opentelemetry::trace::propagation::detail::IsValidHex;
 
 namespace node {
 namespace nsolid {
@@ -574,6 +581,61 @@ NSOLID_ENV_METRICS_NUMBERS(V)
               {{ 0.5, stor.http_server_median },
                { 0.99, stor.http_server99_ptile }},
               attrs);
+}
+
+void fill_http_histograms(
+    std::vector<MetricData>& metrics,  // NOLINT(runtime/references)
+    const ThreadMetrics::MetricsStor& stor,
+    SharedPointDataAttributes http_client_points,
+    SharedPointDataAttributes http_server_points,
+    bool use_snake_case,
+    uint64_t start_timestamp_ms,
+    uint64_t end_timestamp_ms) {
+  if (end_timestamp_ms == 0) end_timestamp_ms = stor.timestamp;
+  time_point end{
+      duration_cast<time_point::duration>(milliseconds(end_timestamp_ms))};
+  time_point start = process_start;
+  if (start_timestamp_ms != 0) {
+    start = time_point{
+        duration_cast<time_point::duration>(milliseconds(start_timestamp_ms))};
+    if (start > end) {
+      start = end;
+    }
+  }
+
+  // Merge thread-level attributes into each point and emit one MetricData
+  // per histogram type containing all per-attribute-combo points.
+  auto emit = [&metrics, &stor, &start, &end](
+                  const char* metric_name,
+                  const char* unit,
+                  SharedPointDataAttributes points) {
+    if (!points || points->empty()) return;
+    std::vector<PointDataAttributes> enriched;
+    enriched.reserve(points->size());
+    for (const auto& pt : *points) {
+      PointAttributes attrs = pt.attributes;
+      attrs.insert({kThreadId, static_cast<int64_t>(stor.thread_id)});
+      attrs.insert({kThreadName, stor.thread_name});
+      enriched.push_back({std::move(attrs), pt.point_data});
+    }
+    MetricData metric_data{InstrumentDescriptor{metric_name,
+                                                "",
+                                                unit,
+                                                InstrumentType::kHistogram,
+                                                InstrumentValueType::kDouble},
+                           AggregationTemporality::kDelta,
+                           SystemTimestamp{start},
+                           SystemTimestamp{end},
+                           std::move(enriched)};
+    metrics.push_back(std::move(metric_data));
+  };
+
+  emit(kMetricHttpClientRequestDuration,
+       unitMetricHttpClientRequestDuration,
+       http_client_points);
+  emit(kMetricHttpServerRequestDuration,
+       unitMetricHttpServerRequestDuration,
+       http_server_points);
 }
 
 void fill_log_recordable(LogsRecordable* recordable,

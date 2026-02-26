@@ -7,6 +7,8 @@
     'include_dirs': [
       '../../../src/',
       '../../../deps/nsuv/include/',
+      '../../../deps/opentelemetry-cpp/api/include',
+      '../../../deps/opentelemetry-cpp/sdk/include',
       '../../../deps/protobuf/src',
       '../../../deps/protobuf/third_party/abseil-cpp',
       '../../../deps/v8',
