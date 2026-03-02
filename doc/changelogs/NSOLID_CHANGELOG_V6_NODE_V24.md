@@ -2,6 +2,23 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-03-02, Version 24.14.0-nsolid-v6.2.1 'Krypton'
+
+### Commits
+
+* \[[`252ea7fdf1`](https://github.com/nodesource/nsolid/commit/252ea7fdf1)] - Merge tag 'v24.14.0' into node-v24.14.0-nsolid-v6.2.1-release (Santiago Gimeno)
+* \[[`369ce34beb`](https://github.com/nodesource/nsolid/commit/369ce34beb)] - **agents**: fix http\_client percentile calculation (Santiago Gimeno) [#424](https://github.com/nodesource/nsolid/pull/424)
+* \[[`8ad264131c`](https://github.com/nodesource/nsolid/commit/8ad264131c)] - **agents**: fix infinite recursion on \~CommandStream (Santiago Gimeno) [#412](https://github.com/nodesource/nsolid/pull/412)
+* \[[`c491885463`](https://github.com/nodesource/nsolid/commit/c491885463)] - **agents**: on grpc add appVersion field to info msg (Santiago Gimeno) [#413](https://github.com/nodesource/nsolid/pull/413)
+* \[[`2c84a6a5ee`](https://github.com/nodesource/nsolid/commit/2c84a6a5ee)] - **agents**: fix otel-cpp warning when setting creds (Santiago Gimeno)
+* \[[`a9ac92fe61`](https://github.com/nodesource/nsolid/commit/a9ac92fe61)] - **agents**: increase gRPC timeout from 10 to 60 secs (Santiago Gimeno)
+* \[[`c4442b3d98`](https://github.com/nodesource/nsolid/commit/c4442b3d98)] - **build**: avoid try/except inside a loop (Santiago Gimeno) [#419](https://github.com/nodesource/nsolid/pull/419)
+* \[[`9394bd4778`](https://github.com/nodesource/nsolid/commit/9394bd4778)] - **deps**: update libcurl to 8.18.0 (Santiago Gimeno) [#407](https://github.com/nodesource/nsolid/pull/407)
+* \[[`80c4caf393`](https://github.com/nodesource/nsolid/commit/80c4caf393)] - **deps**: update libsodium to 1.0.21 (Santiago Gimeno) [#408](https://github.com/nodesource/nsolid/pull/408)
+* \[[`c9d341d93c`](https://github.com/nodesource/nsolid/commit/c9d341d93c)] - **src**: fix null pointer deref error in SetWeak cb (Santiago Gimeno)
+* \[[`edcd346843`](https://github.com/nodesource/nsolid/commit/edcd346843)] - **test**: fix failing grpc agent otel tests (Santiago Gimeno) [#421](https://github.com/nodesource/nsolid/pull/421)
+* \[[`f4360e5995`](https://github.com/nodesource/nsolid/commit/f4360e5995)] - **test**: fix flaky test-grpc-continuous-profile (Santiago Gimeno) [#418](https://github.com/nodesource/nsolid/pull/418)
+
 ## 2026-01-14, Version 24.13.0-nsolid-v6.2.0 'Krypton'
 
 ### Commits
