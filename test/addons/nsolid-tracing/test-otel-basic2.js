@@ -9,6 +9,7 @@
 //
 
 const common = require('../../common');
+const assert = require('assert');
 const { checkTracesOnExit } = require('../../common/nsolid-traces');
 const { setupNSolid } = require('./utils');
 const { fixturesDir } = require('../../common/fixtures');
@@ -62,6 +63,10 @@ setupNSolid(common.mustCall(() => {
   let activeContext = api.context.active();
   activeContext = api.trace.setSpan(activeContext, span);
   const childSpan = tracer.startSpan('child', {}, activeContext);
+  assert.strictEqual(childSpan.spanContext().traceId,
+                     span.spanContext().traceId);
+  assert.strictEqual(childSpan.spanContext().traceFlags,
+                     span.spanContext().traceFlags);
   childSpan.setAttribute('child_key', 'child_value');
   childSpan.end();
   span.end();

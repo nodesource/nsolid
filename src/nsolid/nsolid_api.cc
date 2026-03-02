@@ -111,6 +111,7 @@ EnvInst::EnvInst(Environment* env)
       res_arr_(),
       gc_ring_(1000),
       trace_flags_(EnvList::Inst()->GetTracer()->traceFlags()),
+      trace_sample_rate_(EnvList::Inst()->trace_sample_rate()),
       has_metrics_stream_hooks_(
         EnvList::Inst()->metrics_stream_hook_list_.size() > 0) {
   int er;
@@ -1157,14 +1158,40 @@ void EnvList::StoreInfo(const std::string& info) {
 }
 
 
+void EnvList::validate_trace_sample_rate(nlohmann::json* config) {
+  auto incoming_it = config->find("traceSampleRate");
+  if (incoming_it == config->end()) {
+    return;
+  }
+
+  if (!incoming_it->is_number()) {
+    config->erase(incoming_it);
+    return;
+  }
+
+  double candidate = *incoming_it;
+  if (!std::isfinite(candidate) || candidate < 0.0 || candidate > 1.0) {
+    config->erase(incoming_it);
+  }
+}
+
+
+void EnvList::validate_config(nlohmann::json* config) {
+  validate_trace_sample_rate(config);
+}
+
+
 void EnvList::UpdateConfig(const nlohmann::json& config) {
   nlohmann::json curr;
   nlohmann::json old;
+  nlohmann::json validated_config = config;
 
   {
     ns_mutex::scoped_lock lock(configuration_lock_);
     old = current_config_;
-    current_config_.merge_patch(config);
+
+    validate_config(&validated_config);
+    current_config_.merge_patch(validated_config);
     curr = current_config_;
   }
 
@@ -1221,6 +1248,13 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     if (it != config.end() && !it->is_null()) {
       grpc::GrpcAgent::Inst()->start();
     }
+
+    it = curr.find("traceSampleRate");
+    DCHECK(it == curr.end() || it->is_number());
+    if (it != curr.end() && it->is_number()) {
+      update_tracing_sample_rate(*it);
+    }
+
     // If tags have changed, update info_ accordingly
     it = config.find("tags");
     if (it != config.end()) {
@@ -1405,6 +1439,26 @@ void EnvList::update_continuous_profiler(bool enabled, uint64_t interval) {
     continuous_profiler_->Enable(interval);
   } else {
     continuous_profiler_->Disable();
+  }
+}
+
+void EnvList::update_tracing_sample_rate(double rate) {
+  trace_sample_rate_.store(rate);
+  decltype(env_map_) env_map;
+  {
+    // Copy the envinst map so we don't need to keep it locked the entire time.
+    ns_mutex::scoped_lock lock(map_lock_);
+    env_map = env_map_;
+  }
+
+  for (auto& entry : env_map) {
+    SharedEnvInst envinst = entry.second;
+    USE(RunCommand(envinst,
+                   CommandType::InterruptOnly,
+                   +[](SharedEnvInst envinst_sp, double rate) {
+                     envinst_sp->trace_sample_rate_ = rate;
+                   },
+                   rate));
   }
 }
 
@@ -3141,6 +3195,19 @@ static void SetupArrayBufferExports(Isolate* isolate,
   target->Set(context,
               OneByteString(isolate, "trace_flags"),
               Uint32Array::New(trace_flags_ab, 0, 1)).Check();
+
+  double* tsr = envinst_sp->trace_sample_rate();
+  std::unique_ptr<BackingStore> trace_sample_rate_bs =
+    ArrayBuffer::NewBackingStore(tsr,
+                                 sizeof(double),
+                                 [](void*, size_t, void*){},
+                                 nullptr);
+
+  Local<ArrayBuffer> trace_sample_rate_ab =
+    ArrayBuffer::New(isolate, std::move(trace_sample_rate_bs));
+  target->Set(context,
+              OneByteString(isolate, "trace_sample_rate"),
+              Float64Array::New(trace_sample_rate_ab, 0, 1)).Check();
 }
 
 

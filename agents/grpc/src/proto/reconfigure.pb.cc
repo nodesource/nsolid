@@ -56,6 +56,7 @@ inline constexpr ReconfigureBody::Impl_::Impl_(
         redactsnapshots_{false},
         tracingenabled_{false},
         tracingmodulesblacklist_{0u},
+        tracesamplerate_{0},
         contcpuprofile_{false},
         assetsenabled_{false} {}
 
@@ -115,7 +116,7 @@ const ::uint32_t
         protodesc_cold) = {
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_._has_bits_),
-        16, // hasbit index offset
+        17, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.blockedloopthreshold_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.interval_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.pausemetrics_),
@@ -129,6 +130,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.tracingmodulesblacklist_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.contcpuprofile_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.assetsenabled_),
+        PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.tracesamplerate_),
         4,
         5,
         6,
@@ -140,8 +142,9 @@ const ::uint32_t
         0,
         9,
         10,
-        11,
         12,
+        13,
+        11,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureEvent, _impl_._has_bits_),
         5, // hasbit index offset
@@ -154,7 +157,7 @@ const ::uint32_t
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::grpcagent::ReconfigureBody)},
-        {29, sizeof(::grpcagent::ReconfigureEvent)},
+        {31, sizeof(::grpcagent::ReconfigureEvent)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::grpcagent::_ReconfigureBody_default_instance_._instance,
@@ -163,7 +166,7 @@ static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
 const char descriptor_table_protodef_reconfigure_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n\021reconfigure.proto\022\tgrpcagent\032\014common.p"
-    "roto\"\323\004\n\017ReconfigureBody\022!\n\024blockedLoopT"
+    "roto\"\205\005\n\017ReconfigureBody\022!\n\024blockedLoopT"
     "hreshold\030\001 \001(\004H\000\210\001\001\022\025\n\010interval\030\002 \001(\004H\001\210"
     "\001\001\022\031\n\014pauseMetrics\030\003 \001(\010H\002\210\001\001\022\034\n\017promise"
     "Tracking\030\004 \001(\010H\003\210\001\001\022\034\n\017redactSnapshots\030\005"
@@ -172,15 +175,17 @@ const char descriptor_table_protodef_reconfigure_2eproto[] ABSL_ATTRIBUTE_SECTIO
     "\001\001\022\014\n\004tags\030\t \003(\t\022\033\n\016tracingEnabled\030\n \001(\010"
     "H\010\210\001\001\022$\n\027tracingModulesBlacklist\030\013 \001(\rH\t"
     "\210\001\001\022\033\n\016contCpuProfile\030\014 \001(\010H\n\210\001\001\022\032\n\rasse"
-    "tsEnabled\030\r \001(\010H\013\210\001\001B\027\n\025_blockedLoopThre"
-    "sholdB\013\n\t_intervalB\017\n\r_pauseMetricsB\022\n\020_"
-    "promiseTrackingB\022\n\020_redactSnapshotsB\t\n\007_"
-    "statsdB\017\n\r_statsdBucketB\r\n\013_statsdTagsB\021"
-    "\n\017_tracingEnabledB\032\n\030_tracingModulesBlac"
-    "klistB\021\n\017_contCpuProfileB\020\n\016_assetsEnabl"
-    "ed\"g\n\020ReconfigureEvent\022)\n\006common\030\001 \001(\0132\031"
-    ".grpcagent.CommonResponse\022(\n\004body\030\002 \001(\0132"
-    "\032.grpcagent.ReconfigureBodyb\006proto3"
+    "tsEnabled\030\r \001(\010H\013\210\001\001\022\034\n\017traceSampleRate\030"
+    "\016 \001(\001H\014\210\001\001B\027\n\025_blockedLoopThresholdB\013\n\t_"
+    "intervalB\017\n\r_pauseMetricsB\022\n\020_promiseTra"
+    "ckingB\022\n\020_redactSnapshotsB\t\n\007_statsdB\017\n\r"
+    "_statsdBucketB\r\n\013_statsdTagsB\021\n\017_tracing"
+    "EnabledB\032\n\030_tracingModulesBlacklistB\021\n\017_"
+    "contCpuProfileB\020\n\016_assetsEnabledB\022\n\020_tra"
+    "ceSampleRate\"g\n\020ReconfigureEvent\022)\n\006comm"
+    "on\030\001 \001(\0132\031.grpcagent.CommonResponse\022(\n\004b"
+    "ody\030\002 \001(\0132\032.grpcagent.ReconfigureBodyb\006p"
+    "roto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_reconfigure_2eproto_deps[1] = {
@@ -190,7 +195,7 @@ static ::absl::once_flag descriptor_table_reconfigure_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_reconfigure_2eproto = {
     false,
     false,
-    755,
+    805,
     descriptor_table_protodef_reconfigure_2eproto,
     "reconfigure.proto",
     &descriptor_table_reconfigure_2eproto_once,
@@ -369,16 +374,16 @@ ReconfigureBody::GetClassData() const {
   return ReconfigureBody_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<4, 13, 0, 74, 2>
+const ::_pbi::TcParseTable<4, 14, 0, 74, 2>
 ReconfigureBody::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_._has_bits_),
     0, // no _extensions_
-    13, 120,  // max_field_number, fast_idx_mask
+    14, 120,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294959104,  // skipmap
+    4294950912,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    13,  // num_field_entries
+    14,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     ReconfigureBody_class_data_.base(),
@@ -434,14 +439,17 @@ ReconfigureBody::_table_ = {
      {88, 10, 0,
       PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.tracingmodulesblacklist_)}},
     // optional bool contCpuProfile = 12;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ReconfigureBody, _impl_.contcpuprofile_), 11>(),
-     {96, 11, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ReconfigureBody, _impl_.contcpuprofile_), 12>(),
+     {96, 12, 0,
       PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.contcpuprofile_)}},
     // optional bool assetsEnabled = 13;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ReconfigureBody, _impl_.assetsenabled_), 12>(),
-     {104, 12, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ReconfigureBody, _impl_.assetsenabled_), 13>(),
+     {104, 13, 0,
       PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.assetsenabled_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // optional double traceSampleRate = 14;
+    {::_pbi::TcParser::FastF64S1,
+     {113, 11, 0,
+      PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.tracesamplerate_)}},
     {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
@@ -469,9 +477,11 @@ ReconfigureBody::_table_ = {
     // optional uint32 tracingModulesBlacklist = 11;
     {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.tracingmodulesblacklist_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
     // optional bool contCpuProfile = 12;
-    {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.contcpuprofile_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.contcpuprofile_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // optional bool assetsEnabled = 13;
-    {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.assetsenabled_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.assetsenabled_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    // optional double traceSampleRate = 14;
+    {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.tracesamplerate_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
   }},
   // no aux_entries
   {{
@@ -510,7 +520,7 @@ PROTOBUF_NOINLINE void ReconfigureBody::Clear() {
         reinterpret_cast<char*>(&_impl_.promisetracking_) -
         reinterpret_cast<char*>(&_impl_.blockedloopthreshold_)) + sizeof(_impl_.promisetracking_));
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00001f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
     ::memset(&_impl_.redactsnapshots_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.assetsenabled_) -
         reinterpret_cast<char*>(&_impl_.redactsnapshots_)) + sizeof(_impl_.assetsenabled_));
@@ -622,17 +632,24 @@ PROTOBUF_NOINLINE void ReconfigureBody::Clear() {
   }
 
   // optional bool contCpuProfile = 12;
-  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteBoolToArray(
         12, this_._internal_contcpuprofile(), target);
   }
 
   // optional bool assetsEnabled = 13;
-  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteBoolToArray(
         13, this_._internal_assetsenabled(), target);
+  }
+
+  // optional double traceSampleRate = 14;
+  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        14, this_._internal_tracesamplerate(), target);
   }
 
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -660,7 +677,8 @@ PROTOBUF_NOINLINE void ReconfigureBody::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  total_size += ::absl::popcount(0x00001bc0U & cached_has_bits) * 2;
+  total_size += static_cast<bool>(0x00000800U & cached_has_bits) * 9;
+  total_size += ::absl::popcount(0x000033c0U & cached_has_bits) * 2;
   if (BatchCheckHasBit(cached_has_bits, 0x0000003fU)) {
     // repeated string tags = 9;
     if (CheckHasBitForRepeated(cached_has_bits, 0x00000001U)) {
@@ -751,7 +769,7 @@ void ReconfigureBody::MergeImpl(::google::protobuf::MessageLite& to_msg,
       _this->_impl_.promisetracking_ = from._impl_.promisetracking_;
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00001f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
       _this->_impl_.redactsnapshots_ = from._impl_.redactsnapshots_;
     }
@@ -762,9 +780,12 @@ void ReconfigureBody::MergeImpl(::google::protobuf::MessageLite& to_msg,
       _this->_impl_.tracingmodulesblacklist_ = from._impl_.tracingmodulesblacklist_;
     }
     if (CheckHasBit(cached_has_bits, 0x00000800U)) {
-      _this->_impl_.contcpuprofile_ = from._impl_.contcpuprofile_;
+      _this->_impl_.tracesamplerate_ = from._impl_.tracesamplerate_;
     }
     if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+      _this->_impl_.contcpuprofile_ = from._impl_.contcpuprofile_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       _this->_impl_.assetsenabled_ = from._impl_.assetsenabled_;
     }
   }
