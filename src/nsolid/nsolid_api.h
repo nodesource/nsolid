@@ -272,6 +272,7 @@ class EnvInst {
   inline std::pair<uint64_t, uint64_t> provider_times();
   bool can_call_into_js() const;
   uint32_t* get_trace_flags() { return &trace_flags_; }
+  double* trace_sample_rate() { return &trace_sample_rate_; }
 
   std::atomic<bool> metrics_paused = { false };
 
@@ -412,6 +413,7 @@ class EnvInst {
 
   std::string thread_name_;
   uint32_t trace_flags_;
+  double trace_sample_rate_;
   bool has_metrics_stream_hooks_;
 
   nsuv::ns_mutex source_files_lock_;
@@ -590,6 +592,9 @@ class EnvList {
     return is_alive_.load(std::memory_order_relaxed);
   }
   inline uint64_t main_thread_id() { return main_thread_id_; }
+  inline double trace_sample_rate() {
+    return trace_sample_rate_.load(std::memory_order_relaxed);
+  }
 
   tracing::TracerImpl* GetTracer() { return &tracer_; }
   void send_trace_data(tracing::SpanItem&& item);
@@ -635,6 +640,11 @@ class EnvList {
   void update_continuous_profiler(bool enabled, uint64_t interval);
   void refresh_min_blocked_threshold();
 
+  void validate_trace_sample_rate(nlohmann::json* config);
+  void validate_config(nlohmann::json* config);
+
+  void update_tracing_sample_rate(double rate);
+
 #ifdef __POSIX__
   static void signal_handler_(int signum, siginfo_t* info, void* ucontext);
   void setup_signal_handler(int signum);
@@ -658,6 +668,7 @@ class EnvList {
   static void datapoint_cb_(std::queue<MetricsStream::Datapoint>&&);
 
   std::atomic<bool> is_alive_ = { true };
+  std::atomic<double> trace_sample_rate_ = { 1.0 };
   // unique agent id
   const std::string agent_id_ = utils::generate_unique_id();
   // The thread that EnvList is running on.

@@ -18,6 +18,7 @@ message ReconfigureBody {
   optional uint32 tracingModulesBlacklist = 11;
   optional bool contCpuProfile = 12;
   optional bool assetsEnabled = 13;
+  optional double traceSampleRate = 14;
 }
 
 message ReconfigureEvent {

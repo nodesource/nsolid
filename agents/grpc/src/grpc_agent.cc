@@ -385,6 +385,11 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   if (it != config.end()) {
     body->set_assetsenabled(*it);
   }
+
+  it = config.find("traceSampleRate");
+  if (it != config.end()) {
+    body->set_tracesamplerate(*it);
+  }
 }
 
 void PopulateStartupTimesEvent(grpcagent::StartupTimesEvent* st_events,
@@ -1756,6 +1761,10 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
 
   if (body.has_assetsenabled()) {
       out["assetsEnabled"] = body.assetsenabled();
+  }
+
+  if (body.has_tracesamplerate()) {
+      out["traceSampleRate"] = body.tracesamplerate();
   }
 
   DebugJSON("Reconfigure out: \n%s\n", out);

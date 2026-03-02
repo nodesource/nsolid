@@ -38,7 +38,7 @@ function checkReconfigureData(reconfigure, metadata, requestId, agentId, nsolidC
     if (!key.startsWith('_')) {
       // Convert string numbers to actual numbers for comparison
       if (typeof value === 'string' && !Number.isNaN(Number(value))) {
-        normalizedReconfigBody[key] = parseInt(value, 10);
+        normalizedReconfigBody[key] = Number(value);
       } else {
         normalizedReconfigBody[key] = value;
       }
@@ -109,6 +109,7 @@ const newConfigs = [
   [ 'tracingEnabled', true ],
   [ 'tracingModulesBlacklist', 1 ],
   [ 'contCpuProfile', true ],
+  [ 'traceSampleRate', 0.4 ],
 ];
 
 tests.push({
@@ -162,6 +163,44 @@ tests.push({
 
         // Start sending configs
         await sendConfigs(0);
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should preserve previous traceSampleRate for invalid values',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = getEnv(port);
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+
+        const client = new TestClient([], opts);
+        const agentId = await client.id();
+
+        await grpcServer.reconfigure(agentId, { traceSampleRate: 0.4 });
+        let nsolidConfig = await client.config();
+        assert.strictEqual(nsolidConfig.traceSampleRate, 0.4);
+
+        const invalidRates = [2, -0.5];
+        for (const invalidRate of invalidRates) {
+          await grpcServer.reconfigure(agentId, { traceSampleRate: invalidRate });
+          nsolidConfig = await client.config();
+          assert.strictEqual(
+            nsolidConfig.traceSampleRate,
+            0.4,
+            `Expected traceSampleRate to remain 0.4 after invalid update ${invalidRate}, got ${nsolidConfig.traceSampleRate}`,
+          );
+        }
+
+        await client.shutdown(0);
+        grpcServer.close();
+        resolve();
       }));
     });
   },

@@ -233,6 +233,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
     kRedactSnapshotsFieldNumber = 5,
     kTracingEnabledFieldNumber = 10,
     kTracingModulesBlacklistFieldNumber = 11,
+    kTraceSampleRateFieldNumber = 14,
     kContCpuProfileFieldNumber = 12,
     kAssetsEnabledFieldNumber = 13,
   };
@@ -396,6 +397,17 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
   void _internal_set_tracingmodulesblacklist(::uint32_t value);
 
   public:
+  // optional double traceSampleRate = 14;
+  bool has_tracesamplerate() const;
+  void clear_tracesamplerate() ;
+  double tracesamplerate() const;
+  void set_tracesamplerate(double value);
+
+  private:
+  double _internal_tracesamplerate() const;
+  void _internal_set_tracesamplerate(double value);
+
+  public:
   // optional bool contCpuProfile = 12;
   [[nodiscard]] bool has_contcpuprofile()
       const;
@@ -424,7 +436,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 13,
+  static const ::google::protobuf::internal::TcParseTable<4, 14,
                                    0, 74,
                                    2>
       _table_;
@@ -459,6 +471,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
     bool redactsnapshots_;
     bool tracingenabled_;
     ::uint32_t tracingmodulesblacklist_;
+    double tracesamplerate_;
     bool contcpuprofile_;
     bool assetsenabled_;
     PROTOBUF_TSAN_DECLARE_MEMBER
@@ -1189,14 +1202,14 @@ inline void ReconfigureBody::_internal_set_tracingmodulesblacklist(::uint32_t va
 
 // optional bool contCpuProfile = 12;
 inline bool ReconfigureBody::has_contcpuprofile() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
   return value;
 }
 inline void ReconfigureBody::clear_contcpuprofile() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.contcpuprofile_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000800U);
+                  0x00001000U);
 }
 inline bool ReconfigureBody::contcpuprofile() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.contCpuProfile)
@@ -1204,7 +1217,7 @@ inline bool ReconfigureBody::contcpuprofile() const {
 }
 inline void ReconfigureBody::set_contcpuprofile(bool value) {
   _internal_set_contcpuprofile(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.contCpuProfile)
 }
 inline bool ReconfigureBody::_internal_contcpuprofile() const {
@@ -1218,14 +1231,14 @@ inline void ReconfigureBody::_internal_set_contcpuprofile(bool value) {
 
 // optional bool assetsEnabled = 13;
 inline bool ReconfigureBody::has_assetsenabled() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
   return value;
 }
 inline void ReconfigureBody::clear_assetsenabled() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.assetsenabled_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00001000U);
+                  0x00002000U);
 }
 inline bool ReconfigureBody::assetsenabled() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.assetsEnabled)
@@ -1233,7 +1246,7 @@ inline bool ReconfigureBody::assetsenabled() const {
 }
 inline void ReconfigureBody::set_assetsenabled(bool value) {
   _internal_set_assetsenabled(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.assetsEnabled)
 }
 inline bool ReconfigureBody::_internal_assetsenabled() const {
@@ -1243,6 +1256,35 @@ inline bool ReconfigureBody::_internal_assetsenabled() const {
 inline void ReconfigureBody::_internal_set_assetsenabled(bool value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.assetsenabled_ = value;
+}
+
+// optional double traceSampleRate = 14;
+inline bool ReconfigureBody::has_tracesamplerate() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
+  return value;
+}
+inline void ReconfigureBody::clear_tracesamplerate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.tracesamplerate_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000800U);
+}
+inline double ReconfigureBody::tracesamplerate() const {
+  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.traceSampleRate)
+  return _internal_tracesamplerate();
+}
+inline void ReconfigureBody::set_tracesamplerate(double value) {
+  _internal_set_tracesamplerate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.traceSampleRate)
+}
+inline double ReconfigureBody::_internal_tracesamplerate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.tracesamplerate_;
+}
+inline void ReconfigureBody::_internal_set_tracesamplerate(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.tracesamplerate_ = value;
 }
 
 // -------------------------------------------------------------------
