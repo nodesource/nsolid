@@ -2,6 +2,19 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-03-02, Version 22.22.0-nsolid-v6.2.1 'Jod'
+
+### Commits
+
+* \[[`e32e4403fa`](https://github.com/nodesource/nsolid/commit/e32e4403fa)] - **agents**: fix http\_client percentile calculation (Santiago Gimeno) [#424](https://github.com/nodesource/nsolid/pull/424)
+* \[[`e6447e7940`](https://github.com/nodesource/nsolid/commit/e6447e7940)] - **agents**: fix infinite recursion on \~CommandStream (Santiago Gimeno) [#412](https://github.com/nodesource/nsolid/pull/412)
+* \[[`27e01121e6`](https://github.com/nodesource/nsolid/commit/27e01121e6)] - **agents**: on grpc add appVersion field to info msg (Santiago Gimeno) [#413](https://github.com/nodesource/nsolid/pull/413)
+* \[[`2c19e370e0`](https://github.com/nodesource/nsolid/commit/2c19e370e0)] - **build**: avoid try/except inside a loop (Santiago Gimeno) [#419](https://github.com/nodesource/nsolid/pull/419)
+* \[[`50218af606`](https://github.com/nodesource/nsolid/commit/50218af606)] - **deps**: update libcurl to 8.18.0 (Santiago Gimeno) [#407](https://github.com/nodesource/nsolid/pull/407)
+* \[[`2cc12d2e4c`](https://github.com/nodesource/nsolid/commit/2cc12d2e4c)] - **deps**: update libsodium to 1.0.21 (Santiago Gimeno) [#408](https://github.com/nodesource/nsolid/pull/408)
+* \[[`daa9b4d73e`](https://github.com/nodesource/nsolid/commit/daa9b4d73e)] - **test**: fix failing grpc agent otel tests (Santiago Gimeno) [#421](https://github.com/nodesource/nsolid/pull/421)
+* \[[`31d62d2fed`](https://github.com/nodesource/nsolid/commit/31d62d2fed)] - **test**: fix flaky test-grpc-continuous-profile (Santiago Gimeno) [#418](https://github.com/nodesource/nsolid/pull/418)
+
 ## 2026-01-14, Version 22.22.0-nsolid-v6.2.0 'Jod'
 
 ### Commits
