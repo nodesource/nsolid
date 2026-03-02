@@ -104,10 +104,10 @@ platforms. This is true regardless of entries in the table below.
 | ---------------- | ---------------- | --------------------------------- | ------------ | ------------------------------------ |
 | GNU/Linux        | x64              | kernel >= 4.18[^1], glibc >= 2.28 | Tier 1       | e.g. Ubuntu 20.04, Debian 10, RHEL 8 |
 | GNU/Linux        | x64              | kernel >= 3.10, musl >= 1.1.19    | Experimental | e.g. Alpine 3.8                      |
-| GNU/Linux        | x86              | kernel >= 3.10, glibc >= 2.17     | Experimental | Downgraded as of Node.js 10          |
+| GNU/Linux        | x86              | kernel >= 3.10, glibc >= 2.17     | Experimental | Downgraded as of N\|Solid 10         |
 | GNU/Linux        | arm64            | kernel >= 4.18[^1], glibc >= 2.28 | Tier 1       | e.g. Ubuntu 20.04, Debian 10, RHEL 8 |
-| GNU/Linux        | armv7            | kernel >= 4.18[^1], glibc >= 2.28 | Experimental | Downgraded as of Node.js 24          |
-| GNU/Linux        | armv6            | kernel >= 4.14, glibc >= 2.24     | Experimental | Downgraded as of Node.js 12          |
+| GNU/Linux        | armv7            | kernel >= 4.18[^1], glibc >= 2.28 | Experimental | Downgraded as of N\|Solid 24         |
+| GNU/Linux        | armv6            | kernel >= 4.14, glibc >= 2.24     | Experimental | Downgraded as of N\|Solid 12         |
 | GNU/Linux        | ppc64le >=power8 | kernel >= 4.18[^1], glibc >= 2.28 | Tier 2       | e.g. Ubuntu 20.04, RHEL 8            |
 | GNU/Linux        | s390x            | kernel >= 4.18[^1], glibc >= 2.28 | Tier 2       | e.g. RHEL 8                          |
 | GNU/Linux        | loong64          | kernel >= 5.19, glibc >= 2.36     | Experimental |                                      |
@@ -347,7 +347,7 @@ tools/test.py parallel/test-stream-*  # The test/ prefix can be omitted
 tools/test.py "test/parallel/test-stream-*"
 ```
 
-The whildcard `*` can be used in any part of the path. For example, to run all tests
+The wildcard `*` can be used in any part of the path. For example, to run all tests
 with a name that starts with `test-inspector-`, regardless of the directory they are in:
 
 ```bash
@@ -530,7 +530,7 @@ $ gdb /opt/nsolid-debug/nsolid core.nsolid.8.1535359906
 related bugs. ASan builds are currently only supported on linux.
 
 The `--debug` is not necessary and will slow down build and testing, but it can
-show clear stacktrace if ASan hits an issue.
+show a clear stack trace if ASan hits an issue.
 
 ```bash
 ./configure --debug --enable-asan && make -j4
@@ -592,14 +592,35 @@ the number of parallel build tasks (`-j<n>`).
 
 #### Prerequisites
 
-##### Manual install
+You may need to disable vcpkg integration if you encounter a link error about symbol
+redefinition related to zlib.lib(zlib1.dll), even if you never installed it by hand,
+as vcpkg is part of CLion and Visual Studio now.
 
-* [Python 3.11](https://apps.microsoft.com/store/detail/python-311/9NRWMJP3717K)
+```powershell
+# find your vcpkg
+# double check vcpkg install the related file
+vcpkg owns zlib.lib
+vcpkg owns zlib1.dll
+vcpkg integrate remove
+```
+
+Refs:
+
+1. <https://github.com/nodejs/node/issues/24448>
+2. <https://github.com/microsoft/vcpkg/issues/37518> / <https://github.com/microsoft/vcpkg/discussions/37546>
+3. [vcpkg](https://github.com/microsoft/vcpkg/)
+
+#### Windows Prerequisites
+
+##### Option 1: Manual install
+
+* The current [version of Python][Python downloads] by following the instructions in
+  [Using Python on Windows][].
 * The "Desktop development with C++" workload from
   [Visual Studio 2022 (17.6 or newer)](https://visualstudio.microsoft.com/downloads/)
   or the "C++ build tools" workload from the
   [Build Tools](https://aka.ms/vs/17/release/vs_buildtools.exe),
-  with the default optional components. Starting with Node.js v24, ClangCL is required to compile
+  with the default optional components. As of N|Solid 24.0.0, ClangCL is required to compile
   on Windows. To enable it, two additional components are needed:
   * C++ Clang Compiler for Windows (Microsoft.VisualStudio.Component.VC.Llvm.Clang)
   * MSBuild support for LLVM toolset (Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset)
@@ -619,16 +640,89 @@ Optional requirements for compiling for Windows on ARM (ARM64):
 
 * Visual Studio 17.6.0 or newer
   > **Note:** There is [a bug](https://github.com/nodejs/build/issues/3739) in `17.10.x`
-  > preventing Node.js from compiling.
+  > preventing N|Solid from compiling.
 * Visual Studio optional components
   * Visual C++ compilers and libraries for ARM64
   * Visual C++ ATL for ARM64
 * Windows 10 SDK 10.0.17763.0 or newer
 
+When building with ClangCL, if the output from `vcbuild.bat` shows that the components are not installed
+even when the Visual Studio Installer shows that they are installed, try removing the components
+first and then reinstalling them again.
+
+##### Option 2: Automated install with WinGet
+
+[WinGet configuration files](https://github.com/nodesource/nsolid/tree/main/.configurations)
+can be used to install all the required prerequisites for N|Solid development
+easily. These files will install the following
+[WinGet](https://learn.microsoft.com/en-us/windows/package-manager/winget/) packages:
+
+* Git for Windows with the `git` and Unix tools added to the `PATH`
+* `Python 3.14`
+* `Visual Studio 2022` (Community, Enterprise or Professional)
+* `Visual Studio 2022 Build Tools` with Visual C++ workload, Clang and ClangToolset
+* `NetWide Assembler`
+
+To install N|Solid prerequisites from PowerShell Terminal:
+
+```powershell
+winget configure .\.configurations\configuration.dsc.yaml
+```
+
+##### Option 3: Automated install with Boxstarter
+
+A [Boxstarter](https://boxstarter.org/) script can be used for easy setup of
+Windows systems with all the required prerequisites for N|Solid development.
+This script will install the following [Chocolatey](https://chocolatey.org/)
+packages:
+
+* [Git for Windows](https://chocolatey.org/packages/git) with the `git` and
+  Unix tools added to the `PATH`
+* [Python 3.x](https://chocolatey.org/packages/python)
+* [Visual Studio 2022 Build Tools](https://chocolatey.org/packages/visualstudio2022buildtools)
+  with [Visual C++ workload](https://chocolatey.org/packages/visualstudio2022-workload-vctools)
+* [NetWide Assembler](https://chocolatey.org/packages/nasm)
+
+To install N|Solid prerequisites using
+[Boxstarter WebLauncher](https://boxstarter.org/weblauncher), visit
+<https://boxstarter.org/package/nr/url?https://raw.githubusercontent.com/nodesource/nsolid/HEAD/tools/bootstrap/windows_boxstarter>
+with a supported browser.
+
+Alternatively, you can use PowerShell. Run those commands from
+an elevated (Administrator) PowerShell terminal:
+
+```powershell
+Set-ExecutionPolicy Unrestricted -Force
+iex ((New-Object System.Net.WebClient).DownloadString('https://boxstarter.org/bootstrapper.ps1'))
+get-boxstarter -Force
+Install-BoxstarterPackage https://raw.githubusercontent.com/nodesource/nsolid/HEAD/tools/bootstrap/windows_boxstarter -DisableReboots
+refreshenv
+```
+
+The entire installation using Boxstarter will take up approximately 10 GB of
+disk space.
+
 #### Building N|Solid
 
-If the path to your build directory contains a space or a non-ASCII character,
-the build will likely fail.
+* Remember to first clone the N|Solid repository with the Git command
+  and head to the directory that Git created; If you haven't already
+  ```powershell
+  git clone https://github.com/nodesource/nsolid.git
+  cd nsolid
+  ```
+
+> \[!TIP]
+> If you are building from a Windows machine, symlinks are disabled by default, and can be enabled by cloning
+> with the `-c core.symlinks=true` flag.
+>
+> ```powershell
+> git clone -c core.symlinks=true <repository_url>
+> ```
+
+* If the path to your build directory contains a space or a non-ASCII character,
+  the build will likely fail
+
+To start the build process:
 
 ```powershell
 .\vcbuild
@@ -646,6 +740,11 @@ To test if N|Solid was built correctly:
 Release\nsolid -e "console.log('Hello from N|Solid', process.version)"
 ```
 
+> \[!TIP]
+> On Windows, creating symlinks requires [Developer Mode][] to be enabled or
+> running the command as Administrator. Tests that rely on creating symlinks
+> may fail with EPERM errors if symlink creation is not permitted.
+
 ##### Using ccache:
 
 Follow <https://github.com/ccache/ccache/wiki/MS-Visual-Studio>, and you
@@ -660,14 +759,14 @@ cp c:\ccache\ccache.exe c:\ccache\cl.exe
 ```
 
 With newer version of Visual Studio, it may need the copy to be `clang-cl.exe`
-instead. If the output of `vcbuild.bat` suggestion missing `clang-cl.exe`, copy
+instead. If the output of `vcbuild.bat` suggests missing `clang-cl.exe`, copy
 it differently:
 
 ```powershell
 cp c:\ccache\ccache.exe c:\ccache\clang-cl.exe
 ```
 
-When building Node.js, provide a path to your ccache via the option:
+When building N|Solid, provide a path to your ccache via the option:
 
 ```powershell
 .\vcbuild.bat ccache c:\ccache\
@@ -906,4 +1005,7 @@ by opening a pull request against the registry available at
 <https://github.com/nodesource/nsolid/blob/HEAD/doc/abi_version_registry.json>.
 
 [AIX toolbox]: https://www.ibm.com/support/pages/aix-toolbox-open-source-software-overview
+[Developer Mode]: https://learn.microsoft.com/en-us/windows/advanced-settings/developer-mode
+[Python downloads]: https://www.python.org/downloads/
 [Python versions]: https://devguide.python.org/versions/
+[Using Python on Windows]: https://docs.python.org/3/using/windows.html

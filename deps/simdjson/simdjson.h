@@ -1,4 +1,4 @@
-/* auto-generated on 2025-10-27 16:52:41 -0400. version 4.1.0 Do not edit! */
+/* auto-generated on 2025-12-17 20:32:36 -0500. version 4.2.4 Do not edit! */
 /* including simdjson.h:  */
 /* begin file simdjson.h */
 #ifndef SIMDJSON_H
@@ -58,6 +58,11 @@
 #else
 #define SIMDJSON_CPLUSPLUS __cplusplus
 #endif
+#endif
+
+// C++ 26
+#if !defined(SIMDJSON_CPLUSPLUS26) && (SIMDJSON_CPLUSPLUS >= 202402L) // update when the standard is finalized
+#define SIMDJSON_CPLUSPLUS26 1
 #endif
 
 // C++ 23
@@ -2508,7 +2513,7 @@ namespace std {
 #define SIMDJSON_SIMDJSON_VERSION_H
 
 /** The version of simdjson being used (major.minor.revision) */
-#define SIMDJSON_VERSION "4.1.0"
+#define SIMDJSON_VERSION "4.2.4"
 
 namespace simdjson {
 enum {
@@ -2519,11 +2524,11 @@ enum {
   /**
    * The minor version (major.MINOR.revision) of simdjson being used.
    */
-  SIMDJSON_VERSION_MINOR = 1,
+  SIMDJSON_VERSION_MINOR = 2,
   /**
    * The revision (major.minor.REVISION) of simdjson being used.
    */
-  SIMDJSON_VERSION_REVISION = 0
+  SIMDJSON_VERSION_REVISION = 4
 };
 } // namespace simdjson
 
@@ -2810,6 +2815,8 @@ struct simdjson_result_base : protected std::pair<T, error_code> {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
 }; // struct simdjson_result_base
 
 } // namespace internal
@@ -2921,6 +2928,8 @@ struct simdjson_result : public internal::simdjson_result_base<T> {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
 }; // struct simdjson_result
 
 #if SIMDJSON_EXCEPTIONS
@@ -3190,7 +3199,7 @@ consteval std::string consteval_to_quoted_escaped(std::string_view input) {
 
 
 #if SIMDJSON_SUPPORTS_CONCEPTS
-template <std::size_t N>
+template <size_t N>
 struct fixed_string {
     constexpr fixed_string(const char (&str)[N])  {
         for (std::size_t i = 0; i < N; ++i) {
@@ -3199,6 +3208,20 @@ struct fixed_string {
     }
     char data[N];
     constexpr std::string_view view() const { return {data, N - 1}; }
+    constexpr size_t size() const { return N ; }
+    constexpr operator std::string_view() const { return view(); }
+    constexpr char operator[](std::size_t index) const { return data[index]; }
+    constexpr bool operator==(const fixed_string& other) const {
+        if (N != other.size()) {
+            return false;
+        }
+        for (std::size_t i = 0; i < N; ++i) {
+            if (data[i] != other.data[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 template <std::size_t N>
 fixed_string(const char (&)[N]) -> fixed_string<N>;
@@ -4146,6 +4169,19 @@ struct padded_string final {
    **/
   inline static simdjson_result<padded_string> load(std::string_view path) noexcept;
 
+    #if defined(_WIN32) && SIMDJSON_CPLUSPLUS17
+  /**
+   * This function accepts a wide string path (UTF-16) and converts it to
+   * UTF-8 before loading the file. This allows windows users to work
+   * with unicode file paths without manually converting the paths everytime.
+   *
+   * @return IO_ERROR on error, including conversion failures.
+   *
+   * @param path the path to the file as a wide string.
+  **/
+    inline static simdjson_result<padded_string> load(std::wstring_view path) noexcept;
+  #endif
+
 private:
   padded_string &operator=(const padded_string &o) = delete;
   padded_string(const padded_string &o) = delete;
@@ -4457,6 +4493,7 @@ inline padded_string_view pad_with_reserve(std::string& s) noexcept {
 /* end file simdjson/padded_string_view-inl.h */
 
 #include <climits>
+#include <cwchar>
 
 namespace simdjson {
 namespace internal {
@@ -4634,6 +4671,62 @@ inline simdjson_result<padded_string> padded_string::load(std::string_view filen
   return s;
 }
 
+#if defined(_WIN32) && SIMDJSON_CPLUSPLUS17
+inline simdjson_result<padded_string> padded_string::load(std::wstring_view filename) noexcept {
+  // Open the file using the wide characters
+  SIMDJSON_PUSH_DISABLE_WARNINGS
+  SIMDJSON_DISABLE_DEPRECATED_WARNING // Disable CRT_SECURE warning on MSVC: manually verified this is safe
+  std::FILE *fp = _wfopen(filename.data(), L"rb");
+  SIMDJSON_POP_DISABLE_WARNINGS
+
+  if (fp == nullptr) {
+    return IO_ERROR;
+  }
+
+  // Get the file size
+  int ret;
+#if SIMDJSON_VISUAL_STUDIO && !SIMDJSON_IS_32BITS
+  ret = _fseeki64(fp, 0, SEEK_END);
+#else
+  ret = std::fseek(fp, 0, SEEK_END);
+#endif // _WIN64
+  if(ret < 0) {
+    std::fclose(fp);
+    return IO_ERROR;
+  }
+#if SIMDJSON_VISUAL_STUDIO && !SIMDJSON_IS_32BITS
+  __int64 llen = _ftelli64(fp);
+  if(llen == -1L) {
+    std::fclose(fp);
+    return IO_ERROR;
+  }
+#else
+  long llen = std::ftell(fp);
+  if((llen < 0) || (llen == LONG_MAX)) {
+    std::fclose(fp);
+    return IO_ERROR;
+  }
+#endif
+
+  // Allocate the padded_string
+  size_t len = static_cast<size_t>(llen);
+  padded_string s(len);
+  if (s.data() == nullptr) {
+    std::fclose(fp);
+    return MEMALLOC;
+  }
+
+  // Read the padded_string
+  std::rewind(fp);
+  size_t bytes_read = std::fread(s.data(), 1, len, fp);
+  if (std::fclose(fp) != 0 || bytes_read != len) {
+    return IO_ERROR;
+  }
+
+  return s;
+}
+#endif
+
 } // namespace simdjson
 
 inline simdjson::padded_string operator ""_padded(const char *str, size_t len) {
@@ -4641,7 +4734,7 @@ inline simdjson::padded_string operator ""_padded(const char *str, size_t len) {
 }
 #ifdef __cpp_char8_t
 inline simdjson::padded_string operator ""_padded(const char8_t *str, size_t len) {
-  return simdjson::padded_string(reinterpret_cast<const char8_t *>(str), len);
+  return simdjson::padded_string(reinterpret_cast<const char *>(str), len);
 }
 #endif
 #endif // SIMDJSON_PADDED_STRING_INL_H
@@ -5294,10 +5387,7 @@ public:
    *
    * ### std::string references
    *
-   * If you pass a mutable std::string reference (std::string&), the parser will seek to extend
-   * its capacity to SIMDJSON_PADDING bytes beyond the end of the string.
-   *
-   * Whenever you pass an std::string reference, the parser will access the bytes beyond the end of
+   * Whenever you pass an std::string reference, the parser may access the bytes beyond the end of
    * the string but before the end of the allocated memory (std::string::capacity()).
    * If you are using a sanitizer that checks for reading uninitialized bytes or std::string's
    * container-overflow checks, you may encounter sanitizer warnings.
@@ -5329,7 +5419,7 @@ public:
   /** @overload parse(const uint8_t *buf, size_t len, bool realloc_if_needed) */
   simdjson_inline simdjson_result<element> parse(const char *buf, size_t len, bool realloc_if_needed = true) & noexcept;
   simdjson_inline simdjson_result<element> parse(const char *buf, size_t len, bool realloc_if_needed = true) && =delete;
-  /** @overload parse(const uint8_t *buf, size_t len, bool realloc_if_needed) */
+  /** @overload parse(const std::string &) */
   simdjson_inline simdjson_result<element> parse(const std::string &s) & noexcept;
   simdjson_inline simdjson_result<element> parse(const std::string &s) && =delete;
   /** @overload parse(const uint8_t *buf, size_t len, bool realloc_if_needed) */
@@ -10595,7 +10685,665 @@ extern SIMDJSON_DLLIMPORTEXPORT const double power_of_ten[];
 // The truncated powers of five from 5^-342 all the way to 5^308
 // The mantissa is truncated to 128 bits, and
 // never rounded up. Uses about 10KB.
-extern SIMDJSON_DLLIMPORTEXPORT const uint64_t power_of_five_128[];
+// We use the template trick to allow inclusion in multiple translation units.
+#if SIMDJSON_STATIC_REFLECTION
+template <typename unused = void>  struct powers_template {
+constexpr static uint64_t power_of_five_128[651*2]= {
+        0xeef453d6923bd65a,0x113faa2906a13b3f,
+        0x9558b4661b6565f8,0x4ac7ca59a424c507,
+        0xbaaee17fa23ebf76,0x5d79bcf00d2df649,
+        0xe95a99df8ace6f53,0xf4d82c2c107973dc,
+        0x91d8a02bb6c10594,0x79071b9b8a4be869,
+        0xb64ec836a47146f9,0x9748e2826cdee284,
+        0xe3e27a444d8d98b7,0xfd1b1b2308169b25,
+        0x8e6d8c6ab0787f72,0xfe30f0f5e50e20f7,
+        0xb208ef855c969f4f,0xbdbd2d335e51a935,
+        0xde8b2b66b3bc4723,0xad2c788035e61382,
+        0x8b16fb203055ac76,0x4c3bcb5021afcc31,
+        0xaddcb9e83c6b1793,0xdf4abe242a1bbf3d,
+        0xd953e8624b85dd78,0xd71d6dad34a2af0d,
+        0x87d4713d6f33aa6b,0x8672648c40e5ad68,
+        0xa9c98d8ccb009506,0x680efdaf511f18c2,
+        0xd43bf0effdc0ba48,0x212bd1b2566def2,
+        0x84a57695fe98746d,0x14bb630f7604b57,
+        0xa5ced43b7e3e9188,0x419ea3bd35385e2d,
+        0xcf42894a5dce35ea,0x52064cac828675b9,
+        0x818995ce7aa0e1b2,0x7343efebd1940993,
+        0xa1ebfb4219491a1f,0x1014ebe6c5f90bf8,
+        0xca66fa129f9b60a6,0xd41a26e077774ef6,
+        0xfd00b897478238d0,0x8920b098955522b4,
+        0x9e20735e8cb16382,0x55b46e5f5d5535b0,
+        0xc5a890362fddbc62,0xeb2189f734aa831d,
+        0xf712b443bbd52b7b,0xa5e9ec7501d523e4,
+        0x9a6bb0aa55653b2d,0x47b233c92125366e,
+        0xc1069cd4eabe89f8,0x999ec0bb696e840a,
+        0xf148440a256e2c76,0xc00670ea43ca250d,
+        0x96cd2a865764dbca,0x380406926a5e5728,
+        0xbc807527ed3e12bc,0xc605083704f5ecf2,
+        0xeba09271e88d976b,0xf7864a44c633682e,
+        0x93445b8731587ea3,0x7ab3ee6afbe0211d,
+        0xb8157268fdae9e4c,0x5960ea05bad82964,
+        0xe61acf033d1a45df,0x6fb92487298e33bd,
+        0x8fd0c16206306bab,0xa5d3b6d479f8e056,
+        0xb3c4f1ba87bc8696,0x8f48a4899877186c,
+        0xe0b62e2929aba83c,0x331acdabfe94de87,
+        0x8c71dcd9ba0b4925,0x9ff0c08b7f1d0b14,
+        0xaf8e5410288e1b6f,0x7ecf0ae5ee44dd9,
+        0xdb71e91432b1a24a,0xc9e82cd9f69d6150,
+        0x892731ac9faf056e,0xbe311c083a225cd2,
+        0xab70fe17c79ac6ca,0x6dbd630a48aaf406,
+        0xd64d3d9db981787d,0x92cbbccdad5b108,
+        0x85f0468293f0eb4e,0x25bbf56008c58ea5,
+        0xa76c582338ed2621,0xaf2af2b80af6f24e,
+        0xd1476e2c07286faa,0x1af5af660db4aee1,
+        0x82cca4db847945ca,0x50d98d9fc890ed4d,
+        0xa37fce126597973c,0xe50ff107bab528a0,
+        0xcc5fc196fefd7d0c,0x1e53ed49a96272c8,
+        0xff77b1fcbebcdc4f,0x25e8e89c13bb0f7a,
+        0x9faacf3df73609b1,0x77b191618c54e9ac,
+        0xc795830d75038c1d,0xd59df5b9ef6a2417,
+        0xf97ae3d0d2446f25,0x4b0573286b44ad1d,
+        0x9becce62836ac577,0x4ee367f9430aec32,
+        0xc2e801fb244576d5,0x229c41f793cda73f,
+        0xf3a20279ed56d48a,0x6b43527578c1110f,
+        0x9845418c345644d6,0x830a13896b78aaa9,
+        0xbe5691ef416bd60c,0x23cc986bc656d553,
+        0xedec366b11c6cb8f,0x2cbfbe86b7ec8aa8,
+        0x94b3a202eb1c3f39,0x7bf7d71432f3d6a9,
+        0xb9e08a83a5e34f07,0xdaf5ccd93fb0cc53,
+        0xe858ad248f5c22c9,0xd1b3400f8f9cff68,
+        0x91376c36d99995be,0x23100809b9c21fa1,
+        0xb58547448ffffb2d,0xabd40a0c2832a78a,
+        0xe2e69915b3fff9f9,0x16c90c8f323f516c,
+        0x8dd01fad907ffc3b,0xae3da7d97f6792e3,
+        0xb1442798f49ffb4a,0x99cd11cfdf41779c,
+        0xdd95317f31c7fa1d,0x40405643d711d583,
+        0x8a7d3eef7f1cfc52,0x482835ea666b2572,
+        0xad1c8eab5ee43b66,0xda3243650005eecf,
+        0xd863b256369d4a40,0x90bed43e40076a82,
+        0x873e4f75e2224e68,0x5a7744a6e804a291,
+        0xa90de3535aaae202,0x711515d0a205cb36,
+        0xd3515c2831559a83,0xd5a5b44ca873e03,
+        0x8412d9991ed58091,0xe858790afe9486c2,
+        0xa5178fff668ae0b6,0x626e974dbe39a872,
+        0xce5d73ff402d98e3,0xfb0a3d212dc8128f,
+        0x80fa687f881c7f8e,0x7ce66634bc9d0b99,
+        0xa139029f6a239f72,0x1c1fffc1ebc44e80,
+        0xc987434744ac874e,0xa327ffb266b56220,
+        0xfbe9141915d7a922,0x4bf1ff9f0062baa8,
+        0x9d71ac8fada6c9b5,0x6f773fc3603db4a9,
+        0xc4ce17b399107c22,0xcb550fb4384d21d3,
+        0xf6019da07f549b2b,0x7e2a53a146606a48,
+        0x99c102844f94e0fb,0x2eda7444cbfc426d,
+        0xc0314325637a1939,0xfa911155fefb5308,
+        0xf03d93eebc589f88,0x793555ab7eba27ca,
+        0x96267c7535b763b5,0x4bc1558b2f3458de,
+        0xbbb01b9283253ca2,0x9eb1aaedfb016f16,
+        0xea9c227723ee8bcb,0x465e15a979c1cadc,
+        0x92a1958a7675175f,0xbfacd89ec191ec9,
+        0xb749faed14125d36,0xcef980ec671f667b,
+        0xe51c79a85916f484,0x82b7e12780e7401a,
+        0x8f31cc0937ae58d2,0xd1b2ecb8b0908810,
+        0xb2fe3f0b8599ef07,0x861fa7e6dcb4aa15,
+        0xdfbdcece67006ac9,0x67a791e093e1d49a,
+        0x8bd6a141006042bd,0xe0c8bb2c5c6d24e0,
+        0xaecc49914078536d,0x58fae9f773886e18,
+        0xda7f5bf590966848,0xaf39a475506a899e,
+        0x888f99797a5e012d,0x6d8406c952429603,
+        0xaab37fd7d8f58178,0xc8e5087ba6d33b83,
+        0xd5605fcdcf32e1d6,0xfb1e4a9a90880a64,
+        0x855c3be0a17fcd26,0x5cf2eea09a55067f,
+        0xa6b34ad8c9dfc06f,0xf42faa48c0ea481e,
+        0xd0601d8efc57b08b,0xf13b94daf124da26,
+        0x823c12795db6ce57,0x76c53d08d6b70858,
+        0xa2cb1717b52481ed,0x54768c4b0c64ca6e,
+        0xcb7ddcdda26da268,0xa9942f5dcf7dfd09,
+        0xfe5d54150b090b02,0xd3f93b35435d7c4c,
+        0x9efa548d26e5a6e1,0xc47bc5014a1a6daf,
+        0xc6b8e9b0709f109a,0x359ab6419ca1091b,
+        0xf867241c8cc6d4c0,0xc30163d203c94b62,
+        0x9b407691d7fc44f8,0x79e0de63425dcf1d,
+        0xc21094364dfb5636,0x985915fc12f542e4,
+        0xf294b943e17a2bc4,0x3e6f5b7b17b2939d,
+        0x979cf3ca6cec5b5a,0xa705992ceecf9c42,
+        0xbd8430bd08277231,0x50c6ff782a838353,
+        0xece53cec4a314ebd,0xa4f8bf5635246428,
+        0x940f4613ae5ed136,0x871b7795e136be99,
+        0xb913179899f68584,0x28e2557b59846e3f,
+        0xe757dd7ec07426e5,0x331aeada2fe589cf,
+        0x9096ea6f3848984f,0x3ff0d2c85def7621,
+        0xb4bca50b065abe63,0xfed077a756b53a9,
+        0xe1ebce4dc7f16dfb,0xd3e8495912c62894,
+        0x8d3360f09cf6e4bd,0x64712dd7abbbd95c,
+        0xb080392cc4349dec,0xbd8d794d96aacfb3,
+        0xdca04777f541c567,0xecf0d7a0fc5583a0,
+        0x89e42caaf9491b60,0xf41686c49db57244,
+        0xac5d37d5b79b6239,0x311c2875c522ced5,
+        0xd77485cb25823ac7,0x7d633293366b828b,
+        0x86a8d39ef77164bc,0xae5dff9c02033197,
+        0xa8530886b54dbdeb,0xd9f57f830283fdfc,
+        0xd267caa862a12d66,0xd072df63c324fd7b,
+        0x8380dea93da4bc60,0x4247cb9e59f71e6d,
+        0xa46116538d0deb78,0x52d9be85f074e608,
+        0xcd795be870516656,0x67902e276c921f8b,
+        0x806bd9714632dff6,0xba1cd8a3db53b6,
+        0xa086cfcd97bf97f3,0x80e8a40eccd228a4,
+        0xc8a883c0fdaf7df0,0x6122cd128006b2cd,
+        0xfad2a4b13d1b5d6c,0x796b805720085f81,
+        0x9cc3a6eec6311a63,0xcbe3303674053bb0,
+        0xc3f490aa77bd60fc,0xbedbfc4411068a9c,
+        0xf4f1b4d515acb93b,0xee92fb5515482d44,
+        0x991711052d8bf3c5,0x751bdd152d4d1c4a,
+        0xbf5cd54678eef0b6,0xd262d45a78a0635d,
+        0xef340a98172aace4,0x86fb897116c87c34,
+        0x9580869f0e7aac0e,0xd45d35e6ae3d4da0,
+        0xbae0a846d2195712,0x8974836059cca109,
+        0xe998d258869facd7,0x2bd1a438703fc94b,
+        0x91ff83775423cc06,0x7b6306a34627ddcf,
+        0xb67f6455292cbf08,0x1a3bc84c17b1d542,
+        0xe41f3d6a7377eeca,0x20caba5f1d9e4a93,
+        0x8e938662882af53e,0x547eb47b7282ee9c,
+        0xb23867fb2a35b28d,0xe99e619a4f23aa43,
+        0xdec681f9f4c31f31,0x6405fa00e2ec94d4,
+        0x8b3c113c38f9f37e,0xde83bc408dd3dd04,
+        0xae0b158b4738705e,0x9624ab50b148d445,
+        0xd98ddaee19068c76,0x3badd624dd9b0957,
+        0x87f8a8d4cfa417c9,0xe54ca5d70a80e5d6,
+        0xa9f6d30a038d1dbc,0x5e9fcf4ccd211f4c,
+        0xd47487cc8470652b,0x7647c3200069671f,
+        0x84c8d4dfd2c63f3b,0x29ecd9f40041e073,
+        0xa5fb0a17c777cf09,0xf468107100525890,
+        0xcf79cc9db955c2cc,0x7182148d4066eeb4,
+        0x81ac1fe293d599bf,0xc6f14cd848405530,
+        0xa21727db38cb002f,0xb8ada00e5a506a7c,
+        0xca9cf1d206fdc03b,0xa6d90811f0e4851c,
+        0xfd442e4688bd304a,0x908f4a166d1da663,
+        0x9e4a9cec15763e2e,0x9a598e4e043287fe,
+        0xc5dd44271ad3cdba,0x40eff1e1853f29fd,
+        0xf7549530e188c128,0xd12bee59e68ef47c,
+        0x9a94dd3e8cf578b9,0x82bb74f8301958ce,
+        0xc13a148e3032d6e7,0xe36a52363c1faf01,
+        0xf18899b1bc3f8ca1,0xdc44e6c3cb279ac1,
+        0x96f5600f15a7b7e5,0x29ab103a5ef8c0b9,
+        0xbcb2b812db11a5de,0x7415d448f6b6f0e7,
+        0xebdf661791d60f56,0x111b495b3464ad21,
+        0x936b9fcebb25c995,0xcab10dd900beec34,
+        0xb84687c269ef3bfb,0x3d5d514f40eea742,
+        0xe65829b3046b0afa,0xcb4a5a3112a5112,
+        0x8ff71a0fe2c2e6dc,0x47f0e785eaba72ab,
+        0xb3f4e093db73a093,0x59ed216765690f56,
+        0xe0f218b8d25088b8,0x306869c13ec3532c,
+        0x8c974f7383725573,0x1e414218c73a13fb,
+        0xafbd2350644eeacf,0xe5d1929ef90898fa,
+        0xdbac6c247d62a583,0xdf45f746b74abf39,
+        0x894bc396ce5da772,0x6b8bba8c328eb783,
+        0xab9eb47c81f5114f,0x66ea92f3f326564,
+        0xd686619ba27255a2,0xc80a537b0efefebd,
+        0x8613fd0145877585,0xbd06742ce95f5f36,
+        0xa798fc4196e952e7,0x2c48113823b73704,
+        0xd17f3b51fca3a7a0,0xf75a15862ca504c5,
+        0x82ef85133de648c4,0x9a984d73dbe722fb,
+        0xa3ab66580d5fdaf5,0xc13e60d0d2e0ebba,
+        0xcc963fee10b7d1b3,0x318df905079926a8,
+        0xffbbcfe994e5c61f,0xfdf17746497f7052,
+        0x9fd561f1fd0f9bd3,0xfeb6ea8bedefa633,
+        0xc7caba6e7c5382c8,0xfe64a52ee96b8fc0,
+        0xf9bd690a1b68637b,0x3dfdce7aa3c673b0,
+        0x9c1661a651213e2d,0x6bea10ca65c084e,
+        0xc31bfa0fe5698db8,0x486e494fcff30a62,
+        0xf3e2f893dec3f126,0x5a89dba3c3efccfa,
+        0x986ddb5c6b3a76b7,0xf89629465a75e01c,
+        0xbe89523386091465,0xf6bbb397f1135823,
+        0xee2ba6c0678b597f,0x746aa07ded582e2c,
+        0x94db483840b717ef,0xa8c2a44eb4571cdc,
+        0xba121a4650e4ddeb,0x92f34d62616ce413,
+        0xe896a0d7e51e1566,0x77b020baf9c81d17,
+        0x915e2486ef32cd60,0xace1474dc1d122e,
+        0xb5b5ada8aaff80b8,0xd819992132456ba,
+        0xe3231912d5bf60e6,0x10e1fff697ed6c69,
+        0x8df5efabc5979c8f,0xca8d3ffa1ef463c1,
+        0xb1736b96b6fd83b3,0xbd308ff8a6b17cb2,
+        0xddd0467c64bce4a0,0xac7cb3f6d05ddbde,
+        0x8aa22c0dbef60ee4,0x6bcdf07a423aa96b,
+        0xad4ab7112eb3929d,0x86c16c98d2c953c6,
+        0xd89d64d57a607744,0xe871c7bf077ba8b7,
+        0x87625f056c7c4a8b,0x11471cd764ad4972,
+        0xa93af6c6c79b5d2d,0xd598e40d3dd89bcf,
+        0xd389b47879823479,0x4aff1d108d4ec2c3,
+        0x843610cb4bf160cb,0xcedf722a585139ba,
+        0xa54394fe1eedb8fe,0xc2974eb4ee658828,
+        0xce947a3da6a9273e,0x733d226229feea32,
+        0x811ccc668829b887,0x806357d5a3f525f,
+        0xa163ff802a3426a8,0xca07c2dcb0cf26f7,
+        0xc9bcff6034c13052,0xfc89b393dd02f0b5,
+        0xfc2c3f3841f17c67,0xbbac2078d443ace2,
+        0x9d9ba7832936edc0,0xd54b944b84aa4c0d,
+        0xc5029163f384a931,0xa9e795e65d4df11,
+        0xf64335bcf065d37d,0x4d4617b5ff4a16d5,
+        0x99ea0196163fa42e,0x504bced1bf8e4e45,
+        0xc06481fb9bcf8d39,0xe45ec2862f71e1d6,
+        0xf07da27a82c37088,0x5d767327bb4e5a4c,
+        0x964e858c91ba2655,0x3a6a07f8d510f86f,
+        0xbbe226efb628afea,0x890489f70a55368b,
+        0xeadab0aba3b2dbe5,0x2b45ac74ccea842e,
+        0x92c8ae6b464fc96f,0x3b0b8bc90012929d,
+        0xb77ada0617e3bbcb,0x9ce6ebb40173744,
+        0xe55990879ddcaabd,0xcc420a6a101d0515,
+        0x8f57fa54c2a9eab6,0x9fa946824a12232d,
+        0xb32df8e9f3546564,0x47939822dc96abf9,
+        0xdff9772470297ebd,0x59787e2b93bc56f7,
+        0x8bfbea76c619ef36,0x57eb4edb3c55b65a,
+        0xaefae51477a06b03,0xede622920b6b23f1,
+        0xdab99e59958885c4,0xe95fab368e45eced,
+        0x88b402f7fd75539b,0x11dbcb0218ebb414,
+        0xaae103b5fcd2a881,0xd652bdc29f26a119,
+        0xd59944a37c0752a2,0x4be76d3346f0495f,
+        0x857fcae62d8493a5,0x6f70a4400c562ddb,
+        0xa6dfbd9fb8e5b88e,0xcb4ccd500f6bb952,
+        0xd097ad07a71f26b2,0x7e2000a41346a7a7,
+        0x825ecc24c873782f,0x8ed400668c0c28c8,
+        0xa2f67f2dfa90563b,0x728900802f0f32fa,
+        0xcbb41ef979346bca,0x4f2b40a03ad2ffb9,
+        0xfea126b7d78186bc,0xe2f610c84987bfa8,
+        0x9f24b832e6b0f436,0xdd9ca7d2df4d7c9,
+        0xc6ede63fa05d3143,0x91503d1c79720dbb,
+        0xf8a95fcf88747d94,0x75a44c6397ce912a,
+        0x9b69dbe1b548ce7c,0xc986afbe3ee11aba,
+        0xc24452da229b021b,0xfbe85badce996168,
+        0xf2d56790ab41c2a2,0xfae27299423fb9c3,
+        0x97c560ba6b0919a5,0xdccd879fc967d41a,
+        0xbdb6b8e905cb600f,0x5400e987bbc1c920,
+        0xed246723473e3813,0x290123e9aab23b68,
+        0x9436c0760c86e30b,0xf9a0b6720aaf6521,
+        0xb94470938fa89bce,0xf808e40e8d5b3e69,
+        0xe7958cb87392c2c2,0xb60b1d1230b20e04,
+        0x90bd77f3483bb9b9,0xb1c6f22b5e6f48c2,
+        0xb4ecd5f01a4aa828,0x1e38aeb6360b1af3,
+        0xe2280b6c20dd5232,0x25c6da63c38de1b0,
+        0x8d590723948a535f,0x579c487e5a38ad0e,
+        0xb0af48ec79ace837,0x2d835a9df0c6d851,
+        0xdcdb1b2798182244,0xf8e431456cf88e65,
+        0x8a08f0f8bf0f156b,0x1b8e9ecb641b58ff,
+        0xac8b2d36eed2dac5,0xe272467e3d222f3f,
+        0xd7adf884aa879177,0x5b0ed81dcc6abb0f,
+        0x86ccbb52ea94baea,0x98e947129fc2b4e9,
+        0xa87fea27a539e9a5,0x3f2398d747b36224,
+        0xd29fe4b18e88640e,0x8eec7f0d19a03aad,
+        0x83a3eeeef9153e89,0x1953cf68300424ac,
+        0xa48ceaaab75a8e2b,0x5fa8c3423c052dd7,
+        0xcdb02555653131b6,0x3792f412cb06794d,
+        0x808e17555f3ebf11,0xe2bbd88bbee40bd0,
+        0xa0b19d2ab70e6ed6,0x5b6aceaeae9d0ec4,
+        0xc8de047564d20a8b,0xf245825a5a445275,
+        0xfb158592be068d2e,0xeed6e2f0f0d56712,
+        0x9ced737bb6c4183d,0x55464dd69685606b,
+        0xc428d05aa4751e4c,0xaa97e14c3c26b886,
+        0xf53304714d9265df,0xd53dd99f4b3066a8,
+        0x993fe2c6d07b7fab,0xe546a8038efe4029,
+        0xbf8fdb78849a5f96,0xde98520472bdd033,
+        0xef73d256a5c0f77c,0x963e66858f6d4440,
+        0x95a8637627989aad,0xdde7001379a44aa8,
+        0xbb127c53b17ec159,0x5560c018580d5d52,
+        0xe9d71b689dde71af,0xaab8f01e6e10b4a6,
+        0x9226712162ab070d,0xcab3961304ca70e8,
+        0xb6b00d69bb55c8d1,0x3d607b97c5fd0d22,
+        0xe45c10c42a2b3b05,0x8cb89a7db77c506a,
+        0x8eb98a7a9a5b04e3,0x77f3608e92adb242,
+        0xb267ed1940f1c61c,0x55f038b237591ed3,
+        0xdf01e85f912e37a3,0x6b6c46dec52f6688,
+        0x8b61313bbabce2c6,0x2323ac4b3b3da015,
+        0xae397d8aa96c1b77,0xabec975e0a0d081a,
+        0xd9c7dced53c72255,0x96e7bd358c904a21,
+        0x881cea14545c7575,0x7e50d64177da2e54,
+        0xaa242499697392d2,0xdde50bd1d5d0b9e9,
+        0xd4ad2dbfc3d07787,0x955e4ec64b44e864,
+        0x84ec3c97da624ab4,0xbd5af13bef0b113e,
+        0xa6274bbdd0fadd61,0xecb1ad8aeacdd58e,
+        0xcfb11ead453994ba,0x67de18eda5814af2,
+        0x81ceb32c4b43fcf4,0x80eacf948770ced7,
+        0xa2425ff75e14fc31,0xa1258379a94d028d,
+        0xcad2f7f5359a3b3e,0x96ee45813a04330,
+        0xfd87b5f28300ca0d,0x8bca9d6e188853fc,
+        0x9e74d1b791e07e48,0x775ea264cf55347e,
+        0xc612062576589dda,0x95364afe032a81a0,
+        0xf79687aed3eec551,0x3a83ddbd83f52210,
+        0x9abe14cd44753b52,0xc4926a9672793580,
+        0xc16d9a0095928a27,0x75b7053c0f178400,
+        0xf1c90080baf72cb1,0x5324c68b12dd6800,
+        0x971da05074da7bee,0xd3f6fc16ebca8000,
+        0xbce5086492111aea,0x88f4bb1ca6bd0000,
+        0xec1e4a7db69561a5,0x2b31e9e3d0700000,
+        0x9392ee8e921d5d07,0x3aff322e62600000,
+        0xb877aa3236a4b449,0x9befeb9fad487c3,
+        0xe69594bec44de15b,0x4c2ebe687989a9b4,
+        0x901d7cf73ab0acd9,0xf9d37014bf60a11,
+        0xb424dc35095cd80f,0x538484c19ef38c95,
+        0xe12e13424bb40e13,0x2865a5f206b06fba,
+        0x8cbccc096f5088cb,0xf93f87b7442e45d4,
+        0xafebff0bcb24aafe,0xf78f69a51539d749,
+        0xdbe6fecebdedd5be,0xb573440e5a884d1c,
+        0x89705f4136b4a597,0x31680a88f8953031,
+        0xabcc77118461cefc,0xfdc20d2b36ba7c3e,
+        0xd6bf94d5e57a42bc,0x3d32907604691b4d,
+        0x8637bd05af6c69b5,0xa63f9a49c2c1b110,
+        0xa7c5ac471b478423,0xfcf80dc33721d54,
+        0xd1b71758e219652b,0xd3c36113404ea4a9,
+        0x83126e978d4fdf3b,0x645a1cac083126ea,
+        0xa3d70a3d70a3d70a,0x3d70a3d70a3d70a4,
+        0xcccccccccccccccc,0xcccccccccccccccd,
+        0x8000000000000000,0x0,
+        0xa000000000000000,0x0,
+        0xc800000000000000,0x0,
+        0xfa00000000000000,0x0,
+        0x9c40000000000000,0x0,
+        0xc350000000000000,0x0,
+        0xf424000000000000,0x0,
+        0x9896800000000000,0x0,
+        0xbebc200000000000,0x0,
+        0xee6b280000000000,0x0,
+        0x9502f90000000000,0x0,
+        0xba43b74000000000,0x0,
+        0xe8d4a51000000000,0x0,
+        0x9184e72a00000000,0x0,
+        0xb5e620f480000000,0x0,
+        0xe35fa931a0000000,0x0,
+        0x8e1bc9bf04000000,0x0,
+        0xb1a2bc2ec5000000,0x0,
+        0xde0b6b3a76400000,0x0,
+        0x8ac7230489e80000,0x0,
+        0xad78ebc5ac620000,0x0,
+        0xd8d726b7177a8000,0x0,
+        0x878678326eac9000,0x0,
+        0xa968163f0a57b400,0x0,
+        0xd3c21bcecceda100,0x0,
+        0x84595161401484a0,0x0,
+        0xa56fa5b99019a5c8,0x0,
+        0xcecb8f27f4200f3a,0x0,
+        0x813f3978f8940984,0x4000000000000000,
+        0xa18f07d736b90be5,0x5000000000000000,
+        0xc9f2c9cd04674ede,0xa400000000000000,
+        0xfc6f7c4045812296,0x4d00000000000000,
+        0x9dc5ada82b70b59d,0xf020000000000000,
+        0xc5371912364ce305,0x6c28000000000000,
+        0xf684df56c3e01bc6,0xc732000000000000,
+        0x9a130b963a6c115c,0x3c7f400000000000,
+        0xc097ce7bc90715b3,0x4b9f100000000000,
+        0xf0bdc21abb48db20,0x1e86d40000000000,
+        0x96769950b50d88f4,0x1314448000000000,
+        0xbc143fa4e250eb31,0x17d955a000000000,
+        0xeb194f8e1ae525fd,0x5dcfab0800000000,
+        0x92efd1b8d0cf37be,0x5aa1cae500000000,
+        0xb7abc627050305ad,0xf14a3d9e40000000,
+        0xe596b7b0c643c719,0x6d9ccd05d0000000,
+        0x8f7e32ce7bea5c6f,0xe4820023a2000000,
+        0xb35dbf821ae4f38b,0xdda2802c8a800000,
+        0xe0352f62a19e306e,0xd50b2037ad200000,
+        0x8c213d9da502de45,0x4526f422cc340000,
+        0xaf298d050e4395d6,0x9670b12b7f410000,
+        0xdaf3f04651d47b4c,0x3c0cdd765f114000,
+        0x88d8762bf324cd0f,0xa5880a69fb6ac800,
+        0xab0e93b6efee0053,0x8eea0d047a457a00,
+        0xd5d238a4abe98068,0x72a4904598d6d880,
+        0x85a36366eb71f041,0x47a6da2b7f864750,
+        0xa70c3c40a64e6c51,0x999090b65f67d924,
+        0xd0cf4b50cfe20765,0xfff4b4e3f741cf6d,
+        0x82818f1281ed449f,0xbff8f10e7a8921a4,
+        0xa321f2d7226895c7,0xaff72d52192b6a0d,
+        0xcbea6f8ceb02bb39,0x9bf4f8a69f764490,
+        0xfee50b7025c36a08,0x2f236d04753d5b4,
+        0x9f4f2726179a2245,0x1d762422c946590,
+        0xc722f0ef9d80aad6,0x424d3ad2b7b97ef5,
+        0xf8ebad2b84e0d58b,0xd2e0898765a7deb2,
+        0x9b934c3b330c8577,0x63cc55f49f88eb2f,
+        0xc2781f49ffcfa6d5,0x3cbf6b71c76b25fb,
+        0xf316271c7fc3908a,0x8bef464e3945ef7a,
+        0x97edd871cfda3a56,0x97758bf0e3cbb5ac,
+        0xbde94e8e43d0c8ec,0x3d52eeed1cbea317,
+        0xed63a231d4c4fb27,0x4ca7aaa863ee4bdd,
+        0x945e455f24fb1cf8,0x8fe8caa93e74ef6a,
+        0xb975d6b6ee39e436,0xb3e2fd538e122b44,
+        0xe7d34c64a9c85d44,0x60dbbca87196b616,
+        0x90e40fbeea1d3a4a,0xbc8955e946fe31cd,
+        0xb51d13aea4a488dd,0x6babab6398bdbe41,
+        0xe264589a4dcdab14,0xc696963c7eed2dd1,
+        0x8d7eb76070a08aec,0xfc1e1de5cf543ca2,
+        0xb0de65388cc8ada8,0x3b25a55f43294bcb,
+        0xdd15fe86affad912,0x49ef0eb713f39ebe,
+        0x8a2dbf142dfcc7ab,0x6e3569326c784337,
+        0xacb92ed9397bf996,0x49c2c37f07965404,
+        0xd7e77a8f87daf7fb,0xdc33745ec97be906,
+        0x86f0ac99b4e8dafd,0x69a028bb3ded71a3,
+        0xa8acd7c0222311bc,0xc40832ea0d68ce0c,
+        0xd2d80db02aabd62b,0xf50a3fa490c30190,
+        0x83c7088e1aab65db,0x792667c6da79e0fa,
+        0xa4b8cab1a1563f52,0x577001b891185938,
+        0xcde6fd5e09abcf26,0xed4c0226b55e6f86,
+        0x80b05e5ac60b6178,0x544f8158315b05b4,
+        0xa0dc75f1778e39d6,0x696361ae3db1c721,
+        0xc913936dd571c84c,0x3bc3a19cd1e38e9,
+        0xfb5878494ace3a5f,0x4ab48a04065c723,
+        0x9d174b2dcec0e47b,0x62eb0d64283f9c76,
+        0xc45d1df942711d9a,0x3ba5d0bd324f8394,
+        0xf5746577930d6500,0xca8f44ec7ee36479,
+        0x9968bf6abbe85f20,0x7e998b13cf4e1ecb,
+        0xbfc2ef456ae276e8,0x9e3fedd8c321a67e,
+        0xefb3ab16c59b14a2,0xc5cfe94ef3ea101e,
+        0x95d04aee3b80ece5,0xbba1f1d158724a12,
+        0xbb445da9ca61281f,0x2a8a6e45ae8edc97,
+        0xea1575143cf97226,0xf52d09d71a3293bd,
+        0x924d692ca61be758,0x593c2626705f9c56,
+        0xb6e0c377cfa2e12e,0x6f8b2fb00c77836c,
+        0xe498f455c38b997a,0xb6dfb9c0f956447,
+        0x8edf98b59a373fec,0x4724bd4189bd5eac,
+        0xb2977ee300c50fe7,0x58edec91ec2cb657,
+        0xdf3d5e9bc0f653e1,0x2f2967b66737e3ed,
+        0x8b865b215899f46c,0xbd79e0d20082ee74,
+        0xae67f1e9aec07187,0xecd8590680a3aa11,
+        0xda01ee641a708de9,0xe80e6f4820cc9495,
+        0x884134fe908658b2,0x3109058d147fdcdd,
+        0xaa51823e34a7eede,0xbd4b46f0599fd415,
+        0xd4e5e2cdc1d1ea96,0x6c9e18ac7007c91a,
+        0x850fadc09923329e,0x3e2cf6bc604ddb0,
+        0xa6539930bf6bff45,0x84db8346b786151c,
+        0xcfe87f7cef46ff16,0xe612641865679a63,
+        0x81f14fae158c5f6e,0x4fcb7e8f3f60c07e,
+        0xa26da3999aef7749,0xe3be5e330f38f09d,
+        0xcb090c8001ab551c,0x5cadf5bfd3072cc5,
+        0xfdcb4fa002162a63,0x73d9732fc7c8f7f6,
+        0x9e9f11c4014dda7e,0x2867e7fddcdd9afa,
+        0xc646d63501a1511d,0xb281e1fd541501b8,
+        0xf7d88bc24209a565,0x1f225a7ca91a4226,
+        0x9ae757596946075f,0x3375788de9b06958,
+        0xc1a12d2fc3978937,0x52d6b1641c83ae,
+        0xf209787bb47d6b84,0xc0678c5dbd23a49a,
+        0x9745eb4d50ce6332,0xf840b7ba963646e0,
+        0xbd176620a501fbff,0xb650e5a93bc3d898,
+        0xec5d3fa8ce427aff,0xa3e51f138ab4cebe,
+        0x93ba47c980e98cdf,0xc66f336c36b10137,
+        0xb8a8d9bbe123f017,0xb80b0047445d4184,
+        0xe6d3102ad96cec1d,0xa60dc059157491e5,
+        0x9043ea1ac7e41392,0x87c89837ad68db2f,
+        0xb454e4a179dd1877,0x29babe4598c311fb,
+        0xe16a1dc9d8545e94,0xf4296dd6fef3d67a,
+        0x8ce2529e2734bb1d,0x1899e4a65f58660c,
+        0xb01ae745b101e9e4,0x5ec05dcff72e7f8f,
+        0xdc21a1171d42645d,0x76707543f4fa1f73,
+        0x899504ae72497eba,0x6a06494a791c53a8,
+        0xabfa45da0edbde69,0x487db9d17636892,
+        0xd6f8d7509292d603,0x45a9d2845d3c42b6,
+        0x865b86925b9bc5c2,0xb8a2392ba45a9b2,
+        0xa7f26836f282b732,0x8e6cac7768d7141e,
+        0xd1ef0244af2364ff,0x3207d795430cd926,
+        0x8335616aed761f1f,0x7f44e6bd49e807b8,
+        0xa402b9c5a8d3a6e7,0x5f16206c9c6209a6,
+        0xcd036837130890a1,0x36dba887c37a8c0f,
+        0x802221226be55a64,0xc2494954da2c9789,
+        0xa02aa96b06deb0fd,0xf2db9baa10b7bd6c,
+        0xc83553c5c8965d3d,0x6f92829494e5acc7,
+        0xfa42a8b73abbf48c,0xcb772339ba1f17f9,
+        0x9c69a97284b578d7,0xff2a760414536efb,
+        0xc38413cf25e2d70d,0xfef5138519684aba,
+        0xf46518c2ef5b8cd1,0x7eb258665fc25d69,
+        0x98bf2f79d5993802,0xef2f773ffbd97a61,
+        0xbeeefb584aff8603,0xaafb550ffacfd8fa,
+        0xeeaaba2e5dbf6784,0x95ba2a53f983cf38,
+        0x952ab45cfa97a0b2,0xdd945a747bf26183,
+        0xba756174393d88df,0x94f971119aeef9e4,
+        0xe912b9d1478ceb17,0x7a37cd5601aab85d,
+        0x91abb422ccb812ee,0xac62e055c10ab33a,
+        0xb616a12b7fe617aa,0x577b986b314d6009,
+        0xe39c49765fdf9d94,0xed5a7e85fda0b80b,
+        0x8e41ade9fbebc27d,0x14588f13be847307,
+        0xb1d219647ae6b31c,0x596eb2d8ae258fc8,
+        0xde469fbd99a05fe3,0x6fca5f8ed9aef3bb,
+        0x8aec23d680043bee,0x25de7bb9480d5854,
+        0xada72ccc20054ae9,0xaf561aa79a10ae6a,
+        0xd910f7ff28069da4,0x1b2ba1518094da04,
+        0x87aa9aff79042286,0x90fb44d2f05d0842,
+        0xa99541bf57452b28,0x353a1607ac744a53,
+        0xd3fa922f2d1675f2,0x42889b8997915ce8,
+        0x847c9b5d7c2e09b7,0x69956135febada11,
+        0xa59bc234db398c25,0x43fab9837e699095,
+        0xcf02b2c21207ef2e,0x94f967e45e03f4bb,
+        0x8161afb94b44f57d,0x1d1be0eebac278f5,
+        0xa1ba1ba79e1632dc,0x6462d92a69731732,
+        0xca28a291859bbf93,0x7d7b8f7503cfdcfe,
+        0xfcb2cb35e702af78,0x5cda735244c3d43e,
+        0x9defbf01b061adab,0x3a0888136afa64a7,
+        0xc56baec21c7a1916,0x88aaa1845b8fdd0,
+        0xf6c69a72a3989f5b,0x8aad549e57273d45,
+        0x9a3c2087a63f6399,0x36ac54e2f678864b,
+        0xc0cb28a98fcf3c7f,0x84576a1bb416a7dd,
+        0xf0fdf2d3f3c30b9f,0x656d44a2a11c51d5,
+        0x969eb7c47859e743,0x9f644ae5a4b1b325,
+        0xbc4665b596706114,0x873d5d9f0dde1fee,
+        0xeb57ff22fc0c7959,0xa90cb506d155a7ea,
+        0x9316ff75dd87cbd8,0x9a7f12442d588f2,
+        0xb7dcbf5354e9bece,0xc11ed6d538aeb2f,
+        0xe5d3ef282a242e81,0x8f1668c8a86da5fa,
+        0x8fa475791a569d10,0xf96e017d694487bc,
+        0xb38d92d760ec4455,0x37c981dcc395a9ac,
+        0xe070f78d3927556a,0x85bbe253f47b1417,
+        0x8c469ab843b89562,0x93956d7478ccec8e,
+        0xaf58416654a6babb,0x387ac8d1970027b2,
+        0xdb2e51bfe9d0696a,0x6997b05fcc0319e,
+        0x88fcf317f22241e2,0x441fece3bdf81f03,
+        0xab3c2fddeeaad25a,0xd527e81cad7626c3,
+        0xd60b3bd56a5586f1,0x8a71e223d8d3b074,
+        0x85c7056562757456,0xf6872d5667844e49,
+        0xa738c6bebb12d16c,0xb428f8ac016561db,
+        0xd106f86e69d785c7,0xe13336d701beba52,
+        0x82a45b450226b39c,0xecc0024661173473,
+        0xa34d721642b06084,0x27f002d7f95d0190,
+        0xcc20ce9bd35c78a5,0x31ec038df7b441f4,
+        0xff290242c83396ce,0x7e67047175a15271,
+        0x9f79a169bd203e41,0xf0062c6e984d386,
+        0xc75809c42c684dd1,0x52c07b78a3e60868,
+        0xf92e0c3537826145,0xa7709a56ccdf8a82,
+        0x9bbcc7a142b17ccb,0x88a66076400bb691,
+        0xc2abf989935ddbfe,0x6acff893d00ea435,
+        0xf356f7ebf83552fe,0x583f6b8c4124d43,
+        0x98165af37b2153de,0xc3727a337a8b704a,
+        0xbe1bf1b059e9a8d6,0x744f18c0592e4c5c,
+        0xeda2ee1c7064130c,0x1162def06f79df73,
+        0x9485d4d1c63e8be7,0x8addcb5645ac2ba8,
+        0xb9a74a0637ce2ee1,0x6d953e2bd7173692,
+        0xe8111c87c5c1ba99,0xc8fa8db6ccdd0437,
+        0x910ab1d4db9914a0,0x1d9c9892400a22a2,
+        0xb54d5e4a127f59c8,0x2503beb6d00cab4b,
+        0xe2a0b5dc971f303a,0x2e44ae64840fd61d,
+        0x8da471a9de737e24,0x5ceaecfed289e5d2,
+        0xb10d8e1456105dad,0x7425a83e872c5f47,
+        0xdd50f1996b947518,0xd12f124e28f77719,
+        0x8a5296ffe33cc92f,0x82bd6b70d99aaa6f,
+        0xace73cbfdc0bfb7b,0x636cc64d1001550b,
+        0xd8210befd30efa5a,0x3c47f7e05401aa4e,
+        0x8714a775e3e95c78,0x65acfaec34810a71,
+        0xa8d9d1535ce3b396,0x7f1839a741a14d0d,
+        0xd31045a8341ca07c,0x1ede48111209a050,
+        0x83ea2b892091e44d,0x934aed0aab460432,
+        0xa4e4b66b68b65d60,0xf81da84d5617853f,
+        0xce1de40642e3f4b9,0x36251260ab9d668e,
+        0x80d2ae83e9ce78f3,0xc1d72b7c6b426019,
+        0xa1075a24e4421730,0xb24cf65b8612f81f,
+        0xc94930ae1d529cfc,0xdee033f26797b627,
+        0xfb9b7cd9a4a7443c,0x169840ef017da3b1,
+        0x9d412e0806e88aa5,0x8e1f289560ee864e,
+        0xc491798a08a2ad4e,0xf1a6f2bab92a27e2,
+        0xf5b5d7ec8acb58a2,0xae10af696774b1db,
+        0x9991a6f3d6bf1765,0xacca6da1e0a8ef29,
+        0xbff610b0cc6edd3f,0x17fd090a58d32af3,
+        0xeff394dcff8a948e,0xddfc4b4cef07f5b0,
+        0x95f83d0a1fb69cd9,0x4abdaf101564f98e,
+        0xbb764c4ca7a4440f,0x9d6d1ad41abe37f1,
+        0xea53df5fd18d5513,0x84c86189216dc5ed,
+        0x92746b9be2f8552c,0x32fd3cf5b4e49bb4,
+        0xb7118682dbb66a77,0x3fbc8c33221dc2a1,
+        0xe4d5e82392a40515,0xfabaf3feaa5334a,
+        0x8f05b1163ba6832d,0x29cb4d87f2a7400e,
+        0xb2c71d5bca9023f8,0x743e20e9ef511012,
+        0xdf78e4b2bd342cf6,0x914da9246b255416,
+        0x8bab8eefb6409c1a,0x1ad089b6c2f7548e,
+        0xae9672aba3d0c320,0xa184ac2473b529b1,
+        0xda3c0f568cc4f3e8,0xc9e5d72d90a2741e,
+        0x8865899617fb1871,0x7e2fa67c7a658892,
+        0xaa7eebfb9df9de8d,0xddbb901b98feeab7,
+        0xd51ea6fa85785631,0x552a74227f3ea565,
+        0x8533285c936b35de,0xd53a88958f87275f,
+        0xa67ff273b8460356,0x8a892abaf368f137,
+        0xd01fef10a657842c,0x2d2b7569b0432d85,
+        0x8213f56a67f6b29b,0x9c3b29620e29fc73,
+        0xa298f2c501f45f42,0x8349f3ba91b47b8f,
+        0xcb3f2f7642717713,0x241c70a936219a73,
+        0xfe0efb53d30dd4d7,0xed238cd383aa0110,
+        0x9ec95d1463e8a506,0xf4363804324a40aa,
+        0xc67bb4597ce2ce48,0xb143c6053edcd0d5,
+        0xf81aa16fdc1b81da,0xdd94b7868e94050a,
+        0x9b10a4e5e9913128,0xca7cf2b4191c8326,
+        0xc1d4ce1f63f57d72,0xfd1c2f611f63a3f0,
+        0xf24a01a73cf2dccf,0xbc633b39673c8cec,
+        0x976e41088617ca01,0xd5be0503e085d813,
+        0xbd49d14aa79dbc82,0x4b2d8644d8a74e18,
+        0xec9c459d51852ba2,0xddf8e7d60ed1219e,
+        0x93e1ab8252f33b45,0xcabb90e5c942b503,
+        0xb8da1662e7b00a17,0x3d6a751f3b936243,
+        0xe7109bfba19c0c9d,0xcc512670a783ad4,
+        0x906a617d450187e2,0x27fb2b80668b24c5,
+        0xb484f9dc9641e9da,0xb1f9f660802dedf6,
+        0xe1a63853bbd26451,0x5e7873f8a0396973,
+        0x8d07e33455637eb2,0xdb0b487b6423e1e8,
+        0xb049dc016abc5e5f,0x91ce1a9a3d2cda62,
+        0xdc5c5301c56b75f7,0x7641a140cc7810fb,
+        0x89b9b3e11b6329ba,0xa9e904c87fcb0a9d,
+        0xac2820d9623bf429,0x546345fa9fbdcd44,
+        0xd732290fbacaf133,0xa97c177947ad4095,
+        0x867f59a9d4bed6c0,0x49ed8eabcccc485d,
+        0xa81f301449ee8c70,0x5c68f256bfff5a74,
+        0xd226fc195c6a2f8c,0x73832eec6fff3111,
+        0x83585d8fd9c25db7,0xc831fd53c5ff7eab,
+        0xa42e74f3d032f525,0xba3e7ca8b77f5e55,
+        0xcd3a1230c43fb26f,0x28ce1bd2e55f35eb,
+        0x80444b5e7aa7cf85,0x7980d163cf5b81b3,
+        0xa0555e361951c366,0xd7e105bcc332621f,
+        0xc86ab5c39fa63440,0x8dd9472bf3fefaa7,
+        0xfa856334878fc150,0xb14f98f6f0feb951,
+        0x9c935e00d4b9d8d2,0x6ed1bf9a569f33d3,
+        0xc3b8358109e84f07,0xa862f80ec4700c8,
+        0xf4a642e14c6262c8,0xcd27bb612758c0fa,
+        0x98e7e9cccfbd7dbd,0x8038d51cb897789c,
+        0xbf21e44003acdd2c,0xe0470a63e6bd56c3,
+        0xeeea5d5004981478,0x1858ccfce06cac74,
+        0x95527a5202df0ccb,0xf37801e0c43ebc8,
+        0xbaa718e68396cffd,0xd30560258f54e6ba,
+        0xe950df20247c83fd,0x47c6b82ef32a2069,
+        0x91d28b7416cdd27e,0x4cdc331d57fa5441,
+        0xb6472e511c81471d,0xe0133fe4adf8e952,
+        0xe3d8f9e563a198e5,0x58180fddd97723a6,
+        0x8e679c2f5e44ff8f,0x570f09eaa7ea7648,};
+};
+#endif // SIMDJSON_STATIC_REFLECTION
+
+extern SIMDJSON_DLLIMPORTEXPORT const uint64_t power_of_five_128[651*2];
 } // namespace internal
 } // namespace simdjson
 
@@ -12319,6 +13067,9 @@ struct implementation_simdjson_result_base {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
+
 protected:
   /** users should never directly access first and second. **/
   T first{}; /** Users should never directly access 'first'. **/
@@ -12501,7 +13252,12 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
   // with a returned value of type value128 with a "low component" corresponding to the
   // 64-bit least significant bits of the product and with a "high component" corresponding
   // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+  simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+#else
   simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index]);
+#endif
+
   // Both i and power_of_five_128[index] have their most significant bit set to 1 which
   // implies that the either the most or the second most significant bit of the product
   // is 1. We pack values in this manner for efficiency reasons: it maximizes the use
@@ -12534,7 +13290,11 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
     // with a returned value of type value128 with a "low component" corresponding to the
     // 64-bit least significant bits of the product and with a "high component" corresponding
     // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+    simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+#else
     simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index + 1]);
+#endif
     firstproduct.low += secondproduct.high;
     if(secondproduct.high > firstproduct.low) { firstproduct.high++; }
     // As it has been proven by Noble Mushtak and Daniel Lemire in "Fast Number Parsing Without
@@ -14505,6 +15265,9 @@ struct implementation_simdjson_result_base {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
+
 protected:
   /** users should never directly access first and second. **/
   T first{}; /** Users should never directly access 'first'. **/
@@ -14687,7 +15450,12 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
   // with a returned value of type value128 with a "low component" corresponding to the
   // 64-bit least significant bits of the product and with a "high component" corresponding
   // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+  simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+#else
   simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index]);
+#endif
+
   // Both i and power_of_five_128[index] have their most significant bit set to 1 which
   // implies that the either the most or the second most significant bit of the product
   // is 1. We pack values in this manner for efficiency reasons: it maximizes the use
@@ -14720,7 +15488,11 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
     // with a returned value of type value128 with a "low component" corresponding to the
     // 64-bit least significant bits of the product and with a "high component" corresponding
     // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+    simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+#else
     simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index + 1]);
+#endif
     firstproduct.low += secondproduct.high;
     if(secondproduct.high > firstproduct.low) { firstproduct.high++; }
     // As it has been proven by Noble Mushtak and Daniel Lemire in "Fast Number Parsing Without
@@ -17190,6 +17962,9 @@ struct implementation_simdjson_result_base {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
+
 protected:
   /** users should never directly access first and second. **/
   T first{}; /** Users should never directly access 'first'. **/
@@ -17372,7 +18147,12 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
   // with a returned value of type value128 with a "low component" corresponding to the
   // 64-bit least significant bits of the product and with a "high component" corresponding
   // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+  simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+#else
   simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index]);
+#endif
+
   // Both i and power_of_five_128[index] have their most significant bit set to 1 which
   // implies that the either the most or the second most significant bit of the product
   // is 1. We pack values in this manner for efficiency reasons: it maximizes the use
@@ -17405,7 +18185,11 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
     // with a returned value of type value128 with a "low component" corresponding to the
     // 64-bit least significant bits of the product and with a "high component" corresponding
     // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+    simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+#else
     simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index + 1]);
+#endif
     firstproduct.low += secondproduct.high;
     if(secondproduct.high > firstproduct.low) { firstproduct.high++; }
     // As it has been proven by Noble Mushtak and Daniel Lemire in "Fast Number Parsing Without
@@ -19875,6 +20659,9 @@ struct implementation_simdjson_result_base {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
+
 protected:
   /** users should never directly access first and second. **/
   T first{}; /** Users should never directly access 'first'. **/
@@ -20057,7 +20844,12 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
   // with a returned value of type value128 with a "low component" corresponding to the
   // 64-bit least significant bits of the product and with a "high component" corresponding
   // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+  simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+#else
   simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index]);
+#endif
+
   // Both i and power_of_five_128[index] have their most significant bit set to 1 which
   // implies that the either the most or the second most significant bit of the product
   // is 1. We pack values in this manner for efficiency reasons: it maximizes the use
@@ -20090,7 +20882,11 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
     // with a returned value of type value128 with a "low component" corresponding to the
     // 64-bit least significant bits of the product and with a "high component" corresponding
     // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+    simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+#else
     simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index + 1]);
+#endif
     firstproduct.low += secondproduct.high;
     if(secondproduct.high > firstproduct.low) { firstproduct.high++; }
     // As it has been proven by Noble Mushtak and Daniel Lemire in "Fast Number Parsing Without
@@ -22675,6 +23471,9 @@ struct implementation_simdjson_result_base {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
+
 protected:
   /** users should never directly access first and second. **/
   T first{}; /** Users should never directly access 'first'. **/
@@ -22857,7 +23656,12 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
   // with a returned value of type value128 with a "low component" corresponding to the
   // 64-bit least significant bits of the product and with a "high component" corresponding
   // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+  simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+#else
   simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index]);
+#endif
+
   // Both i and power_of_five_128[index] have their most significant bit set to 1 which
   // implies that the either the most or the second most significant bit of the product
   // is 1. We pack values in this manner for efficiency reasons: it maximizes the use
@@ -22890,7 +23694,11 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
     // with a returned value of type value128 with a "low component" corresponding to the
     // 64-bit least significant bits of the product and with a "high component" corresponding
     // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+    simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+#else
     simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index + 1]);
+#endif
     firstproduct.low += secondproduct.high;
     if(secondproduct.high > firstproduct.low) { firstproduct.high++; }
     // As it has been proven by Noble Mushtak and Daniel Lemire in "Fast Number Parsing Without
@@ -25791,6 +26599,9 @@ struct implementation_simdjson_result_base {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
+
 protected:
   /** users should never directly access first and second. **/
   T first{}; /** Users should never directly access 'first'. **/
@@ -25973,7 +26784,12 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
   // with a returned value of type value128 with a "low component" corresponding to the
   // 64-bit least significant bits of the product and with a "high component" corresponding
   // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+  simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+#else
   simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index]);
+#endif
+
   // Both i and power_of_five_128[index] have their most significant bit set to 1 which
   // implies that the either the most or the second most significant bit of the product
   // is 1. We pack values in this manner for efficiency reasons: it maximizes the use
@@ -26006,7 +26822,11 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
     // with a returned value of type value128 with a "low component" corresponding to the
     // 64-bit least significant bits of the product and with a "high component" corresponding
     // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+    simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+#else
     simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index + 1]);
+#endif
     firstproduct.low += secondproduct.high;
     if(secondproduct.high > firstproduct.low) { firstproduct.high++; }
     // As it has been proven by Noble Mushtak and Daniel Lemire in "Fast Number Parsing Without
@@ -28384,6 +29204,9 @@ struct implementation_simdjson_result_base {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
+
 protected:
   /** users should never directly access first and second. **/
   T first{}; /** Users should never directly access 'first'. **/
@@ -28566,7 +29389,12 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
   // with a returned value of type value128 with a "low component" corresponding to the
   // 64-bit least significant bits of the product and with a "high component" corresponding
   // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+  simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+#else
   simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index]);
+#endif
+
   // Both i and power_of_five_128[index] have their most significant bit set to 1 which
   // implies that the either the most or the second most significant bit of the product
   // is 1. We pack values in this manner for efficiency reasons: it maximizes the use
@@ -28599,7 +29427,11 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
     // with a returned value of type value128 with a "low component" corresponding to the
     // 64-bit least significant bits of the product and with a "high component" corresponding
     // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+    simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+#else
     simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index + 1]);
+#endif
     firstproduct.low += secondproduct.high;
     if(secondproduct.high > firstproduct.low) { firstproduct.high++; }
     // As it has been proven by Noble Mushtak and Daniel Lemire in "Fast Number Parsing Without
@@ -30990,6 +31822,9 @@ struct implementation_simdjson_result_base {
    */
   simdjson_inline T&& value_unsafe() && noexcept;
 
+  using value_type = T;
+  using error_type = error_code;
+
 protected:
   /** users should never directly access first and second. **/
   T first{}; /** Users should never directly access 'first'. **/
@@ -31172,7 +32007,12 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
   // with a returned value of type value128 with a "low component" corresponding to the
   // 64-bit least significant bits of the product and with a "high component" corresponding
   // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+  simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+#else
   simdjson::internal::value128 firstproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index]);
+#endif
+
   // Both i and power_of_five_128[index] have their most significant bit set to 1 which
   // implies that the either the most or the second most significant bit of the product
   // is 1. We pack values in this manner for efficiency reasons: it maximizes the use
@@ -31205,7 +32045,11 @@ simdjson_inline bool compute_float_64(int64_t power, uint64_t i, bool negative, 
     // with a returned value of type value128 with a "low component" corresponding to the
     // 64-bit least significant bits of the product and with a "high component" corresponding
     // to the 64-bit most significant bits of the product.
+#if SIMDJSON_STATIC_REFLECTION
+    simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+#else
     simdjson::internal::value128 secondproduct = full_multiplication(i, simdjson::internal::power_of_five_128[index + 1]);
+#endif
     firstproduct.low += secondproduct.high;
     if(secondproduct.high > firstproduct.low) { firstproduct.high++; }
     // As it has been proven by Noble Mushtak and Daniel Lemire in "Fast Number Parsing Without
@@ -34042,6 +34886,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 #include <type_traits>
@@ -34430,7 +35275,9 @@ public:
    */
   simdjson_inline simdjson_result<value> at(size_t index) noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -34464,7 +35311,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -34707,6 +35555,14 @@ public:
    */
   simdjson_inline simdjson_result<value> at_path(std::string_view at_path) noexcept;
 
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard character (*) for arrays or ".*" for objects.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 protected:
   /**
@@ -34803,7 +35659,9 @@ public:
   simdjson_inline simdjson_result<arm64::ondemand::array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -34835,7 +35693,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the defaul because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -34894,6 +35753,7 @@ public:
   simdjson_inline simdjson_result<int32_t> current_depth() const noexcept;
   simdjson_inline simdjson_result<arm64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<arm64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 };
 
 } // namespace simdjson
@@ -36303,9 +37163,8 @@ struct has_custom_serialization : std::false_type {};
 
 inline constexpr struct serialize_tag {
   template <typename T>
-    requires custom_deserializable<T>
-  constexpr void operator()(arm64::builder::string_builder& b, T& obj) const{
-    return tag_invoke(*this, b, obj);
+  constexpr void operator()(arm64::builder::string_builder& b, T&& obj) const{
+    return tag_invoke(*this, b, std::forward<T>(obj));
   }
 
 
@@ -36444,7 +37303,7 @@ public:
 
   template <typename T>
   requires(require_custom_serialization<T>)
-  simdjson_inline void append(const T &val);
+  simdjson_inline void append(T &&val);
 
   // Support for string-like types
   template <typename T>
@@ -36455,7 +37314,7 @@ public:
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
   // Support for range-based appending (std::ranges::view, etc.)
   template <std::ranges::range R>
-requires (!std::is_convertible<R, std::string_view>::value)
+requires (!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
   simdjson_inline void append(const R &range) noexcept;
 #endif
   /**
@@ -36593,6 +37452,7 @@ simdjson_warn_unused simdjson_error to_json(const Z &z, std::string &s, size_t i
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 namespace simdjson {
@@ -36704,6 +37564,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
   */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like "[*]" to match all array elements.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Consumes the array and returns a string_view instance corresponding to the
@@ -36827,6 +37696,7 @@ public:
   simdjson_inline simdjson_result<arm64::ondemand::value> at(size_t index) noexcept;
   simdjson_inline simdjson_result<arm64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<arm64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   simdjson_inline simdjson_result<std::string_view> raw_json() noexcept;
 #if SIMDJSON_SUPPORTS_CONCEPTS
   // TODO: move this code into object-inl.h
@@ -36972,6 +37842,7 @@ struct simdjson_result<arm64::ondemand::array_iterator> : public arm64::implemen
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 
@@ -37368,7 +38239,9 @@ public:
   simdjson_inline simdjson_result<array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -37412,7 +38285,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -37686,6 +38560,23 @@ public:
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
 
   /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   *
+   * Supports wildcard patterns like "$.array[*]" or "$.object.*" to match multiple elements.
+   *
+   * This method materializes all matching values into a vector.
+   * The document will be consumed after this call.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern, or:
+   *         - INVALID_JSON_POINTER if the JSONPath cannot be parsed
+   *         - NO_SUCH_FIELD if a field does not exist
+   *         - INDEX_OUT_OF_BOUNDS if an array index is out of bounds
+   *         - INCORRECT_TYPE if path traversal encounters wrong type
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
+
+  /**
    * Consumes the document and returns a string_view instance corresponding to the
    * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
@@ -37902,6 +38793,7 @@ public:
   simdjson_inline simdjson_result<std::string_view> raw_json_token() noexcept;
   simdjson_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 private:
   document *doc{nullptr};
@@ -37985,6 +38877,7 @@ public:
 
   simdjson_inline simdjson_result<arm64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<arm64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -38067,6 +38960,7 @@ public:
 
   simdjson_inline simdjson_result<arm64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<arm64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -38552,6 +39446,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION && SIMDJSON_SUPPORTS_CONCEPTS */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #endif */
@@ -38576,7 +39471,9 @@ public:
   simdjson_inline simdjson_result<object_iterator> begin() noexcept;
   simdjson_inline simdjson_result<object_iterator> end() noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -38624,7 +39521,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -38706,6 +39604,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
    */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like ".*" to match all object fields.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Reset the iterator so that we are pointing back at the
@@ -38855,6 +39762,7 @@ public:
   simdjson_inline simdjson_result<arm64::ondemand::value> operator[](std::string_view key) && noexcept;
   simdjson_inline simdjson_result<arm64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<arm64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   inline simdjson_result<bool> reset() noexcept;
   inline simdjson_result<bool> is_empty() noexcept;
   inline simdjson_result<size_t> count_fields() & noexcept;
@@ -39863,6 +40771,67 @@ inline simdjson_result<value> array::at_path(std::string_view json_path) noexcep
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> array::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Wildcard case
+  if(key=="*"){
+    for(auto element: *this){
+
+      if(element.error()){
+        return element.error();
+      }
+
+      if(remaining_path.empty()){
+        // Use value_unsafe() because we've already checked for errors above.
+        // The 'element' is a simdjson_result<value> wrapper, and we need to extract
+        // the underlying value. value_unsafe() is safe here because error() returned false.
+        result.push_back(std::move(element).value_unsafe());
+
+      }else{
+        auto nested_result = element.at_path_with_wildcard(remaining_path);
+
+        if(nested_result.error()){
+          return nested_result.error();
+        }
+        // Same logic as above.
+        std::vector<value> nested_matches = std::move(nested_result).value_unsafe();
+
+        result.insert(result.end(),
+                      std::make_move_iterator(nested_matches.begin()),
+                      std::make_move_iterator(nested_matches.end()));
+      }
+    }
+    return result;
+  }else{
+    // Specific index case in which we access the element at the given index
+    size_t idx=0;
+
+    for(char c:key){
+      if(c < '0' || c > '9'){
+        return INVALID_JSON_POINTER;
+      }
+      idx = idx*10 + (c - '0');
+    }
+
+    auto element = at(idx);
+
+    if(element.error()){
+      return element.error();
+    }
+
+    if(remaining_path.empty()){
+      result.push_back(std::move(element).value_unsafe());
+      return result;
+    }else{
+      return element.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<value> array::at(size_t index) noexcept {
   size_t i = 0;
   for (auto value : *this) {
@@ -39920,6 +40889,10 @@ simdjson_inline  simdjson_result<arm64::ondemand::value> simdjson_result<arm64::
 simdjson_inline  simdjson_result<arm64::ondemand::value> simdjson_result<arm64::ondemand::array>::at_path(std::string_view json_path) noexcept {
   if (error()) { return error(); }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> simdjson_result<arm64::ondemand::array>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 simdjson_inline  simdjson_result<std::string_view> simdjson_result<arm64::ondemand::array>::raw_json() noexcept {
   if (error()) { return error(); }
@@ -40315,6 +41288,19 @@ simdjson_inline simdjson_result<value> value::at_path(std::string_view json_path
   }
 }
 
+inline simdjson_result<std::vector<value>> value::at_path_with_wildcard(std::string_view json_path) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace arm64
 } // namespace simdjson
@@ -40563,6 +41549,14 @@ simdjson_inline simdjson_result<arm64::ondemand::value> simdjson_result<arm64::o
     return error();
   }
   return first.at_path(json_path);
+}
+
+inline simdjson_result<std::vector<arm64::ondemand::value>> simdjson_result<arm64::ondemand::value>::at_path_with_wildcard(
+      std::string_view json_path) noexcept {
+  if (error()) {
+    return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 
 } // namespace simdjson
@@ -40920,7 +41914,22 @@ simdjson_inline simdjson_result<value> document::at_path(std::string_view json_p
   }
 }
 
-
+simdjson_inline simdjson_result<std::vector<value>> document::at_path_with_wildcard(std::string_view json_path) noexcept {
+  rewind(); // Rewind the document each time at_path_with_wildcard is called
+  if (json_path.empty()) {
+      return INVALID_JSON_POINTER;
+  }
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
 
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
 
@@ -41245,6 +42254,11 @@ simdjson_inline simdjson_result<arm64::ondemand::value> simdjson_result<arm64::o
   return first.at_path(json_path);
 }
 
+simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> simdjson_result<arm64::ondemand::document>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
+}
+
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
   requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -41339,6 +42353,7 @@ simdjson_inline simdjson_result<number> document_reference::get_number() noexcep
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json_token() noexcept { return doc->raw_json_token(); }
 simdjson_inline simdjson_result<value> document_reference::at_pointer(std::string_view json_pointer) noexcept { return doc->at_pointer(json_pointer); }
 simdjson_inline simdjson_result<value> document_reference::at_path(std::string_view json_path) noexcept { return doc->at_path(json_path); }
+simdjson_inline simdjson_result<std::vector<value>> document_reference::at_path_with_wildcard(std::string_view json_path) noexcept { return doc->at_path_with_wildcard(json_path); }
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json() noexcept { return doc->raw_json();}
 simdjson_inline document_reference::operator document&() const noexcept { return *doc; }
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
@@ -41594,6 +42609,12 @@ simdjson_inline simdjson_result<arm64::ondemand::value> simdjson_result<arm64::o
       return error();
   }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> simdjson_result<arm64::ondemand::document_reference>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) {
+      return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
@@ -42996,6 +44017,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/raw_json_string.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value-inl.h" */
+/* amalgamation skipped (editor-only): #include "simdjson/jsonpathutil.h" */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #include <meta> */
@@ -43163,6 +44185,50 @@ inline simdjson_result<value> object::at_path(std::string_view json_path) noexce
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> object::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Handle when its the case for wildcard
+  if (key == "*") {
+    // Loop through each field in the object
+    for (auto field : *this) {
+      value val;
+      SIMDJSON_TRY(field.value().get(val));
+
+      if (remaining_path.empty()) {
+        result.push_back(std::move(val));
+      } else {
+        auto nested_result = val.at_path_with_wildcard(remaining_path);
+
+        if (nested_result.error()) {
+          return nested_result.error();
+        }
+        // Extract and append all nested matches to our result
+        std::vector<value> nested_vec;
+        SIMDJSON_TRY(std::move(nested_result).get(nested_vec));
+
+        result.insert(result.end(),
+                     std::make_move_iterator(nested_vec.begin()),
+                     std::make_move_iterator(nested_vec.end()));
+      }
+    }
+    return result;
+  } else {
+    value val;
+    SIMDJSON_TRY(find_field(key).get(val));
+
+    if (remaining_path.empty()) {
+      result.push_back(std::move(val));
+      return result;
+    } else {
+      return val.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<size_t> object::count_fields() & noexcept {
   size_t count{0};
   // Important: we do not consume any of the values.
@@ -43287,6 +44353,11 @@ simdjson_inline simdjson_result<arm64::ondemand::value> simdjson_result<arm64::o
     return error();
   }
   return first.at_path(json_path);
+}
+
+simdjson_inline simdjson_result<std::vector<arm64::ondemand::value>> simdjson_result<arm64::ondemand::object>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 
 inline simdjson_result<bool> simdjson_result<arm64::ondemand::object>::reset() noexcept {
@@ -45875,8 +46946,8 @@ simdjson_inline void string_builder::append(const T &opt) {
 
 template <typename T>
   requires(require_custom_serialization<T>)
-simdjson_inline void string_builder::append(const T &val) {
-  serialize(*this, val);
+simdjson_inline void string_builder::append(T &&val) {
+  serialize(*this, std::forward<T>(val));
 }
 
 template <typename T>
@@ -45890,11 +46961,11 @@ simdjson_inline void string_builder::append(const T &value) {
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
 // Support for range-based appending (std::ranges::view, etc.)
 template <std::ranges::range R>
-  requires(!std::is_convertible<R, std::string_view>::value)
+  requires(!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
 simdjson_inline void string_builder::append(const R &range) noexcept {
   auto it = std::ranges::begin(range);
   auto end = std::ranges::end(range);
-  if constexpr (concepts::is_pair<typename R::value_type>) {
+  if constexpr (concepts::is_pair<std::ranges::range_value_t<R>>) {
     start_object();
 
     if (it == end) {
@@ -48291,6 +49362,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 #include <type_traits>
@@ -48679,7 +49751,9 @@ public:
    */
   simdjson_inline simdjson_result<value> at(size_t index) noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -48713,7 +49787,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -48956,6 +50031,14 @@ public:
    */
   simdjson_inline simdjson_result<value> at_path(std::string_view at_path) noexcept;
 
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard character (*) for arrays or ".*" for objects.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 protected:
   /**
@@ -49052,7 +50135,9 @@ public:
   simdjson_inline simdjson_result<fallback::ondemand::array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -49084,7 +50169,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the defaul because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -49143,6 +50229,7 @@ public:
   simdjson_inline simdjson_result<int32_t> current_depth() const noexcept;
   simdjson_inline simdjson_result<fallback::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<fallback::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 };
 
 } // namespace simdjson
@@ -50552,9 +51639,8 @@ struct has_custom_serialization : std::false_type {};
 
 inline constexpr struct serialize_tag {
   template <typename T>
-    requires custom_deserializable<T>
-  constexpr void operator()(fallback::builder::string_builder& b, T& obj) const{
-    return tag_invoke(*this, b, obj);
+  constexpr void operator()(fallback::builder::string_builder& b, T&& obj) const{
+    return tag_invoke(*this, b, std::forward<T>(obj));
   }
 
 
@@ -50693,7 +51779,7 @@ public:
 
   template <typename T>
   requires(require_custom_serialization<T>)
-  simdjson_inline void append(const T &val);
+  simdjson_inline void append(T &&val);
 
   // Support for string-like types
   template <typename T>
@@ -50704,7 +51790,7 @@ public:
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
   // Support for range-based appending (std::ranges::view, etc.)
   template <std::ranges::range R>
-requires (!std::is_convertible<R, std::string_view>::value)
+requires (!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
   simdjson_inline void append(const R &range) noexcept;
 #endif
   /**
@@ -50842,6 +51928,7 @@ simdjson_warn_unused simdjson_error to_json(const Z &z, std::string &s, size_t i
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 namespace simdjson {
@@ -50953,6 +52040,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
   */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like "[*]" to match all array elements.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Consumes the array and returns a string_view instance corresponding to the
@@ -51076,6 +52172,7 @@ public:
   simdjson_inline simdjson_result<fallback::ondemand::value> at(size_t index) noexcept;
   simdjson_inline simdjson_result<fallback::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<fallback::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   simdjson_inline simdjson_result<std::string_view> raw_json() noexcept;
 #if SIMDJSON_SUPPORTS_CONCEPTS
   // TODO: move this code into object-inl.h
@@ -51221,6 +52318,7 @@ struct simdjson_result<fallback::ondemand::array_iterator> : public fallback::im
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 
@@ -51617,7 +52715,9 @@ public:
   simdjson_inline simdjson_result<array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -51661,7 +52761,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -51935,6 +53036,23 @@ public:
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
 
   /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   *
+   * Supports wildcard patterns like "$.array[*]" or "$.object.*" to match multiple elements.
+   *
+   * This method materializes all matching values into a vector.
+   * The document will be consumed after this call.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern, or:
+   *         - INVALID_JSON_POINTER if the JSONPath cannot be parsed
+   *         - NO_SUCH_FIELD if a field does not exist
+   *         - INDEX_OUT_OF_BOUNDS if an array index is out of bounds
+   *         - INCORRECT_TYPE if path traversal encounters wrong type
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
+
+  /**
    * Consumes the document and returns a string_view instance corresponding to the
    * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
@@ -52151,6 +53269,7 @@ public:
   simdjson_inline simdjson_result<std::string_view> raw_json_token() noexcept;
   simdjson_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 private:
   document *doc{nullptr};
@@ -52234,6 +53353,7 @@ public:
 
   simdjson_inline simdjson_result<fallback::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<fallback::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -52316,6 +53436,7 @@ public:
 
   simdjson_inline simdjson_result<fallback::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<fallback::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -52801,6 +53922,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION && SIMDJSON_SUPPORTS_CONCEPTS */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #endif */
@@ -52825,7 +53947,9 @@ public:
   simdjson_inline simdjson_result<object_iterator> begin() noexcept;
   simdjson_inline simdjson_result<object_iterator> end() noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -52873,7 +53997,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -52955,6 +54080,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
    */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like ".*" to match all object fields.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Reset the iterator so that we are pointing back at the
@@ -53104,6 +54238,7 @@ public:
   simdjson_inline simdjson_result<fallback::ondemand::value> operator[](std::string_view key) && noexcept;
   simdjson_inline simdjson_result<fallback::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<fallback::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   inline simdjson_result<bool> reset() noexcept;
   inline simdjson_result<bool> is_empty() noexcept;
   inline simdjson_result<size_t> count_fields() & noexcept;
@@ -54112,6 +55247,67 @@ inline simdjson_result<value> array::at_path(std::string_view json_path) noexcep
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> array::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Wildcard case
+  if(key=="*"){
+    for(auto element: *this){
+
+      if(element.error()){
+        return element.error();
+      }
+
+      if(remaining_path.empty()){
+        // Use value_unsafe() because we've already checked for errors above.
+        // The 'element' is a simdjson_result<value> wrapper, and we need to extract
+        // the underlying value. value_unsafe() is safe here because error() returned false.
+        result.push_back(std::move(element).value_unsafe());
+
+      }else{
+        auto nested_result = element.at_path_with_wildcard(remaining_path);
+
+        if(nested_result.error()){
+          return nested_result.error();
+        }
+        // Same logic as above.
+        std::vector<value> nested_matches = std::move(nested_result).value_unsafe();
+
+        result.insert(result.end(),
+                      std::make_move_iterator(nested_matches.begin()),
+                      std::make_move_iterator(nested_matches.end()));
+      }
+    }
+    return result;
+  }else{
+    // Specific index case in which we access the element at the given index
+    size_t idx=0;
+
+    for(char c:key){
+      if(c < '0' || c > '9'){
+        return INVALID_JSON_POINTER;
+      }
+      idx = idx*10 + (c - '0');
+    }
+
+    auto element = at(idx);
+
+    if(element.error()){
+      return element.error();
+    }
+
+    if(remaining_path.empty()){
+      result.push_back(std::move(element).value_unsafe());
+      return result;
+    }else{
+      return element.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<value> array::at(size_t index) noexcept {
   size_t i = 0;
   for (auto value : *this) {
@@ -54169,6 +55365,10 @@ simdjson_inline  simdjson_result<fallback::ondemand::value> simdjson_result<fall
 simdjson_inline  simdjson_result<fallback::ondemand::value> simdjson_result<fallback::ondemand::array>::at_path(std::string_view json_path) noexcept {
   if (error()) { return error(); }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> simdjson_result<fallback::ondemand::array>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 simdjson_inline  simdjson_result<std::string_view> simdjson_result<fallback::ondemand::array>::raw_json() noexcept {
   if (error()) { return error(); }
@@ -54564,6 +55764,19 @@ simdjson_inline simdjson_result<value> value::at_path(std::string_view json_path
   }
 }
 
+inline simdjson_result<std::vector<value>> value::at_path_with_wildcard(std::string_view json_path) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace fallback
 } // namespace simdjson
@@ -54812,6 +56025,14 @@ simdjson_inline simdjson_result<fallback::ondemand::value> simdjson_result<fallb
     return error();
   }
   return first.at_path(json_path);
+}
+
+inline simdjson_result<std::vector<fallback::ondemand::value>> simdjson_result<fallback::ondemand::value>::at_path_with_wildcard(
+      std::string_view json_path) noexcept {
+  if (error()) {
+    return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 
 } // namespace simdjson
@@ -55169,7 +56390,22 @@ simdjson_inline simdjson_result<value> document::at_path(std::string_view json_p
   }
 }
 
-
+simdjson_inline simdjson_result<std::vector<value>> document::at_path_with_wildcard(std::string_view json_path) noexcept {
+  rewind(); // Rewind the document each time at_path_with_wildcard is called
+  if (json_path.empty()) {
+      return INVALID_JSON_POINTER;
+  }
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
 
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
 
@@ -55494,6 +56730,11 @@ simdjson_inline simdjson_result<fallback::ondemand::value> simdjson_result<fallb
   return first.at_path(json_path);
 }
 
+simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> simdjson_result<fallback::ondemand::document>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
+}
+
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
   requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -55588,6 +56829,7 @@ simdjson_inline simdjson_result<number> document_reference::get_number() noexcep
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json_token() noexcept { return doc->raw_json_token(); }
 simdjson_inline simdjson_result<value> document_reference::at_pointer(std::string_view json_pointer) noexcept { return doc->at_pointer(json_pointer); }
 simdjson_inline simdjson_result<value> document_reference::at_path(std::string_view json_path) noexcept { return doc->at_path(json_path); }
+simdjson_inline simdjson_result<std::vector<value>> document_reference::at_path_with_wildcard(std::string_view json_path) noexcept { return doc->at_path_with_wildcard(json_path); }
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json() noexcept { return doc->raw_json();}
 simdjson_inline document_reference::operator document&() const noexcept { return *doc; }
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
@@ -55843,6 +57085,12 @@ simdjson_inline simdjson_result<fallback::ondemand::value> simdjson_result<fallb
       return error();
   }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> simdjson_result<fallback::ondemand::document_reference>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) {
+      return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
@@ -57245,6 +58493,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/raw_json_string.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value-inl.h" */
+/* amalgamation skipped (editor-only): #include "simdjson/jsonpathutil.h" */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #include <meta> */
@@ -57412,6 +58661,50 @@ inline simdjson_result<value> object::at_path(std::string_view json_path) noexce
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> object::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Handle when its the case for wildcard
+  if (key == "*") {
+    // Loop through each field in the object
+    for (auto field : *this) {
+      value val;
+      SIMDJSON_TRY(field.value().get(val));
+
+      if (remaining_path.empty()) {
+        result.push_back(std::move(val));
+      } else {
+        auto nested_result = val.at_path_with_wildcard(remaining_path);
+
+        if (nested_result.error()) {
+          return nested_result.error();
+        }
+        // Extract and append all nested matches to our result
+        std::vector<value> nested_vec;
+        SIMDJSON_TRY(std::move(nested_result).get(nested_vec));
+
+        result.insert(result.end(),
+                     std::make_move_iterator(nested_vec.begin()),
+                     std::make_move_iterator(nested_vec.end()));
+      }
+    }
+    return result;
+  } else {
+    value val;
+    SIMDJSON_TRY(find_field(key).get(val));
+
+    if (remaining_path.empty()) {
+      result.push_back(std::move(val));
+      return result;
+    } else {
+      return val.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<size_t> object::count_fields() & noexcept {
   size_t count{0};
   // Important: we do not consume any of the values.
@@ -57536,6 +58829,11 @@ simdjson_inline simdjson_result<fallback::ondemand::value> simdjson_result<fallb
     return error();
   }
   return first.at_path(json_path);
+}
+
+simdjson_inline simdjson_result<std::vector<fallback::ondemand::value>> simdjson_result<fallback::ondemand::object>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 
 inline simdjson_result<bool> simdjson_result<fallback::ondemand::object>::reset() noexcept {
@@ -60124,8 +61422,8 @@ simdjson_inline void string_builder::append(const T &opt) {
 
 template <typename T>
   requires(require_custom_serialization<T>)
-simdjson_inline void string_builder::append(const T &val) {
-  serialize(*this, val);
+simdjson_inline void string_builder::append(T &&val) {
+  serialize(*this, std::forward<T>(val));
 }
 
 template <typename T>
@@ -60139,11 +61437,11 @@ simdjson_inline void string_builder::append(const T &value) {
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
 // Support for range-based appending (std::ranges::view, etc.)
 template <std::ranges::range R>
-  requires(!std::is_convertible<R, std::string_view>::value)
+  requires(!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
 simdjson_inline void string_builder::append(const R &range) noexcept {
   auto it = std::ranges::begin(range);
   auto end = std::ranges::end(range);
-  if constexpr (concepts::is_pair<typename R::value_type>) {
+  if constexpr (concepts::is_pair<std::ranges::range_value_t<R>>) {
     start_object();
 
     if (it == end) {
@@ -63039,6 +64337,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 #include <type_traits>
@@ -63427,7 +64726,9 @@ public:
    */
   simdjson_inline simdjson_result<value> at(size_t index) noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -63461,7 +64762,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -63704,6 +65006,14 @@ public:
    */
   simdjson_inline simdjson_result<value> at_path(std::string_view at_path) noexcept;
 
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard character (*) for arrays or ".*" for objects.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 protected:
   /**
@@ -63800,7 +65110,9 @@ public:
   simdjson_inline simdjson_result<haswell::ondemand::array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -63832,7 +65144,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the defaul because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -63891,6 +65204,7 @@ public:
   simdjson_inline simdjson_result<int32_t> current_depth() const noexcept;
   simdjson_inline simdjson_result<haswell::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<haswell::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 };
 
 } // namespace simdjson
@@ -65300,9 +66614,8 @@ struct has_custom_serialization : std::false_type {};
 
 inline constexpr struct serialize_tag {
   template <typename T>
-    requires custom_deserializable<T>
-  constexpr void operator()(haswell::builder::string_builder& b, T& obj) const{
-    return tag_invoke(*this, b, obj);
+  constexpr void operator()(haswell::builder::string_builder& b, T&& obj) const{
+    return tag_invoke(*this, b, std::forward<T>(obj));
   }
 
 
@@ -65441,7 +66754,7 @@ public:
 
   template <typename T>
   requires(require_custom_serialization<T>)
-  simdjson_inline void append(const T &val);
+  simdjson_inline void append(T &&val);
 
   // Support for string-like types
   template <typename T>
@@ -65452,7 +66765,7 @@ public:
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
   // Support for range-based appending (std::ranges::view, etc.)
   template <std::ranges::range R>
-requires (!std::is_convertible<R, std::string_view>::value)
+requires (!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
   simdjson_inline void append(const R &range) noexcept;
 #endif
   /**
@@ -65590,6 +66903,7 @@ simdjson_warn_unused simdjson_error to_json(const Z &z, std::string &s, size_t i
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 namespace simdjson {
@@ -65701,6 +67015,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
   */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like "[*]" to match all array elements.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Consumes the array and returns a string_view instance corresponding to the
@@ -65824,6 +67147,7 @@ public:
   simdjson_inline simdjson_result<haswell::ondemand::value> at(size_t index) noexcept;
   simdjson_inline simdjson_result<haswell::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<haswell::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   simdjson_inline simdjson_result<std::string_view> raw_json() noexcept;
 #if SIMDJSON_SUPPORTS_CONCEPTS
   // TODO: move this code into object-inl.h
@@ -65969,6 +67293,7 @@ struct simdjson_result<haswell::ondemand::array_iterator> : public haswell::impl
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 
@@ -66365,7 +67690,9 @@ public:
   simdjson_inline simdjson_result<array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -66409,7 +67736,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -66683,6 +68011,23 @@ public:
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
 
   /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   *
+   * Supports wildcard patterns like "$.array[*]" or "$.object.*" to match multiple elements.
+   *
+   * This method materializes all matching values into a vector.
+   * The document will be consumed after this call.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern, or:
+   *         - INVALID_JSON_POINTER if the JSONPath cannot be parsed
+   *         - NO_SUCH_FIELD if a field does not exist
+   *         - INDEX_OUT_OF_BOUNDS if an array index is out of bounds
+   *         - INCORRECT_TYPE if path traversal encounters wrong type
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
+
+  /**
    * Consumes the document and returns a string_view instance corresponding to the
    * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
@@ -66899,6 +68244,7 @@ public:
   simdjson_inline simdjson_result<std::string_view> raw_json_token() noexcept;
   simdjson_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 private:
   document *doc{nullptr};
@@ -66982,6 +68328,7 @@ public:
 
   simdjson_inline simdjson_result<haswell::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<haswell::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -67064,6 +68411,7 @@ public:
 
   simdjson_inline simdjson_result<haswell::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<haswell::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -67549,6 +68897,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION && SIMDJSON_SUPPORTS_CONCEPTS */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #endif */
@@ -67573,7 +68922,9 @@ public:
   simdjson_inline simdjson_result<object_iterator> begin() noexcept;
   simdjson_inline simdjson_result<object_iterator> end() noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -67621,7 +68972,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -67703,6 +69055,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
    */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like ".*" to match all object fields.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Reset the iterator so that we are pointing back at the
@@ -67852,6 +69213,7 @@ public:
   simdjson_inline simdjson_result<haswell::ondemand::value> operator[](std::string_view key) && noexcept;
   simdjson_inline simdjson_result<haswell::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<haswell::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   inline simdjson_result<bool> reset() noexcept;
   inline simdjson_result<bool> is_empty() noexcept;
   inline simdjson_result<size_t> count_fields() & noexcept;
@@ -68860,6 +70222,67 @@ inline simdjson_result<value> array::at_path(std::string_view json_path) noexcep
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> array::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Wildcard case
+  if(key=="*"){
+    for(auto element: *this){
+
+      if(element.error()){
+        return element.error();
+      }
+
+      if(remaining_path.empty()){
+        // Use value_unsafe() because we've already checked for errors above.
+        // The 'element' is a simdjson_result<value> wrapper, and we need to extract
+        // the underlying value. value_unsafe() is safe here because error() returned false.
+        result.push_back(std::move(element).value_unsafe());
+
+      }else{
+        auto nested_result = element.at_path_with_wildcard(remaining_path);
+
+        if(nested_result.error()){
+          return nested_result.error();
+        }
+        // Same logic as above.
+        std::vector<value> nested_matches = std::move(nested_result).value_unsafe();
+
+        result.insert(result.end(),
+                      std::make_move_iterator(nested_matches.begin()),
+                      std::make_move_iterator(nested_matches.end()));
+      }
+    }
+    return result;
+  }else{
+    // Specific index case in which we access the element at the given index
+    size_t idx=0;
+
+    for(char c:key){
+      if(c < '0' || c > '9'){
+        return INVALID_JSON_POINTER;
+      }
+      idx = idx*10 + (c - '0');
+    }
+
+    auto element = at(idx);
+
+    if(element.error()){
+      return element.error();
+    }
+
+    if(remaining_path.empty()){
+      result.push_back(std::move(element).value_unsafe());
+      return result;
+    }else{
+      return element.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<value> array::at(size_t index) noexcept {
   size_t i = 0;
   for (auto value : *this) {
@@ -68917,6 +70340,10 @@ simdjson_inline  simdjson_result<haswell::ondemand::value> simdjson_result<haswe
 simdjson_inline  simdjson_result<haswell::ondemand::value> simdjson_result<haswell::ondemand::array>::at_path(std::string_view json_path) noexcept {
   if (error()) { return error(); }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> simdjson_result<haswell::ondemand::array>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 simdjson_inline  simdjson_result<std::string_view> simdjson_result<haswell::ondemand::array>::raw_json() noexcept {
   if (error()) { return error(); }
@@ -69312,6 +70739,19 @@ simdjson_inline simdjson_result<value> value::at_path(std::string_view json_path
   }
 }
 
+inline simdjson_result<std::vector<value>> value::at_path_with_wildcard(std::string_view json_path) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace haswell
 } // namespace simdjson
@@ -69560,6 +71000,14 @@ simdjson_inline simdjson_result<haswell::ondemand::value> simdjson_result<haswel
     return error();
   }
   return first.at_path(json_path);
+}
+
+inline simdjson_result<std::vector<haswell::ondemand::value>> simdjson_result<haswell::ondemand::value>::at_path_with_wildcard(
+      std::string_view json_path) noexcept {
+  if (error()) {
+    return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 
 } // namespace simdjson
@@ -69917,7 +71365,22 @@ simdjson_inline simdjson_result<value> document::at_path(std::string_view json_p
   }
 }
 
-
+simdjson_inline simdjson_result<std::vector<value>> document::at_path_with_wildcard(std::string_view json_path) noexcept {
+  rewind(); // Rewind the document each time at_path_with_wildcard is called
+  if (json_path.empty()) {
+      return INVALID_JSON_POINTER;
+  }
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
 
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
 
@@ -70242,6 +71705,11 @@ simdjson_inline simdjson_result<haswell::ondemand::value> simdjson_result<haswel
   return first.at_path(json_path);
 }
 
+simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> simdjson_result<haswell::ondemand::document>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
+}
+
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
   requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -70336,6 +71804,7 @@ simdjson_inline simdjson_result<number> document_reference::get_number() noexcep
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json_token() noexcept { return doc->raw_json_token(); }
 simdjson_inline simdjson_result<value> document_reference::at_pointer(std::string_view json_pointer) noexcept { return doc->at_pointer(json_pointer); }
 simdjson_inline simdjson_result<value> document_reference::at_path(std::string_view json_path) noexcept { return doc->at_path(json_path); }
+simdjson_inline simdjson_result<std::vector<value>> document_reference::at_path_with_wildcard(std::string_view json_path) noexcept { return doc->at_path_with_wildcard(json_path); }
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json() noexcept { return doc->raw_json();}
 simdjson_inline document_reference::operator document&() const noexcept { return *doc; }
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
@@ -70591,6 +72060,12 @@ simdjson_inline simdjson_result<haswell::ondemand::value> simdjson_result<haswel
       return error();
   }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> simdjson_result<haswell::ondemand::document_reference>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) {
+      return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
@@ -71993,6 +73468,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/raw_json_string.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value-inl.h" */
+/* amalgamation skipped (editor-only): #include "simdjson/jsonpathutil.h" */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #include <meta> */
@@ -72160,6 +73636,50 @@ inline simdjson_result<value> object::at_path(std::string_view json_path) noexce
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> object::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Handle when its the case for wildcard
+  if (key == "*") {
+    // Loop through each field in the object
+    for (auto field : *this) {
+      value val;
+      SIMDJSON_TRY(field.value().get(val));
+
+      if (remaining_path.empty()) {
+        result.push_back(std::move(val));
+      } else {
+        auto nested_result = val.at_path_with_wildcard(remaining_path);
+
+        if (nested_result.error()) {
+          return nested_result.error();
+        }
+        // Extract and append all nested matches to our result
+        std::vector<value> nested_vec;
+        SIMDJSON_TRY(std::move(nested_result).get(nested_vec));
+
+        result.insert(result.end(),
+                     std::make_move_iterator(nested_vec.begin()),
+                     std::make_move_iterator(nested_vec.end()));
+      }
+    }
+    return result;
+  } else {
+    value val;
+    SIMDJSON_TRY(find_field(key).get(val));
+
+    if (remaining_path.empty()) {
+      result.push_back(std::move(val));
+      return result;
+    } else {
+      return val.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<size_t> object::count_fields() & noexcept {
   size_t count{0};
   // Important: we do not consume any of the values.
@@ -72284,6 +73804,11 @@ simdjson_inline simdjson_result<haswell::ondemand::value> simdjson_result<haswel
     return error();
   }
   return first.at_path(json_path);
+}
+
+simdjson_inline simdjson_result<std::vector<haswell::ondemand::value>> simdjson_result<haswell::ondemand::object>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 
 inline simdjson_result<bool> simdjson_result<haswell::ondemand::object>::reset() noexcept {
@@ -74872,8 +76397,8 @@ simdjson_inline void string_builder::append(const T &opt) {
 
 template <typename T>
   requires(require_custom_serialization<T>)
-simdjson_inline void string_builder::append(const T &val) {
-  serialize(*this, val);
+simdjson_inline void string_builder::append(T &&val) {
+  serialize(*this, std::forward<T>(val));
 }
 
 template <typename T>
@@ -74887,11 +76412,11 @@ simdjson_inline void string_builder::append(const T &value) {
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
 // Support for range-based appending (std::ranges::view, etc.)
 template <std::ranges::range R>
-  requires(!std::is_convertible<R, std::string_view>::value)
+  requires(!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
 simdjson_inline void string_builder::append(const R &range) noexcept {
   auto it = std::ranges::begin(range);
   auto end = std::ranges::end(range);
-  if constexpr (concepts::is_pair<typename R::value_type>) {
+  if constexpr (concepts::is_pair<std::ranges::range_value_t<R>>) {
     start_object();
 
     if (it == end) {
@@ -77787,6 +79312,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 #include <type_traits>
@@ -78175,7 +79701,9 @@ public:
    */
   simdjson_inline simdjson_result<value> at(size_t index) noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -78209,7 +79737,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -78452,6 +79981,14 @@ public:
    */
   simdjson_inline simdjson_result<value> at_path(std::string_view at_path) noexcept;
 
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard character (*) for arrays or ".*" for objects.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 protected:
   /**
@@ -78548,7 +80085,9 @@ public:
   simdjson_inline simdjson_result<icelake::ondemand::array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -78580,7 +80119,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the defaul because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -78639,6 +80179,7 @@ public:
   simdjson_inline simdjson_result<int32_t> current_depth() const noexcept;
   simdjson_inline simdjson_result<icelake::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<icelake::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 };
 
 } // namespace simdjson
@@ -80048,9 +81589,8 @@ struct has_custom_serialization : std::false_type {};
 
 inline constexpr struct serialize_tag {
   template <typename T>
-    requires custom_deserializable<T>
-  constexpr void operator()(icelake::builder::string_builder& b, T& obj) const{
-    return tag_invoke(*this, b, obj);
+  constexpr void operator()(icelake::builder::string_builder& b, T&& obj) const{
+    return tag_invoke(*this, b, std::forward<T>(obj));
   }
 
 
@@ -80189,7 +81729,7 @@ public:
 
   template <typename T>
   requires(require_custom_serialization<T>)
-  simdjson_inline void append(const T &val);
+  simdjson_inline void append(T &&val);
 
   // Support for string-like types
   template <typename T>
@@ -80200,7 +81740,7 @@ public:
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
   // Support for range-based appending (std::ranges::view, etc.)
   template <std::ranges::range R>
-requires (!std::is_convertible<R, std::string_view>::value)
+requires (!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
   simdjson_inline void append(const R &range) noexcept;
 #endif
   /**
@@ -80338,6 +81878,7 @@ simdjson_warn_unused simdjson_error to_json(const Z &z, std::string &s, size_t i
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 namespace simdjson {
@@ -80449,6 +81990,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
   */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like "[*]" to match all array elements.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Consumes the array and returns a string_view instance corresponding to the
@@ -80572,6 +82122,7 @@ public:
   simdjson_inline simdjson_result<icelake::ondemand::value> at(size_t index) noexcept;
   simdjson_inline simdjson_result<icelake::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<icelake::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   simdjson_inline simdjson_result<std::string_view> raw_json() noexcept;
 #if SIMDJSON_SUPPORTS_CONCEPTS
   // TODO: move this code into object-inl.h
@@ -80717,6 +82268,7 @@ struct simdjson_result<icelake::ondemand::array_iterator> : public icelake::impl
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 
@@ -81113,7 +82665,9 @@ public:
   simdjson_inline simdjson_result<array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -81157,7 +82711,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -81431,6 +82986,23 @@ public:
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
 
   /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   *
+   * Supports wildcard patterns like "$.array[*]" or "$.object.*" to match multiple elements.
+   *
+   * This method materializes all matching values into a vector.
+   * The document will be consumed after this call.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern, or:
+   *         - INVALID_JSON_POINTER if the JSONPath cannot be parsed
+   *         - NO_SUCH_FIELD if a field does not exist
+   *         - INDEX_OUT_OF_BOUNDS if an array index is out of bounds
+   *         - INCORRECT_TYPE if path traversal encounters wrong type
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
+
+  /**
    * Consumes the document and returns a string_view instance corresponding to the
    * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
@@ -81647,6 +83219,7 @@ public:
   simdjson_inline simdjson_result<std::string_view> raw_json_token() noexcept;
   simdjson_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 private:
   document *doc{nullptr};
@@ -81730,6 +83303,7 @@ public:
 
   simdjson_inline simdjson_result<icelake::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<icelake::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -81812,6 +83386,7 @@ public:
 
   simdjson_inline simdjson_result<icelake::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<icelake::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -82297,6 +83872,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION && SIMDJSON_SUPPORTS_CONCEPTS */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #endif */
@@ -82321,7 +83897,9 @@ public:
   simdjson_inline simdjson_result<object_iterator> begin() noexcept;
   simdjson_inline simdjson_result<object_iterator> end() noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -82369,7 +83947,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -82451,6 +84030,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
    */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like ".*" to match all object fields.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Reset the iterator so that we are pointing back at the
@@ -82600,6 +84188,7 @@ public:
   simdjson_inline simdjson_result<icelake::ondemand::value> operator[](std::string_view key) && noexcept;
   simdjson_inline simdjson_result<icelake::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<icelake::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   inline simdjson_result<bool> reset() noexcept;
   inline simdjson_result<bool> is_empty() noexcept;
   inline simdjson_result<size_t> count_fields() & noexcept;
@@ -83608,6 +85197,67 @@ inline simdjson_result<value> array::at_path(std::string_view json_path) noexcep
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> array::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Wildcard case
+  if(key=="*"){
+    for(auto element: *this){
+
+      if(element.error()){
+        return element.error();
+      }
+
+      if(remaining_path.empty()){
+        // Use value_unsafe() because we've already checked for errors above.
+        // The 'element' is a simdjson_result<value> wrapper, and we need to extract
+        // the underlying value. value_unsafe() is safe here because error() returned false.
+        result.push_back(std::move(element).value_unsafe());
+
+      }else{
+        auto nested_result = element.at_path_with_wildcard(remaining_path);
+
+        if(nested_result.error()){
+          return nested_result.error();
+        }
+        // Same logic as above.
+        std::vector<value> nested_matches = std::move(nested_result).value_unsafe();
+
+        result.insert(result.end(),
+                      std::make_move_iterator(nested_matches.begin()),
+                      std::make_move_iterator(nested_matches.end()));
+      }
+    }
+    return result;
+  }else{
+    // Specific index case in which we access the element at the given index
+    size_t idx=0;
+
+    for(char c:key){
+      if(c < '0' || c > '9'){
+        return INVALID_JSON_POINTER;
+      }
+      idx = idx*10 + (c - '0');
+    }
+
+    auto element = at(idx);
+
+    if(element.error()){
+      return element.error();
+    }
+
+    if(remaining_path.empty()){
+      result.push_back(std::move(element).value_unsafe());
+      return result;
+    }else{
+      return element.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<value> array::at(size_t index) noexcept {
   size_t i = 0;
   for (auto value : *this) {
@@ -83665,6 +85315,10 @@ simdjson_inline  simdjson_result<icelake::ondemand::value> simdjson_result<icela
 simdjson_inline  simdjson_result<icelake::ondemand::value> simdjson_result<icelake::ondemand::array>::at_path(std::string_view json_path) noexcept {
   if (error()) { return error(); }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> simdjson_result<icelake::ondemand::array>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 simdjson_inline  simdjson_result<std::string_view> simdjson_result<icelake::ondemand::array>::raw_json() noexcept {
   if (error()) { return error(); }
@@ -84060,6 +85714,19 @@ simdjson_inline simdjson_result<value> value::at_path(std::string_view json_path
   }
 }
 
+inline simdjson_result<std::vector<value>> value::at_path_with_wildcard(std::string_view json_path) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace icelake
 } // namespace simdjson
@@ -84308,6 +85975,14 @@ simdjson_inline simdjson_result<icelake::ondemand::value> simdjson_result<icelak
     return error();
   }
   return first.at_path(json_path);
+}
+
+inline simdjson_result<std::vector<icelake::ondemand::value>> simdjson_result<icelake::ondemand::value>::at_path_with_wildcard(
+      std::string_view json_path) noexcept {
+  if (error()) {
+    return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 
 } // namespace simdjson
@@ -84665,7 +86340,22 @@ simdjson_inline simdjson_result<value> document::at_path(std::string_view json_p
   }
 }
 
-
+simdjson_inline simdjson_result<std::vector<value>> document::at_path_with_wildcard(std::string_view json_path) noexcept {
+  rewind(); // Rewind the document each time at_path_with_wildcard is called
+  if (json_path.empty()) {
+      return INVALID_JSON_POINTER;
+  }
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
 
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
 
@@ -84990,6 +86680,11 @@ simdjson_inline simdjson_result<icelake::ondemand::value> simdjson_result<icelak
   return first.at_path(json_path);
 }
 
+simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> simdjson_result<icelake::ondemand::document>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
+}
+
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
   requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -85084,6 +86779,7 @@ simdjson_inline simdjson_result<number> document_reference::get_number() noexcep
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json_token() noexcept { return doc->raw_json_token(); }
 simdjson_inline simdjson_result<value> document_reference::at_pointer(std::string_view json_pointer) noexcept { return doc->at_pointer(json_pointer); }
 simdjson_inline simdjson_result<value> document_reference::at_path(std::string_view json_path) noexcept { return doc->at_path(json_path); }
+simdjson_inline simdjson_result<std::vector<value>> document_reference::at_path_with_wildcard(std::string_view json_path) noexcept { return doc->at_path_with_wildcard(json_path); }
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json() noexcept { return doc->raw_json();}
 simdjson_inline document_reference::operator document&() const noexcept { return *doc; }
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
@@ -85339,6 +87035,12 @@ simdjson_inline simdjson_result<icelake::ondemand::value> simdjson_result<icelak
       return error();
   }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> simdjson_result<icelake::ondemand::document_reference>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) {
+      return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
@@ -86741,6 +88443,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/raw_json_string.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value-inl.h" */
+/* amalgamation skipped (editor-only): #include "simdjson/jsonpathutil.h" */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #include <meta> */
@@ -86908,6 +88611,50 @@ inline simdjson_result<value> object::at_path(std::string_view json_path) noexce
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> object::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Handle when its the case for wildcard
+  if (key == "*") {
+    // Loop through each field in the object
+    for (auto field : *this) {
+      value val;
+      SIMDJSON_TRY(field.value().get(val));
+
+      if (remaining_path.empty()) {
+        result.push_back(std::move(val));
+      } else {
+        auto nested_result = val.at_path_with_wildcard(remaining_path);
+
+        if (nested_result.error()) {
+          return nested_result.error();
+        }
+        // Extract and append all nested matches to our result
+        std::vector<value> nested_vec;
+        SIMDJSON_TRY(std::move(nested_result).get(nested_vec));
+
+        result.insert(result.end(),
+                     std::make_move_iterator(nested_vec.begin()),
+                     std::make_move_iterator(nested_vec.end()));
+      }
+    }
+    return result;
+  } else {
+    value val;
+    SIMDJSON_TRY(find_field(key).get(val));
+
+    if (remaining_path.empty()) {
+      result.push_back(std::move(val));
+      return result;
+    } else {
+      return val.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<size_t> object::count_fields() & noexcept {
   size_t count{0};
   // Important: we do not consume any of the values.
@@ -87032,6 +88779,11 @@ simdjson_inline simdjson_result<icelake::ondemand::value> simdjson_result<icelak
     return error();
   }
   return first.at_path(json_path);
+}
+
+simdjson_inline simdjson_result<std::vector<icelake::ondemand::value>> simdjson_result<icelake::ondemand::object>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 
 inline simdjson_result<bool> simdjson_result<icelake::ondemand::object>::reset() noexcept {
@@ -89620,8 +91372,8 @@ simdjson_inline void string_builder::append(const T &opt) {
 
 template <typename T>
   requires(require_custom_serialization<T>)
-simdjson_inline void string_builder::append(const T &val) {
-  serialize(*this, val);
+simdjson_inline void string_builder::append(T &&val) {
+  serialize(*this, std::forward<T>(val));
 }
 
 template <typename T>
@@ -89635,11 +91387,11 @@ simdjson_inline void string_builder::append(const T &value) {
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
 // Support for range-based appending (std::ranges::view, etc.)
 template <std::ranges::range R>
-  requires(!std::is_convertible<R, std::string_view>::value)
+  requires(!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
 simdjson_inline void string_builder::append(const R &range) noexcept {
   auto it = std::ranges::begin(range);
   auto end = std::ranges::end(range);
-  if constexpr (concepts::is_pair<typename R::value_type>) {
+  if constexpr (concepts::is_pair<std::ranges::range_value_t<R>>) {
     start_object();
 
     if (it == end) {
@@ -92650,6 +94402,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 #include <type_traits>
@@ -93038,7 +94791,9 @@ public:
    */
   simdjson_inline simdjson_result<value> at(size_t index) noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -93072,7 +94827,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -93315,6 +95071,14 @@ public:
    */
   simdjson_inline simdjson_result<value> at_path(std::string_view at_path) noexcept;
 
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard character (*) for arrays or ".*" for objects.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 protected:
   /**
@@ -93411,7 +95175,9 @@ public:
   simdjson_inline simdjson_result<ppc64::ondemand::array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -93443,7 +95209,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the defaul because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -93502,6 +95269,7 @@ public:
   simdjson_inline simdjson_result<int32_t> current_depth() const noexcept;
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 };
 
 } // namespace simdjson
@@ -94911,9 +96679,8 @@ struct has_custom_serialization : std::false_type {};
 
 inline constexpr struct serialize_tag {
   template <typename T>
-    requires custom_deserializable<T>
-  constexpr void operator()(ppc64::builder::string_builder& b, T& obj) const{
-    return tag_invoke(*this, b, obj);
+  constexpr void operator()(ppc64::builder::string_builder& b, T&& obj) const{
+    return tag_invoke(*this, b, std::forward<T>(obj));
   }
 
 
@@ -95052,7 +96819,7 @@ public:
 
   template <typename T>
   requires(require_custom_serialization<T>)
-  simdjson_inline void append(const T &val);
+  simdjson_inline void append(T &&val);
 
   // Support for string-like types
   template <typename T>
@@ -95063,7 +96830,7 @@ public:
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
   // Support for range-based appending (std::ranges::view, etc.)
   template <std::ranges::range R>
-requires (!std::is_convertible<R, std::string_view>::value)
+requires (!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
   simdjson_inline void append(const R &range) noexcept;
 #endif
   /**
@@ -95201,6 +96968,7 @@ simdjson_warn_unused simdjson_error to_json(const Z &z, std::string &s, size_t i
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 namespace simdjson {
@@ -95312,6 +97080,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
   */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like "[*]" to match all array elements.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Consumes the array and returns a string_view instance corresponding to the
@@ -95435,6 +97212,7 @@ public:
   simdjson_inline simdjson_result<ppc64::ondemand::value> at(size_t index) noexcept;
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   simdjson_inline simdjson_result<std::string_view> raw_json() noexcept;
 #if SIMDJSON_SUPPORTS_CONCEPTS
   // TODO: move this code into object-inl.h
@@ -95580,6 +97358,7 @@ struct simdjson_result<ppc64::ondemand::array_iterator> : public ppc64::implemen
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 
@@ -95976,7 +97755,9 @@ public:
   simdjson_inline simdjson_result<array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -96020,7 +97801,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -96294,6 +98076,23 @@ public:
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
 
   /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   *
+   * Supports wildcard patterns like "$.array[*]" or "$.object.*" to match multiple elements.
+   *
+   * This method materializes all matching values into a vector.
+   * The document will be consumed after this call.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern, or:
+   *         - INVALID_JSON_POINTER if the JSONPath cannot be parsed
+   *         - NO_SUCH_FIELD if a field does not exist
+   *         - INDEX_OUT_OF_BOUNDS if an array index is out of bounds
+   *         - INCORRECT_TYPE if path traversal encounters wrong type
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
+
+  /**
    * Consumes the document and returns a string_view instance corresponding to the
    * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
@@ -96510,6 +98309,7 @@ public:
   simdjson_inline simdjson_result<std::string_view> raw_json_token() noexcept;
   simdjson_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 private:
   document *doc{nullptr};
@@ -96593,6 +98393,7 @@ public:
 
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -96675,6 +98476,7 @@ public:
 
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -97160,6 +98962,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION && SIMDJSON_SUPPORTS_CONCEPTS */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #endif */
@@ -97184,7 +98987,9 @@ public:
   simdjson_inline simdjson_result<object_iterator> begin() noexcept;
   simdjson_inline simdjson_result<object_iterator> end() noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -97232,7 +99037,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -97314,6 +99120,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
    */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like ".*" to match all object fields.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Reset the iterator so that we are pointing back at the
@@ -97463,6 +99278,7 @@ public:
   simdjson_inline simdjson_result<ppc64::ondemand::value> operator[](std::string_view key) && noexcept;
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<ppc64::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   inline simdjson_result<bool> reset() noexcept;
   inline simdjson_result<bool> is_empty() noexcept;
   inline simdjson_result<size_t> count_fields() & noexcept;
@@ -98471,6 +100287,67 @@ inline simdjson_result<value> array::at_path(std::string_view json_path) noexcep
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> array::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Wildcard case
+  if(key=="*"){
+    for(auto element: *this){
+
+      if(element.error()){
+        return element.error();
+      }
+
+      if(remaining_path.empty()){
+        // Use value_unsafe() because we've already checked for errors above.
+        // The 'element' is a simdjson_result<value> wrapper, and we need to extract
+        // the underlying value. value_unsafe() is safe here because error() returned false.
+        result.push_back(std::move(element).value_unsafe());
+
+      }else{
+        auto nested_result = element.at_path_with_wildcard(remaining_path);
+
+        if(nested_result.error()){
+          return nested_result.error();
+        }
+        // Same logic as above.
+        std::vector<value> nested_matches = std::move(nested_result).value_unsafe();
+
+        result.insert(result.end(),
+                      std::make_move_iterator(nested_matches.begin()),
+                      std::make_move_iterator(nested_matches.end()));
+      }
+    }
+    return result;
+  }else{
+    // Specific index case in which we access the element at the given index
+    size_t idx=0;
+
+    for(char c:key){
+      if(c < '0' || c > '9'){
+        return INVALID_JSON_POINTER;
+      }
+      idx = idx*10 + (c - '0');
+    }
+
+    auto element = at(idx);
+
+    if(element.error()){
+      return element.error();
+    }
+
+    if(remaining_path.empty()){
+      result.push_back(std::move(element).value_unsafe());
+      return result;
+    }else{
+      return element.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<value> array::at(size_t index) noexcept {
   size_t i = 0;
   for (auto value : *this) {
@@ -98528,6 +100405,10 @@ simdjson_inline  simdjson_result<ppc64::ondemand::value> simdjson_result<ppc64::
 simdjson_inline  simdjson_result<ppc64::ondemand::value> simdjson_result<ppc64::ondemand::array>::at_path(std::string_view json_path) noexcept {
   if (error()) { return error(); }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> simdjson_result<ppc64::ondemand::array>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 simdjson_inline  simdjson_result<std::string_view> simdjson_result<ppc64::ondemand::array>::raw_json() noexcept {
   if (error()) { return error(); }
@@ -98923,6 +100804,19 @@ simdjson_inline simdjson_result<value> value::at_path(std::string_view json_path
   }
 }
 
+inline simdjson_result<std::vector<value>> value::at_path_with_wildcard(std::string_view json_path) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace ppc64
 } // namespace simdjson
@@ -99171,6 +101065,14 @@ simdjson_inline simdjson_result<ppc64::ondemand::value> simdjson_result<ppc64::o
     return error();
   }
   return first.at_path(json_path);
+}
+
+inline simdjson_result<std::vector<ppc64::ondemand::value>> simdjson_result<ppc64::ondemand::value>::at_path_with_wildcard(
+      std::string_view json_path) noexcept {
+  if (error()) {
+    return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 
 } // namespace simdjson
@@ -99528,7 +101430,22 @@ simdjson_inline simdjson_result<value> document::at_path(std::string_view json_p
   }
 }
 
-
+simdjson_inline simdjson_result<std::vector<value>> document::at_path_with_wildcard(std::string_view json_path) noexcept {
+  rewind(); // Rewind the document each time at_path_with_wildcard is called
+  if (json_path.empty()) {
+      return INVALID_JSON_POINTER;
+  }
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
 
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
 
@@ -99853,6 +101770,11 @@ simdjson_inline simdjson_result<ppc64::ondemand::value> simdjson_result<ppc64::o
   return first.at_path(json_path);
 }
 
+simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> simdjson_result<ppc64::ondemand::document>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
+}
+
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
   requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -99947,6 +101869,7 @@ simdjson_inline simdjson_result<number> document_reference::get_number() noexcep
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json_token() noexcept { return doc->raw_json_token(); }
 simdjson_inline simdjson_result<value> document_reference::at_pointer(std::string_view json_pointer) noexcept { return doc->at_pointer(json_pointer); }
 simdjson_inline simdjson_result<value> document_reference::at_path(std::string_view json_path) noexcept { return doc->at_path(json_path); }
+simdjson_inline simdjson_result<std::vector<value>> document_reference::at_path_with_wildcard(std::string_view json_path) noexcept { return doc->at_path_with_wildcard(json_path); }
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json() noexcept { return doc->raw_json();}
 simdjson_inline document_reference::operator document&() const noexcept { return *doc; }
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
@@ -100202,6 +102125,12 @@ simdjson_inline simdjson_result<ppc64::ondemand::value> simdjson_result<ppc64::o
       return error();
   }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> simdjson_result<ppc64::ondemand::document_reference>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) {
+      return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
@@ -101604,6 +103533,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/raw_json_string.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value-inl.h" */
+/* amalgamation skipped (editor-only): #include "simdjson/jsonpathutil.h" */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #include <meta> */
@@ -101771,6 +103701,50 @@ inline simdjson_result<value> object::at_path(std::string_view json_path) noexce
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> object::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Handle when its the case for wildcard
+  if (key == "*") {
+    // Loop through each field in the object
+    for (auto field : *this) {
+      value val;
+      SIMDJSON_TRY(field.value().get(val));
+
+      if (remaining_path.empty()) {
+        result.push_back(std::move(val));
+      } else {
+        auto nested_result = val.at_path_with_wildcard(remaining_path);
+
+        if (nested_result.error()) {
+          return nested_result.error();
+        }
+        // Extract and append all nested matches to our result
+        std::vector<value> nested_vec;
+        SIMDJSON_TRY(std::move(nested_result).get(nested_vec));
+
+        result.insert(result.end(),
+                     std::make_move_iterator(nested_vec.begin()),
+                     std::make_move_iterator(nested_vec.end()));
+      }
+    }
+    return result;
+  } else {
+    value val;
+    SIMDJSON_TRY(find_field(key).get(val));
+
+    if (remaining_path.empty()) {
+      result.push_back(std::move(val));
+      return result;
+    } else {
+      return val.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<size_t> object::count_fields() & noexcept {
   size_t count{0};
   // Important: we do not consume any of the values.
@@ -101895,6 +103869,11 @@ simdjson_inline simdjson_result<ppc64::ondemand::value> simdjson_result<ppc64::o
     return error();
   }
   return first.at_path(json_path);
+}
+
+simdjson_inline simdjson_result<std::vector<ppc64::ondemand::value>> simdjson_result<ppc64::ondemand::object>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 
 inline simdjson_result<bool> simdjson_result<ppc64::ondemand::object>::reset() noexcept {
@@ -104483,8 +106462,8 @@ simdjson_inline void string_builder::append(const T &opt) {
 
 template <typename T>
   requires(require_custom_serialization<T>)
-simdjson_inline void string_builder::append(const T &val) {
-  serialize(*this, val);
+simdjson_inline void string_builder::append(T &&val) {
+  serialize(*this, std::forward<T>(val));
 }
 
 template <typename T>
@@ -104498,11 +106477,11 @@ simdjson_inline void string_builder::append(const T &value) {
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
 // Support for range-based appending (std::ranges::view, etc.)
 template <std::ranges::range R>
-  requires(!std::is_convertible<R, std::string_view>::value)
+  requires(!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
 simdjson_inline void string_builder::append(const R &range) noexcept {
   auto it = std::ranges::begin(range);
   auto end = std::ranges::end(range);
-  if constexpr (concepts::is_pair<typename R::value_type>) {
+  if constexpr (concepts::is_pair<std::ranges::range_value_t<R>>) {
     start_object();
 
     if (it == end) {
@@ -107829,6 +109808,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 #include <type_traits>
@@ -108217,7 +110197,9 @@ public:
    */
   simdjson_inline simdjson_result<value> at(size_t index) noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -108251,7 +110233,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -108494,6 +110477,14 @@ public:
    */
   simdjson_inline simdjson_result<value> at_path(std::string_view at_path) noexcept;
 
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard character (*) for arrays or ".*" for objects.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 protected:
   /**
@@ -108590,7 +110581,9 @@ public:
   simdjson_inline simdjson_result<westmere::ondemand::array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -108622,7 +110615,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the defaul because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -108681,6 +110675,7 @@ public:
   simdjson_inline simdjson_result<int32_t> current_depth() const noexcept;
   simdjson_inline simdjson_result<westmere::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<westmere::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 };
 
 } // namespace simdjson
@@ -110090,9 +112085,8 @@ struct has_custom_serialization : std::false_type {};
 
 inline constexpr struct serialize_tag {
   template <typename T>
-    requires custom_deserializable<T>
-  constexpr void operator()(westmere::builder::string_builder& b, T& obj) const{
-    return tag_invoke(*this, b, obj);
+  constexpr void operator()(westmere::builder::string_builder& b, T&& obj) const{
+    return tag_invoke(*this, b, std::forward<T>(obj));
   }
 
 
@@ -110231,7 +112225,7 @@ public:
 
   template <typename T>
   requires(require_custom_serialization<T>)
-  simdjson_inline void append(const T &val);
+  simdjson_inline void append(T &&val);
 
   // Support for string-like types
   template <typename T>
@@ -110242,7 +112236,7 @@ public:
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
   // Support for range-based appending (std::ranges::view, etc.)
   template <std::ranges::range R>
-requires (!std::is_convertible<R, std::string_view>::value)
+requires (!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
   simdjson_inline void append(const R &range) noexcept;
 #endif
   /**
@@ -110380,6 +112374,7 @@ simdjson_warn_unused simdjson_error to_json(const Z &z, std::string &s, size_t i
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 namespace simdjson {
@@ -110491,6 +112486,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
   */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like "[*]" to match all array elements.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Consumes the array and returns a string_view instance corresponding to the
@@ -110614,6 +112618,7 @@ public:
   simdjson_inline simdjson_result<westmere::ondemand::value> at(size_t index) noexcept;
   simdjson_inline simdjson_result<westmere::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<westmere::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   simdjson_inline simdjson_result<std::string_view> raw_json() noexcept;
 #if SIMDJSON_SUPPORTS_CONCEPTS
   // TODO: move this code into object-inl.h
@@ -110759,6 +112764,7 @@ struct simdjson_result<westmere::ondemand::array_iterator> : public westmere::im
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 
@@ -111155,7 +113161,9 @@ public:
   simdjson_inline simdjson_result<array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -111199,7 +113207,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -111473,6 +113482,23 @@ public:
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
 
   /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   *
+   * Supports wildcard patterns like "$.array[*]" or "$.object.*" to match multiple elements.
+   *
+   * This method materializes all matching values into a vector.
+   * The document will be consumed after this call.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern, or:
+   *         - INVALID_JSON_POINTER if the JSONPath cannot be parsed
+   *         - NO_SUCH_FIELD if a field does not exist
+   *         - INDEX_OUT_OF_BOUNDS if an array index is out of bounds
+   *         - INCORRECT_TYPE if path traversal encounters wrong type
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
+
+  /**
    * Consumes the document and returns a string_view instance corresponding to the
    * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
@@ -111689,6 +113715,7 @@ public:
   simdjson_inline simdjson_result<std::string_view> raw_json_token() noexcept;
   simdjson_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 private:
   document *doc{nullptr};
@@ -111772,6 +113799,7 @@ public:
 
   simdjson_inline simdjson_result<westmere::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<westmere::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -111854,6 +113882,7 @@ public:
 
   simdjson_inline simdjson_result<westmere::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<westmere::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -112339,6 +114368,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION && SIMDJSON_SUPPORTS_CONCEPTS */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #endif */
@@ -112363,7 +114393,9 @@ public:
   simdjson_inline simdjson_result<object_iterator> begin() noexcept;
   simdjson_inline simdjson_result<object_iterator> end() noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -112411,7 +114443,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -112493,6 +114526,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
    */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like ".*" to match all object fields.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Reset the iterator so that we are pointing back at the
@@ -112642,6 +114684,7 @@ public:
   simdjson_inline simdjson_result<westmere::ondemand::value> operator[](std::string_view key) && noexcept;
   simdjson_inline simdjson_result<westmere::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<westmere::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   inline simdjson_result<bool> reset() noexcept;
   inline simdjson_result<bool> is_empty() noexcept;
   inline simdjson_result<size_t> count_fields() & noexcept;
@@ -113650,6 +115693,67 @@ inline simdjson_result<value> array::at_path(std::string_view json_path) noexcep
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> array::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Wildcard case
+  if(key=="*"){
+    for(auto element: *this){
+
+      if(element.error()){
+        return element.error();
+      }
+
+      if(remaining_path.empty()){
+        // Use value_unsafe() because we've already checked for errors above.
+        // The 'element' is a simdjson_result<value> wrapper, and we need to extract
+        // the underlying value. value_unsafe() is safe here because error() returned false.
+        result.push_back(std::move(element).value_unsafe());
+
+      }else{
+        auto nested_result = element.at_path_with_wildcard(remaining_path);
+
+        if(nested_result.error()){
+          return nested_result.error();
+        }
+        // Same logic as above.
+        std::vector<value> nested_matches = std::move(nested_result).value_unsafe();
+
+        result.insert(result.end(),
+                      std::make_move_iterator(nested_matches.begin()),
+                      std::make_move_iterator(nested_matches.end()));
+      }
+    }
+    return result;
+  }else{
+    // Specific index case in which we access the element at the given index
+    size_t idx=0;
+
+    for(char c:key){
+      if(c < '0' || c > '9'){
+        return INVALID_JSON_POINTER;
+      }
+      idx = idx*10 + (c - '0');
+    }
+
+    auto element = at(idx);
+
+    if(element.error()){
+      return element.error();
+    }
+
+    if(remaining_path.empty()){
+      result.push_back(std::move(element).value_unsafe());
+      return result;
+    }else{
+      return element.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<value> array::at(size_t index) noexcept {
   size_t i = 0;
   for (auto value : *this) {
@@ -113707,6 +115811,10 @@ simdjson_inline  simdjson_result<westmere::ondemand::value> simdjson_result<west
 simdjson_inline  simdjson_result<westmere::ondemand::value> simdjson_result<westmere::ondemand::array>::at_path(std::string_view json_path) noexcept {
   if (error()) { return error(); }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> simdjson_result<westmere::ondemand::array>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 simdjson_inline  simdjson_result<std::string_view> simdjson_result<westmere::ondemand::array>::raw_json() noexcept {
   if (error()) { return error(); }
@@ -114102,6 +116210,19 @@ simdjson_inline simdjson_result<value> value::at_path(std::string_view json_path
   }
 }
 
+inline simdjson_result<std::vector<value>> value::at_path_with_wildcard(std::string_view json_path) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace westmere
 } // namespace simdjson
@@ -114350,6 +116471,14 @@ simdjson_inline simdjson_result<westmere::ondemand::value> simdjson_result<westm
     return error();
   }
   return first.at_path(json_path);
+}
+
+inline simdjson_result<std::vector<westmere::ondemand::value>> simdjson_result<westmere::ondemand::value>::at_path_with_wildcard(
+      std::string_view json_path) noexcept {
+  if (error()) {
+    return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 
 } // namespace simdjson
@@ -114707,7 +116836,22 @@ simdjson_inline simdjson_result<value> document::at_path(std::string_view json_p
   }
 }
 
-
+simdjson_inline simdjson_result<std::vector<value>> document::at_path_with_wildcard(std::string_view json_path) noexcept {
+  rewind(); // Rewind the document each time at_path_with_wildcard is called
+  if (json_path.empty()) {
+      return INVALID_JSON_POINTER;
+  }
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
 
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
 
@@ -115032,6 +117176,11 @@ simdjson_inline simdjson_result<westmere::ondemand::value> simdjson_result<westm
   return first.at_path(json_path);
 }
 
+simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> simdjson_result<westmere::ondemand::document>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
+}
+
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
   requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -115126,6 +117275,7 @@ simdjson_inline simdjson_result<number> document_reference::get_number() noexcep
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json_token() noexcept { return doc->raw_json_token(); }
 simdjson_inline simdjson_result<value> document_reference::at_pointer(std::string_view json_pointer) noexcept { return doc->at_pointer(json_pointer); }
 simdjson_inline simdjson_result<value> document_reference::at_path(std::string_view json_path) noexcept { return doc->at_path(json_path); }
+simdjson_inline simdjson_result<std::vector<value>> document_reference::at_path_with_wildcard(std::string_view json_path) noexcept { return doc->at_path_with_wildcard(json_path); }
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json() noexcept { return doc->raw_json();}
 simdjson_inline document_reference::operator document&() const noexcept { return *doc; }
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
@@ -115381,6 +117531,12 @@ simdjson_inline simdjson_result<westmere::ondemand::value> simdjson_result<westm
       return error();
   }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> simdjson_result<westmere::ondemand::document_reference>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) {
+      return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
@@ -116783,6 +118939,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/raw_json_string.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value-inl.h" */
+/* amalgamation skipped (editor-only): #include "simdjson/jsonpathutil.h" */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #include <meta> */
@@ -116950,6 +119107,50 @@ inline simdjson_result<value> object::at_path(std::string_view json_path) noexce
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> object::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Handle when its the case for wildcard
+  if (key == "*") {
+    // Loop through each field in the object
+    for (auto field : *this) {
+      value val;
+      SIMDJSON_TRY(field.value().get(val));
+
+      if (remaining_path.empty()) {
+        result.push_back(std::move(val));
+      } else {
+        auto nested_result = val.at_path_with_wildcard(remaining_path);
+
+        if (nested_result.error()) {
+          return nested_result.error();
+        }
+        // Extract and append all nested matches to our result
+        std::vector<value> nested_vec;
+        SIMDJSON_TRY(std::move(nested_result).get(nested_vec));
+
+        result.insert(result.end(),
+                     std::make_move_iterator(nested_vec.begin()),
+                     std::make_move_iterator(nested_vec.end()));
+      }
+    }
+    return result;
+  } else {
+    value val;
+    SIMDJSON_TRY(find_field(key).get(val));
+
+    if (remaining_path.empty()) {
+      result.push_back(std::move(val));
+      return result;
+    } else {
+      return val.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<size_t> object::count_fields() & noexcept {
   size_t count{0};
   // Important: we do not consume any of the values.
@@ -117074,6 +119275,11 @@ simdjson_inline simdjson_result<westmere::ondemand::value> simdjson_result<westm
     return error();
   }
   return first.at_path(json_path);
+}
+
+simdjson_inline simdjson_result<std::vector<westmere::ondemand::value>> simdjson_result<westmere::ondemand::object>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 
 inline simdjson_result<bool> simdjson_result<westmere::ondemand::object>::reset() noexcept {
@@ -119662,8 +121868,8 @@ simdjson_inline void string_builder::append(const T &opt) {
 
 template <typename T>
   requires(require_custom_serialization<T>)
-simdjson_inline void string_builder::append(const T &val) {
-  serialize(*this, val);
+simdjson_inline void string_builder::append(T &&val) {
+  serialize(*this, std::forward<T>(val));
 }
 
 template <typename T>
@@ -119677,11 +121883,11 @@ simdjson_inline void string_builder::append(const T &value) {
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
 // Support for range-based appending (std::ranges::view, etc.)
 template <std::ranges::range R>
-  requires(!std::is_convertible<R, std::string_view>::value)
+  requires(!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
 simdjson_inline void string_builder::append(const R &range) noexcept {
   auto it = std::ranges::begin(range);
   auto end = std::ranges::end(range);
-  if constexpr (concepts::is_pair<typename R::value_type>) {
+  if constexpr (concepts::is_pair<std::ranges::range_value_t<R>>) {
     start_object();
 
     if (it == end) {
@@ -122485,6 +124691,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 #include <type_traits>
@@ -122873,7 +125080,9 @@ public:
    */
   simdjson_inline simdjson_result<value> at(size_t index) noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -122907,7 +125116,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -123150,6 +125360,14 @@ public:
    */
   simdjson_inline simdjson_result<value> at_path(std::string_view at_path) noexcept;
 
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard character (*) for arrays or ".*" for objects.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 protected:
   /**
@@ -123246,7 +125464,9 @@ public:
   simdjson_inline simdjson_result<lsx::ondemand::array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -123278,7 +125498,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the defaul because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -123337,6 +125558,7 @@ public:
   simdjson_inline simdjson_result<int32_t> current_depth() const noexcept;
   simdjson_inline simdjson_result<lsx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lsx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 };
 
 } // namespace simdjson
@@ -124746,9 +126968,8 @@ struct has_custom_serialization : std::false_type {};
 
 inline constexpr struct serialize_tag {
   template <typename T>
-    requires custom_deserializable<T>
-  constexpr void operator()(lsx::builder::string_builder& b, T& obj) const{
-    return tag_invoke(*this, b, obj);
+  constexpr void operator()(lsx::builder::string_builder& b, T&& obj) const{
+    return tag_invoke(*this, b, std::forward<T>(obj));
   }
 
 
@@ -124887,7 +127108,7 @@ public:
 
   template <typename T>
   requires(require_custom_serialization<T>)
-  simdjson_inline void append(const T &val);
+  simdjson_inline void append(T &&val);
 
   // Support for string-like types
   template <typename T>
@@ -124898,7 +127119,7 @@ public:
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
   // Support for range-based appending (std::ranges::view, etc.)
   template <std::ranges::range R>
-requires (!std::is_convertible<R, std::string_view>::value)
+requires (!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
   simdjson_inline void append(const R &range) noexcept;
 #endif
   /**
@@ -125036,6 +127257,7 @@ simdjson_warn_unused simdjson_error to_json(const Z &z, std::string &s, size_t i
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 namespace simdjson {
@@ -125147,6 +127369,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
   */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like "[*]" to match all array elements.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Consumes the array and returns a string_view instance corresponding to the
@@ -125270,6 +127501,7 @@ public:
   simdjson_inline simdjson_result<lsx::ondemand::value> at(size_t index) noexcept;
   simdjson_inline simdjson_result<lsx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lsx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   simdjson_inline simdjson_result<std::string_view> raw_json() noexcept;
 #if SIMDJSON_SUPPORTS_CONCEPTS
   // TODO: move this code into object-inl.h
@@ -125415,6 +127647,7 @@ struct simdjson_result<lsx::ondemand::array_iterator> : public lsx::implementati
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 
@@ -125811,7 +128044,9 @@ public:
   simdjson_inline simdjson_result<array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -125855,7 +128090,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -126129,6 +128365,23 @@ public:
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
 
   /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   *
+   * Supports wildcard patterns like "$.array[*]" or "$.object.*" to match multiple elements.
+   *
+   * This method materializes all matching values into a vector.
+   * The document will be consumed after this call.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern, or:
+   *         - INVALID_JSON_POINTER if the JSONPath cannot be parsed
+   *         - NO_SUCH_FIELD if a field does not exist
+   *         - INDEX_OUT_OF_BOUNDS if an array index is out of bounds
+   *         - INCORRECT_TYPE if path traversal encounters wrong type
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
+
+  /**
    * Consumes the document and returns a string_view instance corresponding to the
    * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
@@ -126345,6 +128598,7 @@ public:
   simdjson_inline simdjson_result<std::string_view> raw_json_token() noexcept;
   simdjson_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 private:
   document *doc{nullptr};
@@ -126428,6 +128682,7 @@ public:
 
   simdjson_inline simdjson_result<lsx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lsx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -126510,6 +128765,7 @@ public:
 
   simdjson_inline simdjson_result<lsx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lsx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -126995,6 +129251,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION && SIMDJSON_SUPPORTS_CONCEPTS */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #endif */
@@ -127019,7 +129276,9 @@ public:
   simdjson_inline simdjson_result<object_iterator> begin() noexcept;
   simdjson_inline simdjson_result<object_iterator> end() noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -127067,7 +129326,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -127149,6 +129409,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
    */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like ".*" to match all object fields.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Reset the iterator so that we are pointing back at the
@@ -127298,6 +129567,7 @@ public:
   simdjson_inline simdjson_result<lsx::ondemand::value> operator[](std::string_view key) && noexcept;
   simdjson_inline simdjson_result<lsx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lsx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   inline simdjson_result<bool> reset() noexcept;
   inline simdjson_result<bool> is_empty() noexcept;
   inline simdjson_result<size_t> count_fields() & noexcept;
@@ -128306,6 +130576,67 @@ inline simdjson_result<value> array::at_path(std::string_view json_path) noexcep
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> array::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Wildcard case
+  if(key=="*"){
+    for(auto element: *this){
+
+      if(element.error()){
+        return element.error();
+      }
+
+      if(remaining_path.empty()){
+        // Use value_unsafe() because we've already checked for errors above.
+        // The 'element' is a simdjson_result<value> wrapper, and we need to extract
+        // the underlying value. value_unsafe() is safe here because error() returned false.
+        result.push_back(std::move(element).value_unsafe());
+
+      }else{
+        auto nested_result = element.at_path_with_wildcard(remaining_path);
+
+        if(nested_result.error()){
+          return nested_result.error();
+        }
+        // Same logic as above.
+        std::vector<value> nested_matches = std::move(nested_result).value_unsafe();
+
+        result.insert(result.end(),
+                      std::make_move_iterator(nested_matches.begin()),
+                      std::make_move_iterator(nested_matches.end()));
+      }
+    }
+    return result;
+  }else{
+    // Specific index case in which we access the element at the given index
+    size_t idx=0;
+
+    for(char c:key){
+      if(c < '0' || c > '9'){
+        return INVALID_JSON_POINTER;
+      }
+      idx = idx*10 + (c - '0');
+    }
+
+    auto element = at(idx);
+
+    if(element.error()){
+      return element.error();
+    }
+
+    if(remaining_path.empty()){
+      result.push_back(std::move(element).value_unsafe());
+      return result;
+    }else{
+      return element.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<value> array::at(size_t index) noexcept {
   size_t i = 0;
   for (auto value : *this) {
@@ -128363,6 +130694,10 @@ simdjson_inline  simdjson_result<lsx::ondemand::value> simdjson_result<lsx::onde
 simdjson_inline  simdjson_result<lsx::ondemand::value> simdjson_result<lsx::ondemand::array>::at_path(std::string_view json_path) noexcept {
   if (error()) { return error(); }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> simdjson_result<lsx::ondemand::array>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 simdjson_inline  simdjson_result<std::string_view> simdjson_result<lsx::ondemand::array>::raw_json() noexcept {
   if (error()) { return error(); }
@@ -128758,6 +131093,19 @@ simdjson_inline simdjson_result<value> value::at_path(std::string_view json_path
   }
 }
 
+inline simdjson_result<std::vector<value>> value::at_path_with_wildcard(std::string_view json_path) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace lsx
 } // namespace simdjson
@@ -129006,6 +131354,14 @@ simdjson_inline simdjson_result<lsx::ondemand::value> simdjson_result<lsx::ondem
     return error();
   }
   return first.at_path(json_path);
+}
+
+inline simdjson_result<std::vector<lsx::ondemand::value>> simdjson_result<lsx::ondemand::value>::at_path_with_wildcard(
+      std::string_view json_path) noexcept {
+  if (error()) {
+    return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 
 } // namespace simdjson
@@ -129363,7 +131719,22 @@ simdjson_inline simdjson_result<value> document::at_path(std::string_view json_p
   }
 }
 
-
+simdjson_inline simdjson_result<std::vector<value>> document::at_path_with_wildcard(std::string_view json_path) noexcept {
+  rewind(); // Rewind the document each time at_path_with_wildcard is called
+  if (json_path.empty()) {
+      return INVALID_JSON_POINTER;
+  }
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
 
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
 
@@ -129688,6 +132059,11 @@ simdjson_inline simdjson_result<lsx::ondemand::value> simdjson_result<lsx::ondem
   return first.at_path(json_path);
 }
 
+simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> simdjson_result<lsx::ondemand::document>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
+}
+
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
   requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -129782,6 +132158,7 @@ simdjson_inline simdjson_result<number> document_reference::get_number() noexcep
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json_token() noexcept { return doc->raw_json_token(); }
 simdjson_inline simdjson_result<value> document_reference::at_pointer(std::string_view json_pointer) noexcept { return doc->at_pointer(json_pointer); }
 simdjson_inline simdjson_result<value> document_reference::at_path(std::string_view json_path) noexcept { return doc->at_path(json_path); }
+simdjson_inline simdjson_result<std::vector<value>> document_reference::at_path_with_wildcard(std::string_view json_path) noexcept { return doc->at_path_with_wildcard(json_path); }
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json() noexcept { return doc->raw_json();}
 simdjson_inline document_reference::operator document&() const noexcept { return *doc; }
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
@@ -130037,6 +132414,12 @@ simdjson_inline simdjson_result<lsx::ondemand::value> simdjson_result<lsx::ondem
       return error();
   }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> simdjson_result<lsx::ondemand::document_reference>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) {
+      return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
@@ -131439,6 +133822,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/raw_json_string.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value-inl.h" */
+/* amalgamation skipped (editor-only): #include "simdjson/jsonpathutil.h" */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #include <meta> */
@@ -131606,6 +133990,50 @@ inline simdjson_result<value> object::at_path(std::string_view json_path) noexce
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> object::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Handle when its the case for wildcard
+  if (key == "*") {
+    // Loop through each field in the object
+    for (auto field : *this) {
+      value val;
+      SIMDJSON_TRY(field.value().get(val));
+
+      if (remaining_path.empty()) {
+        result.push_back(std::move(val));
+      } else {
+        auto nested_result = val.at_path_with_wildcard(remaining_path);
+
+        if (nested_result.error()) {
+          return nested_result.error();
+        }
+        // Extract and append all nested matches to our result
+        std::vector<value> nested_vec;
+        SIMDJSON_TRY(std::move(nested_result).get(nested_vec));
+
+        result.insert(result.end(),
+                     std::make_move_iterator(nested_vec.begin()),
+                     std::make_move_iterator(nested_vec.end()));
+      }
+    }
+    return result;
+  } else {
+    value val;
+    SIMDJSON_TRY(find_field(key).get(val));
+
+    if (remaining_path.empty()) {
+      result.push_back(std::move(val));
+      return result;
+    } else {
+      return val.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<size_t> object::count_fields() & noexcept {
   size_t count{0};
   // Important: we do not consume any of the values.
@@ -131730,6 +134158,11 @@ simdjson_inline simdjson_result<lsx::ondemand::value> simdjson_result<lsx::ondem
     return error();
   }
   return first.at_path(json_path);
+}
+
+simdjson_inline simdjson_result<std::vector<lsx::ondemand::value>> simdjson_result<lsx::ondemand::object>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 
 inline simdjson_result<bool> simdjson_result<lsx::ondemand::object>::reset() noexcept {
@@ -134318,8 +136751,8 @@ simdjson_inline void string_builder::append(const T &opt) {
 
 template <typename T>
   requires(require_custom_serialization<T>)
-simdjson_inline void string_builder::append(const T &val) {
-  serialize(*this, val);
+simdjson_inline void string_builder::append(T &&val) {
+  serialize(*this, std::forward<T>(val));
 }
 
 template <typename T>
@@ -134333,11 +136766,11 @@ simdjson_inline void string_builder::append(const T &value) {
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
 // Support for range-based appending (std::ranges::view, etc.)
 template <std::ranges::range R>
-  requires(!std::is_convertible<R, std::string_view>::value)
+  requires(!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
 simdjson_inline void string_builder::append(const R &range) noexcept {
   auto it = std::ranges::begin(range);
   auto end = std::ranges::end(range);
-  if constexpr (concepts::is_pair<typename R::value_type>) {
+  if constexpr (concepts::is_pair<std::ranges::range_value_t<R>>) {
     start_object();
 
     if (it == end) {
@@ -137154,6 +139587,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 #include <type_traits>
@@ -137542,7 +139976,9 @@ public:
    */
   simdjson_inline simdjson_result<value> at(size_t index) noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -137576,7 +140012,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -137819,6 +140256,14 @@ public:
    */
   simdjson_inline simdjson_result<value> at_path(std::string_view at_path) noexcept;
 
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard character (*) for arrays or ".*" for objects.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 protected:
   /**
@@ -137915,7 +140360,9 @@ public:
   simdjson_inline simdjson_result<lasx::ondemand::array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -137947,7 +140394,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the defaul because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -138006,6 +140454,7 @@ public:
   simdjson_inline simdjson_result<int32_t> current_depth() const noexcept;
   simdjson_inline simdjson_result<lasx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lasx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 };
 
 } // namespace simdjson
@@ -139415,9 +141864,8 @@ struct has_custom_serialization : std::false_type {};
 
 inline constexpr struct serialize_tag {
   template <typename T>
-    requires custom_deserializable<T>
-  constexpr void operator()(lasx::builder::string_builder& b, T& obj) const{
-    return tag_invoke(*this, b, obj);
+  constexpr void operator()(lasx::builder::string_builder& b, T&& obj) const{
+    return tag_invoke(*this, b, std::forward<T>(obj));
   }
 
 
@@ -139556,7 +142004,7 @@ public:
 
   template <typename T>
   requires(require_custom_serialization<T>)
-  simdjson_inline void append(const T &val);
+  simdjson_inline void append(T &&val);
 
   // Support for string-like types
   template <typename T>
@@ -139567,7 +142015,7 @@ public:
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
   // Support for range-based appending (std::ranges::view, etc.)
   template <std::ranges::range R>
-requires (!std::is_convertible<R, std::string_view>::value)
+requires (!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
   simdjson_inline void append(const R &range) noexcept;
 #endif
   /**
@@ -139705,6 +142153,7 @@ simdjson_warn_unused simdjson_error to_json(const Z &z, std::string &s, size_t i
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 namespace simdjson {
@@ -139816,6 +142265,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
   */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like "[*]" to match all array elements.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Consumes the array and returns a string_view instance corresponding to the
@@ -139939,6 +142397,7 @@ public:
   simdjson_inline simdjson_result<lasx::ondemand::value> at(size_t index) noexcept;
   simdjson_inline simdjson_result<lasx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lasx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   simdjson_inline simdjson_result<std::string_view> raw_json() noexcept;
 #if SIMDJSON_SUPPORTS_CONCEPTS
   // TODO: move this code into object-inl.h
@@ -140084,6 +142543,7 @@ struct simdjson_result<lasx::ondemand::array_iterator> : public lasx::implementa
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/deserialize.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #endif // SIMDJSON_CONDITIONAL_INCLUDE */
 
 
@@ -140480,7 +142940,9 @@ public:
   simdjson_inline simdjson_result<array_iterator> end() & noexcept;
 
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -140524,7 +142986,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -140798,6 +143261,23 @@ public:
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
 
   /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   *
+   * Supports wildcard patterns like "$.array[*]" or "$.object.*" to match multiple elements.
+   *
+   * This method materializes all matching values into a vector.
+   * The document will be consumed after this call.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern, or:
+   *         - INVALID_JSON_POINTER if the JSONPath cannot be parsed
+   *         - NO_SUCH_FIELD if a field does not exist
+   *         - INDEX_OUT_OF_BOUNDS if an array index is out of bounds
+   *         - INCORRECT_TYPE if path traversal encounters wrong type
+   */
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
+
+  /**
    * Consumes the document and returns a string_view instance corresponding to the
    * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
@@ -141014,6 +143494,7 @@ public:
   simdjson_inline simdjson_result<std::string_view> raw_json_token() noexcept;
   simdjson_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
 private:
   document *doc{nullptr};
@@ -141097,6 +143578,7 @@ public:
 
   simdjson_inline simdjson_result<lasx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lasx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -141179,6 +143661,7 @@ public:
 
   simdjson_inline simdjson_result<lasx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lasx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 #if SIMDJSON_STATIC_REFLECTION
   template<constevalutil::fixed_string... FieldNames, typename T>
     requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -141664,6 +144147,7 @@ public:
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/implementation_simdjson_result_base.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value_iterator.h" */
+/* amalgamation skipped (editor-only): #include <vector> */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION && SIMDJSON_SUPPORTS_CONCEPTS */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #endif */
@@ -141688,7 +144172,9 @@ public:
   simdjson_inline simdjson_result<object_iterator> begin() noexcept;
   simdjson_inline simdjson_result<object_iterator> end() noexcept;
   /**
-   * Look up a field by name on an object (order-sensitive).
+   * Look up a field by name on an object (order-sensitive). By order-sensitive, we mean that
+   * fields must be accessed in the order they appear in the JSON text (although you can
+   * skip fields). See find_field_unordered() and operator[] for an order-insensitive version.
    *
    * The following code reads z, then y, then x, and thus will not retrieve x or y if fed the
    * JSON `{ "x": 1, "y": 2, "z": 3 }`:
@@ -141736,7 +144222,8 @@ public:
    * missing case has a non-cache-friendly bump and lots of extra scanning, especially if the object
    * in question is large. The fact that the extra code is there also bumps the executable size.
    *
-   * It is the default, however, because it would be highly surprising (and hard to debug) if the
+   * We default operator[] on find_field_unordered() for convenience.
+   * It is the default because it would be highly surprising (and hard to debug) if the
    * default behavior failed to look up a field just because it was in the wrong order--and many
    * APIs assume this. Therefore, you must be explicit if you want to treat objects as out of order.
    *
@@ -141818,6 +144305,15 @@ public:
    *         - INCORRECT_TYPE if a non-integer is used to access an array
    */
   inline simdjson_result<value> at_path(std::string_view json_path) noexcept;
+
+  /**
+   * Get all values matching the given JSONPath expression with wildcard support.
+   * Supports wildcard patterns like ".*" to match all object fields.
+   *
+   * @param json_path JSONPath expression with wildcards
+   * @return Vector of values matching the wildcard pattern
+  */
+  inline simdjson_result<std::vector<value>> at_path_with_wildcard(std::string_view json_path) noexcept;
 
   /**
    * Reset the iterator so that we are pointing back at the
@@ -141967,6 +144463,7 @@ public:
   simdjson_inline simdjson_result<lasx::ondemand::value> operator[](std::string_view key) && noexcept;
   simdjson_inline simdjson_result<lasx::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
   simdjson_inline simdjson_result<lasx::ondemand::value> at_path(std::string_view json_path) noexcept;
+  simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> at_path_with_wildcard(std::string_view json_path) noexcept;
   inline simdjson_result<bool> reset() noexcept;
   inline simdjson_result<bool> is_empty() noexcept;
   inline simdjson_result<size_t> count_fields() & noexcept;
@@ -142975,6 +145472,67 @@ inline simdjson_result<value> array::at_path(std::string_view json_path) noexcep
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> array::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Wildcard case
+  if(key=="*"){
+    for(auto element: *this){
+
+      if(element.error()){
+        return element.error();
+      }
+
+      if(remaining_path.empty()){
+        // Use value_unsafe() because we've already checked for errors above.
+        // The 'element' is a simdjson_result<value> wrapper, and we need to extract
+        // the underlying value. value_unsafe() is safe here because error() returned false.
+        result.push_back(std::move(element).value_unsafe());
+
+      }else{
+        auto nested_result = element.at_path_with_wildcard(remaining_path);
+
+        if(nested_result.error()){
+          return nested_result.error();
+        }
+        // Same logic as above.
+        std::vector<value> nested_matches = std::move(nested_result).value_unsafe();
+
+        result.insert(result.end(),
+                      std::make_move_iterator(nested_matches.begin()),
+                      std::make_move_iterator(nested_matches.end()));
+      }
+    }
+    return result;
+  }else{
+    // Specific index case in which we access the element at the given index
+    size_t idx=0;
+
+    for(char c:key){
+      if(c < '0' || c > '9'){
+        return INVALID_JSON_POINTER;
+      }
+      idx = idx*10 + (c - '0');
+    }
+
+    auto element = at(idx);
+
+    if(element.error()){
+      return element.error();
+    }
+
+    if(remaining_path.empty()){
+      result.push_back(std::move(element).value_unsafe());
+      return result;
+    }else{
+      return element.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<value> array::at(size_t index) noexcept {
   size_t i = 0;
   for (auto value : *this) {
@@ -143032,6 +145590,10 @@ simdjson_inline  simdjson_result<lasx::ondemand::value> simdjson_result<lasx::on
 simdjson_inline  simdjson_result<lasx::ondemand::value> simdjson_result<lasx::ondemand::array>::at_path(std::string_view json_path) noexcept {
   if (error()) { return error(); }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> simdjson_result<lasx::ondemand::array>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 simdjson_inline  simdjson_result<std::string_view> simdjson_result<lasx::ondemand::array>::raw_json() noexcept {
   if (error()) { return error(); }
@@ -143427,6 +145989,19 @@ simdjson_inline simdjson_result<value> value::at_path(std::string_view json_path
   }
 }
 
+inline simdjson_result<std::vector<value>> value::at_path_with_wildcard(std::string_view json_path) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace lasx
 } // namespace simdjson
@@ -143675,6 +146250,14 @@ simdjson_inline simdjson_result<lasx::ondemand::value> simdjson_result<lasx::ond
     return error();
   }
   return first.at_path(json_path);
+}
+
+inline simdjson_result<std::vector<lasx::ondemand::value>> simdjson_result<lasx::ondemand::value>::at_path_with_wildcard(
+      std::string_view json_path) noexcept {
+  if (error()) {
+    return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 
 } // namespace simdjson
@@ -144032,7 +146615,22 @@ simdjson_inline simdjson_result<value> document::at_path(std::string_view json_p
   }
 }
 
-
+simdjson_inline simdjson_result<std::vector<value>> document::at_path_with_wildcard(std::string_view json_path) noexcept {
+  rewind(); // Rewind the document each time at_path_with_wildcard is called
+  if (json_path.empty()) {
+      return INVALID_JSON_POINTER;
+  }
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t) {
+  case json_type::array:
+      return (*this).get_array().at_path_with_wildcard(json_path);
+  case json_type::object:
+      return (*this).get_object().at_path_with_wildcard(json_path);
+  default:
+      return INVALID_JSON_POINTER;
+  }
+}
 
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
 
@@ -144357,6 +146955,11 @@ simdjson_inline simdjson_result<lasx::ondemand::value> simdjson_result<lasx::ond
   return first.at_path(json_path);
 }
 
+simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> simdjson_result<lasx::ondemand::document>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
+}
+
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
   requires(std::is_class_v<T> && (sizeof...(FieldNames) > 0))
@@ -144451,6 +147054,7 @@ simdjson_inline simdjson_result<number> document_reference::get_number() noexcep
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json_token() noexcept { return doc->raw_json_token(); }
 simdjson_inline simdjson_result<value> document_reference::at_pointer(std::string_view json_pointer) noexcept { return doc->at_pointer(json_pointer); }
 simdjson_inline simdjson_result<value> document_reference::at_path(std::string_view json_path) noexcept { return doc->at_path(json_path); }
+simdjson_inline simdjson_result<std::vector<value>> document_reference::at_path_with_wildcard(std::string_view json_path) noexcept { return doc->at_path_with_wildcard(json_path); }
 simdjson_inline simdjson_result<std::string_view> document_reference::raw_json() noexcept { return doc->raw_json();}
 simdjson_inline document_reference::operator document&() const noexcept { return *doc; }
 #if SIMDJSON_SUPPORTS_CONCEPTS && SIMDJSON_STATIC_REFLECTION
@@ -144706,6 +147310,12 @@ simdjson_inline simdjson_result<lasx::ondemand::value> simdjson_result<lasx::ond
       return error();
   }
   return first.at_path(json_path);
+}
+simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> simdjson_result<lasx::ondemand::document_reference>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) {
+      return error();
+  }
+  return first.at_path_with_wildcard(json_path);
 }
 #if SIMDJSON_STATIC_REFLECTION
 template<constevalutil::fixed_string... FieldNames, typename T>
@@ -146108,6 +148718,7 @@ inline void log_line(const json_iterator &iter, token_position index, depth_t de
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/raw_json_string.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_iterator.h" */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/value-inl.h" */
+/* amalgamation skipped (editor-only): #include "simdjson/jsonpathutil.h" */
 /* amalgamation skipped (editor-only): #if SIMDJSON_STATIC_REFLECTION */
 /* amalgamation skipped (editor-only): #include "simdjson/generic/ondemand/json_string_builder.h"  // for constevalutil::fixed_string */
 /* amalgamation skipped (editor-only): #include <meta> */
@@ -146275,6 +148886,50 @@ inline simdjson_result<value> object::at_path(std::string_view json_path) noexce
   return at_pointer(json_pointer);
 }
 
+inline simdjson_result<std::vector<value>> object::at_path_with_wildcard(std::string_view json_path) noexcept {
+  std::vector<value> result;
+
+  auto result_pair = get_next_key_and_json_path(json_path);
+  std::string_view key = result_pair.first;
+  std::string_view remaining_path = result_pair.second;
+  // Handle when its the case for wildcard
+  if (key == "*") {
+    // Loop through each field in the object
+    for (auto field : *this) {
+      value val;
+      SIMDJSON_TRY(field.value().get(val));
+
+      if (remaining_path.empty()) {
+        result.push_back(std::move(val));
+      } else {
+        auto nested_result = val.at_path_with_wildcard(remaining_path);
+
+        if (nested_result.error()) {
+          return nested_result.error();
+        }
+        // Extract and append all nested matches to our result
+        std::vector<value> nested_vec;
+        SIMDJSON_TRY(std::move(nested_result).get(nested_vec));
+
+        result.insert(result.end(),
+                     std::make_move_iterator(nested_vec.begin()),
+                     std::make_move_iterator(nested_vec.end()));
+      }
+    }
+    return result;
+  } else {
+    value val;
+    SIMDJSON_TRY(find_field(key).get(val));
+
+    if (remaining_path.empty()) {
+      result.push_back(std::move(val));
+      return result;
+    } else {
+      return val.at_path_with_wildcard(remaining_path);
+    }
+  }
+}
+
 simdjson_inline simdjson_result<size_t> object::count_fields() & noexcept {
   size_t count{0};
   // Important: we do not consume any of the values.
@@ -146399,6 +149054,11 @@ simdjson_inline simdjson_result<lasx::ondemand::value> simdjson_result<lasx::ond
     return error();
   }
   return first.at_path(json_path);
+}
+
+simdjson_inline simdjson_result<std::vector<lasx::ondemand::value>> simdjson_result<lasx::ondemand::object>::at_path_with_wildcard(std::string_view json_path) noexcept {
+  if (error()) { return error(); }
+  return first.at_path_with_wildcard(json_path);
 }
 
 inline simdjson_result<bool> simdjson_result<lasx::ondemand::object>::reset() noexcept {
@@ -148987,8 +151647,8 @@ simdjson_inline void string_builder::append(const T &opt) {
 
 template <typename T>
   requires(require_custom_serialization<T>)
-simdjson_inline void string_builder::append(const T &val) {
-  serialize(*this, val);
+simdjson_inline void string_builder::append(T &&val) {
+  serialize(*this, std::forward<T>(val));
 }
 
 template <typename T>
@@ -149002,11 +151662,11 @@ simdjson_inline void string_builder::append(const T &value) {
 #if SIMDJSON_SUPPORTS_RANGES && SIMDJSON_SUPPORTS_CONCEPTS
 // Support for range-based appending (std::ranges::view, etc.)
 template <std::ranges::range R>
-  requires(!std::is_convertible<R, std::string_view>::value)
+  requires(!std::is_convertible<R, std::string_view>::value && !require_custom_serialization<R>)
 simdjson_inline void string_builder::append(const R &range) noexcept {
   auto it = std::ranges::begin(range);
   auto end = std::ranges::end(range);
-  if constexpr (concepts::is_pair<typename R::value_type>) {
+  if constexpr (concepts::is_pair<std::ranges::range_value_t<R>>) {
     start_object();
 
     if (it == end) {
@@ -150826,5 +153486,1219 @@ inline auto to_adaptor<T>::operator()(ondemand::parser &parser, std::string str)
 #endif // SIMDJSON_SUPPORTS_CONCEPTS
 #endif // SIMDJSON_CONVERT_INL_H
 /* end file simdjson/convert-inl.h */
+
+// Compile-time JSON parsing (C++26 P2996 reflection)
+/* including simdjson/compile_time_json.h: #include "simdjson/compile_time_json.h" */
+/* begin file simdjson/compile_time_json.h */
+/**
+ * @file compile_time_json.h
+ * @brief Compile-time JSON parsing using C++26 reflection with
+ * std::meta::substitute()
+ */
+
+#ifndef SIMDJSON_GENERIC_COMPILE_TIME_JSON_H
+#define SIMDJSON_GENERIC_COMPILE_TIME_JSON_H
+
+#if SIMDJSON_STATIC_REFLECTION
+
+#include <algorithm>
+#include <array>
+#include <charconv>
+#include <cstdint>
+#include <expected>
+#include <meta>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace simdjson {
+namespace compile_time {
+
+/**
+ * @brief Compile-time JSON parser. This function parses the provided JSON
+ * string at compile time and returns a custom struct type representing the JSON
+ * object.
+ *
+ * We have a few limitations which trigger compile-time errors if violated:
+ * - Only JSON objects and arrays are supported at the top level (no primitives).
+ *   We will lift this limitation in the future.
+ * - Strings are represented using the const char * in UTF-8, but they must not
+ *   contain embedded nulls. We would prefer to represent them as std::string or
+ *   std::string_view, and hope to do so in the future.
+ * - Heterogeneous arrays are not supported yet. E.g., you need to have arrays of
+ *   all integers, or all strings, all floats, all compatible objects, etc.
+ *   For example, the following is accepted:
+ *    [
+ *     { "name": "Alice", "age": 30 },
+ *     { "name": "Bob", "age": 25 },
+ *     { "name": "Charlie", "age": 35 }
+ *   ]
+ *   but the following is not:
+ *   [
+ *     { "name": "Alice", "age": 30 },
+ *     "Just a string",
+ *     42,
+ *     { "name": "Charlie", "age": 35 }
+ *   ]
+ *
+ *    We may support heterogeneous arrays in the future with std::variant types.
+ * - We parse the first JSON document encountered in the string. Trailing
+ *   characters are ignored. Thus if your JSON begins with {"a":1}, everything
+ *   after the closing } is ignored. This limitation will be lifted in the future,
+ *   reporting an error.
+ *
+ * These limitations are safe in the sense that they result in compile-time errors.
+ * Thus you will not get truncated strings or imprecise floats silently.
+ *
+ * This function is subject to change in the future.
+ */
+template <constevalutil::fixed_string json_str> consteval auto parse_json();
+
+} // namespace compile_time
+} // namespace simdjson
+
+
+template <simdjson::constevalutil::fixed_string str>
+consteval auto operator ""_json() {
+  return simdjson::compile_time::parse_json<str>();
+}
+
+#endif // SIMDJSON_STATIC_REFLECTION
+#endif // SIMDJSON_GENERIC_COMPILE_TIME_JSON_H
+/* end file simdjson/compile_time_json.h */
+/* including simdjson/compile_time_json-inl.h: #include "simdjson/compile_time_json-inl.h" */
+/* begin file simdjson/compile_time_json-inl.h */
+/**
+ * @file compile_time_json-inl.h
+ * @brief Implementation details for compile-time JSON parsing
+ *
+ * This file contains inline implementations and helper utilities for
+ * compile-time JSON parsing. Currently, the main implementation is
+ * self-contained in the header.
+ */
+
+#ifndef SIMDJSON_GENERIC_COMPILE_TIME_JSON_INL_H
+
+#if SIMDJSON_STATIC_REFLECTION
+
+/* skipped duplicate #include "simdjson/compile_time_json.h" */
+#include <array>
+#include <cstdint>
+#include <meta>
+#include <string_view>
+
+#include <algorithm>
+#include <array>
+#include <charconv>
+#include <cstdint>
+#include <expected>
+#include <meta>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#define simdjson_consteval_error(...)                                          \
+  {                                                                            \
+    std::abort();                                                              \
+  }
+
+namespace simdjson {
+namespace compile_time {
+
+/**
+ * Namespace for number parsing utilities.
+ * We seek to provide exact compile-time number parsing functions.
+ * That is not trivial, but thankfully we can reuse much of the existing
+ * simdjson functionality.
+ * Importantly, it is not a trivial matter to provide correct rounding
+ * for floating-point numbers at compile-time. The fast_float library
+ * does it well.
+ */
+namespace number_parsing {
+
+// Counts the number of leading zeros in a 64-bit integer.
+consteval int leading_zeroes(uint64_t input_num, int last_bit = 0) {
+  if (input_num & uint64_t(0xffffffff00000000)) {
+    input_num >>= 32;
+    last_bit |= 32;
+  }
+  if (input_num & uint64_t(0xffff0000)) {
+    input_num >>= 16;
+    last_bit |= 16;
+  }
+  if (input_num & uint64_t(0xff00)) {
+    input_num >>= 8;
+    last_bit |= 8;
+  }
+  if (input_num & uint64_t(0xf0)) {
+    input_num >>= 4;
+    last_bit |= 4;
+  }
+  if (input_num & uint64_t(0xc)) {
+    input_num >>= 2;
+    last_bit |= 2;
+  }
+  if (input_num & uint64_t(0x2)) { /* input_num >>=  1; */
+    last_bit |= 1;
+  }
+  return 63 - last_bit;
+}
+// Multiplies two 32-bit unsigned integers and returns a 64-bit result.
+consteval uint64_t emulu(uint32_t x, uint32_t y) { return x * (uint64_t)y; }
+consteval uint64_t umul128_generic(uint64_t ab, uint64_t cd, uint64_t *hi) {
+  uint64_t ad = emulu((uint32_t)(ab >> 32), (uint32_t)cd);
+  uint64_t bd = emulu((uint32_t)ab, (uint32_t)cd);
+  uint64_t adbc = ad + emulu((uint32_t)ab, (uint32_t)(cd >> 32));
+  uint64_t adbc_carry = (uint64_t)(adbc < ad);
+  uint64_t lo = bd + (adbc << 32);
+  *hi = emulu((uint32_t)(ab >> 32), (uint32_t)(cd >> 32)) + (adbc >> 32) +
+        (adbc_carry << 32) + (uint64_t)(lo < bd);
+  return lo;
+}
+
+// Represents a 128-bit unsigned integer as two 64-bit parts.
+// We have a value128 struct elsewhere in the simdjson, but we
+// use a separate one here for clarity.
+struct value128 {
+  uint64_t low;
+  uint64_t high;
+
+  constexpr value128(uint64_t _low, uint64_t _high) : low(_low), high(_high) {}
+  constexpr value128() : low(0), high(0) {}
+};
+
+// Multiplies two 64-bit integers and returns a 128-bit result as value128.
+consteval value128 full_multiplication(uint64_t a, uint64_t b) {
+  value128 answer;
+  answer.low = umul128_generic(a, b, &answer.high);
+  return answer;
+}
+
+// Converts mantissa and exponent to a double, considering the sign.
+consteval double to_double(uint64_t mantissa, int64_t exponent, bool negative) {
+  uint64_t sign_bit = negative ? (1ULL << 63) : 0;
+  uint64_t exponent_bits = (uint64_t(exponent) & 0x7FF) << 52;
+  uint64_t bits = sign_bit | exponent_bits | (mantissa & ((1ULL << 52) - 1));
+  return std::bit_cast<double>(bits);
+}
+
+// Attempts to compute i * 10^(power) exactly; and if "negative" is
+// true, negate the result.
+// Returns true on success, false on failure.
+// Failure suggests and invalid input or out-of-range result.
+consteval bool compute_float_64(int64_t power, uint64_t i, bool negative,
+                                double &d) {
+  if (i == 0) {
+    d = negative ? -0.0 : 0.0;
+    return true;
+  }
+  int64_t exponent = (((152170 + 65536) * power) >> 16) + 1024 + 63;
+  int lz = leading_zeroes(i);
+  i <<= lz;
+  const uint32_t index =
+      2 * uint32_t(power - simdjson::internal::smallest_power);
+  value128 firstproduct = full_multiplication(
+      i, simdjson::internal::powers_template<>::power_of_five_128[index]);
+  if ((firstproduct.high & 0x1FF) == 0x1FF) {
+    value128 secondproduct = full_multiplication(
+        i, simdjson::internal::powers_template<>::power_of_five_128[index + 1]);
+    firstproduct.low += secondproduct.high;
+    if (secondproduct.high > firstproduct.low) {
+      firstproduct.high++;
+    }
+  }
+  uint64_t lower = firstproduct.low;
+  uint64_t upper = firstproduct.high;
+  uint64_t upperbit = upper >> 63;
+  uint64_t mantissa = upper >> (upperbit + 9);
+  lz += int(1 ^ upperbit);
+  int64_t real_exponent = exponent - lz;
+  if (real_exponent <= 0) {
+    if (-real_exponent + 1 >= 64) {
+      d = negative ? -0.0 : 0.0;
+      return true;
+    }
+    mantissa >>= -real_exponent + 1;
+    mantissa += (mantissa & 1);
+    mantissa >>= 1;
+    real_exponent = (mantissa < (uint64_t(1) << 52)) ? 0 : 1;
+    d = to_double(mantissa, real_exponent, negative);
+    return true;
+  }
+  if ((lower <= 1) && (power >= -4) && (power <= 23) && ((mantissa & 3) == 1)) {
+    if ((mantissa << (upperbit + 64 - 53 - 2)) == upper) {
+      mantissa &= ~1;
+    }
+  }
+  mantissa += mantissa & 1;
+  mantissa >>= 1;
+  if (mantissa >= (1ULL << 53)) {
+    mantissa = (1ULL << 52);
+    real_exponent++;
+  }
+  mantissa &= ~(1ULL << 52);
+  if (real_exponent > 2046) {
+    return false;
+  }
+  d = to_double(mantissa, real_exponent, negative);
+  return true;
+}
+
+// Parses a single digit character and updates the integer value.
+consteval bool parse_digit(const char c, uint64_t &i) {
+  const uint8_t digit = static_cast<uint8_t>(c - '0');
+  if (digit > 9) {
+    return false;
+  }
+  i = 10 * i + digit;
+  return true;
+}
+
+// Parses a JSON float from a string starting at src.
+// Returns the parsed double and the number of characters consumed.
+consteval std::pair<double, size_t> parse_double(const char *src,
+                                                 const char *end) {
+  auto get_value = [&](const char *pointer) -> char {
+    if (pointer == end) {
+      return '\0';
+    }
+    return *pointer;
+  };
+  const char *srcinit = src;
+  bool negative = (get_value(src) == '-');
+  src += uint8_t(negative);
+  uint64_t i = 0;
+  const char *p = src;
+  p += parse_digit(get_value(p), i);
+  bool leading_zero = (i == 0);
+  while (parse_digit(get_value(p), i)) {
+    p++;
+  }
+  if (p == src) {
+    simdjson_consteval_error("Invalid float value");
+  }
+  if ((leading_zero && p != src + 1)) {
+    simdjson_consteval_error("Invalid float value");
+  }
+  int64_t exponent = 0;
+  bool overflow;
+  if (get_value(p) == '.') {
+    p++;
+    const char *start_decimal_digits = p;
+    if (!parse_digit(get_value(p), i)) {
+      simdjson_consteval_error("Invalid float value");
+    } // no decimal digits
+    p++;
+    while (parse_digit(get_value(p), i)) {
+      p++;
+    }
+    exponent = -(p - start_decimal_digits);
+    overflow = p - src - 1 > 19;
+    if (overflow && leading_zero) {
+      const char *start_digits = src + 2;
+      while (get_value(start_digits) == '0') {
+        start_digits++;
+      }
+      overflow = p - start_digits > 19;
+    }
+  } else {
+    overflow = p - src > 19;
+  }
+  if (overflow) {
+    simdjson_consteval_error(
+        "Overflow while computing the float value: too many digits");
+  }
+  if (get_value(p) == 'e' || get_value(p) == 'E') {
+    p++;
+    bool exp_neg = get_value(p) == '-';
+    p += exp_neg || get_value(p) == '+';
+    uint64_t exp = 0;
+    const char *start_exp_digits = p;
+    while (parse_digit(get_value(p), exp)) {
+      p++;
+    }
+    if (p - start_exp_digits == 0 || p - start_exp_digits > 19) {
+      simdjson_consteval_error("Invalid float value");
+    }
+    exponent += exp_neg ? 0 - exp : exp;
+  }
+
+  overflow = overflow || exponent < simdjson::internal::smallest_power ||
+             exponent > simdjson::internal::largest_power;
+  if (overflow) {
+    simdjson_consteval_error("Overflow while computing the float value");
+  }
+  double d;
+  if (!compute_float_64(exponent, i, negative, d)) {
+    simdjson_consteval_error("Overflow while computing the float value");
+  }
+  return {d, size_t(p - srcinit)};
+}
+} // namespace number_parsing
+
+// JSON string may contain embedded nulls, and C++26 reflection does not yet
+// support std::string_view as a data member type. As a workaround, we define
+// a custom type that holds a const char* and a size.
+template <char... Vals> struct fixed_json_string {
+  // Statically-allocated array to hold the characters and a null terminator
+  static constexpr char inner_data[] = {Vals..., '\0'};
+
+  // Constant for the length of the string view (excluding the null terminator)
+  static constexpr std::size_t inner_size = sizeof...(Vals);
+
+  // The std::string_view over the data.
+  // We use data and size to avoid including the null terminator in the view.
+  static constexpr std::string_view view = {inner_data, inner_size};
+
+  constexpr operator std::string_view() { return view; }
+  constexpr const char *c_str() { return view.data(); }
+  constexpr const char *data() { return view.data(); }
+  constexpr size_t size() { return view.size(); }
+};
+
+consteval std::meta::info to_fixed_json_string(std::string_view in) {
+  std::vector<std::meta::info> Args = {};
+  for (char c : in) {
+    Args.push_back(std::meta::reflect_constant(c));
+  }
+  return std::meta::substitute(^^fixed_json_string, Args);
+}
+
+/**
+ * @brief Helper struct for substitute() pattern
+ */
+template <std::meta::info... meta_info> struct type_builder {
+  struct constructed_type;
+  consteval {
+    std::meta::define_aggregate(^^constructed_type, {
+                                                        meta_info...});
+  }
+};
+
+/**
+ * @brief Type alias for the generated struct
+ * Usage:
+ * using struct = class_type<std::meta::data_member_spec(^^int;,  {.name =
+ * "x"}),std::meta::data_member_spec(^^float, {.name = "y"})>;
+ */
+template <std::meta::info... meta_info>
+using class_type = type_builder<meta_info...>::constructed_type;
+
+/**
+ */
+
+/**
+ * @brief Variable template for constructing instances with values
+ */
+template <typename T, auto... Vs> constexpr auto construct_from = T{Vs...};
+
+// in JSON, there are only a few whitespace characters that are allowed
+// outside of objects, arrays, strings, and numbers.
+[[nodiscard]] constexpr bool is_whitespace(char c) {
+  return c == ' ' || c == '\n' || c == '\t' || c == '\r';
+};
+
+[[nodiscard]] constexpr std::string_view trim_whitespace(std::string_view str) {
+  size_t start = 0;
+  size_t end = str.size();
+
+  while (start < end && is_whitespace(str[start])) {
+    start++;
+  }
+  while (end > start && is_whitespace(str[end - 1])) {
+    end--;
+  }
+  return str.substr(start, end - start);
+}
+
+// Forward declaration
+consteval std::pair<std::meta::info, size_t>
+parse_json_object_impl(std::string_view json);
+
+///////////////////////////////////////////////////
+/// NUMBER PARSING
+///////////////////////////////////////////////////
+
+// Parses a JSON number from a string view.
+// Returns the number of characters consumed and the parsed value
+// as a variant of int64_t, uint64_t, or double.
+[[nodiscard]] consteval size_t
+parse_number(std::string_view json,
+             std::variant<int64_t, uint64_t, double> &out) {
+  if (json.empty()) {
+    simdjson_consteval_error("Empty string is not a valid JSON number");
+  }
+  if (json[0] == '+') {
+    simdjson_consteval_error("Invalid number: leading '+' sign is not allowed");
+  }
+  // Compute the range and determine the type.
+  auto it = json.begin();
+  if (it != json.end() && (*it == '-')) {
+    it++;
+  }
+  while (it != json.end() && (*it >= '0' && *it <= '9')) {
+    it++;
+  }
+  bool is_float = false;
+  if (it != json.end() && (*it == '.' || *it == 'e' || *it == 'E')) {
+    is_float = true;
+    if (*it == '.') {
+      it++;
+      while (it != json.end() && (*it >= '0' && *it <= '9')) {
+        it++;
+      }
+    }
+    if (it != json.end() && (*it == 'e' || *it == 'E')) {
+      it++;
+      if (it != json.end() && (*it == '+' || *it == '-')) {
+        it++;
+      }
+      while (it != json.end() && (*it >= '0' && *it <= '9')) {
+        it++;
+      }
+    }
+  }
+  size_t scope = it - json.begin();
+
+  bool is_negative = json[0] == '-';
+  // Note that we consider -0 to be an integer unless it has a decimal point or
+  // exponent.
+  if (is_float) {
+    // It would be cool to use std::from_chars in a consteval context, but it is
+    // not supported yet for floating point types. :-(
+    auto [value, offset] =
+        number_parsing::parse_double(json.data(), json.data() + json.size());
+    if (offset != scope) {
+      simdjson_consteval_error(
+          "Internal error: cannot agree on the character range of the float");
+    }
+    out = value;
+    return offset;
+  } else if (is_negative) {
+    int64_t int_value = 0;
+    std::from_chars_result res =
+        std::from_chars(json.data(), json.data() + json.size(), int_value);
+    if (res.ec == std::errc()) {
+      out = int_value;
+      if ((res.ptr - json.data()) != scope) {
+        simdjson_consteval_error(
+            "Internal error: cannot agree on the character range of the float");
+      }
+      return (res.ptr - json.data());
+    } else {
+      simdjson_consteval_error("Invalid integer value");
+    }
+  } else {
+    uint64_t uint_value = 0;
+    std::from_chars_result res =
+        std::from_chars(json.data(), json.data() + json.size(), uint_value);
+    if (res.ec == std::errc()) {
+      out = uint_value;
+      if ((res.ptr - json.data()) != scope) {
+        simdjson_consteval_error(
+            "Internal error: cannot agree on the character range of the float");
+      }
+      return (res.ptr - json.data());
+    } else {
+      simdjson_consteval_error("Invalid unsigned integer value");
+    }
+  }
+}
+
+////////////////////////////////////////////////////////
+/// STRING PARSING
+////////////////////////////////////////////////////////
+
+// parse a JSON string value, handling escape sequences and validating UTF-8
+// Returns the created string and the number of characters consumed.
+// Note that the number of characters consumed includes the surrounding quotes.
+// The number of bytes written to out differs from the number of characters
+// consumed in general because of escape sequences and UTF-8 encoding.
+[[nodiscard]] consteval std::pair<std::string, size_t>
+parse_string(std::string_view json) {
+  auto cursor = json.begin();
+  auto end = json.end();
+  std::string out;
+
+  // Expect starting quote
+  if (cursor == end || *(cursor++) != '"') {
+    simdjson_consteval_error("Expected opening quote for string");
+  }
+  // Notice that the quote is not appended.
+
+  // Process \uXXXX escape sequences, writes out to out.
+  // Returns true on success, false on error.
+  auto process_escaped_unicode = [&] [[nodiscard]] () -> bool {
+    // Processing \uXXXX escape sequence is a bit complicated, so we
+    // define helper lambdas here.
+    //
+    // consume the XXXX in \uXXXX and return the corresponding code point.
+    // In case of error, a value greater than 0xFFFF is returned.
+    // The caller should check!
+    auto hex_to_u32 = [&] [[nodiscard]] () -> uint32_t {
+      auto digit = [](uint8_t c) -> uint32_t {
+        if (c >= '0' && c <= '9')
+          return c - '0';
+        if (c >= 'A' && c <= 'F')
+          return c - 'A' + 10;
+        if (c >= 'a' && c <= 'f')
+          return c - 'a' + 10;
+        return 0xFFFFFFFF;
+      };
+      if (end - cursor < 4) {
+        return 0xFFFFFFFF;
+      }
+      uint32_t d0 = digit(*cursor++);
+      uint32_t d1 = digit(*cursor++);
+      uint32_t d2 = digit(*cursor++);
+      uint32_t d3 = digit(*cursor++);
+
+      return (d0 << 12) | (d1 << 8) | (d2 << 4) | d3;
+    };
+    // Write code point as UTF-8 into out.
+    // The caller must ensure that the code point is valid,
+    // i.e., not in the surrogate range or greater than 0x10FFFF.
+    auto codepoint_to_utf8 = [&out] [[nodiscard]] (uint32_t cp) -> bool {
+      //  the high and low surrogates U+D800 through U+DFFF are invalid code
+      //  points
+      if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
+        return false;
+      }
+      if (cp <= 0x7F) {
+        out.push_back(uint8_t(cp));
+      } else if (cp <= 0x7FF) {
+        out.push_back(uint8_t((cp >> 6) + 192));
+        out.push_back(uint8_t((cp & 63) + 128));
+      } else if (cp <= 0xFFFF) {
+        out.push_back(uint8_t((cp >> 12) + 224));
+        out.push_back(uint8_t(((cp >> 6) & 63) + 128));
+        out.push_back(uint8_t((cp & 63) + 128));
+      } else if (cp <= 0x10FFFF) {
+        out.push_back(uint8_t((cp >> 18) + 240));
+        out.push_back(uint8_t(((cp >> 12) & 63) + 128));
+        out.push_back(uint8_t(((cp >> 6) & 63) + 128));
+        out.push_back(uint8_t((cp & 63) + 128));
+      } else {
+        return false;
+      }
+      return true;
+    };
+    // We begin the implementation of process_escaped_unicode here.
+    // The substitution_code_point is used for invalid sequences.
+    // (This is U+FFFD, the Unicode replacement character.)
+    constexpr uint32_t substitution_code_point = 0xfffd;
+    // We need at least 4 characters for the hex digits
+    if (end - cursor < 4) {
+      return false;
+    }
+    // Consume the 4 hex digits
+    uint32_t code_point = hex_to_u32();
+    // Check for validity
+    if (code_point > 0xFFFF) {
+      return false;
+    }
+    // If we have a high surrogate, we need to process a low surrogate
+    if (code_point >= 0xd800 && code_point < 0xdc00) {
+      // We need at least 6 more characters for \uXXXX, if they are NOT
+      // present, we have an error (isolated high surrogate), which we
+      // tolerate by substituting the substitution_code_point.
+      if (end - cursor < 6 || *cursor != '\\' ||
+          *(cursor + 1) != 'u' > 0xFFFF) {
+        code_point = substitution_code_point;
+      } else {       // we have \u following the high surrogate
+        cursor += 2; // skip \u
+        uint32_t code_point_2 = hex_to_u32();
+        if (code_point_2 > 0xFFFF) {
+          return false;
+        }
+        uint32_t low_bit = code_point_2 - 0xdc00;
+        if (low_bit >> 10) {
+          // Not a valid low surrogate
+          code_point = substitution_code_point;
+        } else {
+          code_point = ((code_point - 0xd800) << 10 | low_bit) + 0x10000;
+        }
+      }
+    } else if (code_point >= 0xdc00 && code_point < 0xe000) {
+      // Isolated low surrogate, invalid
+      code_point = substitution_code_point;
+    }
+    // Now we have the final code point, write it as UTF-8 to out.
+    return codepoint_to_utf8(code_point);
+  };
+
+  while (cursor != end && *cursor != '"') {
+    // If we find the end of input before closing quote, it's an error
+    if (cursor == end) {
+      simdjson_consteval_error("Unterminated string");
+    }
+    // capture the next character and move forward
+    char c = *(cursor++);
+    // The one case where we don't want to append to the string directly
+    // is when the string contains escape sequences.
+
+    if (c == '\\') {
+      // Assume that it is the start of an escape sequence
+      size_t how_many_backslashes = 1;
+      while (cursor != end && *(cursor) == '\\') {
+        cursor++;
+        how_many_backslashes++;
+      }
+      size_t backslashes_to_add = how_many_backslashes / 2;
+      // Append the backslashes
+      for (size_t i = 0; i < backslashes_to_add; i++) {
+        out += '\\';
+      }
+      // If we have an odd number of backslashes, we have an escape sequence
+      // besides the backslashes we have already added.
+      if (how_many_backslashes % 2 == 1) {
+        // If we have an odd number of backslashes, we must be in an escape
+        // sequence check that what follows is a valid escape character
+        if (cursor == end) {
+          simdjson_consteval_error("Truncated escape sequence in string");
+        }
+        char next_char = *cursor;
+        cursor++;
+        switch (next_char) {
+        case '"':
+          out += '"';
+          break;
+        case '/':
+          out += '/';
+          break;
+        case 'b':
+          out += '\b';
+          break;
+        case 'f':
+          out += '\f';
+          break;
+        case 'n':
+          out += '\n';
+          break;
+        case 'r':
+          out += '\r';
+          break;
+        case 't':
+          out += '\t';
+          break;
+        case 'u':
+          if (!process_escaped_unicode()) {
+            simdjson_consteval_error(
+                "Invalid unicode escape sequence in string");
+          }
+          break;
+        default:
+          simdjson_consteval_error("Invalid escape character in string");
+        }
+      }
+      continue; // continue to next iteration
+    }
+    // Handle escape sequences and UTF-8 validation. We do not process
+    // the escape sequences here, just validate them.
+    out += c;
+    if (static_cast<unsigned char>(c) < 0x20) {
+      simdjson_consteval_error("Invalid control character in string");
+    }
+    if (static_cast<unsigned char>(c) >= 0x80) {
+      // We have a non-ASCII character inside a string
+      // We must validate it.
+      uint8_t first_byte = static_cast<uint8_t>(c);
+
+      if ((first_byte & 0b11100000) == 0b11000000) {
+        if (cursor == end) {
+          simdjson_consteval_error("Truncated UTF-8 sequence in string");
+        }
+
+        char second_byte = *cursor;
+        out += second_byte;
+        ++cursor;
+        if ((static_cast<uint8_t>(second_byte) & 0b11000000) != 0b10000000) {
+          simdjson_consteval_error("Invalid UTF-8 continuation byte in string");
+        }
+        // range check
+        uint32_t code_point = (first_byte & 0b00011111) << 6 |
+                              (static_cast<uint8_t>(second_byte) & 0b00111111);
+        if ((code_point < 0x80) || (0x7ff < code_point)) {
+          simdjson_consteval_error("Invalid UTF-8 code point in string");
+        }
+      } else if ((first_byte & 0b11110000) == 0b11100000) {
+        if (cursor == end) {
+          simdjson_consteval_error("Truncated UTF-8 sequence in string");
+        }
+        char second_byte = *cursor;
+        ++cursor;
+        out += second_byte;
+        if ((static_cast<uint8_t>(second_byte) & 0b11000000) != 0b10000000) {
+          simdjson_consteval_error("Invalid UTF-8 continuation byte in string");
+        }
+        if (cursor == end) {
+          simdjson_consteval_error("Truncated UTF-8 sequence in string");
+        }
+        char third_byte = *cursor;
+        ++cursor;
+        out += third_byte;
+        if ((static_cast<uint8_t>(third_byte) & 0b11000000) != 0b10000000) {
+          simdjson_consteval_error("Invalid UTF-8 continuation byte in string");
+        }
+        // range check
+        uint32_t code_point = (first_byte & 0b00001111) << 12 |
+                              (static_cast<uint8_t>(second_byte) & 0b00111111)
+                                  << 6 |
+                              (static_cast<uint8_t>(third_byte) & 0b00111111);
+        if ((code_point < 0x800) || (0xffff < code_point) ||
+            (0xd7ff < code_point && code_point < 0xe000)) {
+          simdjson_consteval_error("Invalid UTF-8 code point in string");
+        }
+      } else if ((first_byte & 0b11111000) == 0b11110000) { // 0b11110000
+        if (cursor == end) {
+          simdjson_consteval_error("Truncated UTF-8 sequence in string");
+        }
+        char second_byte = *cursor;
+        ++cursor;
+        out += second_byte;
+        if (cursor == end) {
+          simdjson_consteval_error("Truncated UTF-8 sequence in string");
+        }
+        char third_byte = *cursor;
+        ++cursor;
+        out += third_byte;
+        if (cursor == end) {
+          simdjson_consteval_error("Truncated UTF-8 sequence in string");
+        }
+        char fourth_byte = *cursor;
+        ++cursor;
+        out += fourth_byte;
+        if ((static_cast<uint8_t>(second_byte) & 0b11000000) != 0b10000000) {
+          simdjson_consteval_error("Invalid UTF-8 continuation byte in string");
+        }
+        if ((static_cast<uint8_t>(third_byte) & 0b11000000) != 0b10000000) {
+          simdjson_consteval_error("Invalid UTF-8 continuation byte in string");
+        }
+        if ((static_cast<uint8_t>(fourth_byte) & 0b11000000) != 0b10000000) {
+          simdjson_consteval_error("Invalid UTF-8 continuation byte in string");
+        }
+        // range check
+        uint32_t code_point =
+            (first_byte & 0b00000111) << 18 |
+            (static_cast<uint8_t>(second_byte) & 0b00111111) << 12 |
+            (static_cast<uint8_t>(third_byte) & 0b00111111) << 6 |
+            (static_cast<uint8_t>(fourth_byte) & 0b00111111);
+        if (code_point <= 0xffff || 0x10ffff < code_point) {
+          simdjson_consteval_error("Invalid UTF-8 code point in string");
+        }
+      } else {
+        // we have a continuation
+        simdjson_consteval_error("Invalid UTF-8 continuation byte in string");
+      }
+      continue;
+    }
+  }
+  if (cursor == end) {
+    simdjson_consteval_error("Unterminated string");
+  }
+  if (*cursor != '"') {
+    simdjson_consteval_error("Internal error: expected closing quote");
+  }
+  cursor++; // consume the closing quote
+  // We get here if and only if we have seen the closing quote.
+
+  return {out, size_t(cursor - json.begin())};
+}
+
+////////////////////////////////////////////////////
+/// ARRAY PARSING
+////////////////////////////////////////////////////
+
+// Parses a JSON array and returns a std::meta::info representing the array as
+// well as the number of characters consumed.
+consteval std::pair<std::meta::info, size_t>
+parse_json_array_impl(const std::string_view json) {
+  size_t consumed = 0;
+  auto cursor = json.begin();
+  auto end = json.end();
+  auto is_whitespace = [](char c) {
+    return c == ' ' || c == '\n' || c == '\t' || c == '\r';
+  };
+
+  auto skip_whitespace = [&]() -> void {
+    while (cursor != end && is_whitespace(*cursor))
+      cursor++;
+  };
+
+  auto expect_consume = [&] [[nodiscard]] (char c) -> bool {
+    skip_whitespace();
+    if (cursor == end || *(cursor++) != c) {
+      return false;
+    };
+    return true;
+  };
+
+  if (!expect_consume('[')) {
+    simdjson_consteval_error("Expected '['");
+  }
+
+  std::vector<std::meta::info> values = {^^void};
+  skip_whitespace();
+  if (cursor != end && *cursor == ']') {
+    if (!expect_consume(']')) {
+      simdjson_consteval_error("Expected ']'");
+    }
+    // Empty array - use int as placeholder type since void doesn't work
+    auto array_type = std::meta::substitute(
+        ^^std::array, {
+                          ^^int, std::meta::reflect_constant(0uz)});
+    values[0] = array_type;
+    consumed = size_t(cursor - json.begin());
+    if (json[consumed - 1] != ']') {
+      simdjson_consteval_error("Expected ']'");
+    }
+    return {std::meta::substitute(^^construct_from, values), consumed};
+  }
+  while (cursor != end && *cursor != ']') {
+    char c = *cursor;
+    switch (c) {
+    case '{': {
+      std::string_view value(cursor, end);
+      auto [parsed, object_size] = parse_json_object_impl(value);
+      if (*(cursor + object_size - 1) != '}') {
+        simdjson_consteval_error("Expected '}'");
+      }
+      values.push_back(parsed);
+      cursor += object_size;
+      break;
+    }
+    case '[': {
+      std::string_view value(cursor, end);
+      auto [parsed, array_size] = parse_json_array_impl(value);
+      if (*(cursor + array_size - 1) != ']') {
+        simdjson_consteval_error("Expected ']'");
+      }
+      values.push_back(parsed);
+      cursor += array_size;
+      break;
+    }
+    case '"': {
+      auto res = parse_string(std::string_view(cursor, end));
+      cursor += res.second;
+      for (char ch : res.first) {
+        if (ch == '\0') {
+          simdjson_consteval_error(
+              "Field string values cannot contain embedded nulls");
+        }
+      }
+      values.push_back(std::meta::reflect_constant_string(res.first));
+      break;
+    }
+    case 't': {
+      if (end - cursor < 4 || std::string_view(cursor, 4) != "true") {
+        simdjson_consteval_error("Invalid value");
+      }
+      cursor += 4;
+      values.push_back(std::meta::reflect_constant(true));
+      break;
+    }
+    case 'f': {
+      if (end - cursor < 5 || std::string_view(cursor, 5) != "false") {
+        simdjson_consteval_error("Invalid value");
+      }
+      cursor += 5;
+      values.push_back(std::meta::reflect_constant(false));
+      break;
+    }
+    case 'n': {
+      if (end - cursor < 4 || std::string_view(cursor, 4) != "null") {
+        simdjson_consteval_error("Invalid value");
+      }
+      cursor += 4;
+      values.push_back(std::meta::reflect_constant(nullptr));
+      break;
+    }
+    // We deliberately do not include '+' here, as per JSON spec
+    case '-':
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9': {
+      std::string_view suffix = std::string_view(cursor, end);
+      std::variant<int64_t, uint64_t, double> out;
+      size_t r = parse_number(suffix, out);
+      cursor += r;
+      if (std::holds_alternative<int64_t>(out)) {
+        int64_t int_value = std::get<int64_t>(out);
+        values.push_back(std::meta::reflect_constant(int_value));
+      } else if (std::holds_alternative<uint64_t>(out)) {
+        uint64_t uint_value = std::get<uint64_t>(out);
+        values.push_back(std::meta::reflect_constant(uint_value));
+      } else {
+        double float_value = std::get<double>(out);
+        values.push_back(std::meta::reflect_constant(float_value));
+      }
+      break;
+    }
+    default:
+      simdjson_consteval_error("Invalid character starting value");
+    }
+    skip_whitespace();
+    if (cursor != end && *cursor == ',') {
+      ++cursor;
+      skip_whitespace();
+    }
+  }
+
+  if (!expect_consume(']')) {
+    simdjson_consteval_error("Expected ']'");
+  }
+  std::size_t count = values.size() - 1;
+  // We assume all elements have the same type as the first element.
+  // However, if the array is heterogeneous, we should use std::variant.
+  auto array_type = std::meta::substitute(
+      ^^std::array,
+      {
+          std::meta::type_of(values[1]), std::meta::reflect_constant(count)});
+
+  // Create array instance with values
+  values[0] = array_type;
+  consumed = size_t(cursor - json.begin());
+  if (json[consumed - 1] != ']') {
+    simdjson_consteval_error("Expected ']'");
+  }
+  return {std::meta::substitute(^^construct_from, values), consumed};
+}
+
+////////////////////////////////////////////////////
+/// OBJECT PARSING
+////////////////////////////////////////////////////
+
+// Parses a JSON object and returns a std::meta::info representing the object
+// type as well as the number of characters consumed.
+consteval std::pair<std::meta::info, size_t>
+parse_json_object_impl(std::string_view json) {
+  size_t consumed = 0;
+  auto cursor = json.begin();
+  auto end = json.end();
+
+  auto skip_whitespace = [&]() -> void {
+    while (cursor != end && is_whitespace(*cursor))
+      cursor++;
+  };
+
+  auto expect_consume = [&] [[nodiscard]] (char c) -> bool {
+    skip_whitespace();
+    if (cursor == end || *(cursor++) != c) {
+      return false;
+    };
+    return true;
+  };
+
+  if (!expect_consume('{')) {
+    simdjson_consteval_error("Expected '{'");
+  }
+
+  std::vector<std::meta::info> members;
+  std::vector<std::meta::info> values = {^^void};
+
+  while (cursor != end && *cursor != '}') {
+    skip_whitespace();
+    // Not all strings can be identifiers, but in JSON field names can be any
+    // string. Thus we may have a problem if the field name contains characters
+    // not allowed in identifiers. Let the standard library handle that case.
+    auto field = parse_string(std::string_view(cursor, end));
+    std::string field_name = field.first;
+    cursor += field.second;
+    if (!expect_consume(':')) {
+      simdjson_consteval_error("Expected ':'");
+    }
+    skip_whitespace();
+    if (cursor == end) {
+      simdjson_consteval_error("Expected value after colon");
+    }
+    char c = *cursor;
+    switch (c) {
+    case '{': {
+      std::string_view value(cursor, end);
+      auto [parsed, object_size] = parse_json_object_impl(value);
+      if (*(cursor + object_size - 1) != '}') {
+        simdjson_consteval_error("Expected '}'");
+      }
+      cursor += object_size;
+      auto dms = std::meta::data_member_spec(std::meta::type_of(parsed),
+                                             {.name = field_name});
+      members.push_back(std::meta::reflect_constant(dms));
+      values.push_back(parsed);
+
+      break;
+    }
+    case '[': {
+      std::string_view value(cursor, end);
+      auto [parsed, array_size] = parse_json_array_impl(value);
+      auto dms = std::meta::data_member_spec(std::meta::type_of(parsed),
+                                             {.name = field_name});
+      members.push_back(std::meta::reflect_constant(dms));
+      values.push_back(parsed);
+      if (*(cursor + array_size - 1) != ']') {
+        simdjson_consteval_error("Expected ']'");
+      }
+      cursor += array_size;
+
+      break;
+    }
+    case '"': {
+      auto res = parse_string(std::string_view(cursor, end));
+      std::string_view value = res.first;
+      cursor += res.second;
+      for (char ch : value) {
+        if (ch == '\0') {
+          simdjson_consteval_error(
+              "Field string values cannot contain embedded nulls");
+        }
+      }
+      auto dms =
+          std::meta::data_member_spec(^^const char *, {
+                                                          .name = field_name});
+      members.push_back(std::meta::reflect_constant(dms));
+      values.push_back(std::meta::reflect_constant_string(value));
+      break;
+    }
+    case 't': {
+      if (end - cursor < 4 || std::string_view(cursor, 4) != "true") {
+        simdjson_consteval_error("Invalid value");
+      }
+      cursor += 4;
+
+      auto dms = std::meta::data_member_spec(^^bool, {
+                                                         .name = field_name});
+      members.push_back(std::meta::reflect_constant(dms));
+      values.push_back(std::meta::reflect_constant(true));
+      break;
+    }
+    case 'f': {
+      if (end - cursor < 5 || std::string_view(cursor, 5) != "false") {
+        simdjson_consteval_error("Invalid value");
+      }
+      cursor += 5;
+
+      auto dms = std::meta::data_member_spec(^^bool, {
+                                                         .name = field_name});
+      members.push_back(std::meta::reflect_constant(dms));
+      values.push_back(std::meta::reflect_constant(false));
+      break;
+    }
+    case 'n': {
+      if (end - cursor < 4 || std::string_view(cursor, 4) != "null") {
+        simdjson_consteval_error("Invalid value");
+      }
+      cursor += 4;
+
+      auto dms = std::meta::data_member_spec(^^std::nullptr_t,
+                                             {
+                                                 .name = field_name});
+      members.push_back(std::meta::reflect_constant(dms));
+      values.push_back(std::meta::reflect_constant(nullptr));
+      break;
+    }
+    // We deliberately do not include '+' here, as per JSON spec
+    case '-':
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9': {
+      std::string_view suffix = std::string_view(cursor, end);
+      std::variant<int64_t, uint64_t, double> out;
+      size_t r = parse_number(suffix, out);
+      cursor += r;
+      if (std::holds_alternative<int64_t>(out)) {
+        int64_t int_value = std::get<int64_t>(out);
+        auto dms =
+            std::meta::data_member_spec(^^int64_t, {
+                                                       .name = field_name});
+        members.push_back(std::meta::reflect_constant(dms));
+        values.push_back(std::meta::reflect_constant(int_value));
+      } else if (std::holds_alternative<uint64_t>(out)) {
+        uint64_t uint_value = std::get<uint64_t>(out);
+        auto dms =
+            std::meta::data_member_spec(^^uint64_t, {
+                                                        .name = field_name});
+        members.push_back(std::meta::reflect_constant(dms));
+        values.push_back(std::meta::reflect_constant(uint_value));
+      } else {
+        double float_value = std::get<double>(out);
+        auto dms =
+            std::meta::data_member_spec(^^double, {
+                                                      .name = field_name});
+        members.push_back(std::meta::reflect_constant(dms));
+        values.push_back(std::meta::reflect_constant(float_value));
+      }
+      break;
+    }
+    default:
+      simdjson_consteval_error("Invalid character starting value");
+    }
+    skip_whitespace();
+    if (cursor == end) {
+      simdjson_consteval_error("Expected '}' or ','");
+    }
+    if (*cursor == ',') {
+      ++cursor;
+      skip_whitespace();
+    } else if (*cursor != '}') {
+      simdjson_consteval_error("Expected '}'");
+    }
+  }
+
+  if (!expect_consume('}')) {
+    simdjson_consteval_error("Expected '}'");
+  }
+  values[0] = std::meta::substitute(^^class_type, members);
+  consumed = size_t(cursor - json.begin());
+  if (json[consumed - 1] != '}') {
+    simdjson_consteval_error("Expected '}'");
+  }
+  return {std::meta::substitute(^^construct_from, values), consumed};
+}
+
+/**
+ * Our public function to parse JSON at compile time.
+ * @brief Compile-time JSON parser. This function parses the provided JSON
+ * string at compile time and returns a custom struct type representing the JSON
+ * object.
+ */
+template <constevalutil::fixed_string json_str> consteval auto parse_json() {
+  constexpr std::string_view json = trim_whitespace(json_str.view());
+  static_assert(!json.empty(), "JSON string cannot be empty");
+  /*static_assert(json.front() != '{' && json.front() != '[',
+                "Only JSON objects and arrays are supported at the top level, this "
+                "limitation will be lifted in the future.");*/
+
+  constexpr auto result = json.front() == '['
+                              ? parse_json_array_impl(json)
+                              : parse_json_object_impl(json);
+  return [: result.first :];
+  /*
+  if(json.front() == '[') {
+      return [:parse_json_array_impl(json).first:];
+  } else if(json.front() == '{') {
+   //   return [:parse_json_object_impl(json).first:];
+  }*/
+}
+
+} // namespace compile_time
+} // namespace simdjson
+
+#endif // SIMDJSON_STATIC_REFLECTION
+#endif // SIMDJSON_GENERIC_COMPILE_TIME_JSON_INL_H
+/* end file simdjson/compile_time_json-inl.h */
+
 #endif // SIMDJSON_H
 /* end file simdjson.h */

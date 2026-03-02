@@ -66,14 +66,14 @@ namespace node {
   V(nbytes)                                                                    \
   NODE_VERSIONS_KEY_AMARO(V)                                                   \
   NODE_VERSIONS_KEY_UNDICI(V)                                                  \
+  V(merve)                                                                     \
   V(curl)                                                                      \
   V(grpc)                                                                      \
   V(sodium)                                                                    \
   V(protobuf)                                                                  \
   V(nlohmann)                                                                  \
   V(opentelemetry)                                                             \
-  V(zmq)                                                                       \
-  V(cjs_module_lexer)
+  V(zmq)
 
 #if HAVE_OPENSSL
 #define NODE_VERSIONS_KEY_CRYPTO(V) V(openssl) V(ncrypto)

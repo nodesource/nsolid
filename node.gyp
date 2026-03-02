@@ -4,41 +4,47 @@
     'v8_trace_maps%': 0,
     'v8_enable_pointer_compression%': 0,
     'v8_enable_31bit_smis_on_64bit_arch%': 0,
-    'node_no_browser_globals%': 'false',
-    'node_snapshot_main%': '',
-    'node_use_node_snapshot%': 'false',
-    'node_use_v8_platform%': 'true',
-    'node_use_bundled_v8%': 'true',
-    'node_shared%': 'false',
-    'node_write_snapshot_as_string_literals': 'true',
     'force_dynamic_crt%': 0,
-    'ossfuzz' : 'false',
+    'node_builtin_modules_path%': '',
+    'node_core_target_name%': 'node',
+    'node_enable_v8_vtunejit%': 'false',
+    'node_intermediate_lib_type%': 'static_library',
+    'node_lib_target_name%': 'libnode',
     'node_module_version%': '',
-    'node_use_amaro%': 'true',
+    'node_no_browser_globals%': 'false',
     'node_shared_brotli%': 'false',
-    'node_shared_zstd%': 'false',
-    'node_shared_zlib%': 'false',
-    'node_shared_http_parser%': 'false',
     'node_shared_cares%': 'false',
+    'node_shared_gtest%': 'false',
+    'node_shared_hdr_histogram%': 'false',
+    'node_shared_http_parser%': 'false',
     'node_shared_libuv%': 'false',
+    'node_shared_merve%': 'false',
+    'node_shared_nbytes%': 'false',
+    'node_shared_nghttp2%': 'false',
+    'node_shared_openssl%': 'false',
     'node_shared_sqlite%': 'false',
     'node_shared_uvwasi%': 'false',
-    'node_shared_nghttp2%': 'false',
+    'node_shared_zlib%': 'false',
+    'node_shared_zstd%': 'false',
     'node_shared_sodium%': 'false',
     'node_shared_zmq%': 'false',
     'node_shared_curl%': 'false',
     'node_shared_grpc%': 'false',
     'node_shared_protobuf%': 'false',
     'node_shared_otlp_http_exporter': 'false',
+    'node_shared%': 'false',
+    'node_snapshot_main%': '',
+    'node_use_amaro%': 'true',
+    'node_use_bundled_v8%': 'true',
+    'node_use_node_snapshot%': 'false',
     'node_use_openssl%': 'true',
     'node_use_sqlite%': 'true',
-    'node_shared_openssl%': 'false',
+    'node_use_v8_platform%': 'true',
     'node_v8_options%': '',
-    'node_enable_v8_vtunejit%': 'false',
+    'node_write_snapshot_as_string_literals': 'true',
     'node_core_target_name%': 'nsolid',
     'node_lib_target_name%': 'libnsolid',
-    'node_intermediate_lib_type%': 'static_library',
-    'node_builtin_modules_path%': '',
+    'ossfuzz' : 'false',
     'linked_module_files': [
     ],
     # We list the deps/ files out instead of globbing them in js2c.cc since we
@@ -120,6 +126,7 @@
       'src/node_config.cc',
       'src/node_config_file.cc',
       'src/node_constants.cc',
+      'src/node_cjs_lexer.cc',
       'src/node_contextify.cc',
       'src/node_credentials.cc',
       'src/node_debug.cc',
@@ -150,6 +157,7 @@
       'src/node_report_module.cc',
       'src/node_report_utils.cc',
       'src/node_sea.cc',
+      'src/node_sea_bin.cc',
       'src/node_serdes.cc',
       'src/node_shadow_realm.cc',
       'src/node_snapshotable.cc',
@@ -697,10 +705,6 @@
         'src/node_main.cc'
       ],
 
-      'dependencies': [
-        'deps/histogram/histogram.gyp:histogram',
-      ],
-
       'msvs_settings': {
         'VCLinkerTool': {
           'GenerateMapFile': 'true', # /MAP
@@ -722,6 +726,11 @@
       'msvs_disabled_warnings!': [4244],
 
       'conditions': [
+        [ 'node_shared_hdr_histogram=="false"', {
+          'dependencies': [
+            'deps/histogram/histogram.gyp:histogram',
+          ],
+        }],
         [ 'error_on_warn=="true"', {
           'cflags': ['-Werror', '-Wno-c++98-compat-extra-semi'],
           'xcode_settings': {
@@ -993,9 +1002,6 @@
         '<(SHARED_INTERMEDIATE_DIR)' # for node_natives.h
       ],
       'dependencies': [
-        'deps/googletest/googletest.gyp:gtest_prod',
-        'deps/histogram/histogram.gyp:histogram',
-        'deps/nbytes/nbytes.gyp:nbytes',
         'deps/protobuf/abseil.gyp:abseil_proto',
         'tools/v8_gypfiles/abseil.gyp:abseil',
         'node_js2c#host',
@@ -1060,11 +1066,25 @@
             'src/node_snapshot_stub.cc',
           ]
         }],
+        [ 'node_shared_gtest=="false"', {
+          'dependencies': [
+            'deps/googletest/googletest.gyp:gtest_prod',
+          ],
+        }],
+        [ 'node_shared_hdr_histogram=="false"', {
+          'dependencies': [
+            'deps/histogram/histogram.gyp:histogram',
+          ],
+        }],
+        [ 'node_shared_nbytes=="false"', {
+          'dependencies': [
+            'deps/nbytes/nbytes.gyp:nbytes',
+          ],
+        }],
         [ 'node_use_sqlite=="true"', {
           'sources': [
             '<@(node_sqlite_sources)',
           ],
-          'defines': [ 'HAVE_SQLITE=1' ],
         }],
         [ 'node_shared=="true" and node_module_version!="" and OS!="win"', {
           'product_extension': '<(shlib_suffix)',
@@ -1118,7 +1138,6 @@
           'sources': [
             '<@(node_sqlite_sources)',
           ],
-          'defines': [ 'HAVE_SQLITE=1' ],
         }],
         [ 'OS in "linux freebsd mac solaris openharmony" and '
           'target_arch=="x64" and '
@@ -1206,7 +1225,6 @@
       'type': 'executable',
       'dependencies': [
         '<(node_lib_target_name)',
-        'deps/histogram/histogram.gyp:histogram',
       ],
 
       'includes': [
@@ -1231,6 +1249,11 @@
         'test/fuzzers/fuzz_env.cc',
       ],
       'conditions': [
+        [ 'node_shared_hdr_histogram=="false"', {
+          'dependencies': [
+            'deps/histogram/histogram.gyp:histogram',
+          ],
+        }],
         ['OS=="linux" or OS=="openharmony"', {
           'ldflags': [ '-fsanitize=fuzzer' ]
         }],
@@ -1249,7 +1272,6 @@
       'type': 'executable',
       'dependencies': [
         '<(node_lib_target_name)',
-        'deps/histogram/histogram.gyp:histogram',
       ],
       'includes': [
         'node.gypi'
@@ -1272,6 +1294,11 @@
         'test/fuzzers/fuzz_ClientHelloParser.cc',
       ],
       'conditions': [
+        [ 'node_shared_hdr_histogram=="false"', {
+          'dependencies': [
+            'deps/histogram/histogram.gyp:histogram',
+          ],
+        }],
         [ 'node_shared_uvwasi=="false"', {
           'dependencies': [ 'deps/uvwasi/uvwasi.gyp:uvwasi' ],
           'include_dirs': [ 'deps/uvwasi/include' ],
@@ -1294,9 +1321,6 @@
       'type': 'executable',
       'dependencies': [
         '<(node_lib_target_name)',
-        'deps/googletest/googletest.gyp:gtest_prod',
-        'deps/histogram/histogram.gyp:histogram',
-        'deps/nbytes/nbytes.gyp:nbytes',
       ],
       'includes': [
         'node.gypi'
@@ -1319,6 +1343,21 @@
         'test/fuzzers/fuzz_strings.cc',
       ],
       'conditions': [
+        [ 'node_shared_gtest=="false"', {
+          'dependencies': [
+            'deps/googletest/googletest.gyp:gtest_prod',
+          ],
+        }],
+        [ 'node_shared_hdr_histogram=="false"', {
+          'dependencies': [
+            'deps/histogram/histogram.gyp:histogram',
+          ],
+        }],
+        [ 'node_shared_nbytes=="false"', {
+          'dependencies': [
+            'deps/nbytes/nbytes.gyp:nbytes',
+          ],
+        }],
         [ 'node_shared_uvwasi=="false"', {
           'dependencies': [ 'deps/uvwasi/uvwasi.gyp:uvwasi' ],
           'include_dirs': [ 'deps/uvwasi/include' ],
@@ -1342,10 +1381,6 @@
 
       'dependencies': [
         '<(node_lib_target_name)',
-        'deps/googletest/googletest.gyp:gtest',
-        'deps/googletest/googletest.gyp:gtest_main',
-        'deps/histogram/histogram.gyp:histogram',
-        'deps/nbytes/nbytes.gyp:nbytes',
         'deps/protobuf/abseil.gyp:abseil_proto',
         'tools/v8_gypfiles/abseil.gyp:abseil',
       ],
@@ -1374,6 +1409,25 @@
       'sources': [ '<@(node_cctest_sources)' ],
 
       'conditions': [
+        [ 'node_shared_gtest=="false"', {
+          'dependencies': [
+            'deps/googletest/googletest.gyp:gtest',
+            'deps/googletest/googletest.gyp:gtest_main',
+          ],
+        }],
+        [ 'node_shared_gtest=="true"', {
+          'libraries': [ '-lgtest_main' ],
+        }],
+        [ 'node_shared_hdr_histogram=="false"', {
+          'dependencies': [
+            'deps/histogram/histogram.gyp:histogram',
+          ],
+        }],
+        [ 'node_shared_nbytes=="false"', {
+          'dependencies': [
+            'deps/nbytes/nbytes.gyp:nbytes',
+          ],
+        }],
         [ 'node_use_openssl=="true"', {
           'defines': [
             'HAVE_OPENSSL=1',
@@ -1434,8 +1488,6 @@
 
       'dependencies': [
         '<(node_lib_target_name)',
-        'deps/histogram/histogram.gyp:histogram',
-        'deps/nbytes/nbytes.gyp:nbytes',
       ],
 
       'includes': [
@@ -1469,6 +1521,16 @@
           'xcode_settings': {
             'OTHER_LDFLAGS': [ '-Wl,-rpath,@loader_path', ],
           },
+        }],
+        [ 'node_shared_hdr_histogram=="false"', {
+          'dependencies': [
+            'deps/histogram/histogram.gyp:histogram',
+          ],
+        }],
+        [ 'node_shared_nbytes=="false"', {
+          'dependencies': [
+            'deps/nbytes/nbytes.gyp:nbytes',
+          ],
         }],
         ['OS=="win"', {
           'libraries': [
@@ -1554,8 +1616,6 @@
 
       'dependencies': [
         '<(node_lib_target_name)',
-        'deps/histogram/histogram.gyp:histogram',
-        'deps/nbytes/nbytes.gyp:nbytes',
       ],
 
       'includes': [
@@ -1587,6 +1647,16 @@
       'conditions': [
         ['node_write_snapshot_as_array_literals=="true"', {
           'defines': [ 'NODE_MKSNAPSHOT_USE_ARRAY_LITERALS=1' ],
+        }],
+        [ 'node_shared_hdr_histogram=="false"', {
+          'dependencies': [
+            'deps/histogram/histogram.gyp:histogram',
+          ],
+        }],
+        [ 'node_shared_nbytes=="false"', {
+          'dependencies': [
+            'deps/nbytes/nbytes.gyp:nbytes',
+          ],
         }],
         [ 'node_use_openssl=="true"', {
           'dependencies': [

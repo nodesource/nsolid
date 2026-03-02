@@ -5,10 +5,10 @@
 #include "amaro_version.h"
 #include "ares.h"
 #include "brotli/encode.h"
-#include "cjs_module_lexer_version.h"
 #include "curl/curlver.h"
 #include "grpcpp/version_info.h"
 #include "llhttp.h"
+#include "merve.h"
 #include "nbytes.h"
 #include "nghttp2/nghttp2ver.h"
 #include "nlohmann/json.h"
@@ -135,7 +135,7 @@ Metadata::Versions::Versions() {
 #endif
 
   acorn = ACORN_VERSION;
-  cjs_module_lexer = CJS_MODULE_LEXER_VERSION;
+  merve = MERVE_VERSION;
   uvwasi = UVWASI_VERSION_STRING;
   zstd = ZSTD_VERSION_STRING;
 
