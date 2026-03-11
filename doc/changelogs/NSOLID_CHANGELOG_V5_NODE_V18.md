@@ -2,6 +2,21 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-05-11, Version 18.20.8-nsolid-v5.7.3 'Hydrogen'
+
+### Commits
+
+* \[[`c01509b676`](https://github.com/nodesource/nsolid/commit/c01509b676)] - **agents**: fix http\_client percentile calculation (Santiago Gimeno) [#424](https://github.com/nodesource/nsolid/pull/424)
+* \[[`d3d6763a34`](https://github.com/nodesource/nsolid/commit/d3d6763a34)] - **agents**: fix infinite recursion on \~CommandStream (Santiago Gimeno) [#412](https://github.com/nodesource/nsolid/pull/412)
+* \[[`0551f600cc`](https://github.com/nodesource/nsolid/commit/0551f600cc)] - **agents**: on grpc add appVersion field to info msg (Santiago Gimeno) [#413](https://github.com/nodesource/nsolid/pull/413)
+* \[[`39676ed055`](https://github.com/nodesource/nsolid/commit/39676ed055)] - **agents**: increase gRPC timeout from 10 to 60 secs (Santiago Gimeno)
+* \[[`8596d3eb61`](https://github.com/nodesource/nsolid/commit/8596d3eb61)] - **agents**: enable compression in GrpcAgent (Santiago Gimeno) [#346](https://github.com/nodesource/nsolid/pull/346)
+* \[[`90903da41e`](https://github.com/nodesource/nsolid/commit/90903da41e)] - **agents**: add root certs API and use it in OTLPAgent (Santiago Gimeno) [#340](https://github.com/nodesource/nsolid/pull/340)
+* \[[`7b28ea94e1`](https://github.com/nodesource/nsolid/commit/7b28ea94e1)] - **lib,src**: set default metrics interval to 5 secs (Santiago Gimeno)
+* \[[`aa69b59634`](https://github.com/nodesource/nsolid/commit/aa69b59634)] - **src**: fix null pointer deref error in SetWeak cb (Santiago Gimeno)
+* \[[`ee28be19b3`](https://github.com/nodesource/nsolid/commit/ee28be19b3)] - **src**: store hasEbpfSupport metadata in info.proto (RafaelGSS) [#290](https://github.com/nodesource/nsolid/pull/290)
+* \[[`bf8201a4e4`](https://github.com/nodesource/nsolid/commit/bf8201a4e4)] - **test**: fix failing grpc agent otel tests (Santiago Gimeno) [#421](https://github.com/nodesource/nsolid/pull/421)
+
 ## 2025-09-17, Version 18.20.8-nsolid-v5.7.2 'Hydrogen'
 
 ### Commits
