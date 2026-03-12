@@ -83,6 +83,7 @@
         'src/google/protobuf/service.cc',
         'src/google/protobuf/source_context.pb.cc',
         'src/google/protobuf/struct.pb.cc',
+        'src/google/protobuf/symbol_checker.cc',
         'src/google/protobuf/text_format.cc',
         'src/google/protobuf/timestamp.pb.cc',
         'src/google/protobuf/type.pb.cc',
