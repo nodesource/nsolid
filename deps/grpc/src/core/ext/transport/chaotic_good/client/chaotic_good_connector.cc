@@ -21,10 +21,6 @@
 #include <memory>
 #include <utility>
 
-#include "absl/log/log.h"
-#include "absl/random/bit_gen_ref.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "src/core/client_channel/client_channel_factory.h"
 #include "src/core/client_channel/client_channel_filter.h"
 #include "src/core/config/core_configuration.h"
@@ -69,6 +65,10 @@
 #include "src/core/util/no_destruct.h"
 #include "src/core/util/ref_counted_ptr.h"
 #include "src/core/util/time.h"
+#include "absl/log/log.h"
+#include "absl/random/bit_gen_ref.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 
 using grpc_event_engine::experimental::EventEngine;
 
@@ -212,6 +212,8 @@ auto ConnectChaoticGood(EventEngine::ResolvedAddress addr,
 
 void ChaoticGoodConnector::Connect(const Args& args, Result* result,
                                    grpc_closure* notify) {
+  // TODO(ctiller): Figure out a better value to use here.
+  result->max_concurrent_streams = std::numeric_limits<uint32_t>::max();
   auto event_engine = args.channel_args.GetObjectRef<EventEngine>();
   auto arena = SimpleArenaAllocator(0)->MakeArena();
   auto result_notifier = std::make_unique<ResultNotifier>(args, result, notify);
@@ -229,7 +231,10 @@ void ChaoticGoodConnector::Connect(const Args& args, Result* result,
         return TrySeq(
             ConnectChaoticGood(
                 resolved_addr, result_notifier_ptr->args.channel_args,
-                Timestamp::Now() + Duration::FromSecondsAsDouble(kTimeoutSecs),
+                IsChaoticGoodConnectDeadlineEnabled()
+                    ? result_notifier_ptr->args.deadline
+                    : Timestamp::Now() +
+                          Duration::FromSecondsAsDouble(kTimeoutSecs),
                 std::move(client_settings)),
             [resolved_addr,
              result_notifier_ptr](ConnectChaoticGoodResult result) {

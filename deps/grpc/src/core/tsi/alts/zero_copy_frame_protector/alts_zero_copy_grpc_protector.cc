@@ -25,7 +25,6 @@
 #include <memory>
 #include <utility>
 
-#include "absl/log/log.h"
 #include "src/core/tsi/alts/crypt/gsec.h"
 #include "src/core/tsi/alts/zero_copy_frame_protector/alts_grpc_integrity_only_record_protocol.h"
 #include "src/core/tsi/alts/zero_copy_frame_protector/alts_grpc_privacy_integrity_record_protocol.h"
@@ -33,6 +32,7 @@
 #include "src/core/tsi/alts/zero_copy_frame_protector/alts_iovec_record_protocol.h"
 #include "src/core/tsi/transport_security_grpc.h"
 #include "src/core/util/grpc_check.h"
+#include "absl/log/log.h"
 
 constexpr size_t kMinFrameLength = 1024;
 constexpr size_t kDefaultFrameLength = 16 * 1024;
@@ -256,13 +256,26 @@ static bool alts_zero_copy_grpc_protector_read_frame_size(
   return read_frame_size(protected_slices, frame_size);
 }
 
+static void alts_zero_copy_grpc_protector_set_allocator(
+    tsi_zero_copy_grpc_protector* self,
+    tsi_zero_copy_grpc_protector_allocator_cb alloc_cb, void* user_data) {
+  alts_zero_copy_grpc_protector* impl =
+      reinterpret_cast<alts_zero_copy_grpc_protector*>(self);
+  // Set on both protect and unprotect protocols
+  alts_grpc_record_protocol_set_allocation_callback(impl->record_protocol,
+                                                    alloc_cb, user_data);
+  alts_grpc_record_protocol_set_allocation_callback(impl->unrecord_protocol,
+                                                    alloc_cb, user_data);
+}
+
 static const tsi_zero_copy_grpc_protector_vtable
     alts_zero_copy_grpc_protector_vtable = {
         alts_zero_copy_grpc_protector_protect,
         alts_zero_copy_grpc_protector_unprotect,
         alts_zero_copy_grpc_protector_destroy,
         alts_zero_copy_grpc_protector_max_frame_size,
-        alts_zero_copy_grpc_protector_read_frame_size};
+        alts_zero_copy_grpc_protector_read_frame_size,
+        alts_zero_copy_grpc_protector_set_allocator};
 
 tsi_result alts_zero_copy_grpc_protector_create(
     const grpc_core::GsecKeyFactoryInterface& key_factory, bool is_client,

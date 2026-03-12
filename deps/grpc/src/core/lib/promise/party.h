@@ -25,9 +25,6 @@
 #include <string>
 #include <utility>
 
-#include "absl/base/attributes.h"
-#include "absl/functional/any_invocable.h"
-#include "absl/strings/string_view.h"
 #include "src/core/channelz/channelz.h"
 #include "src/core/channelz/property_list.h"
 #include "src/core/lib/debug/trace.h"
@@ -44,6 +41,9 @@
 #include "src/core/util/json/json_writer.h"
 #include "src/core/util/ref_counted.h"
 #include "src/core/util/ref_counted_ptr.h"
+#include "absl/base/attributes.h"
+#include "absl/functional/any_invocable.h"
+#include "absl/strings/string_view.h"
 
 namespace grpc_core {
 
@@ -394,7 +394,14 @@ class Party : public Activity, private Wakeable {
   void ToJson(absl::AnyInvocable<void(Json::Object)>);
 
   // Export the party to channelz.
-  void ExportToChannelz(std::string name, channelz::DataSink sink);
+  // The final argument is called whilst the party is locked, and so can be used
+  // to export contextual data alongside the party.
+  void ExportToChannelz(
+      std::string name, channelz::DataSink sink,
+      absl::AnyInvocable<channelz::PropertyList()> export_context = []() {
+        // The default implementation does nothing.
+        return channelz::PropertyList();
+      });
 
  protected:
   friend class Arena;

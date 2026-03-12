@@ -18,8 +18,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "absl/cleanup/cleanup.h"
-#include "absl/strings/escaping.h"
 #include "src/core/ext/transport/chaotic_good_legacy/pending_connection.h"
 #include "src/core/lib/event_engine/event_engine_context.h"
 #include "src/core/lib/event_engine/extensions/channelz.h"
@@ -30,6 +28,8 @@
 #include "src/core/lib/promise/seq.h"
 #include "src/core/lib/promise/try_seq.h"
 #include "src/core/telemetry/default_tcp_tracer.h"
+#include "absl/cleanup/cleanup.h"
+#include "absl/strings/escaping.h"
 
 namespace grpc_core {
 namespace chaotic_good_legacy {
@@ -310,7 +310,10 @@ Endpoint::Endpoint(uint32_t id, RefCountedPtr<OutputBuffers> output_buffers,
                 auto* epte = grpc_event_engine::experimental::QueryExtension<
                     grpc_event_engine::experimental::TcpTraceExtension>(
                     endpoint->GetEventEngineEndpoint().get());
-                if (epte != nullptr) {
+                if (epte != nullptr && stats_plugin_group != nullptr) {
+                  epte->EnableTcpTelemetry(
+                      stats_plugin_group->GetCollectionScope(),
+                      /*is_control_endpoint=*/false);
                   epte->SetTcpTracer(std::make_shared<DefaultTcpTracer>(
                       std::move(stats_plugin_group)));
                 }
