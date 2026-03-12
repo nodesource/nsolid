@@ -20,9 +20,6 @@
 #include <cstdint>
 #include <limits>
 
-#include "absl/base/thread_annotations.h"
-#include "absl/log/log.h"
-#include "absl/strings/str_format.h"
 #include "src/core/channelz/property_list.h"
 #include "src/core/lib/event_engine/event_engine_context.h"
 #include "src/core/lib/iomgr/exec_ctx.h"
@@ -31,11 +28,14 @@
 #include "src/core/util/json/json_writer.h"
 #include "src/core/util/latent_see.h"
 #include "src/core/util/sync.h"
+#include "absl/base/thread_annotations.h"
+#include "absl/log/log.h"
+#include "absl/strings/str_format.h"
 
 #ifdef GRPC_MAXIMIZE_THREADYNESS
-#include "absl/random/random.h"           // IWYU pragma: keep
 #include "src/core/lib/iomgr/exec_ctx.h"  // IWYU pragma: keep
 #include "src/core/util/thd.h"            // IWYU pragma: keep
+#include "absl/random/random.h"           // IWYU pragma: keep
 #endif
 
 namespace grpc_core {
@@ -202,14 +202,20 @@ void Party::ToJson(absl::AnyInvocable<void(Json::Object)> f) {
       [](absl::Status) {});
 }
 
-void Party::ExportToChannelz(std::string name, channelz::DataSink sink) {
+void Party::ExportToChannelz(
+    std::string name, channelz::DataSink sink,
+    absl::AnyInvocable<channelz::PropertyList()> export_context) {
   arena()->GetContext<grpc_event_engine::experimental::EventEngine>()->Run(
-      [self = Ref(), name = std::move(name), sink = std::move(sink)]() mutable {
+      [self = Ref(), name = std::move(name), sink = std::move(sink),
+       export_context = std::move(export_context)]() mutable {
         ExecCtx exec_ctx;
         self->Spawn(
             "export-to-channelz",
-            [name = std::move(name), sink = std::move(sink), self]() mutable {
-              sink.AddData(std::move(name), self->ChannelzPropertiesLocked());
+            [name = std::move(name), sink = std::move(sink), self,
+             export_context = std::move(export_context)]() mutable {
+              sink.AddData(
+                  std::move(name),
+                  self->ChannelzPropertiesLocked().Merge(export_context()));
               return absl::OkStatus();
             },
             [](absl::Status) {});

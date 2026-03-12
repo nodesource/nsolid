@@ -35,11 +35,6 @@
 #include <string>
 #include <utility>
 
-#include "absl/base/attributes.h"
-#include "absl/functional/any_invocable.h"
-#include "absl/status/status.h"
-#include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 #include "src/core/channelz/channelz.h"
 #include "src/core/config/core_configuration.h"
 #include "src/core/handshaker/handshaker.h"
@@ -64,6 +59,11 @@
 #include "src/core/util/ref_counted_ptr.h"
 #include "src/core/util/sync.h"
 #include "src/core/util/unique_type_name.h"
+#include "absl/base/attributes.h"
+#include "absl/functional/any_invocable.h"
+#include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 
 #define GRPC_INITIAL_HANDSHAKE_BUFFER_SIZE 256
 
@@ -324,6 +324,9 @@ grpc_error_handle SecurityHandshaker::CheckPeerLocked() {
       });
   connector_->check_peer(peer, args_->endpoint.get(), args_->args,
                          &auth_context_, on_peer_checked_);
+  if (auth_context_ != nullptr) {
+    auth_context_->set_protocol(connector_->type().name());
+  }
   grpc_auth_property_iterator it = grpc_auth_context_find_properties_by_name(
       auth_context_.get(), GRPC_TRANSPORT_SECURITY_LEVEL_PROPERTY_NAME);
   const grpc_auth_property* prop = grpc_auth_property_iterator_next(&it);

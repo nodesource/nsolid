@@ -37,11 +37,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/base/thread_annotations.h"
-#include "absl/log/log.h"
-#include "absl/status/status.h"
-#include "absl/strings/string_view.h"
-#include "absl/types/span.h"
 #include "src/core/lib/debug/trace.h"
 #include "src/core/lib/experiments/experiments.h"
 #include "src/core/lib/iomgr/closure.h"
@@ -63,6 +58,11 @@
 #include "src/core/util/ref_counted_ptr.h"
 #include "src/core/util/string.h"
 #include "src/core/util/sync.h"
+#include "absl/base/thread_annotations.h"
+#include "absl/log/log.h"
+#include "absl/status/status.h"
+#include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 
 #define STAGING_BUFFER_SIZE 8192
 
@@ -71,6 +71,12 @@ static void on_write(void* user_data, grpc_error_handle error);
 
 namespace grpc_core {
 namespace {
+
+grpc_slice AllocSlice(size_t size, void* user_data) {
+  auto* owner = static_cast<MemoryOwner*>(user_data);
+  return owner->MakeSlice(MemoryRequest(size));
+}
+
 class FrameProtector : public RefCounted<FrameProtector> {
  public:
   FrameProtector(tsi_frame_protector* protector,
@@ -94,6 +100,10 @@ class FrameProtector : public RefCounted<FrameProtector> {
       }
     }
     if (zero_copy_protector_ != nullptr) {
+      if (IsTrackZeroCopyAllocationsInResourceQuotaEnabled()) {
+        tsi_zero_copy_grpc_protector_set_allocator(zero_copy_protector_,
+                                                   &AllocSlice, &memory_owner_);
+      }
       read_staging_buffer_ = grpc_empty_slice();
       write_staging_buffer_ = grpc_empty_slice();
     } else {

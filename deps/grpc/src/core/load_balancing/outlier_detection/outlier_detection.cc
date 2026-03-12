@@ -34,13 +34,6 @@
 #include <variant>
 #include <vector>
 
-#include "absl/base/thread_annotations.h"
-#include "absl/log/log.h"
-#include "absl/meta/type_traits.h"
-#include "absl/random/random.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/core/client_channel/subchannel_interface_internal.h"
 #include "src/core/config/core_configuration.h"
 #include "src/core/lib/address_utils/sockaddr_utils.h"
@@ -71,6 +64,13 @@
 #include "src/core/util/unique_type_name.h"
 #include "src/core/util/validation_errors.h"
 #include "src/core/util/work_serializer.h"
+#include "absl/base/thread_annotations.h"
+#include "absl/log/log.h"
+#include "absl/meta/type_traits.h"
+#include "absl/random/random.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 
 namespace grpc_core {
 
@@ -491,14 +491,6 @@ class OutlierDetectionLb::Picker::SubchannelCallTracker final
 
   ~SubchannelCallTracker() override {
     endpoint_state_.reset(DEBUG_LOCATION, "SubchannelCallTracker");
-  }
-
-  void Start() override {
-    // This tracker does not care about started calls only finished calls.
-    // Delegate if needed.
-    if (original_subchannel_call_tracker_ != nullptr) {
-      original_subchannel_call_tracker_->Start();
-    }
   }
 
   void Finish(FinishArgs args) override {
