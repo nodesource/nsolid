@@ -22,12 +22,12 @@
 #include <grpc/support/port_platform.h>
 #include <string.h>
 
-#include "absl/log/log.h"
 #include "src/core/lib/iomgr/exec_ctx.h"
 #include "src/core/lib/slice/slice_internal.h"
 #include "src/core/util/crash.h"
 #include "src/core/util/grpc_check.h"
 #include "src/core/util/useful.h"
+#include "absl/log/log.h"
 
 const size_t kInitialIovecBufferSize = 8;
 
@@ -172,4 +172,12 @@ size_t alts_grpc_record_protocol_max_unprotected_data_size(
   }
   return alts_iovec_record_protocol_max_unprotected_data_size(
       self->iovec_rp, max_protected_frame_size);
+}
+
+void alts_grpc_record_protocol_set_allocation_callback(
+    alts_grpc_record_protocol* self,
+    tsi_zero_copy_grpc_protector_allocator_cb allocator_cb, void* user_data) {
+  if (self == nullptr) return;
+  self->alloc_cb = allocator_cb;
+  self->alloc_user_data = user_data;
 }

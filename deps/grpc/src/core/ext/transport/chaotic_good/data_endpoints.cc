@@ -24,12 +24,6 @@
 #include <optional>
 #include <utility>
 
-#include "absl/cleanup/cleanup.h"
-#include "absl/container/inlined_vector.h"
-#include "absl/log/log.h"
-#include "absl/strings/numbers.h"
-#include "absl/strings/str_split.h"
-#include "absl/time/time.h"
 #include "src/core/channelz/property_list.h"
 #include "src/core/ext/transport/chaotic_good/tcp_frame_header.h"
 #include "src/core/ext/transport/chaotic_good/tcp_ztrace_collector.h"
@@ -49,6 +43,12 @@
 #include "src/core/util/ref_counted.h"
 #include "src/core/util/shared_bit_gen.h"
 #include "src/core/util/string.h"
+#include "absl/cleanup/cleanup.h"
+#include "absl/container/inlined_vector.h"
+#include "absl/log/log.h"
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_split.h"
+#include "absl/time/time.h"
 
 namespace grpc_core {
 namespace chaotic_good {
@@ -879,7 +879,12 @@ Endpoint::Endpoint(uint32_t id, uint32_t encode_alignment,
                 auto* epte = grpc_event_engine::experimental::QueryExtension<
                     grpc_event_engine::experimental::TcpTraceExtension>(
                     endpoint->GetEventEngineEndpoint().get());
-                if (epte != nullptr) {
+                if (epte != nullptr &&
+                    ep_ctx->transport_ctx->stats_plugin_group != nullptr) {
+                  epte->EnableTcpTelemetry(
+                      ep_ctx->transport_ctx->stats_plugin_group
+                          ->GetCollectionScope(),
+                      /*is_control_endpoint=*/false);
                   epte->SetTcpTracer(std::make_shared<DefaultTcpTracer>(
                       ep_ctx->transport_ctx->stats_plugin_group));
                 }

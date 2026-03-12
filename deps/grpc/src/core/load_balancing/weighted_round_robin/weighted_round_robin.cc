@@ -32,15 +32,6 @@
 #include <variant>
 #include <vector>
 
-#include "absl/base/thread_annotations.h"
-#include "absl/log/log.h"
-#include "absl/meta/type_traits.h"
-#include "absl/random/random.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
-#include "absl/strings/str_join.h"
-#include "absl/strings/string_view.h"
 #include "src/core/config/core_configuration.h"
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/debug/trace.h"
@@ -73,6 +64,15 @@
 #include "src/core/util/time.h"
 #include "src/core/util/validation_errors.h"
 #include "src/core/util/work_serializer.h"
+#include "absl/base/thread_annotations.h"
+#include "absl/log/log.h"
+#include "absl/meta/type_traits.h"
+#include "absl/random/random.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
+#include "absl/strings/string_view.h"
 
 namespace grpc_core {
 
@@ -347,8 +347,6 @@ class WeightedRoundRobin final : public LoadBalancingPolicy {
             error_utilization_penalty_(error_utilization_penalty),
             child_tracker_(std::move(child_tracker)) {}
 
-      void Start() override;
-
       void Finish(FinishArgs args) override;
 
      private:
@@ -510,10 +508,6 @@ void WeightedRoundRobin::EndpointWeight::ResetNonEmptySince() {
 //
 // WeightedRoundRobin::Picker::SubchannelCallTracker
 //
-
-void WeightedRoundRobin::Picker::SubchannelCallTracker::Start() {
-  if (child_tracker_ != nullptr) child_tracker_->Start();
-}
 
 void WeightedRoundRobin::Picker::SubchannelCallTracker::Finish(
     FinishArgs args) {

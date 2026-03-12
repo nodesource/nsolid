@@ -23,13 +23,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "absl/log/log.h"
 #include "src/core/lib/slice/slice_internal.h"
 #include "src/core/tsi/transport_security_grpc.h"
 #include "src/core/tsi/transport_security_interface.h"
 #include "src/core/util/crash.h"
 #include "src/core/util/grpc_check.h"
 #include "src/core/util/memory.h"
+#include "absl/log/log.h"
 
 // --- Constants. ---
 #define TSI_FAKE_FRAME_HEADER_SIZE 4
@@ -543,6 +543,7 @@ static const tsi_zero_copy_grpc_protector_vtable
         fake_zero_copy_grpc_protector_destroy,
         fake_zero_copy_grpc_protector_max_frame_size,
         fake_zero_copy_grpc_protector_read_frame_size,
+        nullptr /* set_allocator */
 };
 
 // --- tsi_handshaker_result methods implementation. ---
