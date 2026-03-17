@@ -1,6 +1,8 @@
 #ifndef AGENTS_OTLP_SRC_OTLP_COMMON_H_
 #define AGENTS_OTLP_SRC_OTLP_COMMON_H_
 
+#include <memory>
+
 #include "nsolid.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/resource/resource.h"
@@ -42,9 +44,14 @@ namespace otlp {
 OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*
     GetScope();
 
-OPENTELEMETRY_NAMESPACE::sdk::resource::Resource* GetResource();
+std::shared_ptr<OPENTELEMETRY_NAMESPACE::sdk::resource::Resource>
+    GetResource();
 
-OPENTELEMETRY_NAMESPACE::sdk::resource::Resource* UpdateResource(
+std::shared_ptr<OPENTELEMETRY_NAMESPACE::sdk::resource::Resource>
+    GetMetricsResource();
+
+std::shared_ptr<OPENTELEMETRY_NAMESPACE::sdk::resource::Resource>
+    UpdateResource(
     OPENTELEMETRY_NAMESPACE::sdk::resource::ResourceAttributes&&);
 
 void fill_proc_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
