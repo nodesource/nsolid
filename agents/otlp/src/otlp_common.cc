@@ -1,10 +1,17 @@
 #include "otlp_common.h"
 // NOLINTNEXTLINE(build/c++11)
 #include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 #include <unordered_map>
 #include "asserts-cpp/asserts.h"
 #include "env-inl.h"
 #include "nlohmann/json.hpp"
+#include "nsuv-inl.h"
+#include "opentelemetry/semconv/incubating/deployment_attributes.h"
+#include "opentelemetry/semconv/incubating/host_attributes.h"
+#include "opentelemetry/semconv/incubating/os_attributes.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/incubating/service_attributes.h"
 #include "opentelemetry/semconv/incubating/thread_attributes.h"
@@ -44,8 +51,20 @@ using opentelemetry::trace::SpanId;
 using opentelemetry::trace::SpanKind;
 using opentelemetry::trace::TraceFlags;
 using opentelemetry::trace::TraceId;
+using opentelemetry::semconv::deployment::kDeploymentEnvironmentName;
+using opentelemetry::semconv::host::kHostArch;
+using opentelemetry::semconv::host::kHostCpuModelName;
+using opentelemetry::semconv::host::kHostName;
+using opentelemetry::semconv::os::kOsType;
 using opentelemetry::trace::propagation::detail::HexToBinary;
+using opentelemetry::semconv::process::kProcessCreationTime;
+using opentelemetry::semconv::process::kProcessExecutablePath;
 using opentelemetry::semconv::process::kProcessOwner;
+using opentelemetry::semconv::process::kProcessPid;
+using opentelemetry::semconv::process::kProcessRuntimeDescription;
+using opentelemetry::semconv::process::kProcessRuntimeName;
+using opentelemetry::semconv::process::kProcessRuntimeVersion;
+using opentelemetry::semconv::process::kProcessTitle;
 using opentelemetry::semconv::service::kServiceName;
 using opentelemetry::semconv::service::kServiceInstanceId;
 using opentelemetry::semconv::service::kServiceVersion;
@@ -67,9 +86,235 @@ static std::vector<std::string> discarded_metrics = {
   "thread_id", "timestamp"
 };
 
-static std::unique_ptr<Resource> resource_g =
-  std::make_unique<Resource>(Resource::GetEmpty());
-static bool isResourceInitialized_g = false;
+static std::shared_ptr<Resource> resource_g;
+static std::shared_ptr<Resource> metrics_resource_g;
+
+static nsuv::ns_mutex& ResourceMutex() {
+  static int er = 0;
+  static nsuv::ns_mutex mutex(&er, false);
+  ASSERT_EQ(0, er);
+  return mutex;
+}
+
+static std::string ToIso8601(uint64_t timestamp_ms) {
+  if (timestamp_ms == 0) return "";
+
+  const time_t seconds = static_cast<time_t>(timestamp_ms / 1000);
+  std::tm tm{};
+#ifdef _WIN32
+  gmtime_s(&tm, &seconds);
+#else
+  gmtime_r(&seconds, &tm);
+#endif
+
+  std::ostringstream stream;
+  stream << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
+
+  const uint64_t millis = timestamp_ms % 1000;
+  stream << '.' << std::setw(3) << std::setfill('0') << millis;
+
+  stream << 'Z';
+  return stream.str();
+}
+
+static std::string NormalizeOsType(const std::string& platform) {
+  if (platform == "win32") return "windows";
+  if (platform == "sunos") return "solaris";
+  return platform;
+}
+
+static std::string NormalizeHostArch(const std::string& arch) {
+  if (arch == "x64") return "amd64";
+  if (arch == "ia32") return "x86";
+  if (arch == "arm") return "arm32";
+  return arch;
+}
+
+static ResourceAttributes GetMetadataResourceAttributes(const json& info) {
+  ResourceAttributes attrs;
+
+  if (info.is_discarded() || !info.is_object()) return attrs;
+
+  auto it = info.find("app");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute(kServiceName, it->get<std::string>());
+  }
+
+  attrs.SetAttribute(kServiceInstanceId, nsolid::GetAgentId());
+
+  it = info.find("appVersion");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute(kServiceVersion, it->get<std::string>());
+  }
+
+  it = info.find("hostname");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute(kHostName, it->get<std::string>());
+  }
+
+  it = info.find("pid");
+  if (it != info.end() && it->is_number_unsigned()) {
+    attrs.SetAttribute(kProcessPid, static_cast<int64_t>(it->get<uint32_t>()));
+  }
+
+  it = info.find("arch");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute(kHostArch, NormalizeHostArch(it->get<std::string>()));
+  }
+
+  it = info.find("platform");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute(kOsType, NormalizeOsType(it->get<std::string>()));
+  }
+
+  it = info.find("execPath");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute(kProcessExecutablePath, it->get<std::string>());
+  }
+
+  it = info.find("main");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute("main", it->get<std::string>());
+  }
+
+  it = info.find("nodeEnv");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute(kDeploymentEnvironmentName, it->get<std::string>());
+  }
+
+  it = info.find("versions");
+  if (it != info.end() && it->is_object()) {
+    auto version_it = it->find("node");
+    if (version_it != it->end() && version_it->is_string()) {
+      attrs.SetAttribute(kProcessRuntimeVersion,
+                         version_it->get<std::string>());
+    }
+
+    version_it = it->find("nsolid");
+    if (version_it != it->end() && version_it->is_string()) {
+      std::string nsolid_version = version_it->get<std::string>();
+      attrs.SetAttribute(kProcessRuntimeDescription,
+                         "N|Solid " + nsolid_version);
+    }
+  }
+
+  attrs.SetAttribute(kProcessRuntimeName, "nodejs");
+
+  it = info.find("cpuCores");
+  if (it != info.end() && it->is_number_unsigned()) {
+    attrs.SetAttribute("cpuCores", it->get<uint32_t>());
+  }
+
+  it = info.find("cpuModel");
+  if (it != info.end() && it->is_string()) {
+    attrs.SetAttribute(kHostCpuModelName, it->get<std::string>());
+  }
+
+  it = info.find("processStart");
+  if (it != info.end() && it->is_number_unsigned()) {
+    std::string iso_time = ToIso8601(it->get<uint64_t>());
+    if (!iso_time.empty()) {
+      attrs.SetAttribute(kProcessCreationTime, std::move(iso_time));
+    }
+  }
+
+  it = info.find("tags");
+  if (it != info.end() && it->is_array()) {
+    std::string tags;
+    for (const auto& tag : *it) {
+      if (!tag.is_string()) continue;
+      if (!tags.empty()) tags += ',';
+      tags += tag.get<std::string>();
+    }
+    attrs.SetAttribute("tagsString", std::move(tags));
+  }
+
+  return attrs;
+}
+
+static std::shared_ptr<Resource> MergeResourceAttributes(
+    const std::shared_ptr<Resource>& base,
+    ResourceAttributes attrs) {
+  auto resource_attributes = base->GetAttributes();
+  if (resource_attributes.find(kServiceName) != resource_attributes.end() &&
+      attrs.find(kServiceName) == attrs.end()) {
+    attrs.SetAttribute(
+        kServiceName,
+        opentelemetry::nostd::get<std::string>(
+            resource_attributes[kServiceName]));
+  }
+  auto overlay = std::make_shared<Resource>(Resource::Create(attrs));
+  return std::make_shared<Resource>(base->Merge(*overlay));
+}
+
+InstrumentationScope* GetScope() {
+  static std::unique_ptr<InstrumentationScope> scope =
+    InstrumentationScope::Create("nsolid", NODE_VERSION "+ns" NSOLID_VERSION);
+  return scope.get();
+}
+
+static void EnsureResourceInitializedLocked() {
+  if (resource_g != nullptr) return;
+
+  json config = json::parse(nsolid::GetConfig(), nullptr, false);
+  // assert because the runtime should never send me an invalid JSON config
+  ASSERT(!config.is_discarded());
+  auto it = config.find("app");
+  ASSERT(it != config.end());
+  ResourceAttributes attrs({
+    {kServiceName, it->get<std::string>()},
+    {kServiceInstanceId, nsolid::GetAgentId()}
+  });
+
+  it = config.find("appVersion");
+  if (it != config.end()) {
+    attrs.SetAttribute(kServiceVersion, it->get<std::string>());
+  }
+
+  resource_g = std::make_shared<Resource>(Resource::Create(attrs));
+}
+
+std::shared_ptr<Resource> GetResource() {
+  nsuv::ns_mutex::scoped_lock lock(ResourceMutex());
+  EnsureResourceInitializedLocked();
+  return resource_g;
+}
+
+static void EnsureMetricsResourceInitializedLocked() {
+  if (metrics_resource_g != nullptr) return;
+
+  EnsureResourceInitializedLocked();
+
+  json info = json::parse(nsolid::GetProcessInfo(), nullptr, false);
+  ResourceAttributes attrs = GetMetadataResourceAttributes(info);
+  metrics_resource_g = MergeResourceAttributes(resource_g, std::move(attrs));
+}
+
+std::shared_ptr<Resource> GetMetricsResource() {
+  nsuv::ns_mutex::scoped_lock lock(ResourceMutex());
+  EnsureMetricsResourceInitializedLocked();
+  return metrics_resource_g;
+}
+
+void InvalidateMetricsResource() {
+  nsuv::ns_mutex::scoped_lock lock(ResourceMutex());
+  metrics_resource_g.reset();
+}
+
+std::shared_ptr<Resource> UpdateResource(ResourceAttributes&& attrs) {
+  nsuv::ns_mutex::scoped_lock lock(ResourceMutex());
+  EnsureResourceInitializedLocked();
+
+  ResourceAttributes metrics_attrs(attrs);
+  resource_g = MergeResourceAttributes(resource_g, std::move(attrs));
+
+  if (metrics_resource_g != nullptr) {
+    metrics_resource_g = MergeResourceAttributes(metrics_resource_g,
+                                                std::move(metrics_attrs));
+  }
+
+  return resource_g;
+}
 
 // NOLINTNEXTLINE(runtime/references)
 static void add_counter(std::vector<MetricData>& metrics,
@@ -134,53 +379,6 @@ static void add_summary(std::vector<MetricData>& metrics,
     std::vector<PointDataAttributes>{{ attrs, summary_point_data }}
   };
   metrics.push_back(metric_data);
-}
-
-InstrumentationScope* GetScope() {
-  static std::unique_ptr<InstrumentationScope> scope =
-    InstrumentationScope::Create("nsolid", NODE_VERSION "+ns" NSOLID_VERSION);
-  return scope.get();
-}
-
-Resource* GetResource() {
-  if (!isResourceInitialized_g) {
-    json config = json::parse(nsolid::GetConfig(), nullptr, false);
-    // assert because the runtime should never send me an invalid JSON config
-    ASSERT(!config.is_discarded());
-    auto it = config.find("app");
-    ASSERT(it != config.end());
-    ResourceAttributes attrs({
-      {kServiceName, it->get<std::string>()},
-      {kServiceInstanceId, nsolid::GetAgentId()}
-    });
-
-    it = config.find("appVersion");
-    if (it != config.end()) {
-      attrs.SetAttribute(kServiceVersion, it->get<std::string>());
-    }
-
-    // Directly construct a new Resource in the unique_ptr
-    resource_g = std::make_unique<Resource>(Resource::Create(attrs));
-    isResourceInitialized_g = true;
-  }
-
-  return resource_g.get();
-}
-
-Resource* UpdateResource(ResourceAttributes&& attrs) {
-  // First, get current kServiceName to avoid overwriting it with the default
-  // value "unknown_service". (See Resource::Create() method in the SDK).
-  auto resource = GetResource();
-  auto attributes = resource->GetAttributes();
-  if (attributes.find(kServiceName) != attributes.end() &&
-      attrs.find(kServiceName) == attrs.end()) {
-    attrs.SetAttribute(kServiceName,
-        opentelemetry::nostd::get<std::string>(attributes[kServiceName]));
-  }
-
-  auto new_res = std::make_unique<Resource>(Resource::Create(attrs));
-  resource_g = std::make_unique<Resource>(resource->Merge(*new_res));
-  return resource_g.get();
 }
 
 // NOLINTNEXTLINE(runtime/references)
@@ -250,7 +448,7 @@ NSOLID_PROCESS_METRICS_DOUBLE(V)
   if (prev_stor.user != stor.user || prev_stor.title != stor.title) {
     ResourceAttributes attrs = {
       { kProcessOwner, stor.user },
-      { "process.title", stor.title },
+      { kProcessTitle, stor.title },
     };
 
     USE(UpdateResource(std::move(attrs)));
@@ -370,7 +568,8 @@ void fill_log_recordable(LogsRecordable* recordable,
     nanoseconds(static_cast<uint64_t>(info.timestamp))));
   recordable->SetTimestamp(ts);
   recordable->SetObservedTimestamp(ts);
-  recordable->SetResource(*GetResource());
+  auto resource = GetResource();
+  recordable->SetResource(*resource);
   recordable->SetInstrumentationScope(*GetScope());
 }
 
@@ -508,7 +707,8 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
   recordable->SetAttribute("thread.id", s.thread_id);
   recordable->SetAttribute("nsolid.span_type", s.type);
 
-  recordable->SetResource(*GetResource());
+  auto resource = GetResource();
+  recordable->SetResource(*resource);
 }
 
 }  // namespace otlp

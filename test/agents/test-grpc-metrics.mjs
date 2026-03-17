@@ -210,7 +210,13 @@ function checkScopeMetrics(scopeMetrics) {
   }
 }
 
-function checkMetricsData(msg, metadata, requestId, agentId, nsolidConfig, nsolidMetrics) {
+function checkMetricsData(msg,
+                          metadata,
+                          requestId,
+                          agentId,
+                          nsolidConfig,
+                          nsolidMetrics,
+                          nsolidInfo) {
   const metrics = msg;
   assert.strictEqual(metrics.common.requestId, requestId);
   assert.strictEqual(metrics.common.command, 'metrics');
@@ -224,7 +230,11 @@ function checkMetricsData(msg, metadata, requestId, agentId, nsolidConfig, nsoli
   const resourceMetrics = metrics.body.resourceMetrics;
   validateArray(resourceMetrics, 'resourceMetrics');
   assert.strictEqual(resourceMetrics.length, 1);
-  checkResource(resourceMetrics[0].resource, agentId, nsolidConfig, nsolidMetrics);
+  checkResource(resourceMetrics[0].resource,
+                agentId,
+                nsolidConfig,
+                nsolidMetrics,
+                nsolidInfo);
   checkScopeMetrics(resourceMetrics[0].scopeMetrics);
 }
 
@@ -247,9 +257,40 @@ async function runTest({ getEnv }) {
 
       grpcServer.once('metrics', mustCall(async () => {
         const metrics = await child.metrics();
+        const info = await child.info();
         assert.strictEqual(config.app, 'my_app_name');
         const { data, requestId } = await grpcServer.metrics(agentId);
-        checkMetricsData(data.msg, data.metadata, requestId, agentId, config, metrics);
+        checkMetricsData(data.msg,
+                         data.metadata,
+                         requestId,
+                         agentId,
+                         config,
+                         metrics,
+                         info);
+
+        await child.config({ tags: ['js-api-tag'] });
+        const jsApiMetrics = await child.metrics();
+        const jsApiInfo = await child.info();
+        const jsApiData = await grpcServer.metrics(agentId);
+        checkMetricsData(jsApiData.data.msg,
+                         jsApiData.data.metadata,
+                         jsApiData.requestId,
+                         agentId,
+                         config,
+                         jsApiMetrics,
+                         jsApiInfo);
+
+        await grpcServer.reconfigure(agentId, { tags: ['reconfigured-tag'] });
+        const updatedMetrics = await child.metrics();
+        const updatedInfo = await child.info();
+        const updatedData = await grpcServer.metrics(agentId);
+        checkMetricsData(updatedData.data.msg,
+                         updatedData.data.metadata,
+                         updatedData.requestId,
+                         agentId,
+                         config,
+                         updatedMetrics,
+                         updatedInfo);
         await child.shutdown(0);
         grpcServer.close();
         resolve();

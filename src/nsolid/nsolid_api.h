@@ -542,6 +542,7 @@ class EnvList {
 
   std::string GetInfo();
   void StoreInfo(const std::string& info);
+  void StoreInfo(const nlohmann::json& info);
 
   std::string CurrentConfig();
   nlohmann::json CurrentConfigJSON();

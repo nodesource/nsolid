@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustCallAtLeast, mustSucceed } from '../common/index.mjs';
+import { mustCall, mustCallAtLeast, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'url';
@@ -38,12 +38,13 @@ if (process.argv[2] === 'child') {
       type: 'nsolid',
       id: nsolid.id,
       appName: nsolid.appName,
+      info: nsolid.info(),
       metrics: nsolid.metrics(),
     });
-    process.on('message', (message) => {
+    process.on('message', mustCall((message) => {
       assert.strictEqual(message, 'exit');
       process.exit(0);
-    });
+    }));
   } else {
     nsolid.setThreadName('worker-thread');
   }
@@ -444,27 +445,66 @@ if (process.argv[2] === 'child') {
 
   let nsolidId;
   let nsolidAppName;
+  let nsolidInfo;
   let nsolidMetrics;
+
+  function normalizeOsType(platform) {
+    if (platform === 'win32') return 'windows';
+    if (platform === 'sunos') return 'solaris';
+    return platform;
+  }
+
+  function normalizeHostArch(arch) {
+    if (arch === 'x64') return 'amd64';
+    if (arch === 'ia32') return 'x86';
+    if (arch === 'arm') return 'arm32';
+    return arch;
+  }
 
   function checkResource(resource) {
     validateArray(resource.attributes, 'attributes');
 
     const expectedAttributes = {
-      'telemetry.sdk.version': process.versions.opentelemetry,
-      'telemetry.sdk.language': 'cpp',
-      'telemetry.sdk.name': 'opentelemetry',
-      'service.instance.id': nsolidId,
-      'service.name': nsolidAppName,
-      'process.title': nsolidMetrics.title,
-      'process.owner': nsolidMetrics.user,
+      'telemetry.sdk.version': { type: 'stringValue', value: process.versions.opentelemetry },
+      'telemetry.sdk.language': { type: 'stringValue', value: 'cpp' },
+      'telemetry.sdk.name': { type: 'stringValue', value: 'opentelemetry' },
+      'service.instance.id': { type: 'stringValue', value: nsolidId },
+      'service.name': { type: 'stringValue', value: nsolidAppName },
+      'host.name': { type: 'stringValue', value: nsolidInfo.hostname },
+      'process.pid': { type: 'intValue', value: `${nsolidInfo.pid}` },
+      'host.arch': { type: 'stringValue', value: normalizeHostArch(nsolidInfo.arch) },
+      'os.type': { type: 'stringValue', value: normalizeOsType(nsolidInfo.platform) },
+      'process.executable.path': { type: 'stringValue', value: nsolidInfo.execPath },
+      'main': { type: 'stringValue', value: nsolidInfo.main },
+      'deployment.environment.name': { type: 'stringValue', value: nsolidInfo.nodeEnv },
+      'process.runtime.version': { type: 'stringValue', value: nsolidInfo.versions.node },
+      'process.runtime.description': {
+        type: 'stringValue',
+        value: `N|Solid ${nsolidInfo.versions.nsolid}`,
+      },
+      'process.runtime.name': { type: 'stringValue', value: 'nodejs' },
+      'cpuCores': { type: 'intValue', value: `${nsolidInfo.cpuCores}` },
+      'host.cpu.model.name': { type: 'stringValue', value: nsolidInfo.cpuModel },
+      'process.creation.time': {
+        type: 'stringValue',
+        value: new Date(nsolidInfo.processStart).toISOString(),
+      },
+      'tagsString': {
+        type: 'stringValue',
+        value: Array.isArray(nsolidInfo.tags) ? nsolidInfo.tags.join(',') : '',
+      },
+      'process.title': { type: 'stringValue', value: nsolidMetrics.title },
+      'process.owner': { type: 'stringValue', value: nsolidMetrics.user },
     };
 
     assert.strictEqual(resource.attributes.length, Object.keys(expectedAttributes).length);
 
-    resource.attributes.forEach((attribute) => {
-      assert.strictEqual(attribute.value.stringValue, expectedAttributes[attribute.key]);
+    resource.attributes.forEach(mustCall((attribute) => {
+      const expected = expectedAttributes[attribute.key];
+      assert.notStrictEqual(expected, undefined, `Unexpected resource attribute: ${attribute.key}`);
+      assert.strictEqual(attribute.value[expected.type], expected.value);
       delete expectedAttributes[attribute.key];
-    });
+    }, resource.attributes.length));
 
     assert.strictEqual(Object.keys(expectedAttributes).length, 0);
   }
@@ -600,16 +640,17 @@ if (process.argv[2] === 'child') {
         const env = getEnv(port);
         const opts = { env };
         const child = fork(__filename, ['child'], opts);
-        child.on('message', (message) => {
+        child.on('message', mustCallAtLeast((message) => {
           if (message.type === 'nsolid') {
             nsolidId = message.id;
             nsolidAppName = message.appName;
+            nsolidInfo = message.info;
             assert.strictEqual(nsolidAppName, appName);
             nsolidMetrics = message.metrics;
           } else if (message.type === 'workerThreadId') {
             context.threadList.push(message.id);
           }
-        });
+        }, 2));
 
         child.on('exit', (code, signal) => {
           console.log(`child process exited with code ${code} and signal ${signal}`);

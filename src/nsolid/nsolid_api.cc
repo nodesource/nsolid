@@ -6,6 +6,7 @@
 #include "nsolid/continuous_profiler.h"
 #include "grpc/src/grpc_agent.h"
 #include "otlp/src/otlp_agent.h"
+#include "otlp/src/otlp_common.h"
 #include "statsd/src/statsd_agent.h"
 #include "util.h"
 #include "env-inl.h"
@@ -1163,10 +1164,21 @@ std::string EnvList::GetInfo() {
 }
 
 
+void EnvList::StoreInfo(const json& info) {
+  {
+    ns_mutex::scoped_lock lock(info_lock_);
+    CHECK(info.is_object());
+    info_ = info;
+  }
+
+  otlp::InvalidateMetricsResource();
+}
+
+
 void EnvList::StoreInfo(const std::string& info) {
-  ns_mutex::scoped_lock lock(info_lock_);
-  info_ = nlohmann::json::parse(info, nullptr, false);
-  CHECK(!info_.is_discarded());
+  json parsed = nlohmann::json::parse(info, nullptr, false);
+  CHECK(!parsed.is_discarded());
+  StoreInfo(parsed);
 }
 
 
@@ -1272,7 +1284,15 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     // If tags have changed, update info_ accordingly
     it = config.find("tags");
     if (it != config.end()) {
-      info_["tags"] = *it;
+      json info;
+      {
+        ns_mutex::scoped_lock info_lock(info_lock_);
+        info = info_;
+      }
+      if (!info.is_object())
+        info = json::object();
+      info["tags"] = *it;
+      StoreInfo(info);
     }
 
     on_config_string_q_.enqueue(curr.dump());
