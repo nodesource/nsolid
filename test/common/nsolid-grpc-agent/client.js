@@ -171,6 +171,8 @@ if (isMainThread) {
       nsolid.heapSampling(msg.duration);
     } else if (msg.type === 'id') {
       process.send({ type: 'id', id: nsolid.id });
+    } else if (msg.type === 'info') {
+      process.send({ type: 'info', info: nsolid.info() });
     } else if (msg.type === 'import') {
       console.log(msg);
       if (threadId === msg.threadId) {

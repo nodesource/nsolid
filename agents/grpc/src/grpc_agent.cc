@@ -284,7 +284,8 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
   PopulateCommon(metrics_event->mutable_common(), "metrics", req_id);
 
   ResourceMetrics data;
-  data.resource_ = otlp::GetResource();
+  auto resource = otlp::GetMetricsResource();
+  data.resource_ = resource.get();
   std::vector<MetricData> metrics;
 
   // As this is the cached we're sending, we pass the same value for prev_stor.
@@ -969,7 +970,8 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   }
 
   ResourceMetrics data;
-  data.resource_ = otlp::GetResource();
+  auto resource = otlp::GetMetricsResource();
+  data.resource_ = resource.get();
   std::vector<MetricData> metrics;
 
   ThreadMetricsStor stor;
@@ -1414,7 +1416,8 @@ void GrpcAgent::got_proc_metrics() {
   std::vector<MetricData> metrics;
   otlp::fill_proc_metrics(metrics, stor, proc_prev_stor_, false);
   ResourceMetrics data;
-  data.resource_ = otlp::GetResource();
+  auto resource = otlp::GetMetricsResource();
+  data.resource_ = resource.get();
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
   auto result = metrics_exporter_->Export(data);

@@ -46,7 +46,7 @@ function checkExitData(data, metadata, agentId, expectedData) {
   checkRpcMetadata(metadata, agentId);
 }
 
-function checkResource(resource, agentId, config, metrics) {
+function checkResource(resource, agentId, config, metrics, info) {
   validateArray(resource.attributes, 'attributes');
 
   const expectedAttributes = {
@@ -63,10 +63,46 @@ function checkResource(resource, agentId, config, metrics) {
     expectedAttributes['process.owner'] = metrics.user;
   }
 
+  if (info) {
+    const normalizeOsType = (platform) => {
+      if (platform === 'win32') return 'windows';
+      if (platform === 'sunos') return 'solaris';
+      return platform;
+    };
+
+    const normalizeHostArch = (arch) => {
+      if (arch === 'x64') return 'amd64';
+      if (arch === 'ia32') return 'x86';
+      if (arch === 'arm') return 'arm32';
+      return arch;
+    };
+
+    expectedAttributes['host.name'] = info.hostname;
+    expectedAttributes['process.pid'] = `${info.pid}`;
+    expectedAttributes['host.arch'] = normalizeHostArch(info.arch);
+    expectedAttributes['os.type'] = normalizeOsType(info.platform);
+    expectedAttributes['process.executable.path'] = info.execPath;
+    expectedAttributes.main = info.main;
+    expectedAttributes['deployment.environment.name'] = info.nodeEnv;
+    expectedAttributes['process.runtime.version'] = info.versions.node;
+    expectedAttributes['process.runtime.description'] = `N|Solid ${info.versions.nsolid}`;
+    expectedAttributes['process.runtime.name'] = 'nodejs';
+    expectedAttributes['host.cpu.model.name'] = info.cpuModel;
+    expectedAttributes['process.creation.time'] =
+      new Date(info.processStart).toISOString();
+    expectedAttributes.cpuCores = `${info.cpuCores}`;
+    expectedAttributes.tagsString = Array.isArray(info.tags) ?
+      info.tags.join(',') :
+      '';
+  }
+
   assert.strictEqual(resource.attributes.length, Object.keys(expectedAttributes).length);
 
   resource.attributes.forEach((attribute) => {
-    assert.strictEqual(attribute.value.stringValue, expectedAttributes[attribute.key]);
+    const expected = expectedAttributes[attribute.key];
+    assert.notStrictEqual(expected, undefined, `Unexpected resource attribute: ${attribute.key}`);
+    const actual = attribute.value.stringValue ?? attribute.value.intValue;
+    assert.strictEqual(actual, expected);
     delete expectedAttributes[attribute.key];
   });
 
@@ -468,6 +504,16 @@ class TestClient {
       } else {
         resolve(null);
       }
+    });
+  }
+
+  async info() {
+    if (!this.#child)
+      return null;
+    return this.#sendAndWait({
+      type: 'info',
+      expect: 'info',
+      map: (msg) => msg?.info ?? null,
     });
   }
 
