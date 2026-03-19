@@ -633,6 +633,7 @@ class EnvList {
   void fill_trace_id_q();
 
   void update_continuous_profiler(bool enabled, uint64_t interval);
+  void refresh_min_blocked_threshold();
 
 #ifdef __POSIX__
   static void signal_handler_(int signum, siginfo_t* info, void* ucontext);

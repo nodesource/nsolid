@@ -17,6 +17,7 @@
 #include "node_url.h"
 #include "v8-fast-api-calls.h"
 
+#include <algorithm>
 #include <cmath>
 
 #if defined(__linux__)
@@ -967,10 +968,12 @@ void EnvList::OnBlockedLoopHook(
     void* data,
     internal::on_block_loop_hook_proxy_sig proxy,
     internal::deleter_sig deleter) {
-  blocked_hooks_list_.push_back(
+  blocked_hooks_list_.replace_if(
+    [proxy](const BlockedLoopStor& stor) {
+      return stor.cb == proxy;
+    },
     { threshold, proxy, nsolid::internal::user_data(data, deleter) });
-  if (threshold < min_blocked_threshold_)
-    min_blocked_threshold_ = threshold;
+  refresh_min_blocked_threshold();
 }
 
 void EnvList::OnUnblockedLoopHook(
@@ -979,7 +982,10 @@ void EnvList::OnUnblockedLoopHook(
     internal::deleter_sig deleter) {
   // Using BlockedLoopStor because it's easier than duplicating a bunch of code,
   // but that means some value needs to be passed in for threshold.
-  unblocked_hooks_list_.push_back(
+  unblocked_hooks_list_.replace_if(
+    [proxy](const BlockedLoopStor& stor) {
+      return stor.cb == proxy;
+    },
     { 0, proxy, nsolid::internal::user_data(data, deleter) });
 }
 
@@ -1007,6 +1013,17 @@ std::string EnvList::CurrentConfig() {
 nlohmann::json EnvList::CurrentConfigJSON() {
   ns_mutex::scoped_lock lock(configuration_lock_);
   return current_config_;
+}
+
+
+void EnvList::refresh_min_blocked_threshold() {
+  uint64_t min_threshold = UINT64_MAX;
+
+  blocked_hooks_list_.for_each([&min_threshold](const BlockedLoopStor& stor) {
+    min_threshold = std::min(min_threshold, stor.threshold);
+  });
+
+  min_blocked_threshold_ = min_threshold;
 }
 
 
