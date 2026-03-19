@@ -117,6 +117,11 @@ class Trace {
 Tracer* tracer_ = nullptr;
 std::queue<std::string> spans_;
 json expected_traces_ = {};
+bool at_exit_registered_ = false;
+bool check_expected_traces_ = true;
+
+static constexpr uint32_t kDefaultTraceFlags =
+    kSpanDns | kSpanHttpClient | kSpanHttpServer | kSpanCustom;
 
 
 // NOLINTNEXTLINE(runtime/references)
@@ -165,6 +170,10 @@ static void at_exit_cb() {
 
   fprintf(stderr, "traces_array: %s\n", traces_array.dump(4).c_str());
   // fprintf(stderr, "expected_traces: %s\n", expected_traces_.dump(4).c_str());
+
+  if (!check_expected_traces_) {
+    return;
+  }
 
   assert(traces_array.size() == expected_traces_.size());
   for (auto i = traces_array.begin(); i != traces_array.end(); ++i) {
@@ -242,22 +251,46 @@ static void ExpectedTrace(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 static void SetupTracing(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  assert(0 == args.Length());
+  assert(args.Length() <= 1);
   v8::Isolate* isolate = args.GetIsolate();
   v8::Local<v8::Context> context = isolate->GetCurrentContext();
   node::nsolid::SharedEnvInst envinst = node::nsolid::GetLocalEnvInst(context);
   if (node::nsolid::IsMainThread(envinst)) {
-    tracer_ = Tracer::CreateInstance(kSpanDns |
-                                     kSpanHttpClient |
-                                     kSpanHttpServer |
-                                     kSpanCustom, got_trace);
-    atexit(at_exit_cb);
+    if (tracer_ != nullptr) {
+      return;
+    }
+
+    uint32_t flags = kDefaultTraceFlags;
+    if (args.Length() == 1) {
+      assert(args[0]->IsUint32());
+      flags = args[0].As<v8::Uint32>()->Value();
+    }
+
+    tracer_ = Tracer::CreateInstance(flags, got_trace);
+    if (!at_exit_registered_) {
+      atexit(at_exit_cb);
+      at_exit_registered_ = true;
+    }
   }
+}
+
+static void StopTracing(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  assert(0 == args.Length());
+  delete tracer_;
+  tracer_ = nullptr;
+}
+
+static void SkipExpectedTracesCheck(
+    const v8::FunctionCallbackInfo<v8::Value>& args) {
+  assert(0 == args.Length());
+  check_expected_traces_ = false;
 }
 
 NODE_MODULE_INIT(/* exports, module, context */) {
   NODE_SET_METHOD(exports, "expectedTrace", ExpectedTrace);
   NODE_SET_METHOD(exports, "setupTracing", SetupTracing);
+  NODE_SET_METHOD(exports, "stopTracing", StopTracing);
+  NODE_SET_METHOD(exports, "skipExpectedTracesCheck", SkipExpectedTracesCheck);
 #define V(Name, Val, Str)                                                      \
   NODE_DEFINE_CONSTANT(exports, Name);
   NSOLID_SPAN_TYPES(V)
