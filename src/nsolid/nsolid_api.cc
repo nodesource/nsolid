@@ -1829,7 +1829,7 @@ void EnvList::update_tracing_flags(SharedEnvInst envinst_sp, uint32_t flags) {
   HandleScope handle_scope(isolate);
   Context::Scope context_scope(env->context());
   Local<Value> argv[] = {
-    v8::Boolean::New(isolate, flags > 0)
+    Uint32::New(isolate, flags)
   };
 
   // We don't care if Call throws or exits. So ignore the return value.

@@ -46,6 +46,33 @@ function execHttpTransaction() {
   });
 }
 
+function execFetchTransaction() {
+  const server = http.createServer((req, res) => {
+    req.resume();
+    setTimeout(() => {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('Hello World\n');
+    }, 10);
+  });
+
+  server.listen(0, '127.0.0.1', async () => {
+    const port = server.address().port;
+    const url = `http://127.0.0.1:${port}/`;
+    for (let i = 0; i < 25; i++) {
+      const responses = await Promise.all(Array.from({ length: 32 }, () => {
+        return fetch(url, {
+          method: 'POST',
+          body: 'payload',
+        });
+      }));
+
+      await Promise.all(responses.map((response) => response.text()));
+    }
+
+    server.close();
+  });
+}
+
 function execDnsTransaction() {
   const dns = require('node:dns');
   dns.lookup('example.org', () => {
@@ -96,6 +123,9 @@ function handleTrace(msg) {
     switch (msg.kind) {
       case 'http':
         execHttpTransaction();
+        break;
+      case 'fetch':
+        execFetchTransaction();
         break;
       case 'dns':
         execDnsTransaction();
@@ -217,6 +247,11 @@ if (isMainThread) {
       // immediately without the need of calling nsolid.start()
       nsolid.start();
       execHttpTransaction();
+    } else if (trace === 'fetch') {
+      // TODO(santigimeno): ideally we should be able to collect traces
+      // immediately without the need of calling nsolid.start()
+      nsolid.start();
+      execFetchTransaction();
     } else if (trace === 'dns') {
       execDnsTransaction();
     } else if (trace === 'custom') {
