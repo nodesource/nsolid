@@ -143,7 +143,43 @@ function checkUnblockedLoopData(blocked, metadata, agentId, threadId, bInfo) {
 const tests = [];
 
 tests.push({
-  name: 'should work in the main thread',
+  name: 'should work in the main thread with default threshold of 200ms',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      let times = 0;
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        grpcServer.on('loop_blocked', mustCall(async (data) => {
+          checkBlockedLoopData(data.msg, data.metadata, agentId, threadId);
+        }, 2));
+
+        grpcServer.on('loop_unblocked', mustCall(async (data) => {
+          checkUnblockedLoopData(data.msg, data.metadata, agentId, threadId);
+          if (++times === 2) {
+            await child.shutdown(0);
+            grpcServer.close();
+            resolve();
+          } else {
+            await child.block(0, 400);
+          }
+        }, 2));
+
+        const env = getEnv(port);
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        await child.block(0, 400);
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should work in the main thread with different threshold',
   test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
@@ -163,18 +199,62 @@ tests.push({
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-          env,
+          env: {
+            ...env,
+            NSOLID_BLOCKED_LOOP_THRESHOLD: '1000',
+          },
         };
         const child = new TestClient([], opts);
         const agentId = await child.id();
         await child.block(0, 400);
+        setTimeout(() => {
+          child.block(0, 1500);
+        }, 500);
       }));
     });
   },
 });
 
 tests.push({
-  name: 'should work for workers',
+  name: 'should work for workers with default threshold of 200ms',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      let times = 0;
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        grpcServer.on('loop_blocked', mustCall(async (data) => {
+          checkBlockedLoopData(data.msg, data.metadata, agentId, wid);
+        }, 2));
+
+        grpcServer.on('loop_unblocked', mustCall(async (data) => {
+          checkUnblockedLoopData(data.msg, data.metadata, agentId, wid);
+          if (++times === 2) {
+            await child.shutdown(0);
+            grpcServer.close();
+            resolve();
+          } else {
+            await child.block(wid, 800);
+          }
+        }, 2));
+
+        const env = getEnv(port);
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([ '-w', 1 ], opts);
+        const agentId = await child.id();
+        const workers = await child.workers();
+        const wid = workers[0];
+        await child.block(wid, 400);
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should work for workers with different threshold',
   test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
@@ -194,13 +274,19 @@ tests.push({
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-          env,
+          env: {
+            ...env,
+            NSOLID_BLOCKED_LOOP_THRESHOLD: '1000',
+          },
         };
         const child = new TestClient([ '-w', 1 ], opts);
         const agentId = await child.id();
         const workers = await child.workers();
         const wid = workers[0];
         await child.block(wid, 400);
+        setTimeout(() => {
+          child.block(wid, 1500);
+        }, 500);
       }));
     });
   },

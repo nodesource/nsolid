@@ -142,6 +142,18 @@ struct TSList {
     list_.push_back(std::move(data));
     return --list_.end();
   }
+  template <typename Match>
+  inline bool replace_if(Match match, DataType&& data) {
+    nsuv::ns_mutex::scoped_lock lock(lock_);
+    for (auto it = list_.begin(); it != list_.end(); ++it) {
+      if (!match(*it))
+        continue;
+      *it = std::move(data);
+      return true;
+    }
+    list_.push_back(std::move(data));
+    return false;
+  }
   inline void for_each(std::function<void(const DataType&)> fn) {
     nsuv::ns_mutex::scoped_lock lock(lock_);
     std::for_each(list_.begin(), list_.end(), fn);
