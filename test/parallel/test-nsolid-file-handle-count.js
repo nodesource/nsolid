@@ -56,7 +56,7 @@ fs.readFile(__filename, () => {
       assert.strictEqual(getClosed(), ++cCntr);
 
       checkPromise()
-        .then(common.mustCall(closePromiseFd));
+        .then(common.mustCall((fh) => closePromiseFd(fh)));
     }));
   }));
 });
