@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-03-25, Version 20.20.2-nsolid-v6.2.2 'Iron'
+
+### Commits
+
+* \[[`570a44106e`](https://github.com/nodesource/nsolid/commit/570a44106e)] - Merge tag 'v20.20.2' into node-v20.20.2-nsolid-v6.2.2-release (Santiago Gimeno)
+
 ## 2026-03-02, Version 20.20.0-nsolid-v6.2.1 'Iron'
 
 ### Commits
