@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: '3.12'
+  PYTHON_VERSION: '3.14'
   NODE_VERSION: lts/*
 
 permissions:
@@ -23,7 +23,7 @@ permissions:
 jobs:
   lint-addon-docs:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
@@ -38,7 +38,7 @@ jobs:
         run: NODE=$(command -v node) make lint-addon-docs
   lint-cpp:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
@@ -53,7 +53,7 @@ jobs:
         run: make lint-cpp
   lint-js-and-md:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
@@ -78,7 +78,7 @@ jobs:
           NODE_RELEASED_VERSIONS: ${{ steps.get-released-versions.outputs.NODE_RELEASED_VERSIONS }}
   lint-py:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
@@ -96,7 +96,7 @@ jobs:
 
   lint-sh:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
@@ -106,7 +106,7 @@ jobs:
         run: tools/lint-sh.mjs .
   lint-pr-url:
     if: ${{ github.event.pull_request }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
@@ -115,7 +115,7 @@ jobs:
       # GH Actions squashes all PR commits, HEAD^ refers to the base branch.
       - run: git diff HEAD^ HEAD -G"pr-url:" -- "*.md" | ./tools/lint-pr-url.mjs ${{ github.event.pull_request.html_url }}
   lint-readme:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
