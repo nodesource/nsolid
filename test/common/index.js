@@ -64,6 +64,7 @@ const noop = () => {};
 const hasCrypto = Boolean(process.versions.openssl) &&
                   !process.env.NODE_SKIP_CRYPTO;
 
+const hasInspector = Boolean(process.features.inspector);
 const hasSQLite = Boolean(process.versions.sqlite);
 
 const hasQuic = hasCrypto && !!process.config.variables.openssl_quic;
@@ -683,7 +684,7 @@ function expectsError(validator, exact) {
 }
 
 function skipIfInspectorDisabled() {
-  if (!process.features.inspector) {
+  if (!hasInspector) {
     skip('V8 inspector is disabled');
   }
 }
@@ -901,6 +902,7 @@ const common = {
   hasIntl,
   hasCrypto,
   hasQuic,
+  hasInspector,
   hasSQLite,
   invalidArgTypeHelper,
   isAlive,

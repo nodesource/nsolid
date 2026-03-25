@@ -186,7 +186,7 @@ if defined package set stage_package=1
 :: assign path to node_exe
 set "node_exe=%config%\nsolid.exe"
 set "node_gyp_exe="%node_exe%" deps\npm\node_modules\node-gyp\bin\node-gyp"
-set "npm_exe="%~dp0%node_exe%" %~dp0deps\npm\bin\npm-cli.js"
+set "npm_exe="%node_exe%" deps\npm\bin\npm-cli.js"
 if "%target_env%"=="vs2022" set "node_gyp_exe=%node_gyp_exe% --msvs_version=2022"
 
 :: skip building if the only argument received was lint
@@ -350,7 +350,7 @@ del .gyp_configure_stamp 2> NUL
 @rem Generate the VS project.
 echo configure %configure_flags%
 echo %configure_flags%> .used_configure_flags
-python configure %configure_flags%
+call python configure %configure_flags%
 if errorlevel 1 goto create-msvs-files-failed
 if not exist node.sln goto create-msvs-files-failed
 set project_generated=1
@@ -603,9 +603,7 @@ if not defined doc if not defined build_addons (
 )
 if exist "tools\doc\node_modules\unified\package.json" goto skip-install-doctools
 SETLOCAL
-cd tools\doc
-%npm_exe% ci
-cd ..\..
+%npm_exe% --prefix tools\doc ci
 if errorlevel 1 goto exit
 ENDLOCAL
 :skip-install-doctools
@@ -751,7 +749,7 @@ if errorlevel 1 goto exit
 goto lint-cpp
 
 :lint-cpp
-if not defined lint_cpp goto lint-js
+if not defined lint_cpp goto lint-js-build
 if defined NODEJS_MAKE goto run-make-lint
 where make > NUL 2>&1 && make -v | findstr /C:"GNU Make" 1> NUL
 if "%ERRORLEVEL%"=="0" set "NODEJS_MAKE=make PYTHON=python" & goto run-make-lint
@@ -759,7 +757,7 @@ where wsl > NUL 2>&1
 if "%ERRORLEVEL%"=="0" set "NODEJS_MAKE=wsl make" & goto run-make-lint
 echo Could not find GNU Make, needed for linting C/C++
 echo Alternatively, you can use WSL
-goto lint-js
+goto lint-js-build
 
 :run-make-lint
 %NODEJS_MAKE% lint-cpp
@@ -767,9 +765,7 @@ goto lint-js-build
 
 :lint-js-build
 if not defined lint_js_build if not defined lint_js if not defined lint_js_fix goto lint-md-build
-cd tools\eslint
-%npm_exe% ci
-cd ..\..
+%npm_exe% --prefix tools\eslint ci
 
 :lint-js
 if not defined lint_js goto lint-js-fix
@@ -787,9 +783,7 @@ goto lint-md-build
 
 :lint-md-build
 if not defined lint_md if not defined format_md goto lint-md
-cd tools\lint-md
-%npm_exe% ci
-cd ..\..
+%npm_exe% --prefix tools\lint-md ci
 
 :lint-md
 if not defined lint_md goto format-md
@@ -800,6 +794,11 @@ set lint_md_files=
 for /D %%D IN (doc\*) do (
   for %%F IN (%%D\*.md) do (
     set "lint_md_files="%%F" !lint_md_files!"
+  )
+  for /D %%S IN (%%D\*) do (
+    for %%F IN (%%S\*.md) do (
+      set "lint_md_files="%%F" !lint_md_files!"
+    )
   )
 )
 %node_exe% tools\lint-md\lint-md.mjs %lint_md_files%
@@ -815,6 +814,11 @@ set lint_md_files=
 for /D %%D IN (doc\*) do (
   for %%F IN (%%D\*.md) do (
     set "lint_md_files="%%F" !lint_md_files!"
+  )
+  for /D %%S IN (%%D\*) do (
+    for %%F IN (%%S\*.md) do (
+      set "lint_md_files="%%F" !lint_md_files!"
+    )
   )
 )
 %node_exe% tools\lint-md\lint-md.mjs --format %lint_md_files%

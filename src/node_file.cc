@@ -1853,11 +1853,18 @@ static void RealPath(const FunctionCallbackInfo<Value>& args) {
   if (argc > 2) {  // realpath(path, encoding, req)
     FSReqBase* req_wrap_async = GetReqWrap(args, 2);
     CHECK_NOT_NULL(req_wrap_async);
+    ASYNC_THROW_IF_INSUFFICIENT_PERMISSIONS(
+        env,
+        req_wrap_async,
+        permission::PermissionScope::kFileSystemRead,
+        path.ToStringView());
     FS_ASYNC_TRACE_BEGIN1(
         UV_FS_REALPATH, req_wrap_async, "path", TRACE_STR_COPY(*path))
     AsyncCall(env, req_wrap_async, args, "realpath", encoding, AfterStringPtr,
               uv_fs_realpath, *path);
   } else {  // realpath(path, encoding, undefined, ctx)
+    THROW_IF_INSUFFICIENT_PERMISSIONS(
+        env, permission::PermissionScope::kFileSystemRead, path.ToStringView());
     FSReqWrapSync req_wrap_sync("realpath", *path);
     FS_SYNC_TRACE_BEGIN(realpath);
     int err =
@@ -2213,8 +2220,10 @@ static void WriteBuffer(const FunctionCallbackInfo<Value>& args) {
   const int argc = args.Length();
   CHECK_GE(argc, 4);
 
-  CHECK(args[0]->IsInt32());
-  const int fd = args[0].As<Int32>()->Value();
+  int fd;
+  if (!GetValidatedFd(env, args[0]).To(&fd)) {
+    return;
+  }
 
   CHECK(Buffer::HasInstance(args[1]));
   Local<Object> buffer_obj = args[1].As<Object>();
@@ -2268,8 +2277,10 @@ static void WriteBuffers(const FunctionCallbackInfo<Value>& args) {
   const int argc = args.Length();
   CHECK_GE(argc, 3);
 
-  CHECK(args[0]->IsInt32());
-  const int fd = args[0].As<Int32>()->Value();
+  int fd;
+  if (!GetValidatedFd(env, args[0]).To(&fd)) {
+    return;
+  }
 
   CHECK(args[1]->IsArray());
   Local<Array> chunks = args[1].As<Array>();
@@ -2328,8 +2339,10 @@ static void WriteString(const FunctionCallbackInfo<Value>& args) {
 
   const int argc = args.Length();
   CHECK_GE(argc, 4);
-  CHECK(args[0]->IsInt32());
-  const int fd = args[0].As<Int32>()->Value();
+  int fd;
+  if (!GetValidatedFd(env, args[0]).To(&fd)) {
+    return;
+  }
 
   const int64_t pos = GetOffset(args[2]);
 
@@ -2509,8 +2522,10 @@ static void Read(const FunctionCallbackInfo<Value>& args) {
   const int argc = args.Length();
   CHECK_GE(argc, 5);
 
-  CHECK(args[0]->IsInt32());
-  const int fd = args[0].As<Int32>()->Value();
+  int fd;
+  if (!GetValidatedFd(env, args[0]).To(&fd)) {
+    return;
+  }
 
   CHECK(Buffer::HasInstance(args[1]));
   Local<Object> buffer_obj = args[1].As<Object>();
@@ -2640,8 +2655,10 @@ static void ReadBuffers(const FunctionCallbackInfo<Value>& args) {
   const int argc = args.Length();
   CHECK_GE(argc, 3);
 
-  CHECK(args[0]->IsInt32());
-  const int fd = args[0].As<Int32>()->Value();
+  int fd;
+  if (!GetValidatedFd(env, args[0]).To(&fd)) {
+    return;
+  }
 
   CHECK(args[1]->IsArray());
   Local<Array> buffers = args[1].As<Array>();
@@ -3419,12 +3436,10 @@ static void CpSyncCopyDir(const FunctionCallbackInfo<Value>& args) {
               if (!dereference &&
                   std::filesystem::is_directory(symlink_target) &&
                   isInsideDir(symlink_target, current_dest_symlink_target)) {
-                std::string message =
+                static constexpr const char* message =
                     "Cannot copy %s to a subdirectory of self %s";
-                THROW_ERR_FS_CP_EINVAL(env,
-                                       message.c_str(),
-                                       symlink_target.c_str(),
-                                       current_dest_symlink_target.c_str());
+                THROW_ERR_FS_CP_EINVAL(
+                    env, message, symlink_target, current_dest_symlink_target);
                 return false;
               }
 
@@ -3433,12 +3448,10 @@ static void CpSyncCopyDir(const FunctionCallbackInfo<Value>& args) {
               // and therefore a broken symlink would be created.
               if (std::filesystem::is_directory(dest_file_path) &&
                   isInsideDir(current_dest_symlink_target, symlink_target)) {
-                std::string message = "cannot overwrite %s with %s";
+                static constexpr const char* message =
+                    "cannot overwrite %s with %s";
                 THROW_ERR_FS_CP_SYMLINK_TO_SUBDIRECTORY(
-                    env,
-                    message.c_str(),
-                    current_dest_symlink_target.c_str(),
-                    symlink_target.c_str());
+                    env, message, current_dest_symlink_target, symlink_target);
                 return false;
               }
 
@@ -3490,7 +3503,7 @@ static void CpSyncCopyDir(const FunctionCallbackInfo<Value>& args) {
             THROW_ERR_FS_CP_EEXIST(isolate,
                                    "[ERR_FS_CP_EEXIST]: Target already exists: "
                                    "cp returned EEXIST (%s already exists)",
-                                   dest_file_path.c_str());
+                                   dest_file_path);
             return false;
           }
           env->ThrowStdErrException(error, "cp", dest_str.c_str());

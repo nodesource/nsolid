@@ -155,11 +155,11 @@ platforms. This is true regardless of entries in the table below.
 
 Depending on the host platform, the selection of toolchains may vary.
 
-| Operating System | Compiler Versions                                              |
-| ---------------- | -------------------------------------------------------------- |
-| Linux            | GCC >= 10.1                                                    |
-| Windows          | Visual Studio >= 2022 with the Windows 10 SDK on a 64-bit host |
-| macOS            | Xcode >= 13 (Apple LLVM >= 12)                                 |
+| Operating System | Compiler Versions                                           |
+| ---------------- | ----------------------------------------------------------- |
+| Linux            | GCC >= 10.1                                                 |
+| Windows          | Visual Studio 2022 with the Windows 10 SDK on a 64-bit host |
+| macOS            | Xcode >= 13 (Apple LLVM >= 12)                              |
 
 ### Official binary platforms and toolchains
 
@@ -344,6 +344,27 @@ You can also execute the tests in a test suite directory
 tools/test.py test/message
 ```
 
+You can execute tests that match a specific naming pattern using the wildcard
+`*`. For example, to run all tests under `test/parallel` with a name that starts
+with `test-stream-`:
+
+```bash
+tools/test.py test/parallel/test-stream-*
+tools/test.py parallel/test-stream-*  # The test/ prefix can be omitted
+# In some shell environments, you may need to quote the pattern
+tools/test.py "test/parallel/test-stream-*"
+```
+
+The wildcard `*` can be used in any part of the path. For example, to run all tests
+with a name that starts with `test-inspector-`, regardless of the directory they are in:
+
+```bash
+# Matches test/sequential/test-inspector-*, test/parallel/test-inspector-*,
+# test/known_issues/test-inspector-*, etc.
+tools/test.py "test/*/test-inspector-*"
+tools/test.py "*/test-inspector-*"  # The test/ prefix can be omitted
+```
+
 If you want to check the other options, please refer to the help by using
 the `--help` option:
 
@@ -517,7 +538,7 @@ $ gdb /opt/nsolid-debug/nsolid core.nsolid.8.1535359906
 related bugs. ASan builds are currently only supported on linux.
 
 The `--debug` is not necessary and will slow down build and testing, but it can
-show clear stacktrace if ASan hits an issue.
+show a clear stack trace if ASan hits an issue.
 
 ```bash
 ./configure --debug --enable-asan && make -j4
@@ -579,6 +600,10 @@ the number of parallel build tasks (`-j<n>`).
 
 #### Prerequisites
 
+You may need to disable vcpkg integration if you encounter a link error about symbol
+redefinition related to zlib.lib(zlib1.dll), even if you never installed it by hand,
+as vcpkg is part of CLion and Visual Studio now.
+
 ##### Manual install
 
 * [Python 3.11](https://apps.microsoft.com/store/detail/python-311/9NRWMJP3717K)
@@ -601,7 +626,7 @@ Optional requirements to build the MSI installer package:
 
 Optional requirements for compiling for Windows on ARM (ARM64):
 
-* Visual Studio 17.6.0 or newer
+* Visual Studio 2022 (17.6.0 or newer)
   > **Note:** There is [a bug](https://github.com/nodejs/build/issues/3739) in `17.10.x`
   > preventing Node.js from compiling.
 * Visual Studio optional components
@@ -644,7 +669,7 @@ cp c:\ccache\ccache.exe c:\ccache\cl.exe
 ```
 
 With newer version of Visual Studio, it may need the copy to be `clang-cl.exe`
-instead. If the output of `vcbuild.bat` suggestion missing `clang-cl.exe`, copy
+instead. If the output of `vcbuild.bat` suggests missing `clang-cl.exe`, copy
 it differently:
 
 ```powershell

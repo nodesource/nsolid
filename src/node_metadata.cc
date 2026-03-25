@@ -1,4 +1,5 @@
 #include "node_metadata.h"
+#include <algorithm>
 #include <zmq.h>
 #include "acorn_version.h"
 #include "ada.h"
@@ -202,8 +203,9 @@ Metadata::Versions::pairs() const {
   NODE_VERSIONS_KEYS(V)
 #undef V
 
-  std::ranges::sort(versions_array,
-                    [](auto& a, auto& b) { return a.first < b.first; });
+  std::sort(versions_array.begin(),
+            versions_array.end(),
+            [](auto& a, auto& b) { return a.first < b.first; });
 
   return versions_array;
 }

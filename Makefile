@@ -16,7 +16,7 @@ endif
 ARCHTYPE := $(shell uname -m | tr '[:upper:]' '[:lower:]')
 COVTESTS ?= test-cov
 COV_SKIP_TESTS ?= core_line_numbers.js,testFinalizer.js,test_function/test.js
-GTEST_FILTER ?= "*"
+GTEST_FILTER ?= *
 GNUMAKEFLAGS += --no-print-directory
 GCOV ?= gcov
 PWD = $(CURDIR)
@@ -30,9 +30,9 @@ else
 endif
 
 ifdef ENABLE_V8_TAP
-	TAP_V8 := --junitout $(PWD)/v8-tap.xml
-	TAP_V8_INTL := --junitout $(PWD)/v8-intl-tap.xml
-	TAP_V8_BENCHMARKS := --junitout $(PWD)/v8-benchmarks-tap.xml
+	TAP_V8 := --junitout '$(PWD)/v8-tap.xml'
+	TAP_V8_INTL := --junitout '$(PWD)/v8-intl-tap.xml'
+	TAP_V8_BENCHMARKS := --junitout '$(PWD)/v8-benchmarks-tap.xml'
 define convert_to_junit
 	@true
 endef
@@ -46,12 +46,12 @@ ifdef ENABLE_CONVERT_V8_JSON_TO_XML
 	# By default, the V8's JSON test output only includes the tests which have
 	# failed. We use --slow-tests-cutoff to ensure that all tests are present
 	# in the output, including those which pass.
-	TAP_V8 := --json-test-results $(TAP_V8_JSON) --slow-tests-cutoff 1000000
-	TAP_V8_INTL := --json-test-results $(TAP_V8_INTL_JSON) --slow-tests-cutoff 1000000
-	TAP_V8_BENCHMARKS := --json-test-results $(TAP_V8_BENCHMARKS_JSON) --slow-tests-cutoff 1000000
+	TAP_V8 := --json-test-results '$(TAP_V8_JSON)' --slow-tests-cutoff 1000000
+	TAP_V8_INTL := --json-test-results '$(TAP_V8_INTL_JSON)' --slow-tests-cutoff 1000000
+	TAP_V8_BENCHMARKS := --json-test-results '$(TAP_V8_BENCHMARKS_JSON)' --slow-tests-cutoff 1000000
 
 define convert_to_junit
-	export PATH="$(NO_BIN_OVERRIDE_PATH)" && \
+	PATH="$(NO_BIN_OVERRIDE_PATH)" \
 		$(PYTHON) tools/v8-json-to-junit.py < $(1) > $(1:.json=.xml)
 endef
 endif
@@ -77,10 +77,16 @@ EXEEXT := $(shell $(PYTHON) -c \
 		"import sys; print('.exe' if sys.platform == 'win32' else '')")
 
 NODE_EXE = nsolid$(EXEEXT)
-# Use $(PWD) so we can cd to anywhere before calling this
-NODE ?= "$(PWD)/$(NODE_EXE)"
 NODE_G_EXE = nsolid_g$(EXEEXT)
 NPM ?= ./deps/npm/bin/npm-cli.js
+
+# Release build of node.
+# Use $(PWD) so we can cd to anywhere before calling this.
+NODE ?= $(PWD)/$(NODE_EXE)
+# Prefer $(OUT_NODE) when running tests. Use $(NODE)
+# when generating coverage reports or running toolings as
+# debug build is be slower.
+OUT_NODE ?= $(PWD)/out/$(BUILDTYPE)/node$(EXEEXT)
 
 # Flags for packaging.
 BUILD_DOWNLOAD_FLAGS ?= --download=all
@@ -93,8 +99,8 @@ V ?= 0
 
 # Use -e to double check in case it's a broken link
 available-node = \
-	if [ -x "$(NODE)" ] && [ -e "$(NODE)" ]; then \
-		"$(NODE)" $(1); \
+	if [ -x '$(NODE)' ] && [ -e '$(NODE)' ]; then \
+		'$(NODE)' $(1); \
 	elif [ -x `command -v node` ] && [ -e `command -v node` ] && [ `command -v node` ]; then \
 		`command -v node` $(1); \
 	else \
@@ -107,8 +113,10 @@ available-node = \
 # just the debug build, run `make -C out BUILDTYPE=Debug` instead.
 ifeq ($(BUILDTYPE),Release)
 all: $(NODE_EXE) ## Build node in out/Release/node (Default).
+$(OUT_NODE): $(NODE_EXE)
 else
 all: $(NODE_EXE) $(NODE_G_EXE)
+$(OUT_NODE): $(NODE_G_EXE)
 endif
 
 .PHONY: help
@@ -260,7 +268,7 @@ coverage-build: all ## Build coverage files.
 coverage-build-js: ## Build JavaScript coverage files.
 	mkdir -p node_modules
 	if [ ! -d node_modules/c8 ]; then \
-		$(NODE) ./deps/npm install c8 --no-save --no-package-lock;\
+		'$(NODE)' ./deps/npm install c8 --no-save --no-package-lock;\
 	fi
 
 .PHONY: coverage-test
@@ -287,13 +295,13 @@ coverage-test: coverage-build ## Run the tests and generate a coverage report.
 .PHONY: coverage-report-js
 coverage-report-js: ## Report JavaScript coverage results.
 	-$(MAKE) coverage-build-js
-	$(NODE) ./node_modules/.bin/c8 report
+	'$(NODE)' ./node_modules/.bin/c8 report
 
 .PHONY: cctest
 
 cctest: all ## Run the C++ tests using the built `cctest` executable.
 	@out/$(BUILDTYPE)/$@ --gtest_filter=$(GTEST_FILTER)
-	$(NODE) ./test/embedding/test-embedding.js
+	'$(OUT_NODE)' ./test/embedding/test-embedding.js
 
 .PHONY: list-gtests
 list-gtests: ## List all available C++ gtests.
@@ -386,7 +394,7 @@ test/addons/.docbuildstamp: $(DOCBUILDSTAMP_PREREQS) tools/doc/node_modules
 		echo "Skipping .docbuildstamp (no crypto)"; \
 	else \
 		$(RM) -r test/addons/??_*/; \
-		[ -x $(NODE) ] && $(NODE) $< || node $< ; \
+		[ -x '$(NODE)' ] && '$(NODE)' $< || node $< ; \
 		[ $$? -eq 0 ] && touch $@; \
 	fi
 
@@ -609,7 +617,7 @@ test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tes
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) -p tap --logfile test.tap \
 		--mode=$(BUILDTYPE_LOWER) --flaky-tests=$(FLAKY_TESTS) \
 		$(TEST_CI_ARGS) $(CI_JS_SUITES) $(CI_NATIVE_SUITES) $(CI_DOC)
-	$(NODE) ./test/embedding/test-embedding.js
+	'$(OUT_NODE)' ./test/embedding/test-embedding.js
 	$(info Clean up any leftover processes, error if found.)
 	ps awwx | grep Release/node | grep -v grep | cat
 	@PS_OUT=`ps awwx | grep Release/node | grep -v grep | awk '{print $$1}'`; \
@@ -651,12 +659,16 @@ test-test426: all ## Run the Web Platform Tests.
 test-wpt: all ## Run the Web Platform Tests.
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) wpt
 
+# https://github.com/nodejs/node/blob/a00d95c73dcac8fc2b316238fb978a7d5aa650c6/.github/workflows/daily-wpt-fyi.yml#L71-L97
+# This uses NODE instead of OUT_NODE and if changes are to be made they'd need to be made on all
+# non-EOL release lines' since the wpt.fyi job checks out the repository in a state of a given release
+# to ensure future changes to the WPT runner don't need to be backported.
 .PHONY: test-wpt-report
 test-wpt-report: ## Run the Web Platform Tests and generate a report.
 	$(RM) -r out/wpt
 	mkdir -p out/wpt
-	-WPT_REPORT=1 $(PYTHON) tools/test.py --shell $(NODE) $(PARALLEL_ARGS) wpt
-	$(NODE) "$$PWD/tools/merge-wpt-reports.mjs"
+	-WPT_REPORT=1 $(PYTHON) tools/test.py --shell '$(NODE)' $(PARALLEL_ARGS) wpt
+	'$(NODE)' "$$PWD/tools/merge-wpt-reports.mjs"
 
 .PHONY: test-internet
 test-internet: all ## Run internet tests.
@@ -680,7 +692,7 @@ test-doc: doc-only lint-md ## Build, lint, and verify the docs.
 
 .PHONY: test-doc-ci
 test-doc-ci: doc-only ## Build, lint, and verify the docs (CI).
-	$(PYTHON) tools/test.py --shell $(NODE) $(TEST_CI_ARGS) $(PARALLEL_ARGS) doctool
+	$(PYTHON) tools/test.py --shell '$(NODE)' $(TEST_CI_ARGS) $(PARALLEL_ARGS) doctool
 
 .PHONY: test-known-issues
 test-known-issues: all ## Run tests for known issues.
@@ -688,12 +700,12 @@ test-known-issues: all ## Run tests for known issues.
 
 # Related CI job: node-test-npm
 .PHONY: test-npm
-test-npm: $(NODE_EXE) ## Run the npm test suite on deps/npm.
-	$(NODE) tools/test-npm-package --install --logfile=test-npm.tap deps/npm test
+test-npm: $(OUT_NODE) ## Run the npm test suite on deps/npm.
+	'$(OUT_NODE)' tools/test-npm-package --install --logfile=test-npm.tap deps/npm test
 
 .PHONY: test-npm-publish
-test-npm-publish: $(NODE_EXE) ## Test the `npm publish` command.
-	npm_package_config_publishtest=true $(NODE) deps/npm/test/run.js
+test-npm-publish: $(OUT_NODE) ## Test the `npm publish` command.
+	npm_package_config_publishtest=true '$(OUT_NODE)' deps/npm/test/run.js
 
 .PHONY: test-js-native-api
 test-js-native-api: test-build-js-native-api ## Run JS Native-API tests.
@@ -837,7 +849,7 @@ out/doc/api/assets/%: doc/api_assets/% | out/doc/api/assets
 	@cp $< $@ ; $(RM) out/doc/api/assets/README.md
 
 
-run-npm-ci = $(PWD)/$(NPM) ci
+run-npm-ci = '$(PWD)/$(NPM)' ci
 
 LINK_DATA = out/doc/apilinks.json
 VERSIONS_DATA = out/previous-doc-versions.json
@@ -1188,7 +1200,7 @@ endif
 		$(MACOSOUTDIR)/dist/npm/usr/local/lib/node_modules
 	unlink $(MACOSOUTDIR)/dist/node/usr/local/bin/npm
 	unlink $(MACOSOUTDIR)/dist/node/usr/local/bin/npx
-	$(NODE) tools/license2rtf.mjs < LICENSE > \
+	'$(NODE)' tools/license2rtf.mjs < LICENSE > \
 		$(MACOSOUTDIR)/installer/productbuild/Resources/license.rtf
 	cp doc/osx_installer_logo.png $(MACOSOUTDIR)/installer/productbuild/Resources
 	pkgbuild --version $(FULLVERSION) \
@@ -1600,8 +1612,8 @@ cpplint: lint-cpp
 # Try with '--system' if it fails without; the system may have set '--user'
 lint-py-build: ## Build resources needed to lint python files.
 	$(info Pip installing ruff on $(shell $(PYTHON) --version)...)
-	$(PYTHON) -m pip install --upgrade --target tools/pip/site-packages ruff==0.6.5 || \
-		$(PYTHON) -m pip install --upgrade --system --target tools/pip/site-packages ruff==0.6.5
+	$(PYTHON) -m pip install --upgrade --target tools/pip/site-packages ruff==0.13.1 || \
+		$(PYTHON) -m pip install --upgrade --system --target tools/pip/site-packages ruff==0.13.1
 
 .PHONY: lint-py lint-py-fix lint-py-fix-unsafe
 ifneq ("","$(wildcard tools/pip/site-packages/ruff)")
@@ -1611,7 +1623,6 @@ lint-py:
 	tools/pip/site-packages/bin/ruff check .
 lint-py-fix:
 	tools/pip/site-packages/bin/ruff check . --fix
-
 lint-py-fix-unsafe:
 	tools/pip/site-packages/bin/ruff check . --fix --unsafe-fixes
 else
@@ -1708,8 +1719,8 @@ HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 
 
 .PHONY: gen-openssl
 ifeq ($(HAS_DOCKER), 1)
-DOCKER_COMMAND ?= docker run --rm -u $(shell id -u) -v $(PWD):/node
-IS_IN_WORKTREE = $(shell grep '^gitdir: ' $(PWD)/.git 2>/dev/null)
+DOCKER_COMMAND ?= docker run --rm -u $(shell id -u) -v '$(PWD):/node'
+IS_IN_WORKTREE = $(shell grep '^gitdir: ' '$(PWD)/.git' 2>/dev/null)
 GIT_WORKTREE_COMMON = $(shell git rev-parse --git-common-dir)
 DOCKER_COMMAND += $(if $(IS_IN_WORKTREE), -v $(GIT_WORKTREE_COMMON):$(GIT_WORKTREE_COMMON))
 gen-openssl: ## Generate platform dependent openssl files (requires docker).
