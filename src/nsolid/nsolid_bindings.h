@@ -115,6 +115,13 @@ class BindingData : public SnapshotableObject {
                             v8::Local<v8::Value> buffer);
   static void FastGetTraceId(v8::Local<v8::Value> receiver,
                              v8::Local<v8::Value> buffer);
+  static void SlowWriteLog(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void FastWriteLog(v8::Local<v8::Object> receiver,
+                           const v8::FastOneByteString& msg,
+                           uint32_t severity);
+  static void WriteLogImpl(BindingData* data,
+                           const std::string& msg,
+                           uint32_t severity);
 
   static void Initialize(v8::Local<v8::Object> target,
                          v8::Local<v8::Value> unused,
@@ -133,6 +140,7 @@ class BindingData : public SnapshotableObject {
   static v8::CFunction fast_push_span_data_string3_;
   static v8::CFunction fast_get_span_id_;
   static v8::CFunction fast_get_trace_id_;
+  static v8::CFunction fast_write_log_;
 };
 
 }  // namespace nsolid

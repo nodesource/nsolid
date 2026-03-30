@@ -2377,17 +2377,36 @@ static void AgentId(const FunctionCallbackInfo<Value>& args) {
 }
 
 
-static void WriteLog(const FunctionCallbackInfo<Value>& args) {
+void BindingData::SlowWriteLog(const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsString());
   DCHECK(args[1]->IsUint32());
-  String::Utf8Value s(args.GetIsolate(), args[0]);
-  std::string ss = *s;
+  Isolate* isolate = args.GetIsolate();
+  Local<String> value_s = args[0].As<String>();
+  BindingData* data = FromJSObject<BindingData>(args.This());
+  uint32_t severity = args[1].As<Uint32>()->Value();
+  const std::string msg = *String::Utf8Value(isolate, value_s);
+  WriteLogImpl(data, msg, severity);
+}
+
+
+void BindingData::FastWriteLog(v8::Local<v8::Object> receiver,
+                               const FastOneByteString& msg,
+                               uint32_t severity) {
+  WriteLogImpl(FromJSObject<BindingData>(receiver),
+               std::string(msg.data, msg.length),
+               severity);
+}
+
+
+void BindingData::WriteLogImpl(BindingData* data,
+                               const std::string& msg,
+                               uint32_t severity) {
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
   // TODO(trevnorris): Allow tracing through this at some point?
-  EnvList::Inst()->WriteLogLine(GetLocalEnvInst(args.GetIsolate()),
-                                { ss,
-                                  args[1].As<v8::Uint32>()->Value(),
+  EnvList::Inst()->WriteLogLine(data->env()->envinst_,
+                                { msg,
+                                  severity,
                                   nanoseconds,
                                   "",
                                   "",
@@ -3404,6 +3423,8 @@ v8::CFunction BindingData::fast_get_span_id_(
     v8::CFunction::Make(FastGetSpanId));
 v8::CFunction BindingData::fast_get_trace_id_(
     v8::CFunction::Make(FastGetTraceId));
+v8::CFunction BindingData::fast_write_log_(
+    v8::CFunction::Make(FastWriteLog));
 
 
 void BindingData::Initialize(Local<Object> target,
@@ -3463,9 +3484,13 @@ void BindingData::Initialize(Local<Object> target,
                 "getTraceId",
                 SlowGetTraceId,
                 &fast_get_trace_id_);
+  SetFastMethod(context,
+                target,
+                "writeLog",
+                SlowWriteLog,
+                &fast_write_log_);
 
   SetMethod(context, target, "agentId", AgentId);
-  SetMethod(context, target, "writeLog", WriteLog);
   SetMethod(context, target, "getEnvMetrics", GetEnvMetrics);
   SetMethod(context, target, "getProcessMetrics", GetProcessMetrics);
   SetMethod(context, target, "getProcessInfo", GetProcessInfo);
@@ -3605,9 +3630,11 @@ void BindingData::RegisterExternalReferences(
 
   registry->Register(SlowGetTraceId);
   registry->Register(fast_get_trace_id_);
+ 
+  registry->Register(SlowWriteLog);
+  registry->Register(fast_write_log_);
 
   registry->Register(AgentId);
-  registry->Register(WriteLog);
   registry->Register(GetEnvMetrics);
   registry->Register(GetProcessMetrics);
   registry->Register(GetProcessInfo);
