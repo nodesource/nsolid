@@ -10,6 +10,7 @@
 #include "util.h"
 #include "env-inl.h"
 #include "uv.h"
+#include "node_debug.h"
 #include "node_internals.h"
 #include "node_external_reference.h"
 #include "memory_tracker-inl.h"
@@ -2392,6 +2393,7 @@ void BindingData::SlowWriteLog(const FunctionCallbackInfo<Value>& args) {
 void BindingData::FastWriteLog(v8::Local<v8::Object> receiver,
                                const FastOneByteString& msg,
                                uint32_t severity) {
+  TRACK_V8_FAST_API_CALL("nsolid.writeLog");
   WriteLogImpl(FromJSObject<BindingData>(receiver),
                std::string(msg.data, msg.length),
                severity);
