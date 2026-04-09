@@ -10,11 +10,13 @@
 #include "util.h"
 #include "env-inl.h"
 #include "uv.h"
+#include "node_debug.h"
 #include "node_internals.h"
 #include "node_external_reference.h"
 #include "memory_tracker-inl.h"
 #include "node_perf.h"
 #include "node_url.h"
+#include "simdutf.h"
 #include "v8-fast-api-calls.h"
 
 #include <algorithm>
@@ -92,6 +94,16 @@ constexpr uint64_t datapoints_q_interval = 100;
 constexpr size_t datapoints_q_max_size = 100;
 
 static const char* get_startuptime_name(const char* name);
+
+static std::string OneByteToUtf8(const FastOneByteString& input) {
+  std::string out;
+  out.resize(input.length * 2);
+
+  const size_t actual_length = simdutf::convert_latin1_to_utf8(
+      input.data, input.length, out.data());
+  out.resize(actual_length);
+  return out;
+}
 
 
 EnvInst::EnvInst(Environment* env)
@@ -2474,10 +2486,11 @@ void BindingData::FastPushSpanDataString(v8::Local<v8::Object> receiver,
                                          uint32_t trace_id,
                                          uint32_t type,
                                          const FastOneByteString& val) {
+  TRACK_V8_FAST_API_CALL("nsolid.pushSpanDataString");
   PushSpanDataStringImpl(FromJSObject<BindingData>(receiver),
                          trace_id,
                          type,
-                         std::string(val.data, val.length));
+                         OneByteToUtf8(val));
 }
 
 
@@ -2521,12 +2534,13 @@ void BindingData::FastPushSpanDataString3(v8::Local<v8::Object> receiver,
                                           const FastOneByteString& val1,
                                           const FastOneByteString& val2,
                                           const FastOneByteString& val3) {
+  TRACK_V8_FAST_API_CALL("nsolid.pushSpanDataString3");
   PushSpanDataStringImpl3(FromJSObject<BindingData>(receiver),
-                         trace_id,
-                         type,
-                         std::string(val1.data, val1.length),
-                         std::string(val2.data, val2.length),
-                         std::string(val3.data, val3.length));
+                          trace_id,
+                          type,
+                         OneByteToUtf8(val1),
+                         OneByteToUtf8(val2),
+                         OneByteToUtf8(val3));
 }
 
 void BindingData::PushSpanDataStringImpl3(BindingData* data,

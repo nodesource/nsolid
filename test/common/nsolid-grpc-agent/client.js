@@ -98,6 +98,7 @@ function execCustomTrace() {
     const span = tracer.startSpan('initial_name', { attributes: { a: 1, b: 2 },
                                                     kind: api.SpanKind.CLIENT });
     span.setAttributes({ c: 3, d: 4 })
+        .setAttribute('latin1', 'Espa\u00f1a')
         .setAttribute('e', [ 'abAD', 'cdCF'])
         .addEvent('my_event 1', Date.now())
         .addEvent('my_event 2', { attr1: 'val1', attr2: 'val2' }, Date.now());

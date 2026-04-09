@@ -53,6 +53,7 @@ const expectedCustomAttributes = (threadId) => {
     'b': [ 'intValue', '2', false ],
     'c': [ 'intValue', '3', false ],
     'd': [ 'intValue', '4', false ],
+    'latin1': [ 'stringValue', 'Espa\u00f1a', false ],
     'e': [ 'arrayValue', [
       { stringValue: 'abAD', value: 'stringValue' },
       { stringValue: 'cdCF', value: 'stringValue' },
