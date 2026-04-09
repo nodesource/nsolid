@@ -16,6 +16,7 @@
 #include "memory_tracker-inl.h"
 #include "node_perf.h"
 #include "node_url.h"
+#include "simdutf.h"
 #include "v8-fast-api-calls.h"
 
 #include <cmath>
@@ -82,6 +83,17 @@ using opentelemetry::sdk::metrics::Base2ExponentialHistogramAggregation;
 using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
 using opentelemetry::sdk::metrics::MetricAttributes;
 using opentelemetry::sdk::metrics::PointDataAttributes;
+
+static std::string OneByteToUtf8(const FastOneByteString& input) {
+  std::string out;
+  out.resize(input.length * 2);
+
+  const size_t actual_length = simdutf::convert_latin1_to_utf8(
+      input.data, input.length, out.data());
+  DCHECK_NE(actual_length, 0);
+  out.resize(actual_length);
+  return out;
+}
 
 static const char* HttpMethodToString(MetricsStream::HttpMethod m) {
   switch (m) {
@@ -2395,7 +2407,7 @@ void BindingData::FastWriteLog(v8::Local<v8::Object> receiver,
                                uint32_t severity) {
   TRACK_V8_FAST_API_CALL("nsolid.writeLog");
   WriteLogImpl(FromJSObject<BindingData>(receiver),
-               std::string(msg.data, msg.length),
+               OneByteToUtf8(msg),
                severity);
 }
 
@@ -2448,7 +2460,7 @@ void BindingData::FastPushClientBucket(
       val,
       method,
       status_code,
-      std::string(server_address.data, server_address.length),
+      OneByteToUtf8(server_address),
       server_port,
       protocol_version);
 }
@@ -2530,7 +2542,7 @@ void BindingData::FastPushServerBucket(
       status_code,
       url_scheme,
       protocol_version,
-      std::string(route.data, route.length));
+      OneByteToUtf8(route));
 }
 
 
@@ -2654,7 +2666,7 @@ void BindingData::FastPushSpanDataString(v8::Local<v8::Object> receiver,
   PushSpanDataStringImpl(FromJSObject<BindingData>(receiver),
                          trace_id,
                          type,
-                         std::string(val.data, val.length));
+                         OneByteToUtf8(val));
 }
 
 
@@ -2701,9 +2713,9 @@ void BindingData::FastPushSpanDataString3(v8::Local<v8::Object> receiver,
   PushSpanDataStringImpl3(FromJSObject<BindingData>(receiver),
                          trace_id,
                          type,
-                         std::string(val1.data, val1.length),
-                         std::string(val2.data, val2.length),
-                         std::string(val3.data, val3.length));
+                         OneByteToUtf8(val1),
+                         OneByteToUtf8(val2),
+                         OneByteToUtf8(val3));
 }
 
 void BindingData::PushSpanDataStringImpl3(BindingData* data,
