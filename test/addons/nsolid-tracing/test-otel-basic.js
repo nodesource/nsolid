@@ -23,6 +23,7 @@ const expectedTraces = [
       c: 3,
       d: 4,
       e: 5,
+      latin1: 'Espa\u00f1a',
     },
     events: [
       {
@@ -69,6 +70,7 @@ setupNSolid(common.mustCall(() => {
   assert.strictEqual(span.updateName('my name'), span);
   assert.strictEqual(span.setAttributes({ c: 3, d: 4 }), span);
   assert.strictEqual(span.setAttribute('e', 5), span);
+  assert.strictEqual(span.setAttribute('latin1', 'Espa\u00f1a'), span);
   assert.strictEqual(span.addEvent('my_event 1', Date.now()), span);
   assert.strictEqual(
     span.addEvent('my_event 2', { attr1: 'val1', attr2: 'val2' }, Date.now()),
