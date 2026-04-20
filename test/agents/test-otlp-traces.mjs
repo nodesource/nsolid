@@ -67,11 +67,11 @@ if (process.argv[2] === 'child') {
   const interval = setInterval(() => {
     console.log('interval');
   }, 100);
-  process.on('message', (message) => {
+  process.on('message', mustCall((message) => {
     assert.strictEqual(message, 'exit');
     clearInterval(interval);
     process.exit(0);
-  });
+  }));
 } else {
   const {
     validateArray,

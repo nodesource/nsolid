@@ -30,9 +30,9 @@ server.listen(0, 'localhost', common.mustCall(() => {
   }));
 
   c.setEncoding('utf8');
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     const metrics = nsolid.metrics();
     assert.ok(metrics.httpServerMedian >= 100);
     assert.ok(metrics.httpServer99Ptile >= 100);
-  }, 6000);
+  }), 6000);
 }));

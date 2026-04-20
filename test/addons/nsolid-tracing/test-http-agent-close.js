@@ -2,14 +2,14 @@
 'use strict';
 const common = require('../../common');
 const { checkTracesOnExit } = require('../../common/nsolid-traces');
-const { fixturesDir } = require('../../common/fixtures');
+const fixtures = require('../../common/fixtures');
 const { setupNSolid } = require('./utils');
 const assert = require('assert');
 const http = require('http');
 const bindingPath = require.resolve(`./build/${common.buildType}/binding`);
 const binding = require(bindingPath);
 const api = require(require.resolve('@opentelemetry/api',
-                                    { paths: [fixturesDir] }));
+                                    { paths: [fixtures.fixturesDir] }));
 
 const expectedTraces = [
   {

@@ -6,7 +6,7 @@
 const common = require('../../common');
 const { checkTracesOnExit } = require('../../common/nsolid-traces');
 const { setupNSolid } = require('./utils');
-const { fixturesDir } = require('../../common/fixtures');
+const fixtures = require('../../common/fixtures');
 const { Worker, isMainThread, threadId } = require('worker_threads');
 
 const bindingPath = require.resolve(`./build/${common.buildType}/binding`);
@@ -14,7 +14,7 @@ const binding = require(bindingPath);
 
 const nsolid = require('nsolid');
 const api = require(require.resolve('@opentelemetry/api',
-                                    { paths: [fixturesDir] }));
+                                    { paths: [fixtures.fixturesDir] }));
 
 function test() {
   if (!nsolid.otel.register(api)) {

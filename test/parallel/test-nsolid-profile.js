@@ -64,7 +64,7 @@ nsolid.start({
   data: 'localhost:9002'
 });
 
-setTimeout(() => {
+setTimeout(common.mustCall(() => {
   // profile() should return an error if ongoing profile
   assert.strictEqual(nsolid.profile(), undefined);
   assert.throws(
@@ -82,7 +82,7 @@ setTimeout(() => {
   }));
   assert.strictEqual(nsolid.profileEnd(), undefined);
 
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     // profileEnd() should return an error if no ongoing profile
     assert.throws(
       () => {
@@ -114,8 +114,8 @@ setTimeout(() => {
         }));
       }));
     }));
-  }, common.platformTimeout(100));
-}, common.platformTimeout(100));
+  }), common.platformTimeout(100));
+}), common.platformTimeout(100));
 
 function runAssetsToggleTests() {
   // Disable assets through config update
@@ -125,7 +125,7 @@ function runAssetsToggleTests() {
     assetsEnabled: false,
   });
 
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     assert.throws(
       () => {
         nsolid.profile();
@@ -151,13 +151,13 @@ function runAssetsToggleTests() {
 
     // Re-enable through helper
     nsolid.enableAssets();
-    setTimeout(() => {
+    setTimeout(common.mustCall(() => {
       // Start profile and wait for it to complete before toggling assets
       nsolid.profile(common.mustSucceed(() => {
         nsolid.profileEnd(common.mustSucceed(() => {
           // Only disable assets after profile completes
           nsolid.disableAssets();
-          setTimeout(() => {
+          setTimeout(common.mustCall(() => {
             assert.throws(
               () => {
                 nsolid.profile();
@@ -169,14 +169,14 @@ function runAssetsToggleTests() {
 
             // Only re-enable after error is confirmed
             nsolid.enableAssets();
-            setTimeout(() => {
+            setTimeout(common.mustCall(() => {
               nsolid.profile(common.mustSucceed(() => {
                 nsolid.profileEnd(common.mustSucceed());
               }));
-            }, common.platformTimeout(100));
-          }, common.platformTimeout(100));
+            }), common.platformTimeout(100));
+          }), common.platformTimeout(100));
         }));
       }));
-    }, common.platformTimeout(100));
-  }, common.platformTimeout(100));
+    }), common.platformTimeout(100));
+  }), common.platformTimeout(100));
 }

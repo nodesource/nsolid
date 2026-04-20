@@ -39,12 +39,12 @@ server.listen(0, common.mustCall(() => {
       assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 0);
     }));
     // Wait for more than 3secs for the percentiles to be updated
-    setTimeout(() => {
+    setTimeout(common.mustCall(() => {
       const metrics = nsolid.metrics();
       assert.ok(metrics.httpClientMedian > 0);
       assert.ok(metrics.httpClient99Ptile > 0);
       assert.ok(metrics.httpServerMedian > 0);
       assert.ok(metrics.httpServer99Ptile > 0);
-    }, 5500);
+    }), 5500);
   }));
 }));

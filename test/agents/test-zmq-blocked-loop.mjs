@@ -131,78 +131,82 @@ function checkUnblockedLoopData(blocked, agentId, threadId, bInfo) {
 
 const tests = [];
 
+function testBlockedLoopMainThread(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let bInfo = null;
+    const opts = {
+      opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } },
+    };
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      await playground.client.block(threadId, 400);
+    }), mustCall((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'agent-loop_blocked');
+          checkBlockedLoopData(data, agentId, threadId);
+          bInfo = {
+            blocked_for: data.body.blocked_for,
+            loop_id: data.body.loop_id,
+            callback_cntr: data.body.callback_cntr,
+          };
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'agent-loop_unblocked');
+          checkUnblockedLoopData(data, agentId, threadId, bInfo);
+          resolve();
+          break;
+      }
+    }, 2));
+  });
+}
+
+function testBlockedLoopWorker(playground) {
+  return new Promise((resolve) => {
+    let wid;
+    let events = 0;
+    let bInfo = null;
+    const opts = {
+      args: [ '-w', 1 ],
+      opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } },
+    };
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      wid = workers[0];
+      await playground.client.block(wid, 400);
+    }), mustCall((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'agent-loop_blocked');
+          checkBlockedLoopData(data, agentId, wid);
+          bInfo = {
+            blocked_for: data.body.blocked_for,
+            loop_id: data.body.loop_id,
+            callback_cntr: data.body.callback_cntr,
+          };
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'agent-loop_unblocked');
+          checkUnblockedLoopData(data, agentId, wid, bInfo);
+          resolve();
+          break;
+      }
+    }, 2));
+  });
+}
+
 tests.push({
   name: 'should work in the main thread',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let bInfo = null;
-      const opts = {
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } },
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        await playground.client.block(threadId, 400);
-      }), mustCall((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'agent-loop_blocked');
-            checkBlockedLoopData(data, agentId, threadId);
-            bInfo = {
-              blocked_for: data.body.blocked_for,
-              loop_id: data.body.loop_id,
-              callback_cntr: data.body.callback_cntr,
-            };
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'agent-loop_unblocked');
-            checkUnblockedLoopData(data, agentId, threadId, bInfo);
-            resolve();
-            break;
-        }
-      }, 2));
-    });
-  },
+  test: testBlockedLoopMainThread,
 });
 
 tests.push({
   name: 'should work for http transactions on a worker',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let wid;
-      let events = 0;
-      let bInfo = null;
-      const opts = {
-        args: [ '-w', 1 ],
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 100 } },
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        const workers = await playground.client.workers();
-        wid = workers[0];
-        await playground.client.block(wid, 400);
-      }), mustCall((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'agent-loop_blocked');
-            checkBlockedLoopData(data, agentId, wid);
-            bInfo = {
-              blocked_for: data.body.blocked_for,
-              loop_id: data.body.loop_id,
-              callback_cntr: data.body.callback_cntr,
-            };
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'agent-loop_unblocked');
-            checkUnblockedLoopData(data, agentId, wid, bInfo);
-            resolve();
-            break;
-        }
-      }, 2));
-    });
-  },
+  test: testBlockedLoopWorker,
 });
 
 

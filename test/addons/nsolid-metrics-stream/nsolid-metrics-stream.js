@@ -95,7 +95,7 @@ function test() {
           else if (type === KHttpServer)
             counters.http_server++;
           else
-            assert(0);
+            assert.fail(`Unexpected metric type: ${type}`);
         });
 
         assert.strictEqual(counters.dns, 20);

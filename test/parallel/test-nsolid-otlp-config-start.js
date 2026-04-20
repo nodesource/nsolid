@@ -363,7 +363,7 @@ const tests = [
 
 function testConfig(config, expected, cb) {
   nsolid.start(config);
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     const { otlp, otlpConfig } = expected;
     assert.strictEqual(nsolid.config.otlp, otlp);
     if (otlpConfig) {
@@ -396,7 +396,7 @@ function testConfig(config, expected, cb) {
       assert.strictEqual(nsolid.config.otlpConfig, undefined);
     }
     cb();
-  }, 10);
+  }), 10);
 }
 
 function runTests(tests, index, cb) {

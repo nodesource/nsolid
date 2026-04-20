@@ -38,7 +38,7 @@ nsolid.start({
   disableSnapshots: true
 });
 
-setImmediate(() => {
+setImmediate(common.mustCall(() => {
   // Snapshot should return an error if snapshots disabled
   assert.throws(
     () => {
@@ -53,4 +53,4 @@ setImmediate(() => {
     assert.notStrictEqual(err.code, 0);
     assert.strictEqual(err.message, 'Heap snapshot could not be generated');
   }));
-});
+}));

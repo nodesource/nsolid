@@ -28,271 +28,290 @@ function checkSnapshotData(requestId, options, agentId, data, complete) {
 
 const tests = [];
 
+function testMainThreadSnapshot(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let requestId;
+    let snapshot = '';
+    const options = {
+      threadId: 0,
+    };
+
+    const bootstrapOpts = {
+      opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkSnapshotData(requestId, options, agentId, data.metadata, false);
+            snapshot += data.packet;
+            --events;
+          } else {
+            checkSnapshotData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkSnapshotData(requestId, options, agentId, data, true);
+          JSON.parse(snapshot);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
+      requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
+    }), onEvent);
+  });
+}
+
+function testWorkerThreadSnapshot(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let requestId;
+    let snapshot = '';
+    const options = {};
+
+    const bootstrapOpts = {
+      args: [ '-w', 1 ],
+      opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkSnapshotData(requestId, options, agentId, data.metadata, false);
+            snapshot += data.packet;
+            --events;
+          } else {
+            checkSnapshotData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkSnapshotData(requestId, options, agentId, data, true);
+          JSON.parse(snapshot);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      options.threadId = workers[0];
+      requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
+    }), onEvent);
+  });
+}
+
+function testMissingThread(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      threadId: 10,
+    };
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 410);
+        assert.strictEqual(err.message, 'Thread already gone');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testInvalidThreadId(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      threadId: 'wth',
+    };
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testDisabledSnapshots(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      threadId: 0,
+    };
+
+    const bootstrapOpts = {
+      opts: { env: { NSOLID_DISABLE_SNAPSHOTS: 1 } },
+    };
+
+    playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testNullArgs(playground) {
+  return new Promise((resolve) => {
+    const options = null;
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testSnapshotAlreadyRunning(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let requestId;
+    const options = {
+      threadId: 0,
+    };
+
+    const bootstrapOpts = {
+      opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkSnapshotData(requestId, options, agentId, data.metadata, false);
+            --events;
+          } else {
+            checkSnapshotData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkSnapshotData(requestId, options, agentId, data, true);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
+      requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
+      playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 409);
+        assert.strictEqual(err.message, 'Snapshot already in progress');
+      }));
+    }), onEvent);
+  });
+}
+
+function testAssetsEnabledToggle(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let snapshot = '';
+    let requestId;
+    let resolved = false;
+    const options = {
+      threadId: 0,
+    };
+
+    const bootstrapOpts = {
+      opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
+    };
+
+    async function onEvent(eventType, agentId, data) {
+      if (resolved)
+        return;
+
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkSnapshotData(requestId, options, agentId, data.metadata, false);
+            snapshot += data.packet;
+            --events;
+          } else {
+            checkSnapshotData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2: {
+          assert.strictEqual(eventType, 'asset-received');
+          checkSnapshotData(requestId, options, agentId, data, true);
+          JSON.parse(snapshot);
+          resolved = true;
+          const currentConfig = await playground.client.config();
+          assert.strictEqual(currentConfig.assetsEnabled, true);
+          resolve();
+        }
+      }
+    }
+
+    playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
+      const disabledConfig = await playground.client.config({ assetsEnabled: false });
+      assert.strictEqual(disabledConfig.assetsEnabled, false);
+
+      await new Promise((done) => {
+        playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
+          assert.strictEqual(err.code, 422);
+          assert.strictEqual(err.message, 'Invalid arguments');
+          done();
+        }));
+      });
+
+      const enabledConfig = await playground.client.config({ assetsEnabled: true });
+      assert.strictEqual(enabledConfig.assetsEnabled, true);
+
+      requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
+    }), onEvent);
+  });
+}
+
 tests.push({
   name: 'should work for the main thread',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let requestId;
-      let snapshot = '';
-      const options = {
-        threadId: 0,
-      };
-
-      const bootstrapOpts = {
-        // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
-      };
-
-      playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
-        requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
-      }), (eventType, agentId, data) => {
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            if (data.packet.length > 0) {
-              checkSnapshotData(requestId, options, agentId, data.metadata, false);
-              snapshot += data.packet;
-              --events;
-            } else {
-              checkSnapshotData(requestId, options, agentId, data.metadata, true);
-            }
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'asset-received');
-            checkSnapshotData(requestId, options, agentId, data, true);
-            JSON.parse(snapshot);
-            resolve();
-        }
-      });
-    });
-  },
+  test: testMainThreadSnapshot,
 });
 
 tests.push({
   name: 'should work for worker threads',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let requestId;
-      let snapshot = '';
-      const options = {};
-
-      const bootstrapOpts = {
-        args: [ '-w', 1 ],
-        // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
-      };
-
-      playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
-        // Need to get the id's of the worker threads from the metrics first.
-        const workers = await playground.client.workers();
-        options.threadId = workers[0];
-        requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
-      }), (eventType, agentId, data) => {
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            if (data.packet.length > 0) {
-              checkSnapshotData(requestId, options, agentId, data.metadata, false);
-              snapshot += data.packet;
-              --events;
-            } else {
-              checkSnapshotData(requestId, options, agentId, data.metadata, true);
-            }
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'asset-received');
-            checkSnapshotData(requestId, options, agentId, data, true);
-            JSON.parse(snapshot);
-            resolve();
-        }
-      });
-    });
-  },
+  test: testWorkerThreadSnapshot,
 });
 
 tests.push({
   name: 'should return 410 if sent to a non-existant thread',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const options = {
-        threadId: 10,
-      };
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 410);
-          assert.strictEqual(err.message, 'Thread already gone');
-          resolve();
-        }));
-      }));
-    });
-  },
+  test: testMissingThread,
 });
 
 tests.push({
   name: 'should return 422 if invalid threadId field',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const options = {
-        threadId: 'wth',
-      };
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 422);
-          assert.strictEqual(err.message, 'Invalid arguments');
-          resolve();
-        }));
-      }));
-    });
-  },
+  test: testInvalidThreadId,
 });
 
 tests.push({
   name: 'should return 422 if invalid disableSnapshots config',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const options = {
-        threadId: 0,
-      };
-
-      const bootstrapOpts = {
-        opts: { env: { NSOLID_DISABLE_SNAPSHOTS: 1 } },
-      };
-
-      playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
-        playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 422);
-          assert.strictEqual(err.message, 'Invalid arguments');
-          resolve();
-        }));
-      }));
-    });
-  },
+  test: testDisabledSnapshots,
 });
 
 tests.push({
   name: 'should return 422 no args field',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const options = null;
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 422);
-          assert.strictEqual(err.message, 'Invalid arguments');
-          resolve();
-        }));
-      }));
-    });
-  },
+  test: testNullArgs,
 });
 
 tests.push({
   name: 'should return 409 if snapshot in progress',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let requestId;
-      const options = {
-        threadId: 0,
-      };
-
-      const bootstrapOpts = {
-        // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
-      };
-
-      playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
-        requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
-        playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 409);
-          assert.strictEqual(err.message, 'Snapshot already in progress');
-        }));
-      }), (eventType, agentId, data) => {
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            if (data.packet.length > 0) {
-              checkSnapshotData(requestId, options, agentId, data.metadata, false);
-              --events;
-            } else {
-              checkSnapshotData(requestId, options, agentId, data.metadata, true);
-            }
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'asset-received');
-            checkSnapshotData(requestId, options, agentId, data, true);
-            resolve();
-        }
-      });
-    });
-  },
+  test: testSnapshotAlreadyRunning,
 });
 
 tests.push({
   name: 'should respect assetsEnabled toggled via nsolid.start()',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let snapshot = '';
-      let requestId;
-      let resolved = false;
-      const options = {
-        threadId: 0,
-      };
-
-      const bootstrapOpts = {
-        // Just to be sure we don't receive the loop_blocked event
-        opts: { env: { NSOLID_BLOCKED_LOOP_THRESHOLD: 10000 } },
-      };
-
-      playground.bootstrap(bootstrapOpts, mustSucceed(async (agentId) => {
-        const disabledConfig = await playground.client.config({ assetsEnabled: false });
-        assert.strictEqual(disabledConfig.assetsEnabled, false);
-
-        await new Promise((done) => {
-          playground.zmqAgentBus.agentSnapshotRequest(agentId, options, mustCall((err) => {
-            assert.strictEqual(err.code, 422);
-            assert.strictEqual(err.message, 'Invalid arguments');
-            done();
-          }));
-        });
-
-        const enabledConfig = await playground.client.config({ assetsEnabled: true });
-        assert.strictEqual(enabledConfig.assetsEnabled, true);
-
-        requestId = playground.zmqAgentBus.agentSnapshotRequest(agentId, options);
-      }), async (eventType, agentId, data) => {
-        if (resolved)
-          return;
-
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            if (data.packet.length > 0) {
-              checkSnapshotData(requestId, options, agentId, data.metadata, false);
-              snapshot += data.packet;
-              --events;
-            } else {
-              checkSnapshotData(requestId, options, agentId, data.metadata, true);
-            }
-            break;
-          case 2: {
-            assert.strictEqual(eventType, 'asset-received');
-            checkSnapshotData(requestId, options, agentId, data, true);
-            JSON.parse(snapshot);
-            resolved = true;
-            const currentConfig = await playground.client.config();
-            assert.strictEqual(currentConfig.assetsEnabled, true);
-            resolve();
-          }
-        }
-      });
-    });
-  },
+  test: testAssetsEnabledToggle,
 });
 
 

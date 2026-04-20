@@ -41,7 +41,7 @@ fs.readFileSync(__filename);
 assert.strictEqual(getOpened(), ++oCntr);
 assert.strictEqual(getClosed(), ++cCntr);
 
-fs.readFile(__filename, () => {
+fs.readFile(__filename, common.mustCall(() => {
   assert.strictEqual(getOpened(), ++oCntr);
   assert.strictEqual(getClosed(), ++cCntr);
 
@@ -56,10 +56,11 @@ fs.readFile(__filename, () => {
       assert.strictEqual(getClosed(), ++cCntr);
 
       checkPromise()
-        .then(common.mustCall((fh) => closePromiseFd(fh)));
+        .then((fh) => closePromiseFd(fh))
+        .then(common.mustCall());
     }));
   }));
-});
+}));
 
 async function checkPromise() {
   const fh = await fs.promises.open(__filename);

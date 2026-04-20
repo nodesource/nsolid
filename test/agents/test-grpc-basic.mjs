@@ -165,7 +165,7 @@ tests.push({
           config.saas = correctEnv.NSOLID_SAAS;
         }
 
-        grpcServer.on('command', async ({ agentId }) => {
+        grpcServer.on('command', mustCall(async ({ agentId }) => {
           // Verify the CommandStream is working by sending a command from server to client
           const infoResult = await grpcServer.info(agentId);
           assert.ok(infoResult);
@@ -173,8 +173,7 @@ tests.push({
           assert.ok(exit);
           assert.strictEqual(exit.code, 0);
           assert.strictEqual(exit.signal, null);
-        });
-
+        }));
         await child.config(config);
       }));
     });

@@ -37,372 +37,403 @@ function checkProfileData(requestId, options, agentId, data, complete, onExit = 
 
 const tests = [];
 
-tests.push({
-  name: 'should work for the main thread',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let profile = '';
-      let requestId;
-      const options = {
-        duration: 100,
-        threadId: 0,
-      };
+function testMainThreadProfile(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 100,
+      threadId: 0,
+    };
 
-      playground.bootstrap(mustSucceed((agentId) => {
-        requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
-      }), (eventType, agentId, data) => {
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+    }), onEvent);
+  });
+}
+
+function testWorkerThreadProfile(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 100,
+    };
+
+    const opts = {
+      args: [ '-w', 1 ],
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      options.threadId = workers[0];
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+    }), onEvent);
+  });
+}
+
+function testAssetsEnabledToggle(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    let resolved = false;
+    const options = {
+      duration: 100,
+      threadId: 0,
+    };
+
+    async function onEvent(eventType, agentId, data) {
+      if (resolved)
+        return;
+
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2: {
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolved = true;
+          const currentConfig = await playground.client.config();
+          assert.strictEqual(currentConfig.assetsEnabled, true);
+          resolve();
+        }
+      }
+    }
+
+    playground.bootstrap(mustSucceed(async (agentId) => {
+      const disabledConfig = await playground.client.config({ assetsEnabled: false });
+      assert.strictEqual(disabledConfig.assetsEnabled, false);
+
+      await new Promise((done) => {
+        playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+          assert.strictEqual(err.code, 422);
+          assert.strictEqual(err.message, 'Invalid arguments');
+          done();
+        }));
+      });
+
+      const enabledConfig = await playground.client.config({ assetsEnabled: true });
+      assert.strictEqual(enabledConfig.assetsEnabled, true);
+
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+    }), onEvent);
+  });
+}
+
+function testMissingThread(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      duration: 100,
+      threadId: 10,
+    };
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 410);
+        assert.strictEqual(err.message, 'Thread already gone');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testInvalidThreadId(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      duration: 100,
+      threadId: 'wth',
+    };
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testInvalidDuration(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      duration: 'wth',
+    };
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testNullArgs(playground) {
+  return new Promise((resolve) => {
+    const options = null;
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testProfileAlreadyRunningMain(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 100,
+      threadId: 0,
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 409);
+        assert.strictEqual(err.message, 'Profile already in progress');
+      }));
+    }), onEvent);
+  });
+}
+
+function testProfileAlreadyRunningWorker(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 100,
+    };
+
+    const opts = {
+      args: [ '-w', 1 ],
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      options.threadId = workers[0];
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 409);
+        assert.strictEqual(err.message, 'Profile already in progress');
+      }));
+    }), onEvent);
+  });
+}
+
+function testProfileEndsBeforeExit(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 1000,
+      threadId: 0,
+    };
+
+    let gotExit = false;
+    let gotProfile = false;
+    let processExited = false;
+
+    function onEvent(eventType, agentId, data) {
+      console.dir(data, { depth: null });
+      if (eventType === 'agent-exit') {
+        assert.strictEqual(gotExit, false);
+        checkExitData(data, { exit_code: 0, error: null });
+        gotExit = true;
+        if (gotProfile && processExited) {
+          resolve();
+        }
+      } else {
         switch (++events) {
           case 1:
             assert.strictEqual(eventType, 'asset-data-packet');
             if (data.packet.length > 0) {
-              checkProfileData(requestId, options, agentId, data.metadata, false);
+              checkProfileData(requestId, options, agentId, data.metadata, false, true);
               profile += data.packet;
               --events;
             } else {
-              checkProfileData(requestId, options, agentId, data.metadata, true);
+              checkProfileData(requestId, options, agentId, data.metadata, true, true);
             }
             break;
           case 2:
+            assert.strictEqual(gotProfile, false);
             assert.strictEqual(eventType, 'asset-received');
-            checkProfileData(requestId, options, agentId, data, true);
+            checkProfileData(requestId, options, agentId, data, true, true);
             JSON.parse(profile);
-            resolve();
+            gotProfile = true;
+            if (gotExit && processExited) {
+              resolve();
+            }
         }
-      });
-    });
-  },
+      }
+    }
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      setTimeout(mustCall(async () => {
+        const exit = await playground.client.shutdown(0);
+        assert.ok(exit);
+        assert.strictEqual(exit.code, 0);
+        assert.strictEqual(exit.signal, null);
+        if (gotProfile && gotExit) {
+          resolve();
+        } else {
+          processExited = true;
+        }
+      }), 100);
+    }), onEvent);
+  });
+}
+
+tests.push({
+  name: 'should work for the main thread',
+  test: testMainThreadProfile,
 });
 
 tests.push({
   name: 'should work for worker threads',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let profile = '';
-      let requestId;
-      const options = {
-        duration: 100,
-      };
-
-      const opts = {
-        args: [ '-w', 1 ],
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        // Need to get the id's of the worker threads from the metrics first.
-        const workers = await playground.client.workers();
-        options.threadId = workers[0];
-        requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
-      }), (eventType, agentId, data) => {
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            if (data.packet.length > 0) {
-              checkProfileData(requestId, options, agentId, data.metadata, false);
-              profile += data.packet;
-              --events;
-            } else {
-              checkProfileData(requestId, options, agentId, data.metadata, true);
-            }
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'asset-received');
-            checkProfileData(requestId, options, agentId, data, true);
-            JSON.parse(profile);
-            resolve();
-        }
-      });
-    });
-  },
+  test: testWorkerThreadProfile,
 });
 
 tests.push({
   name: 'should respect assetsEnabled toggled via nsolid.start()',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let profile = '';
-      let requestId;
-      let resolved = false;
-      const options = {
-        duration: 100,
-        threadId: 0,
-      };
-
-      playground.bootstrap(mustSucceed(async (agentId) => {
-        const disabledConfig = await playground.client.config({ assetsEnabled: false });
-        assert.strictEqual(disabledConfig.assetsEnabled, false);
-
-        await new Promise((done) => {
-          playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
-            assert.strictEqual(err.code, 422);
-            assert.strictEqual(err.message, 'Invalid arguments');
-            done();
-          }));
-        });
-
-        const enabledConfig = await playground.client.config({ assetsEnabled: true });
-        assert.strictEqual(enabledConfig.assetsEnabled, true);
-
-        requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
-      }), async (eventType, agentId, data) => {
-        if (resolved)
-          return;
-
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            if (data.packet.length > 0) {
-              checkProfileData(requestId, options, agentId, data.metadata, false);
-              profile += data.packet;
-              --events;
-            } else {
-              checkProfileData(requestId, options, agentId, data.metadata, true);
-            }
-            break;
-          case 2: {
-            assert.strictEqual(eventType, 'asset-received');
-            checkProfileData(requestId, options, agentId, data, true);
-            JSON.parse(profile);
-            resolved = true;
-            const currentConfig = await playground.client.config();
-            assert.strictEqual(currentConfig.assetsEnabled, true);
-            resolve();
-          }
-        }
-      });
-    });
-  },
+  test: testAssetsEnabledToggle,
 });
 
 tests.push({
   name: 'should return 410 if sent to a non-existant thread',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const options = {
-        duration: 100,
-        threadId: 10,
-      };
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 410);
-          assert.strictEqual(err.message, 'Thread already gone');
-          resolve();
-        }));
-      }));
-    });
-  },
+  test: testMissingThread,
 });
 
 tests.push({
   name: 'should return 422 if invalid threadId field',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const options = {
-        duration: 100,
-        threadId: 'wth',
-      };
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 422);
-          assert.strictEqual(err.message, 'Invalid arguments');
-          resolve();
-        }));
-      }));
-    });
-  },
+  test: testInvalidThreadId,
 });
 
 tests.push({
   name: 'should return 422 if invalid duration field',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const options = {
-        duration: 'wth',
-      };
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 422);
-          assert.strictEqual(err.message, 'Invalid arguments');
-          resolve();
-        }));
-      }));
-    });
-  },
+  test: testInvalidDuration,
 });
 
 tests.push({
   name: 'should return 422 no args field',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const options = null;
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 422);
-          assert.strictEqual(err.message, 'Invalid arguments');
-          resolve();
-        }));
-      }));
-    });
-  },
+  test: testNullArgs,
 });
 
 tests.push({
   name: 'should return 409 if profile in progress in main thread',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let profile = '';
-      let requestId;
-      const options = {
-        duration: 100,
-        threadId: 0,
-      };
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
-        playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 409);
-          assert.strictEqual(err.message, 'Profile already in progress');
-        }));
-      }), (eventType, agentId, data) => {
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            if (data.packet.length > 0) {
-              checkProfileData(requestId, options, agentId, data.metadata, false);
-              profile += data.packet;
-              --events;
-            } else {
-              checkProfileData(requestId, options, agentId, data.metadata, true);
-            }
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'asset-received');
-            checkProfileData(requestId, options, agentId, data, true);
-            JSON.parse(profile);
-            resolve();
-        }
-      });
-    });
-  },
+  test: testProfileAlreadyRunningMain,
 });
 
 tests.push({
   name: 'should return 409 if profile in progress in worker',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let profile = '';
-      let requestId;
-      const options = {
-        duration: 100,
-      };
-
-      const opts = {
-        args: [ '-w', 1 ],
-      };
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        // Need to get the id's of the worker threads from the metrics first.
-        const workers = await playground.client.workers();
-        options.threadId = workers[0];
-        requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
-        playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
-          assert.strictEqual(err.code, 409);
-          assert.strictEqual(err.message, 'Profile already in progress');
-        }));
-      }), (eventType, agentId, data) => {
-        switch (++events) {
-          case 1:
-            assert.strictEqual(eventType, 'asset-data-packet');
-            if (data.packet.length > 0) {
-              checkProfileData(requestId, options, agentId, data.metadata, false);
-              profile += data.packet;
-              --events;
-            } else {
-              checkProfileData(requestId, options, agentId, data.metadata, true);
-            }
-            break;
-          case 2:
-            assert.strictEqual(eventType, 'asset-received');
-            checkProfileData(requestId, options, agentId, data, true);
-            JSON.parse(profile);
-            resolve();
-        }
-      });
-    });
-  },
+  test: testProfileAlreadyRunningWorker,
 });
 
 tests.push({
   name: 'should end an ongoing profile before exiting',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let profile = '';
-      let requestId;
-      const options = {
-        duration: 1000,
-        threadId: 0,
-      };
-
-      let gotExit = false;
-      let gotProfile = false;
-      let processExited = false;
-
-      playground.bootstrap(mustSucceed((agentId) => {
-        requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
-        setTimeout(async () => {
-          const exit = await playground.client.shutdown(0);
-          assert.ok(exit);
-          assert.strictEqual(exit.code, 0);
-          assert.strictEqual(exit.signal, null);
-          if (gotProfile && gotExit) {
-            resolve();
-          } else {
-            processExited = true;
-          }
-        }, 100);
-      }), (eventType, agentId, data) => {
-        console.dir(data, { depth: null });
-        if (eventType === 'agent-exit') {
-          assert.strictEqual(gotExit, false);
-          checkExitData(data, { exit_code: 0, error: null });
-          gotExit = true;
-          if (gotProfile && processExited) {
-            resolve();
-          }
-        } else {
-          switch (++events) {
-            case 1:
-              assert.strictEqual(eventType, 'asset-data-packet');
-              if (data.packet.length > 0) {
-                checkProfileData(requestId, options, agentId, data.metadata, false, true);
-                profile += data.packet;
-                --events;
-              } else {
-                checkProfileData(requestId, options, agentId, data.metadata, true, true);
-              }
-              break;
-            case 2:
-              assert.strictEqual(gotProfile, false);
-              assert.strictEqual(eventType, 'asset-received');
-              checkProfileData(requestId, options, agentId, data, true, true);
-              JSON.parse(profile);
-              gotProfile = true;
-              if (gotExit && processExited) {
-                resolve();
-              }
-          }
-        }
-      });
-    });
-  },
+  test: testProfileEndsBeforeExit,
 });
 
 

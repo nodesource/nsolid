@@ -20,7 +20,7 @@
 const common = require('../../common');
 const { checkTracesOnExit } = require('../../common/nsolid-traces');
 const { setupNSolid } = require('./utils');
-const { fixturesDir } = require('../../common/fixtures');
+const fixtures = require('../../common/fixtures');
 const bindingPath = require.resolve(`./build/${common.buildType}/binding`);
 const binding = require(bindingPath);
 
@@ -28,7 +28,7 @@ const http = require('http');
 const net = require('net');
 const nsolid = require('nsolid');
 const api = require(require.resolve('@opentelemetry/api',
-                                    { paths: [fixturesDir] }));
+                                    { paths: [fixtures.fixturesDir] }));
 
 function setupTracesCheck(port, addresses) {
   const expectedTraces = [

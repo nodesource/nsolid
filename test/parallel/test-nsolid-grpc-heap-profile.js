@@ -76,7 +76,7 @@ nsolid.start({
   grpc: 1
 });
 
-setTimeout(() => {
+setTimeout(common.mustCall(() => {
   // profile() should return an error if ongoing profile
   assert.strictEqual(nsolid.heapProfile(), undefined);
   assert.throws(
@@ -94,7 +94,7 @@ setTimeout(() => {
   }));
   assert.strictEqual(nsolid.heapProfileEnd(), undefined);
 
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     // profileEnd() should return an error if no ongoing profile
     assert.throws(
       () => {
@@ -125,5 +125,5 @@ setTimeout(() => {
         }));
       }));
     }));
-  }, 100);
-}, 100);
+  }), 100);
+}), 100);

@@ -213,7 +213,7 @@ tests.push({
           await child.shutdown(0);
           grpcServer.close();
           resolve();
-        });
+        }).then(mustCall());
 
         const { data, requestId } = await grpcServer.heapProfile(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
@@ -247,7 +247,7 @@ tests.push({
           await child.shutdown(0);
           grpcServer.close();
           resolve();
-        });
+        }).then(mustCall());
 
         const { data, requestId } = await grpcServer.heapProfile(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
@@ -425,7 +425,7 @@ tests.push({
             grpcServer.close();
             resolve();
           }
-        });
+        }).then(mustCall());
 
         await setTimeout(100);
         const exit = await child.shutdown(0);

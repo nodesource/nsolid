@@ -171,304 +171,313 @@ function validateSpan(span, spanType, threadId) {
 
 const tests = [];
 
-tests.push({
-  name: 'should work for http transactions',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let totalSpans = 0;
-      const opts = {
-        opts: {
-          env: {
-            NSOLID_TRACING_ENABLED: 1,
-            NSOLID_APPNAME: 'myapp',
-          },
+function testHttpTransactions(playground) {
+  return new Promise((resolve) => {
+    let totalSpans = 0;
+    const opts = {
+      opts: {
+        env: {
+          NSOLID_TRACING_ENABLED: 1,
+          NSOLID_APPNAME: 'myapp',
         },
-      };
+      },
+    };
 
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        await playground.client.tracing('http', threadId);
-      }), mustCallAtLeast((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        assert.strictEqual(eventType, 'agent-tracing');
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      await playground.client.tracing('http', threadId);
+    }), mustCallAtLeast((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      assert.strictEqual(eventType, 'agent-tracing');
+      checkTracingData(data, null, agentId, threadId, 'myapp');
+      const spanTypes = [ 'http_server', 'http_client'];
+      for (const span of data.body.spans) {
+        validateSpan(span, spanTypes[totalSpans], threadId);
+        totalSpans++;
+      }
+      if (totalSpans === 2) {
+        resolve();
+      }
+    }, 1));
+  });
+}
+
+function testHttpTransactionsOnStartup(playground) {
+  return new Promise((resolve) => {
+    let totalSpans = 0;
+    const opts = {
+      args: [ '-t', 'http' ],
+      opts: {
+        env: {
+          NSOLID_TRACING_ENABLED: 1,
+          NSOLID_APPNAME: 'myapp',
+        },
+      },
+    };
+
+    playground.bootstrap(opts, mustSucceed(() => {
+    }), mustCallAtLeast((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      assert.strictEqual(eventType, 'agent-tracing');
+      checkTracingData(data, null, agentId, threadId, 'myapp');
+      const spanTypes = [ 'http_server', 'http_client'];
+      for (const span of data.body.spans) {
+        validateSpan(span, spanTypes[totalSpans], threadId);
+        totalSpans++;
+      }
+      if (totalSpans === 2) {
+        resolve();
+      }
+    }, 1));
+  });
+}
+
+function testHttpTransactionsOnWorker(playground) {
+  return new Promise((resolve) => {
+    let wid;
+    let totalSpans = 0;
+    const opts = {
+      args: [ '-w', 1 ],
+      opts: {
+        env: {
+          NSOLID_TRACING_ENABLED: 1,
+          NSOLID_APPNAME: 'myapp',
+        },
+      },
+    };
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      wid = workers[0];
+      await playground.client.tracing('http', wid);
+    }), mustCallAtLeast((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      assert.strictEqual(eventType, 'agent-tracing');
+      checkTracingData(data, null, agentId, wid, 'myapp');
+      const spanTypes = [ 'http_server', 'http_client'];
+      for (const span of data.body.spans) {
+        validateSpan(span, spanTypes[totalSpans], wid);
+        totalSpans++;
+      }
+      if (totalSpans === 2) {
+        resolve();
+      }
+    }, 1));
+  });
+}
+
+function testDnsTransactions(playground) {
+  return new Promise((resolve) => {
+    let totalSpans = 0;
+    const opts = {
+      opts: {
+        env: {
+          NSOLID_TRACING_ENABLED: 1,
+          NSOLID_APPNAME: 'myapp',
+        },
+      },
+    };
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      await playground.client.tracing('dns', threadId);
+    }), mustCallAtLeast((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      assert.strictEqual(eventType, 'agent-tracing');
+      checkTracingData(data, null, agentId, threadId, 'myapp');
+      const spanTypes = [ 'dns_lookup', 'dns_lookup_service', 'dns_resolve'];
+      for (const span of data.body.spans) {
+        validateSpan(span, spanTypes[totalSpans], threadId);
+        totalSpans++;
+      }
+      if (totalSpans === 3) {
+        resolve();
+      }
+    }, 1));
+  });
+}
+
+function testDnsTransactionsOnWorker(playground) {
+  return new Promise((resolve) => {
+    let wid;
+    let totalSpans = 0;
+    const opts = {
+      args: [ '-w', 1 ],
+      opts: {
+        env: {
+          NSOLID_TRACING_ENABLED: 1,
+          NSOLID_APPNAME: 'myapp',
+        },
+      },
+    };
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      wid = workers[0];
+      await playground.client.tracing('dns', wid);
+    }), mustCallAtLeast((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      assert.strictEqual(eventType, 'agent-tracing');
+      checkTracingData(data, null, agentId, wid, 'myapp');
+      const spanTypes = [ 'dns_lookup', 'dns_lookup_service', 'dns_resolve'];
+      for (const span of data.body.spans) {
+        validateSpan(span, spanTypes[totalSpans], wid);
+        totalSpans++;
+      }
+      if (totalSpans === 3) {
+        resolve();
+      }
+    }, 1));
+  });
+}
+
+function testCustomTracesChangingAppName(playground) {
+  return new Promise((resolve) => {
+    const opts = {
+      opts: {
+        env: {
+          NSOLID_TRACING_ENABLED: 1,
+          NSOLID_APPNAME: 'myapp',
+        },
+      },
+    };
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      await playground.client.config({ app: 'myotherapp' });
+      await playground.client.tracing('custom', threadId);
+    }), mustCall((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      assert.strictEqual(eventType, 'agent-tracing');
+      checkTracingData(data, null, agentId, threadId, 'myotherapp');
+      assert.strictEqual(data.body.spans.length, 1);
+      validateSpan(data.body.spans[0], 'custom', threadId);
+      resolve();
+    }));
+  });
+}
+
+function testCustomTracesOnWorker(playground) {
+  return new Promise((resolve) => {
+    let wid;
+    const opts = {
+      args: [ '-w', 1 ],
+      opts: {
+        env: {
+          NSOLID_TRACING_ENABLED: 1,
+          NSOLID_APPNAME: 'myapp',
+        },
+      },
+    };
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      wid = workers[0];
+      await playground.client.tracing('custom', wid);
+    }), mustCall((eventType, agentId, data) => {
+      console.log(`${eventType}, ${agentId}`);
+      assert.strictEqual(eventType, 'agent-tracing');
+      checkTracingData(data, null, agentId, wid, 'myapp');
+      assert.strictEqual(data.body.spans.length, 1);
+      validateSpan(data.body.spans[0], 'custom', wid);
+      resolve();
+    }));
+  });
+}
+
+function testTracingEnabledToggle(playground) {
+  return new Promise((resolve) => {
+    let totalSpans = 0;
+    let phase = 'initial';
+    const opts = {
+      opts: {
+        env: {
+          NSOLID_TRACING_ENABLED: 1,
+          NSOLID_APPNAME: 'myapp',
+        },
+      },
+    };
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      await playground.client.tracing('http', threadId);
+    }), mustCallAtLeast(async (eventType, agentId, data) => {
+      if (phase === 'done')
+        return;
+
+      console.log(`${eventType}, ${agentId}, phase: ${phase}`);
+      assert.strictEqual(eventType, 'agent-tracing');
+      assert.notStrictEqual(phase, 'disabled');
+
+      if (phase === 'initial') {
         checkTracingData(data, null, agentId, threadId, 'myapp');
         const spanTypes = [ 'http_server', 'http_client'];
         for (const span of data.body.spans) {
           validateSpan(span, spanTypes[totalSpans], threadId);
           totalSpans++;
         }
+
         if (totalSpans === 2) {
+          totalSpans = 0;
+          phase = 'disabled';
+          await playground.client.disableTraces();
+          await playground.client.tracing('http', threadId);
+          await delay(200);
+          await playground.client.enableTraces();
+          phase = 'reenabled';
+          await playground.client.tracing('http', threadId);
+        }
+      } else if (phase === 'reenabled') {
+        checkTracingData(data, null, agentId, threadId, 'myapp');
+        const spanTypes = [ 'http_server', 'http_client'];
+        for (const span of data.body.spans) {
+          validateSpan(span, spanTypes[totalSpans], threadId);
+          totalSpans++;
+        }
+
+        if (totalSpans === 2) {
+          phase = 'done';
           resolve();
         }
-      }, 1));
-    });
-  },
+      }
+    }, 2));
+  });
+}
+
+tests.push({
+  name: 'should work for http transactions',
+  test: testHttpTransactions,
 });
 
 tests.push({
   name: 'should work for http transactions immediately on startup',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let totalSpans = 0;
-      const opts = {
-        args: [ '-t', 'http' ],
-        opts: {
-          env: {
-            NSOLID_TRACING_ENABLED: 1,
-            NSOLID_APPNAME: 'myapp',
-          },
-        },
-      };
-
-      playground.bootstrap(opts, mustSucceed(() => {
-      }), mustCallAtLeast((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, threadId, 'myapp');
-        const spanTypes = [ 'http_server', 'http_client'];
-        for (const span of data.body.spans) {
-          validateSpan(span, spanTypes[totalSpans], threadId);
-          totalSpans++;
-        }
-        if (totalSpans === 2) {
-          resolve();
-        }
-      }, 1));
-    });
-  },
+  test: testHttpTransactionsOnStartup,
 });
 
 tests.push({
   name: 'should work for http transactions on a worker',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let wid;
-      let totalSpans = 0;
-      const opts = {
-        args: [ '-w', 1 ],
-        opts: {
-          env: {
-            NSOLID_TRACING_ENABLED: 1,
-            NSOLID_APPNAME: 'myapp',
-          },
-        },
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        const workers = await playground.client.workers();
-        wid = workers[0];
-        await playground.client.tracing('http', wid);
-      }), mustCallAtLeast((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, wid, 'myapp');
-        const spanTypes = [ 'http_server', 'http_client'];
-        for (const span of data.body.spans) {
-          validateSpan(span, spanTypes[totalSpans], wid);
-          totalSpans++;
-        }
-        if (totalSpans === 2) {
-          resolve();
-        }
-      }, 1));
-    });
-  },
+  test: testHttpTransactionsOnWorker,
 });
 
 tests.push({
   name: 'should work for dns transactions',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let totalSpans = 0;
-      const opts = {
-        opts: {
-          env: {
-            NSOLID_TRACING_ENABLED: 1,
-            NSOLID_APPNAME: 'myapp',
-          },
-        },
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        await playground.client.tracing('dns', threadId);
-      }), mustCallAtLeast((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, threadId, 'myapp');
-        const spanTypes = [ 'dns_lookup', 'dns_lookup_service', 'dns_resolve'];
-        for (const span of data.body.spans) {
-          validateSpan(span, spanTypes[totalSpans], threadId);
-          totalSpans++;
-        }
-        if (totalSpans === 3) {
-          resolve();
-        }
-      }, 1));
-    });
-  },
+  test: testDnsTransactions,
 });
 
 tests.push({
   name: 'should work for dns transactions on a worker',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let wid;
-      let totalSpans = 0;
-      const opts = {
-        args: [ '-w', 1 ],
-        opts: {
-          env: {
-            NSOLID_TRACING_ENABLED: 1,
-            NSOLID_APPNAME: 'myapp',
-          },
-        },
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        const workers = await playground.client.workers();
-        wid = workers[0];
-        await playground.client.tracing('dns', wid);
-      }), mustCallAtLeast((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, wid, 'myapp');
-        const spanTypes = [ 'dns_lookup', 'dns_lookup_service', 'dns_resolve'];
-        for (const span of data.body.spans) {
-          validateSpan(span, spanTypes[totalSpans], wid);
-          totalSpans++;
-        }
-        if (totalSpans === 3) {
-          resolve();
-        }
-      }, 1));
-    });
-  },
+  test: testDnsTransactionsOnWorker,
 });
 
 tests.push({
   name: 'should work for custom traces changing app name',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      const opts = {
-        opts: {
-          env: {
-            NSOLID_TRACING_ENABLED: 1,
-            NSOLID_APPNAME: 'myapp',
-          },
-        },
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        await playground.client.config({ app: 'myotherapp' });
-        await playground.client.tracing('custom', threadId);
-      }), mustCall((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, threadId, 'myotherapp');
-        assert.strictEqual(data.body.spans.length, 1);
-        validateSpan(data.body.spans[0], 'custom', threadId);
-        resolve();
-      }));
-    });
-  },
+  test: testCustomTracesChangingAppName,
 });
 
 tests.push({
   name: 'should work for custom traces on a worker',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let wid;
-      const opts = {
-        args: [ '-w', 1 ],
-        opts: {
-          env: {
-            NSOLID_TRACING_ENABLED: 1,
-            NSOLID_APPNAME: 'myapp',
-          },
-        },
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        const workers = await playground.client.workers();
-        wid = workers[0];
-        await playground.client.tracing('custom', wid);
-      }), mustCall((eventType, agentId, data) => {
-        console.log(`${eventType}, ${agentId}`);
-        assert.strictEqual(eventType, 'agent-tracing');
-        checkTracingData(data, null, agentId, wid, 'myapp');
-        assert.strictEqual(data.body.spans.length, 1);
-        validateSpan(data.body.spans[0], 'custom', wid);
-        resolve();
-      }));
-    });
-  },
+  test: testCustomTracesOnWorker,
 });
 
 tests.push({
   name: 'should respect tracingEnabled toggled via enableTraces/disableTraces',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let totalSpans = 0;
-      let phase = 'initial';
-      const opts = {
-        opts: {
-          env: {
-            NSOLID_TRACING_ENABLED: 1,
-            NSOLID_APPNAME: 'myapp',
-          },
-        },
-      };
-
-      playground.bootstrap(opts, mustSucceed(async (agentId) => {
-        // Initial trace with tracing enabled
-        await playground.client.tracing('http', threadId);
-      }), mustCallAtLeast(async (eventType, agentId, data) => {
-        if (phase === 'done')
-          return;
-
-        console.log(`${eventType}, ${agentId}, phase: ${phase}`);
-        assert.strictEqual(eventType, 'agent-tracing');
-
-        // Fail immediately if spans arrive while tracing is disabled
-        assert.notStrictEqual(phase, 'disabled');
-
-        if (phase === 'initial') {
-          checkTracingData(data, null, agentId, threadId, 'myapp');
-          const spanTypes = [ 'http_server', 'http_client'];
-          for (const span of data.body.spans) {
-            validateSpan(span, spanTypes[totalSpans], threadId);
-            totalSpans++;
-          }
-
-          if (totalSpans === 2) {
-            totalSpans = 0;
-            phase = 'disabled';
-
-            // Disable tracing and verify no spans are emitted
-            await playground.client.disableTraces();
-            await playground.client.tracing('http', threadId);
-            await delay(200);
-
-            // Re-enable tracing
-            await playground.client.enableTraces();
-            phase = 'reenabled';
-            await playground.client.tracing('http', threadId);
-          }
-        } else if (phase === 'reenabled') {
-          checkTracingData(data, null, agentId, threadId, 'myapp');
-          const spanTypes = [ 'http_server', 'http_client'];
-          for (const span of data.body.spans) {
-            validateSpan(span, spanTypes[totalSpans], threadId);
-            totalSpans++;
-          }
-
-          if (totalSpans === 2) {
-            phase = 'done';
-            resolve();
-          }
-        }
-      }, 2));
-    });
-  },
+  test: testTracingEnabledToggle,
 });
 
 const config = {

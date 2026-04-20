@@ -28,12 +28,12 @@ async function runRepro(getEnv, kind) {
         resolve();
       }));
 
-      // send lots of trace requests to trigger tracing
+      // Send lots of trace requests to trigger tracing
       for (let i = 0; i < traceBursts; i++) {
         client.tracing(kind, 0);
       }
 
-      // toggle tracing on and off
+      // Toggle tracing on and off
       for (let i = 0; i < toggleRounds; i++) {
         const enabled = (i % 2) !== 0;
         await grpcServer.reconfigure(agentId, { tracingEnabled: enabled });

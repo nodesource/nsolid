@@ -28,12 +28,12 @@ function execProc1() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, `localhost:${PORT}`);
     assert.strictEqual(config.saas, undefined);
-  });
+  }));
 }
 
 function execProc2() {
@@ -49,12 +49,12 @@ function execProc2() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, saasCommand);
     assert.strictEqual(config.saas, saasToken);
-  });
+  }));
 }
 
 function execProc3() {
@@ -70,12 +70,12 @@ function execProc3() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, undefined);
     assert.strictEqual(config.saas, saasToken);
-  });
+  }));
 }
 
 function execProc4() {
@@ -91,12 +91,12 @@ function execProc4() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, `localhost:${PORT}`);
     assert.strictEqual(config.saas, undefined);
-  });
+  }));
 }
 
 function execProc5() {
@@ -112,14 +112,14 @@ function execProc5() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.first.command, `localhost:${PORT}`);
     assert.strictEqual(config.first.saas, undefined);
     assert.strictEqual(config.second.command, undefined);
     assert.strictEqual(config.second.saas, saasToken);
-  });
+  }));
 }
 
 // NSOLID_COMMAND trumps NSOLID_SAAS, so the token should be ignored. It
@@ -139,13 +139,13 @@ function execProc6() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, `localhost:${PORT}`);
     assert.strictEqual(config.grpc, `localhost:${PORT}`);
     assert.strictEqual(config.saas, undefined);
-  });
+  }));
 }
 
 // If NSOLID_SAAS with NSOLID_GRPC, the token connects to SaaS using gRPC.
@@ -163,13 +163,13 @@ function execProc7() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, undefined);
     assert.strictEqual(config.grpc, `${PORT}`);
     assert.strictEqual(config.saas, saasToken);
-  });
+  }));
 }
 
 function execProc8() {
@@ -185,12 +185,12 @@ function execProc8() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, undefined);
     assert.strictEqual(config.saas, undefined);
-  });
+  }));
 }
 
 function execProc9() {
@@ -207,13 +207,13 @@ function execProc9() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, undefined);
     assert.strictEqual(config.grpc, `localhost:${PORT}`);
     assert.strictEqual(config.saas, undefined);
-  });
+  }));
 }
 
 function execProc10() {
@@ -224,13 +224,13 @@ function execProc10() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, undefined);
     assert.strictEqual(config.grpc, `localhost:${PORT}`);
     assert.strictEqual(config.saas, undefined);
-  });
+  }));
 }
 
 function execProc11() {
@@ -241,13 +241,13 @@ function execProc11() {
     output += d;
   });
 
-  proc.on('close', (code) => {
+  proc.on('close', common.mustCall((code) => {
     assert.strictEqual(code, 0);
     const config = JSON.parse(output);
     assert.strictEqual(config.command, undefined);
     assert.strictEqual(config.grpc, `${PORT}`);
     assert.strictEqual(config.saas, saasToken);
-  });
+  }));
 }
 
 
