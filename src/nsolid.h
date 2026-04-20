@@ -1228,8 +1228,7 @@ class NODE_EXTERN Snapshot {
 template <typename Cb, typename... Data>
 int ThreadMetrics::Update(Cb&& cb, Data&&... data) {
   bool expected = false;
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
 
@@ -1274,8 +1273,9 @@ MetricsStream* MetricsStream::CreateInstance(uint32_t flags,
   if (stream == nullptr) {
     return stream;
   }
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
   // _1 - MetricsStream* metrics_stream
@@ -1309,8 +1309,9 @@ Tracer* Tracer::CreateInstance(uint32_t flags, Cb&& cb, Data&&... data) {
   if (tracer == nullptr) {
     return tracer;
   }
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
   // _1 - Tracer*
@@ -1343,8 +1344,8 @@ int CpuProfiler::TakeProfile(SharedEnvInst envinst,
                              uint64_t duration,
                              Cb&& cb,
                              Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
@@ -1388,8 +1389,8 @@ int Snapshot::StartTrackingHeapObjects(SharedEnvInst envinst,
     return UV_ESRCH;
   }
 
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
       std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
@@ -1438,8 +1439,8 @@ int Snapshot::StartSampling(SharedEnvInst envinst,
     return UV_ESRCH;
   }
 
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
       std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
@@ -1465,8 +1466,8 @@ int Snapshot::TakeSnapshot(SharedEnvInst envinst,
                            bool redacted,
                            Cb&& cb,
                            Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
@@ -1550,8 +1551,7 @@ int RunCommand(SharedEnvInst envinst,
                CommandType type,
                Cb&& cb,
                Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
   // _1 - SharedEnvInst
@@ -1580,8 +1580,11 @@ int CustomCommand(SharedEnvInst envinst,
                   std::string args,
                   Cb&& cb,
                   Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+  using std::placeholders::_5;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, _3, _4, _5, std::forward<Data>(data)...));
 
@@ -1614,8 +1617,8 @@ int CustomCommand(SharedEnvInst envinst,
 
 template <typename Cb, typename... Data>
 int AtExitHook(Cb&& cb, Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
@@ -1642,8 +1645,8 @@ int AtExitHook(Cb&& cb, Data&&... data) {
 
 template <typename Cb, typename... Data>
 int OnBlockedLoopHook(uint64_t threshold, Cb&& cb, Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
@@ -1667,8 +1670,8 @@ int OnBlockedLoopHook(uint64_t threshold, Cb&& cb, Data&&... data) {
 
 template <typename Cb, typename... Data>
 int OnUnblockedLoopHook(Cb&& cb, Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
@@ -1690,8 +1693,7 @@ int OnUnblockedLoopHook(Cb&& cb, Data&&... data) {
 
 template <typename Cb, typename... Data>
 int OnConfigurationHook(Cb&& cb, Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
 
@@ -1712,8 +1714,8 @@ int OnConfigurationHook(Cb&& cb, Data&&... data) {
 
 template <typename Cb, typename... Data>
 int OnLogWriteHook(Cb&& cb, Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
 
@@ -1735,8 +1737,7 @@ int OnLogWriteHook(Cb&& cb, Data&&... data) {
 
 template <typename Cb, typename... Data>
 int ThreadAddedHook(Cb&& cb, Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
 
@@ -1756,8 +1757,7 @@ int ThreadAddedHook(Cb&& cb, Data&&... data) {
 
 template <typename Cb, typename... Data>
 int ThreadRemovedHook(Cb&& cb, Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
 

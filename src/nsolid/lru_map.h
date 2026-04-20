@@ -24,7 +24,7 @@ class LRUMap {
   LRUMap(uint64_t expiry, Cb&& cb, Data&&... data): expiry_(expiry),
                                                     data_(nullptr, nullptr) {
     // NOLINTNEXTLINE(build/namespaces)
-    using namespace std::placeholders;
+    using std::placeholders::_1;
     using G = decltype(std::bind(
       std::forward<Cb>(cb), _1, std::forward<Data>(data)...));
     // _1 - Value

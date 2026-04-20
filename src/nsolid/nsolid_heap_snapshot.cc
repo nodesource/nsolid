@@ -84,9 +84,9 @@ nlohmann::ordered_json build_sampling_heap_profile_node(
 
   // Construct callFrame
   json callFrame = {
-    {"functionName", *v8::String::Utf8Value(isolate, node->name)},
+    {"functionName", *node::Utf8Value(isolate, node->name)},
     {"scriptId", node->script_id},
-    {"url", *v8::String::Utf8Value(isolate, node->script_name)},
+    {"url", *node::Utf8Value(isolate, node->script_name)},
     {"lineNumber", node->line_number - 1},
     {"columnNumber", node->column_number - 1}
   };

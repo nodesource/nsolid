@@ -60,7 +60,7 @@ static void Send(const FunctionCallbackInfo<Value>& args) {
   std::vector<std::string> sv(len);
   for (uint32_t i = 0; i < len; i++) {
     auto el = strings->Get(context, i).ToLocalChecked().As<String>();
-    String::Utf8Value str(isolate, el);
+    node::Utf8Value str(isolate, el);
     sv.push_back(std::string(*str) + '\n');
     full_size += sv.back().length();
   }
@@ -113,7 +113,7 @@ static void Config(const FunctionCallbackInfo<Value>& args) {
   Local<Context> context = isolate->GetCurrentContext();
   Local<Object> obj = args[0].As<Object>();
   Local<String> stringify = JSON::Stringify(context, obj).ToLocalChecked();
-  String::Utf8Value cfg(isolate, stringify);
+  node::Utf8Value cfg(isolate, stringify);
   // StatsDAgent::config_agent_cb(*cfg, StatsDAgent::Inst());
 }
 

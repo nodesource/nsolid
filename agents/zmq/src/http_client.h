@@ -56,8 +56,9 @@ void ZmqHttpClient::auth(const std::string& url,
                          const std::string& saas_token,
                          Cb&& cb,
                          Data&&... data) {
-  // NOLINTNEXTLINE(build/namespaces)
-  using namespace std::placeholders;
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
   using UserData = decltype(std::bind(
         std::forward<Cb>(cb), _1, _2, _3, std::forward<Data>(data)...));
 
