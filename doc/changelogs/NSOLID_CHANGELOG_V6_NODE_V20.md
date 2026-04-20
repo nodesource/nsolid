@@ -2,6 +2,27 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-04-28, Version 20.20.2-nsolid-v6.2.3 'Iron'
+
+### Commits
+
+* \[[`2ccd85d59c`](https://github.com/nodesource/nsolid/commit/2ccd85d59c)] - **deps**: tinyglobby\@0.2.16 (Santiago Gimeno) [#453](https://github.com/nodesource/nsolid/pull/453)
+* \[[`7d50e4c898`](https://github.com/nodesource/nsolid/commit/7d50e4c898)] - **deps**: brace-expansion\@2.0.3 (Santiago Gimeno) [#453](https://github.com/nodesource/nsolid/pull/453)
+* \[[`02b8c59c87`](https://github.com/nodesource/nsolid/commit/02b8c59c87)] - **deps**: bump ncm-ng to 2.9.8 (JungMinu) [#455](https://github.com/nodesource/nsolid/pull/455)
+* \[[`ef9e9fcb82`](https://github.com/nodesource/nsolid/commit/ef9e9fcb82)] - **deps**: upgrade npm to 10.9.8 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`950ba9ed79`](https://github.com/nodesource/nsolid/commit/950ba9ed79)] - **deps**: upgrade npm to 10.9.7 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`f19ebe8c12`](https://github.com/nodesource/nsolid/commit/f19ebe8c12)] - **deps**: upgrade npm to 10.9.6 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`ae11abb351`](https://github.com/nodesource/nsolid/commit/ae11abb351)] - **deps**: upgrade npm to 10.9.4 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`45647db4ff`](https://github.com/nodesource/nsolid/commit/45647db4ff)] - **deps**: upgrade npm to 10.9.3 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`d97ee2f8af`](https://github.com/nodesource/nsolid/commit/d97ee2f8af)] - **deps**: upgrade npm to 10.9.2 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`e30b086f0c`](https://github.com/nodesource/nsolid/commit/e30b086f0c)] - **deps**: upgrade npm to 10.9.1 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`8ae7f317a9`](https://github.com/nodesource/nsolid/commit/8ae7f317a9)] - **deps**: upgrade npm to 10.9.0 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`43850daddb`](https://github.com/nodesource/nsolid/commit/43850daddb)] - **deps**: upgrade npm to 10.8.3 (npm team) [#458](https://github.com/nodesource/nsolid/pull/458)
+* \[[`2048c17433`](https://github.com/nodesource/nsolid/commit/2048c17433)] - **lib**: fix JS linting issues (Santiago Gimeno) [#453](https://github.com/nodesource/nsolid/pull/453)
+* \[[`493631c083`](https://github.com/nodesource/nsolid/commit/493631c083)] - **lib,src,test**: fix race during tracing toggles (Santiago Gimeno) [#441](https://github.com/nodesource/nsolid/pull/441)
+* \[[`a1b52c5fa9`](https://github.com/nodesource/nsolid/commit/a1b52c5fa9)] - **src**: replace duplicate loop hook regs (Santiago Gimeno) [#444](https://github.com/nodesource/nsolid/pull/444)
+* \[[`ecb4ee0f10`](https://github.com/nodesource/nsolid/commit/ecb4ee0f10)] - **test**: fix linting in test-nsolid-file-handle-count (Santiago Gimeno) [#441](https://github.com/nodesource/nsolid/pull/441)
+
 ## 2026-03-25, Version 20.20.2-nsolid-v6.2.2 'Iron'
 
 ### Commits
