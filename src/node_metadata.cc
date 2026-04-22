@@ -1,5 +1,5 @@
-#include "node_metadata.h"
 #include <algorithm>
+#include "node_metadata.h"
 #include <zmq.h>
 #include "acorn_version.h"
 #include "ada.h"
