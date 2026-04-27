@@ -1,6 +1,6 @@
 {
   "name": "@ns-private/ncm-ng",
-  "version": "2.9.7",
+  "version": "2.9.8",
   "main": "index.js",
   "publishConfig": {
     "registry": "http://packages-internal.nodesource.io"
@@ -37,8 +37,8 @@
     "spdx-satisfies": "^5.0.1",
     "ssri": "^8.0.1",
     "stats-lite": "^2.2.0",
-    "tar": "^6.0.1",
+    "tar": "^7.5.13",
     "tmp": "^0.2.1",
-    "uuid": "^8.3.0"
+    "uuid": "^14.0.0"
   }
 }
