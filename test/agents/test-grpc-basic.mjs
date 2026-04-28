@@ -4,6 +4,7 @@ import fixtures from '../common/fixtures.js';
 import assert from 'node:assert';
 import {
   checkExitData,
+  checkRpcMetadata,
   GRPCServer,
   TestClient,
 } from '../common/nsolid-grpc-agent/index.js';
@@ -165,8 +166,12 @@ tests.push({
           config.saas = correctEnv.NSOLID_SAAS;
         }
 
-        grpcServer.on('command', mustCall(async ({ agentId }) => {
+        grpcServer.on('command', mustCall(async ({ agentId, metadata }) => {
           // Verify the CommandStream is working by sending a command from server to client
+          checkRpcMetadata(metadata, agentId);
+          if (correctEnv.NSOLID_SAAS) {
+            assert.strictEqual(metadata['nsolid-saas'][0], correctEnv.NSOLID_SAAS);
+          }
           const infoResult = await grpcServer.info(agentId);
           assert.ok(infoResult);
           const exit = await child.shutdown(0);

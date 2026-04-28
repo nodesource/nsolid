@@ -9,6 +9,7 @@
 #include "google/protobuf/util/json_util.h"
 #include "grpc_utils.h"
 #include "grpcpp/grpcpp.h"
+#include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/version.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -21,6 +22,7 @@ OPENTELEMETRY_END_NAMESPACE
 
 using google::protobuf::Arena;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
+using GrpcMetadata = opentelemetry::v1::exporter::otlp::OtlpHeaders;
 
 namespace node {
 namespace nsolid {
@@ -74,7 +76,10 @@ class GrpcClient {
    * Create gRPC client context to call RPC.
    */
   static std::unique_ptr<::grpc::ClientContext>
-    MakeClientContext(const std::string& agent_id, const std::string& saas);
+    MakeClientContext(const GrpcMetadata& metadata);
+
+  static void AddMetadata(::grpc::ClientContext* context,
+                          const GrpcMetadata& metadata);
 
   /**
    * Create N|Solid service stub to communicate with the N|Solid Console.
