@@ -952,7 +952,7 @@ inline std::pair<uint64_t, uint64_t> EnvInst::provider_times() {
   // Need to lock this so the event loop isn't erased while attempting to read
   // the provider time.
   EnvInst::Scope scp(this);
-  if (event_loop_ == nullptr)
+  if (!scp.Success() || event_loop_ == nullptr)
     return { 0, 0 };
   uv_metrics_provider_times(event_loop_, &entry, &exit);
   return { entry, exit };
