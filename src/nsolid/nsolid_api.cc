@@ -1420,12 +1420,16 @@ void EnvList::PromiseTracking(bool promiseTracking) {
   }
 
   for (auto& entry : env_map) {
-    EnvInst* envinst = entry.second.get();
-    if (envinst->env()->nsolid_track_promises_fn().IsEmpty())
+    SharedEnvInst envinst_sp = entry.second;
+    EnvInst::Scope lock(envinst_sp);
+    if (!lock.Success())
+      continue;
+
+    if (envinst_sp->env()->nsolid_track_promises_fn().IsEmpty())
       continue;
 
     int er = EnvInst::RunCommand(
-      EnvInst::GetInst(envinst->thread_id()),
+      envinst_sp,
       promiseTracking ? enable_promise_tracking_ : disable_promise_tracking_,
       nullptr,
       CommandType::InterruptOnly);
@@ -1457,8 +1461,12 @@ void EnvList::UpdateTracingFlags(uint32_t flags) {
   }
 
   for (auto& entry : env_map) {
-    SharedEnvInst envinst = entry.second;
-    int er = RunCommand(envinst,
+    SharedEnvInst envinst_sp = entry.second;
+    EnvInst::Scope lock(envinst_sp);
+    if (!lock.Success())
+      continue;
+
+    int er = RunCommand(envinst_sp,
                         CommandType::InterruptOnly,
                         update_tracing_flags,
                         flags);
@@ -2141,8 +2149,12 @@ void EnvList::UpdateHasMetricsStreamHooks(bool has_metrics) {
   }
 
   for (auto& entry : env_map) {
-    SharedEnvInst envinst = entry.second;
-    int er = RunCommand(envinst,
+    SharedEnvInst envinst_sp = entry.second;
+    EnvInst::Scope lock(envinst_sp);
+    if (!lock.Success())
+      continue;
+
+    int er = RunCommand(envinst_sp,
                         CommandType::InterruptOnly,
                         update_has_metrics_stream_hooks,
                         has_metrics);
