@@ -2,6 +2,10 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-04-30, Version 20.20.2-nsolid-v6.2.4 'Iron'
+
+### Commits
+
 ## 2026-04-28, Version 20.20.2-nsolid-v6.2.3 'Iron'
 
 ### Commits
