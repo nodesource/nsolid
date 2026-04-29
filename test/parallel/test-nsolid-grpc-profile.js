@@ -63,7 +63,7 @@ nsolid.start({
   grpc: 1
 });
 
-setTimeout(() => {
+setTimeout(common.mustCall(() => {
   // profile() should return an error if ongoing profile
   assert.strictEqual(nsolid.profile(), undefined);
   assert.throws(
@@ -81,7 +81,7 @@ setTimeout(() => {
   }));
   assert.strictEqual(nsolid.profileEnd(), undefined);
 
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     // profileEnd() should return an error if no ongoing profile
     assert.throws(
       () => {
@@ -97,7 +97,7 @@ setTimeout(() => {
       assert.strictEqual(err.message, 'CPU profile could not be stopped');
       // The same with callback versions
       // profile() should return an error if ongoing profile
-      setTimeout(() => {
+      setTimeout(common.mustCall(() => {
         nsolid.profile(common.mustSucceed(() => {
           nsolid.profile(common.mustCall((err) => {
             assert.notStrictEqual(err.code, 0);
@@ -112,7 +112,7 @@ setTimeout(() => {
             }));
           }));
         }));
-      }, 100);
+      }), 100);
     }));
-  }, 500);
-}, 100);
+  }), 500);
+}), 100);

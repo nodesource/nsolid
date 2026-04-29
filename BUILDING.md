@@ -36,7 +36,9 @@ file a new issue.
   * [Windows](#windows)
     * [Windows Prerequisites](#windows-prerequisites)
       * [Option 1: Manual install](#option-1-manual-install)
+      * [Option 2: Automated install with WinGet](#option-2-automated-install-with-winget)
     * [Building N|Solid](#building-nsolid-2)
+      * [Using ccache](#using-ccache)
   * [Android](#android)
 * [`Intl` (ECMA-402) support](#intl-ecma-402-support)
   * [Build with full ICU support (all locales supported by ICU)](#build-with-full-icu-support-all-locales-supported-by-icu)
@@ -111,6 +113,7 @@ platforms. This is true regardless of entries in the table below.
 | GNU/Linux        | ppc64le >=power8 | kernel >= 4.18[^1], glibc >= 2.28 | Tier 2       | e.g. Ubuntu 20.04, RHEL 8            |
 | GNU/Linux        | s390x            | kernel >= 4.18[^1], glibc >= 2.28 | Tier 2       | e.g. RHEL 8                          |
 | GNU/Linux        | loong64          | kernel >= 5.19, glibc >= 2.36     | Experimental |                                      |
+| GNU/Linux        | riscv64          | kernel >= 5.19, glibc >= 2.36     | Experimental |                                      |
 | Windows          | x64              | >= Windows 10/Server 2016         | Tier 1       | [^2],[^3]                            |
 | Windows          | arm64            | >= Windows 10                     | Tier 2       |                                      |
 | macOS            | x64              | >= 13.5                           | Tier 1       | For notes about compilation see [^4] |
@@ -149,11 +152,11 @@ platforms. This is true regardless of entries in the table below.
 
 Depending on the host platform, the selection of toolchains may vary.
 
-| Operating System | Compiler Versions                                              |
-| ---------------- | -------------------------------------------------------------- |
-| Linux            | GCC >= 12.2                                                    |
-| Windows          | Visual Studio >= 2022 with the Windows 10 SDK on a 64-bit host |
-| macOS            | Xcode >= 16.1 (Apple LLVM >= 17)                               |
+| Operating System | Compiler Versions                                                         |
+| ---------------- | ------------------------------------------------------------------------- |
+| Linux            | GCC >= 12.2                                                               |
+| Windows          | Visual Studio 2022 or 2026 with the Windows 10 or 11 SDK on a 64-bit host |
+| macOS            | Xcode >= 16.1 (Apple LLVM >= 17)                                          |
 
 ### Official binary platforms and toolchains
 
@@ -309,11 +312,9 @@ If you are running tests before submitting a pull request, use:
 make -j4 test
 ```
 
-`make -j4 test` does a full check on the codebase, including running linters and
-documentation tests.
+`make -j4 test` does a full check on the codebase, including documentation tests.
 
-To run the linter without running tests, use
-`make lint`/`vcbuild lint`. It will lint JavaScript, C++, and Markdown files.
+To run the linter, use `make lint`/`vcbuild lint`. It will lint JavaScript, C++, and Markdown files.
 
 If you are updating tests and want to run tests in a single test file
 (e.g. `test/parallel/test-stream2-transform.js`):
@@ -616,14 +617,20 @@ Refs:
 
 * The current [version of Python][Python downloads] by following the instructions in
   [Using Python on Windows][].
-* The "Desktop development with C++" workload from
-  [Visual Studio 2022 (17.6 or newer)](https://visualstudio.microsoft.com/downloads/)
-  or the "C++ build tools" workload from the
-  [Build Tools](https://aka.ms/vs/17/release/vs_buildtools.exe),
-  with the default optional components. As of N|Solid 24.0.0, ClangCL is required to compile
-  on Windows. To enable it, two additional components are needed:
+* Select and download the Visual Studio Community Edition 2026 from
+  [Visual Studio Downloads](https://visualstudio.microsoft.com/downloads/) or alternatively download
+  [Build Tools for Visual Studio 2026](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2026),
+  and then install.
+  The Build Tools Edition has the lowest disk space requirements of all editions.
+  Professional or Enterprise Editions can also be alternatively selected.
+* During installation of Visual Studio, select the "Desktop development with C++" workload.
+  As of N|Solid 24.0.0, ClangCL is required to compile on Windows.
+  To install it, select the following two optional components:
   * C++ Clang Compiler for Windows (Microsoft.VisualStudio.Component.VC.Llvm.Clang)
-  * MSBuild support for LLVM toolset (Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset)
+  * MSBuild support for LLVM (clang-cl) toolset (Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset)
+* As an alternative to Visual Studio 2026, download Visual Studio 2022 Current channel Version 17.4 from the
+  [Evergreen bootstrappers](https://learn.microsoft.com/en-us/visualstudio/releases/2022/release-history#evergreen-bootstrappers)
+  table and install using the same workload and optional component selection as described above.
 * Basic Unix tools required for some tests,
   [Git for Windows](https://git-scm.com/download/win) includes Git Bash
   and tools which can be included in the global `PATH`.
@@ -632,23 +639,23 @@ Refs:
   to `PATH`. A build with the `openssl-no-asm` option does not need this, nor
   does a build targeting ARM64 Windows.
 
-Optional requirements to build the MSI installer package:
+After you have installed any Visual Studio Edition you can add optional components using the
+Modify / Individual Components tab of Visual Studio Installer.
 
-* The .NET SDK component from [Visual Studio 2019](https://visualstudio.microsoft.com/vs/older-downloads/#visual-studio-2019-and-other-products)
+Optional component required to build the MSI installer package:
 
-Optional requirements for compiling for Windows on ARM (ARM64):
+* The .NET SDK individual component (Microsoft.NetCore.Component.SDK)
 
-* Visual Studio 17.6.0 or newer
-  > **Note:** There is [a bug](https://github.com/nodejs/build/issues/3739) in `17.10.x`
-  > preventing N|Solid from compiling.
-* Visual Studio optional components
-  * Visual C++ compilers and libraries for ARM64
-  * Visual C++ ATL for ARM64
-* Windows 10 SDK 10.0.17763.0 or newer
+Optional components required to compile for Windows on ARM64:
 
-When building with ClangCL, if the output from `vcbuild.bat` shows that the components are not installed
+* MSVC Build Tools for ARM64/ARM64EC (Microsoft.VisualStudio.Component.VC.Tools.ARM64)
+* C++ ATL for ARM64 (Microsoft.VisualStudio.Component.VC.ATL.ARM64)
+
+NOTE: Currently we only support compiling with Clang that comes from Visual Studio.
+
+When building with ClangCL, if the output from `vcbuild.bat` shows that the components are not installed,
 even when the Visual Studio Installer shows that they are installed, try removing the components
-first and then reinstalling them again.
+first and then reinstalling them.
 
 ##### Option 2: Automated install with WinGet
 
@@ -659,9 +666,23 @@ easily. These files will install the following
 
 * Git for Windows with the `git` and Unix tools added to the `PATH`
 * `Python 3.14`
-* `Visual Studio 2022` (Community, Enterprise or Professional)
-* `Visual Studio 2022 Build Tools` with Visual C++ workload, Clang and ClangToolset
+* `Visual Studio 2022` (Build Tools, Community, Professional or Enterprise Edition) and
+  "Desktop development with C++" workload, Clang and ClangToolset optional components
 * `NetWide Assembler`
+
+The following Desired State Configuration (DSC) files are available:
+
+| Edition      | DSC Configuration                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| Build Tools  | [configuration.vsBuildTools.dsc.yaml](./.configurations/configuration.vsBuildTools.dsc.yaml)     |
+| Community    | [configuration.dsc.yaml](./.configurations/configuration.dsc.yaml)                               |
+| Professional | [configuration.vsProfessional.dsc.yaml](./.configurations/configuration.vsProfessional.dsc.yaml) |
+| Enterprise   | [configuration.vsEnterprise.dsc.yaml](./.configurations/configuration.vsEnterprise.dsc.yaml)     |
+
+Use one of the above DSC files with
+[winget configure](https://learn.microsoft.com/en-us/windows/package-manager/winget/configure#configure-subcommands)
+in a PowerShell Terminal to install Node.js prerequisites.
+For example, using the DSC file for Visual Studio Community Edition, execute the following command line:
 
 To install N|Solid prerequisites from PowerShell Terminal:
 

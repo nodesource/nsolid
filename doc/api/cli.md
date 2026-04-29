@@ -699,7 +699,7 @@ added:
 
 By default, Node.js enables trap-handler-based WebAssembly bound
 checks. As a result, V8 does not need to insert inline bound checks
-int the code compiled from WebAssembly which may speedup WebAssembly
+in the code compiled from WebAssembly which may speed up WebAssembly
 execution significantly, but this optimization requires allocating
 a big virtual memory cage (currently 10GB). If the Node.js process
 does not have access to a large enough virtual memory address space
@@ -943,6 +943,9 @@ changes:
 Evaluate the following argument as JavaScript. The modules which are
 predefined in the REPL can also be used in `script`.
 
+If `script` starts with `-`, pass it using `=` (for example,
+`node --print --eval=-42`) so it is parsed as the value of `--eval`.
+
 On Windows, using `cmd.exe` a single quote will not work correctly because it
 only recognizes double `"` for quoting. In Powershell or Git bash, both `'`
 and `"` are usable.
@@ -1136,27 +1139,6 @@ added:
 If the ES module being `require()`'d contains top-level `await`, this flag
 allows Node.js to evaluate the module, try to locate the
 top-level awaits, and print their location to help users find them.
-
-### `--experimental-require-module`
-
-<!-- YAML
-added:
-  - v22.0.0
-  - v20.17.0
-changes:
-  - version:
-    - v23.0.0
-    - v22.12.0
-    - v20.19.0
-    pr-url: https://github.com/nodejs/node/pull/55085
-    description: This is now true by default.
--->
-
-> Stability: 1.1 - Active Development
-
-Supports loading a synchronous ES module graph in `require()`.
-
-See [Loading ECMAScript modules using `require()`][].
 
 ### `--experimental-sea-config`
 
@@ -1846,6 +1828,11 @@ added:
   - v20.17.0
 changes:
   - version:
+    - v24.15.0
+    pr-url: https://github.com/nodejs/node/pull/60959
+    description: The flag was renamed from `--no-experimental-require-module` to
+                 `--no-require-module`, with the former marked as legacy.
+  - version:
     - v23.0.0
     - v22.12.0
     - v20.19.0
@@ -1853,11 +1840,9 @@ changes:
     description: This is now false by default.
 -->
 
-> Stability: 1.1 - Active Development
+> Stability: 3 - Legacy: Use [`--no-require-module`][] instead.
 
-Disable support for loading a synchronous ES module graph in `require()`.
-
-See [Loading ECMAScript modules using `require()`][].
+Legacy alias for [`--no-require-module`][].
 
 ### `--no-experimental-sqlite`
 
@@ -1921,6 +1906,36 @@ changes:
 
 Disables the family autoselection algorithm unless connection options explicitly
 enables it.
+
+<a id="--experimental-require-module"></a>
+
+### `--no-require-module`
+
+<!-- YAML
+added:
+  - v22.0.0
+  - v20.17.0
+changes:
+  - version:
+    - v24.15.0
+    pr-url: https://github.com/nodejs/node/pull/60959
+    description: This flag is no longer experimental.
+  - version:
+    - v24.15.0
+    pr-url: https://github.com/nodejs/node/pull/60959
+    description: This flag was renamed from `--no-experimental-require-module`
+                 to `--no-require-module`.
+  - version:
+    - v23.0.0
+    - v22.12.0
+    - v20.19.0
+    pr-url: https://github.com/nodejs/node/pull/55085
+    description: This is now false by default.
+-->
+
+Disable support for loading a synchronous ES module graph in `require()`.
+
+See [Loading ECMAScript modules using `require()`][].
 
 ### `--no-strip-types`
 
@@ -3315,9 +3330,11 @@ Any other value will result in colorized output being disabled.
 
 <!-- YAML
 added: v22.1.0
+changes:
+  - version: v24.15.0
+    pr-url: https://github.com/nodejs/node/pull/60971
+    description: This feature is no longer experimental.
 -->
-
-> Stability: 1.1 - Active Development
 
 Enable the [module compile cache][] for the Node.js instance. See the documentation of
 [module compile cache][] for details.
@@ -3537,6 +3554,7 @@ one is included in the list below.
 * `--report-on-signal`
 * `--report-signal`
 * `--report-uncaught-exception`
+* `--require-module`
 * `--require`, `-r`
 * `--secure-heap-min`
 * `--secure-heap`
@@ -3605,6 +3623,7 @@ V8 options that are allowed are:
 * `--expose-gc`
 * `--interpreted-frames-native-stack`
 * `--jitless`
+* `--max-heap-size`
 * `--max-old-space-size`
 * `--max-semi-space-size`
 * `--perf-basic-prof-only-functions`
@@ -3961,6 +3980,12 @@ documented here:
 
 ### `--jitless`
 
+### `--max-heap-size`
+
+Specifies the maximum heap size (in megabytes) for the process.
+
+This option is typically used to limit the amount of memory the process can use for its JavaScript heap.
+
 <!-- Anchor to make sure old links find a target -->
 
 <a id="--max-old-space-sizesize-in-megabytes"></a>
@@ -4073,6 +4098,7 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`--experimental-webstorage`]: #--experimental-webstorage
 [`--heap-prof-dir`]: #--heap-prof-dir
 [`--import`]: #--importmodule
+[`--no-require-module`]: #--no-require-module
 [`--no-strip-types`]: #--no-strip-types
 [`--openssl-config`]: #--openssl-configfile
 [`--preserve-symlinks`]: #--preserve-symlinks

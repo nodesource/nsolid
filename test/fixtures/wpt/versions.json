@@ -4,7 +4,7 @@
     "path": "common"
   },
   "compression": {
-    "commit": "67880a4eb83ca9aa732eec4b35a1971ff5bf37ff",
+    "commit": "ae05f5cb53d3e290b91ae1e92069baa188292880",
     "path": "compression"
   },
   "console": {
@@ -28,7 +28,7 @@
     "path": "fetch/data-urls/resources"
   },
   "FileAPI": {
-    "commit": "cceaf3628da950621004d9b5d8c1d1f367073347",
+    "commit": "7f5130188818b6c12c636491186b459ec2bf131f",
     "path": "FileAPI"
   },
   "hr-time": {
@@ -72,7 +72,7 @@
     "path": "streams"
   },
   "url": {
-    "commit": "e3c46fdf5587369127de2863a7e38295f4e07f16",
+    "commit": "fc3e651593fab938433613eb5ad0b4dbd5a4e167",
     "path": "url"
   },
   "urlpattern": {
@@ -96,7 +96,7 @@
     "path": "web-locks"
   },
   "WebCryptoAPI": {
-    "commit": "1e4933113d2028e092d07a9e865db8f606b21026",
+    "commit": "2cb332d71030ba0200610d72b94bb1badf447418",
     "path": "WebCryptoAPI"
   },
   "webidl/ecmascript-binding/es-exceptions": {

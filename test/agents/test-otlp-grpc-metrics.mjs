@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustCallAtLeast, mustSucceed } from '../common/index.mjs';
+import { mustCall, mustCallAtLeast, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'url';
@@ -38,10 +38,10 @@ if (process.argv[2] === 'child') {
       appName: nsolid.appName,
       metrics: nsolid.metrics(),
     });
-    process.on('message', (message) => {
+    process.on('message', mustCall((message) => {
       assert.strictEqual(message, 'exit');
       process.exit(0);
-    });
+    }));
   } else {
     nsolid.setThreadName('worker-thread');
   }
@@ -458,10 +458,10 @@ if (process.argv[2] === 'child') {
 
     assert.strictEqual(resource.attributes.length, Object.keys(expectedAttributes).length);
 
-    resource.attributes.forEach((attribute) => {
+    resource.attributes.forEach(mustCall((attribute) => {
       assert.strictEqual(attribute.value.stringValue, expectedAttributes[attribute.key]);
       delete expectedAttributes[attribute.key];
-    });
+    }, resource.attributes.length));
 
     assert.strictEqual(Object.keys(expectedAttributes).length, 0);
   }

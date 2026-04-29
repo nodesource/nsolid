@@ -486,17 +486,23 @@ EnvironmentOptionsParser::EnvironmentOptionsParser() {
             kAllowedInEnvvar,
             true);
   AddOption("--experimental-print-required-tla",
-            "Print pending top-level await. If --experimental-require-module "
+            "Print pending top-level await. If --require-module "
             "is true, evaluate asynchronous graphs loaded by `require()` but "
             "do not run the microtasks, in order to to find and print "
             "top-level await in the graph",
             &EnvironmentOptions::print_required_tla,
             kAllowedInEnvvar);
-  AddOption("--experimental-require-module",
+  AddOption("--require-module",
             "Allow loading synchronous ES Modules in require().",
             &EnvironmentOptions::require_module,
             kAllowedInEnvvar,
             true);
+  AddOption("--experimental-require-module",
+            "Legacy alias for --require-module",
+            &EnvironmentOptions::require_module,
+            kAllowedInEnvvar,
+            true);
+  Implies("--experimental-require-module", "--require-module");
   AddOption("--diagnostic-dir",
             "set dir for all output files"
             " (default: current working directory)",
@@ -1151,6 +1157,7 @@ PerIsolateOptionsParser::PerIsolateOptionsParser(
             "help system profilers to translate JavaScript interpreted frames",
             V8Option{},
             kAllowedInEnvvar);
+  AddOption("--max-heap-size", "", V8Option{}, kAllowedInEnvvar);
   AddOption("--max-old-space-size", "", V8Option{}, kAllowedInEnvvar);
   AddOption("--max-old-space-size-percentage",
             "set V8's max old space size as a percentage of available memory "

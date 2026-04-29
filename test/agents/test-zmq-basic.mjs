@@ -9,85 +9,93 @@ const SIGTERM = 15;
 
 const tests = [];
 
+function testKilledWithSignal(playground) {
+  let state = 0;
+  return new Promise((resolve) => {
+    playground.bootstrap(mustSucceed(async (agentId) => {
+      const exit = await playground.client.kill();
+      assert.ok(exit);
+      assert.strictEqual(exit.code, null);
+      assert.strictEqual(exit.signal, 'SIGTERM');
+      if (++state === 2) {
+        resolve();
+      }
+    }), mustCall((eventType, agentId, data) => {
+      assert.strictEqual(eventType, 'agent-exit');
+      checkExitData(data, { exit_code: SIGTERM, error: null });
+      if (++state === 2) {
+        resolve();
+      }
+    }));
+  });
+}
+
+function testGracefulExitNoError(playground) {
+  return new Promise((resolve) => {
+    playground.bootstrap(mustSucceed(async (agentId) => {
+      const exit = await playground.client.shutdown(0);
+      assert.ok(exit);
+      assert.strictEqual(exit.code, 0);
+      assert.strictEqual(exit.signal, null);
+      resolve();
+    }), mustCall((eventType, agentId, data) => {
+      assert.strictEqual(eventType, 'agent-exit');
+      checkExitData(data, { exit_code: 0, error: null });
+    }));
+  });
+}
+
+function testGracefulExitWithError(playground) {
+  return new Promise((resolve) => {
+    playground.bootstrap(mustSucceed(async (agentId) => {
+      const exit = await playground.client.shutdown(1);
+      assert.ok(exit);
+      assert.strictEqual(exit.code, 1);
+      assert.strictEqual(exit.signal, null);
+      resolve();
+    }), mustCall((eventType, agentId, data) => {
+      assert.strictEqual(eventType, 'agent-exit');
+      checkExitData(data, { exit_code: 1, error: null });
+    }));
+  });
+}
+
+function testExitWithException(playground) {
+  return new Promise((resolve) => {
+    playground.bootstrap(mustSucceed(async (agentId) => {
+      const exit = await playground.client.exception('msg');
+      assert.ok(exit);
+      assert.strictEqual(exit.code, 1);
+      assert.strictEqual(exit.signal, null);
+      resolve();
+    }), mustCall((eventType, agentId, data) => {
+      assert.strictEqual(eventType, 'agent-exit');
+      assert.strictEqual(data.exit_code, 1);
+      assert.strictEqual(data.error.code, 500);
+      assert.strictEqual(data.error.message, 'Uncaught Error: error');
+      assert.ok(data.error.stack);
+    }));
+  });
+}
+
 tests.push({
   name: 'should work if agent is killed with signal',
-  test: async (playground) => {
-    let state = 0;
-    return new Promise((resolve) => {
-      playground.bootstrap(mustSucceed(async (agentId) => {
-        const exit = await playground.client.kill();
-        assert.ok(exit);
-        assert.strictEqual(exit.code, null);
-        assert.strictEqual(exit.signal, 'SIGTERM');
-        if (++state === 2) {
-          resolve();
-        }
-      }), mustCall((eventType, agentId, data) => {
-        assert.strictEqual(eventType, 'agent-exit');
-        checkExitData(data, { exit_code: SIGTERM, error: null });
-        if (++state === 2) {
-          resolve();
-        }
-      }));
-    });
-  },
+  test: testKilledWithSignal,
 });
 
 tests.push({
   name: 'should work if agent exits gracefully without error',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      playground.bootstrap(mustSucceed(async (agentId) => {
-        const exit = await playground.client.shutdown(0);
-        assert.ok(exit);
-        assert.strictEqual(exit.code, 0);
-        assert.strictEqual(exit.signal, null);
-        resolve();
-      }), mustCall((eventType, agentId, data) => {
-        assert.strictEqual(eventType, 'agent-exit');
-        checkExitData(data, { exit_code: 0, error: null });
-      }));
-    });
-  },
+  test: testGracefulExitNoError,
 });
 
 tests.push({
   name: 'should work if agent exits gracefully with error code',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      playground.bootstrap(mustSucceed(async (agentId) => {
-        const exit = await playground.client.shutdown(1);
-        assert.ok(exit);
-        assert.strictEqual(exit.code, 1);
-        assert.strictEqual(exit.signal, null);
-        resolve();
-      }), mustCall((eventType, agentId, data) => {
-        assert.strictEqual(eventType, 'agent-exit');
-        checkExitData(data, { exit_code: 1, error: null });
-      }));
-    });
-  },
+  test: testGracefulExitWithError,
 });
 
 tests.push({
   name: 'should work if agent exits with exception',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      playground.bootstrap(mustSucceed(async (agentId) => {
-        const exit = await playground.client.exception('msg');
-        assert.ok(exit);
-        assert.strictEqual(exit.code, 1);
-        assert.strictEqual(exit.signal, null);
-        resolve();
-      }), mustCall((eventType, agentId, data) => {
-        assert.strictEqual(eventType, 'agent-exit');
-        assert.strictEqual(data.exit_code, 1);
-        assert.strictEqual(data.error.code, 500);
-        assert.strictEqual(data.error.message, 'Uncaught Error: error');
-        assert.ok(data.error.stack);
-      }));
-    });
-  },
+  test: testExitWithException,
 });
 
 const config = {

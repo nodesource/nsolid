@@ -376,7 +376,7 @@ std::string EnvInst::GetOnBlockedBody() {
       if (script_name_v.IsEmpty()) {
         frame += "null";
       } else {
-        String::Utf8Value s(isolate_, script_name_v);
+        node::Utf8Value s(isolate_, script_name_v);
         nlohmann::json script_n(*s);
         frame += script_n.dump();
       }
@@ -387,7 +387,7 @@ std::string EnvInst::GetOnBlockedBody() {
     Local<String> fn_name_s = stack_frame->GetFunctionName();
     frame += ",\"function_name\":";
     if (!fn_name_s.IsEmpty() && fn_name_s->Length() >= 0) {
-      String::Utf8Value f(isolate_, fn_name_s);
+      node::Utf8Value f(isolate_, fn_name_s);
       nlohmann::json function_n(*f);
       frame += function_n.dump();
     } else {
@@ -1279,7 +1279,7 @@ void EnvList::DoSetExitError(v8::Isolate* isolate,
     auto stack_mv = error.As<Object>()->Get(env->context(),
                                             env->stack_string());
     if (!stack_mv.IsEmpty()) {
-      String::Utf8Value stack_val(isolate, stack_mv.ToLocalChecked());
+      node::Utf8Value stack_val(isolate, stack_mv.ToLocalChecked());
       *stack = *stack_val;
     }
   }
@@ -1296,7 +1296,7 @@ void EnvList::DoSetExitError(v8::Isolate* isolate,
   }
 
   if (!message_v.IsEmpty() && !message_v->IsUndefined()) {
-    String::Utf8Value message_val(isolate, message_v);
+    node::Utf8Value message_val(isolate, message_v);
     *msg = *message_val;
   }
 }
@@ -2251,7 +2251,7 @@ static void AgentId(const FunctionCallbackInfo<Value>& args) {
 static void WriteLog(const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsString());
   DCHECK(args[1]->IsUint32());
-  String::Utf8Value s(args.GetIsolate(), args[0]);
+  node::Utf8Value s(args.GetIsolate(), args[0]);
   std::string ss = *s;
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
@@ -2411,7 +2411,7 @@ void BindingData::SlowPushSpanDataString(
   uint32_t type = args[1].As<Uint32>()->Value();
   Local<String> value_s = args[2].As<String>();
   BindingData* data = FromJSObject<BindingData>(args.This());
-  const std::string val = *String::Utf8Value(isolate, value_s);
+  const std::string val = *node::Utf8Value(isolate, value_s);
   PushSpanDataStringImpl(data, trace_id, type, val);
 }
 
@@ -2454,9 +2454,9 @@ void BindingData::SlowPushSpanDataString3(
   Local<String> value_s2 = args[3].As<String>();
   Local<String> value_s3 = args[4].As<String>();
   BindingData* data = FromJSObject<BindingData>(args.This());
-  const std::string val1 = *String::Utf8Value(isolate, value_s1);
-  const std::string val2 = *String::Utf8Value(isolate, value_s2);
-  const std::string val3 = *String::Utf8Value(isolate, value_s3);
+  const std::string val1 = *node::Utf8Value(isolate, value_s1);
+  const std::string val2 = *node::Utf8Value(isolate, value_s2);
+  const std::string val3 = *node::Utf8Value(isolate, value_s3);
   PushSpanDataStringImpl3(data, trace_id, type, val1, val2, val3);
 }
 
@@ -2629,7 +2629,7 @@ static void StoreProcessInfo(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsString());
   Isolate* isolate = args.GetIsolate();
   Local<String> info_s = args[0].As<String>();
-  String::Utf8Value info(isolate, info_s);
+  node::Utf8Value info(isolate, info_s);
   EnvList::Inst()->StoreInfo(std::string(*info));
 }
 
@@ -2641,7 +2641,7 @@ static void UpdateConfig(const FunctionCallbackInfo<Value>& args) {
   DCHECK(Environment::GetCurrent(isolate)->is_main_thread());
 
   Local<String> config_s = args[0].As<String>();
-  String::Utf8Value config(isolate, config_s);
+  node::Utf8Value config(isolate, config_s);
   EnvList::Inst()->UpdateConfig(std::string(*config));
 }
 
@@ -2674,7 +2674,7 @@ static void RecordStartupTime(const FunctionCallbackInfo<Value>& args) {
   // is incorrect. So instead just return early.
   if (!args[0]->IsString())
     return args.GetReturnValue().Set(-1);
-  String::Utf8Value name(args.GetIsolate(), args[0].As<String>());
+  node::Utf8Value name(args.GetIsolate(), args[0].As<String>());
   EnvInst* envinst = EnvInst::GetEnvLocalInst(args.GetIsolate());
   CHECK_NE(envinst, nullptr);
   envinst->SetStartupTime(*name);
@@ -2713,8 +2713,8 @@ static void StoreModuleInfo(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   Local<String> path_s = args[0].As<String>();
   Local<String> module_s = args[1].As<String>();
-  String::Utf8Value path(isolate, path_s);
-  String::Utf8Value module(isolate, module_s);
+  node::Utf8Value path(isolate, path_s);
+  node::Utf8Value module(isolate, module_s);
   EnvInst* envinst = EnvInst::GetEnvLocalInst(isolate);
   CHECK_NE(envinst, nullptr);
   envinst->SetModuleInfo(*path, *module);
@@ -2890,7 +2890,7 @@ static void setThreadName(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsString());
   Isolate* isolate = args.GetIsolate();
   Local<String> name_s = args[0].As<String>();
-  String::Utf8Value name(args.GetIsolate(), name_s);
+  node::Utf8Value name(args.GetIsolate(), name_s);
   EnvInst::GetEnvLocalInst(isolate)->SetThreadName(*name);
 }
 
@@ -3068,9 +3068,9 @@ static void CustomCommandResponse(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
   EnvInst* envinst = EnvInst::GetEnvLocalInst(isolate);
   Local<String> req_id_s = args[0].As<String>();
-  String::Utf8Value req_id(isolate, req_id_s);
+  node::Utf8Value req_id(isolate, req_id_s);
   Local<String> value_s = args[1].As<String>();
-  String::Utf8Value value(isolate, value_s);
+  node::Utf8Value value(isolate, value_s);
   args.GetReturnValue().Set(
       envinst->CustomCommandResponse(*req_id, *value, args[2]->IsTrue()));
 }
@@ -3082,7 +3082,7 @@ static void AttachRequestToCustomCommand(
   CHECK(args[1]->IsString());
   Isolate* isolate = args.GetIsolate();
   Local<String> req_id_s = args[1].As<String>();
-  String::Utf8Value req_id(isolate, req_id_s);
+  node::Utf8Value req_id(isolate, req_id_s);
   auto* req = new (std::nothrow) EnvInst::CustomCommandGlobalReq({
     *req_id,
     { isolate, args[0].As<Object>() }

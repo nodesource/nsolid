@@ -77,7 +77,7 @@ function runHeapProfileStreamAssetsToggleTests() {
     assetsEnabled: false,
   });
 
-  setImmediate(() => {
+  setImmediate(common.mustCall(() => {
     assert.throws(
       () => {
         nsolid.heapProfileStream(0, 1000, true);
@@ -89,7 +89,7 @@ function runHeapProfileStreamAssetsToggleTests() {
 
     // Re-enable through helper and confirm stream succeeds again
     nsolid.enableAssets();
-    setImmediate(() => {
+    setImmediate(common.mustCall(() => {
       let profile = '';
       const enabledStream = nsolid.heapProfileStream(0, 1200, true);
       enabledStream.on('data', (chunk) => {
@@ -100,7 +100,7 @@ function runHeapProfileStreamAssetsToggleTests() {
 
         // Disable assets via helper and ensure stream creation fails again
         nsolid.disableAssets();
-        setImmediate(() => {
+        setImmediate(common.mustCall(() => {
           assert.throws(
             () => {
               nsolid.heapProfileStream(0, 1000, true);
@@ -112,13 +112,13 @@ function runHeapProfileStreamAssetsToggleTests() {
 
           // Final re-enable to restore functionality
           nsolid.enableAssets();
-          setImmediate(() => {
+          setImmediate(common.mustCall(() => {
             const finalStream = nsolid.heapProfileStream(0, 1200, true);
             finalStream.resume();
             finalStream.on('end', common.mustCall());
-          });
-        });
+          }));
+        }));
       }));
-    });
-  });
+    }));
+  }));
 }

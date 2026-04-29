@@ -15,8 +15,7 @@
 // NOLINTNEXTLINE(build/c++11)
 #include <thread>
 
-// NOLINTNEXTLINE(build/namespaces)
-using namespace std::chrono_literals;
+using std::chrono_literals::operator""ms;
 
 using node::nsolid::AsyncTSQueue;
 using node::nsolid::TSQueue;

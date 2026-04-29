@@ -118,7 +118,7 @@ nsolid.start({
   grpc: 1
 });
 
-setTimeout(() => {
+setTimeout(common.mustCall(() => {
   // profile() should return an error if ongoing profile
   assert.strictEqual(nsolid.heapSampling(), undefined);
   assert.throws(
@@ -136,7 +136,7 @@ setTimeout(() => {
   }));
   assert.strictEqual(nsolid.heapSamplingEnd(), undefined);
 
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     // profileEnd() should return an error if no ongoing profile
     assert.throws(
       () => {
@@ -152,7 +152,7 @@ setTimeout(() => {
       assert.strictEqual(err.message, 'Heap sampling could not be stopped');
       // The same with callback versions
       // profile() should return an error if ongoing profile
-      setTimeout(() => {
+      setTimeout(common.mustCall(() => {
         nsolid.heapSampling(common.mustSucceed(() => {
           nsolid.heapSampling(common.mustCall((err) => {
             assert.notStrictEqual(err.code, 0);
@@ -167,7 +167,7 @@ setTimeout(() => {
             }));
           }));
         }));
-      }, 100);
+      }), 100);
     }));
-  }, 500);
-}, 100);
+  }), 500);
+}), 100);

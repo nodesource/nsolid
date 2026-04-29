@@ -2,6 +2,20 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-04-28, Version 24.15.0-nsolid-v6.2.3 'Krypton'
+
+### Commits
+
+* \[[`4d2ac8ff2d`](https://github.com/nodesource/nsolid/commit/4d2ac8ff2d)] - **deps**: upgrade npm to 11.13.0 (npm team) [#456](https://github.com/nodesource/nsolid/pull/456)
+* \[[`8b6183edd4`](https://github.com/nodesource/nsolid/commit/8b6183edd4)] - **deps**: upgrade npm to 11.12.1 (npm team) [#456](https://github.com/nodesource/nsolid/pull/456)
+* \[[`7d058566cd`](https://github.com/nodesource/nsolid/commit/7d058566cd)] - **deps**: upgrade npm to 11.11.1 (npm team) [#456](https://github.com/nodesource/nsolid/pull/456)
+* \[[`2c871f6549`](https://github.com/nodesource/nsolid/commit/2c871f6549)] - **deps**: bump ncm-ng to 2.9.8 (JungMinu) [#455](https://github.com/nodesource/nsolid/pull/455)
+* \[[`f49f8f9fc4`](https://github.com/nodesource/nsolid/commit/f49f8f9fc4)] - **lib,src,test**: fix race during tracing toggles (Santiago Gimeno) [#441](https://github.com/nodesource/nsolid/pull/441)
+* \[[`2366f19e39`](https://github.com/nodesource/nsolid/commit/2366f19e39)] - **lib,test**: fix JS linting errors (Santiago Gimeno) [#451](https://github.com/nodesource/nsolid/pull/451)
+* \[[`1ff40d7a9f`](https://github.com/nodesource/nsolid/commit/1ff40d7a9f)] - **src**: fix C++ linting issues (Santiago Gimeno) [#451](https://github.com/nodesource/nsolid/pull/451)
+* \[[`20e6cad7e1`](https://github.com/nodesource/nsolid/commit/20e6cad7e1)] - **src**: replace duplicate loop hook regs (Santiago Gimeno) [#444](https://github.com/nodesource/nsolid/pull/444)
+* \[[`1fec452cc9`](https://github.com/nodesource/nsolid/commit/1fec452cc9)] - **test**: fix linting in test-nsolid-file-handle-count (Santiago Gimeno) [#441](https://github.com/nodesource/nsolid/pull/441)
+
 ## 2026-03-25, Version 24.14.1-nsolid-v6.2.2 'Krypton'
 
 ### Commits

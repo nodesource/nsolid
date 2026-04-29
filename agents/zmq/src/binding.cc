@@ -29,7 +29,7 @@ void Config(const FunctionCallbackInfo<Value>& args) {
   Local<Context> context = isolate->GetCurrentContext();
   Local<Object> obj = args[0].As<Object>();
   Local<String> stringify = JSON::Stringify(context, obj).ToLocalChecked();
-  String::Utf8Value cfg(isolate, stringify);
+  node::Utf8Value cfg(isolate, stringify);
   ZmqAgent::config_agent_cb(*cfg, ZmqAgent::Inst());
 }
 

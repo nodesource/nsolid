@@ -39,7 +39,7 @@ nsolid.start({
   disableSnapshots: true
 });
 
-setImmediate(() => {
+setImmediate(common.mustCall(() => {
   // Snapshot should return an error if snapshots disabled
   assert.throws(
     () => {
@@ -55,7 +55,7 @@ setImmediate(() => {
     assert.strictEqual(err.message, 'Heap snapshot could not be generated');
     runSnapshotAssetsToggleTests();
   }));
-});
+}));
 
 function runSnapshotAssetsToggleTests() {
   nsolid.start({
@@ -65,7 +65,7 @@ function runSnapshotAssetsToggleTests() {
     disableSnapshots: false,
   });
 
-  setImmediate(() => {
+  setImmediate(common.mustCall(() => {
     assert.throws(
       () => {
         nsolid.snapshot();
@@ -81,12 +81,12 @@ function runSnapshotAssetsToggleTests() {
 
       // Only enable assets after the error callback completes
       nsolid.enableAssets();
-      setImmediate(() => {
+      setImmediate(common.mustCall(() => {
         // Wait for snapshot to complete before disabling assets
         nsolid.snapshot(common.mustSucceed(() => {
           // Only disable assets after snapshot completes
           nsolid.disableAssets();
-          setImmediate(() => {
+          setImmediate(common.mustCall(() => {
             assert.throws(
               () => {
                 nsolid.snapshot();
@@ -98,13 +98,13 @@ function runSnapshotAssetsToggleTests() {
 
             // Only enable assets after error is confirmed
             nsolid.enableAssets();
-            setImmediate(() => {
+            setImmediate(common.mustCall(() => {
               // Wait for final snapshot to complete
               nsolid.snapshot(common.mustSucceed());
-            });
-          });
+            }));
+          }));
         }));
-      });
+      }));
     }));
-  });
+  }));
 }

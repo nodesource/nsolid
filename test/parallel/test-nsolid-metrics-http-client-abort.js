@@ -14,16 +14,20 @@ const server = http.createServer(function(req, res) {
   res.destroy();
 });
 
-server.listen(0, options.host, function() {
+function onRequestError() {
+  const metrics = require('nsolid').metrics();
+  assert.strictEqual(metrics.httpClientCount, 0);
+  assert.strictEqual(metrics.httpClientAbortCount, 1);
+  assert.strictEqual(metrics.httpServerCount, 0);
+  assert.strictEqual(metrics.httpServerAbortCount, 1);
+  server.close();
+}
+
+function onListen() {
   options.port = this.address().port;
   const req = http.request(options, common.mustNotCall());
   req.end();
-  req.once('error', () => {
-    const metrics = require('nsolid').metrics();
-    assert.strictEqual(metrics.httpClientCount, 0);
-    assert.strictEqual(metrics.httpClientAbortCount, 1);
-    assert.strictEqual(metrics.httpServerCount, 0);
-    assert.strictEqual(metrics.httpServerAbortCount, 1);
-    server.close();
-  });
-});
+  req.once('error', common.mustCall(onRequestError));
+}
+
+server.listen(0, options.host, common.mustCall(onListen));

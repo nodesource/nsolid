@@ -125,34 +125,6 @@ Any subtests that are still outstanding when their parent finishes
 are cancelled and treated as failures. Any subtest failures cause the parent
 test to fail.
 
-## Skipping tests
-
-Individual tests can be skipped by passing the `skip` option to the test, or by
-calling the test context's `skip()` method as shown in the
-following example.
-
-```js
-// The skip option is used, but no message is provided.
-test('skip option', { skip: true }, (t) => {
-  // This code is never executed.
-});
-
-// The skip option is used, and a message is provided.
-test('skip option with message', { skip: 'this is skipped' }, (t) => {
-  // This code is never executed.
-});
-
-test('skip() method', (t) => {
-  // Make sure to return here as well if the test contains additional logic.
-  t.skip();
-});
-
-test('skip() method with message', (t) => {
-  // Make sure to return here as well if the test contains additional logic.
-  t.skip('this is skipped');
-});
-```
-
 ## Rerunning failed tests
 
 The test runner supports persisting the state of the run to a file, allowing
@@ -193,6 +165,68 @@ When the `--test-rerun-failures` option is used, the test runner will only run t
 node --test-rerun-failures /path/to/state/file
 ```
 
+## `describe()` and `it()` aliases
+
+Suites and tests can also be written using the `describe()` and `it()`
+functions. [`describe()`][] is an alias for [`suite()`][], and [`it()`][] is an
+alias for [`test()`][].
+
+```js
+describe('A thing', () => {
+  it('should work', () => {
+    assert.strictEqual(1, 1);
+  });
+
+  it('should be ok', () => {
+    assert.strictEqual(2, 2);
+  });
+
+  describe('a nested thing', () => {
+    it('should work', () => {
+      assert.strictEqual(3, 3);
+    });
+  });
+});
+```
+
+`describe()` and `it()` are imported from the `node:test` module.
+
+```mjs
+import { describe, it } from 'node:test';
+```
+
+```cjs
+const { describe, it } = require('node:test');
+```
+
+## Skipping tests
+
+Individual tests can be skipped by passing the `skip` option to the test, or by
+calling the test context's `skip()` method as shown in the
+following example.
+
+```js
+// The skip option is used, but no message is provided.
+test('skip option', { skip: true }, (t) => {
+  // This code is never executed.
+});
+
+// The skip option is used, and a message is provided.
+test('skip option with message', { skip: 'this is skipped' }, (t) => {
+  // This code is never executed.
+});
+
+test('skip() method', (t) => {
+  // Make sure to return here as well if the test contains additional logic.
+  t.skip();
+});
+
+test('skip() method with message', (t) => {
+  // Make sure to return here as well if the test contains additional logic.
+  t.skip('this is skipped');
+});
+```
+
 ## TODO tests
 
 Individual tests can be marked as flaky or incomplete by passing the `todo`
@@ -231,11 +265,12 @@ added:
  - v24.14.0
 -->
 
-This flips the pass/fail reporting for a specific test or suite: A flagged test/test-case must throw
-in order to "pass"; a test/test-case that does not throw, fails.
+This flips the pass/fail reporting for a specific test or suite: a flagged test
+case must throw in order to pass, and a flagged test case that does not throw
+fails.
 
-In the following, `doTheThing()` returns _currently_ `false` (`false` does not equal `true`, causing
-`strictEqual` to throw, so the test-case passes).
+In each of the following, `doTheThing()` fails to return `true`, but since the
+tests are flagged `expectFailure`, they pass.
 
 ```js
 it.expectFailure('should do the thing', () => {
@@ -243,6 +278,46 @@ it.expectFailure('should do the thing', () => {
 });
 
 it('should do the thing', { expectFailure: true }, () => {
+  assert.strictEqual(doTheThing(), true);
+});
+
+it('should do the thing', { expectFailure: 'feature not implemented' }, () => {
+  assert.strictEqual(doTheThing(), true);
+});
+```
+
+If the value of `expectFailure` is a {RegExp|Function|Object|Error}
+the tests will pass only if they throw a matching value.
+See [`assert.throws`][] for how each value type is handled.
+
+Each of the following tests fails _despite_ being flagged `expectFailure`
+because the failure does not match the specific **expected** failure.
+
+```js
+it('fails because regex does not match', {
+  expectFailure: /expected message/,
+}, () => {
+  throw new Error('different message');
+});
+
+it('fails because object matcher does not match', {
+  expectFailure: { code: 'ERR_EXPECTED' },
+}, () => {
+  const err = new Error('boom');
+  err.code = 'ERR_ACTUAL';
+  throw err;
+});
+```
+
+To supply both a reason and specific error for `expectFailure`, use `{ label, match }`.
+
+```js
+it('should fail with specific error and reason', {
+  expectFailure: {
+    label: 'reason for failure',
+    match: /error message/,
+  },
+}, () => {
   assert.strictEqual(doTheThing(), true);
 });
 ```
@@ -273,40 +348,6 @@ it.expectFailure('should do the thing', { todo: true }, () => {
 it.todo('should do the thing', { expectFailure: true }, () => {
   assert.strictEqual(doTheThing(), true);
 });
-```
-
-## `describe()` and `it()` aliases
-
-Suites and tests can also be written using the `describe()` and `it()`
-functions. [`describe()`][] is an alias for [`suite()`][], and [`it()`][] is an
-alias for [`test()`][].
-
-```js
-describe('A thing', () => {
-  it('should work', () => {
-    assert.strictEqual(1, 1);
-  });
-
-  it('should be ok', () => {
-    assert.strictEqual(2, 2);
-  });
-
-  describe('a nested thing', () => {
-    it('should work', () => {
-      assert.strictEqual(3, 3);
-    });
-  });
-});
-```
-
-`describe()` and `it()` are imported from the `node:test` module.
-
-```mjs
-import { describe, it } from 'node:test';
-```
-
-```cjs
-const { describe, it } = require('node:test');
 ```
 
 ## `only` tests
@@ -1684,6 +1725,14 @@ changes:
     thread. If `false`, only one test runs at a time.
     If unspecified, subtests inherit this value from their parent.
     **Default:** `false`.
+  * `expectFailure` {boolean|string|RegExp|Function|Object|Error} If truthy, the
+    test is expected to fail. If a non-empty string is provided, that string is displayed
+    in the test results as the reason why the test is expected to fail. If a {RegExp|Function|Object|Error}
+    is provided directly (without wrapping in `{ match: … }`), the test passes
+    only if the thrown error matches, following the behavior of
+    [`assert.throws`][]. To provide both a reason and validation, pass an object
+    with `label` (string) and `match` (RegExp, Function, Object, or Error).
+    **Default:** `false`.
   * `only` {boolean} If truthy, and the test context is configured to run
     `only` tests, then this test will be run. Otherwise, the test is skipped.
     **Default:** `false`.
@@ -2428,16 +2477,32 @@ changes:
     generates a new mock module. If `true`, subsequent calls will return the same
     module mock, and the mock module is inserted into the CommonJS cache.
     **Default:** false.
+  * `exports` {Object} Optional mocked exports. The `default` property, if
+    provided, is used as the mocked module's default export. All other own
+    enumerable properties are used as named exports.
+    **This option cannot be used with `defaultExport` or `namedExports`.**
+    * If the mock is a CommonJS or builtin module, `exports.default` is used as
+      the value of `module.exports`.
+    * If `exports.default` is not provided for a CommonJS or builtin mock,
+      `module.exports` defaults to an empty object.
+    * If named exports are provided with a non-object default export, the mock
+      throws an exception when used as a CommonJS or builtin module.
   * `defaultExport` {any} An optional value used as the mocked module's default
     export. If this value is not provided, ESM mocks do not include a default
     export. If the mock is a CommonJS or builtin module, this setting is used as
     the value of `module.exports`. If this value is not provided, CJS and builtin
     mocks use an empty object as the value of `module.exports`.
+    **This option cannot be used with `options.exports`.**
+    This option is deprecated and will be removed in a later version.
+    Prefer `options.exports.default`.
   * `namedExports` {Object} An optional object whose keys and values are used to
     create the named exports of the mock module. If the mock is a CommonJS or
     builtin module, these values are copied onto `module.exports`. Therefore, if a
     mock is created with both named exports and a non-object default export, the
     mock will throw an exception when used as a CJS or builtin module.
+    **This option cannot be used with `options.exports`.**
+    This option is deprecated and will be removed in a later version.
+    Prefer `options.exports`.
 * Returns: {MockModuleContext} An object that can be used to manipulate the mock.
 
 This function is used to mock the exports of ECMAScript modules, CommonJS modules, JSON modules, and
@@ -2445,14 +2510,19 @@ Node.js builtin modules. Any references to the original module prior to mocking 
 order to enable module mocking, Node.js must be started with the
 [`--experimental-test-module-mocks`][] command-line flag.
 
+**Note**: [module customization hooks][] registered via the **synchronous** API effect resolution of
+the `specifier` provided to `mock.module`. Customization hooks registered via the **asynchronous**
+API are currently ignored (because the test runner's loader is synchronous, and node does not
+support multi-chain / cross-chain loading).
+
 The following example demonstrates how a mock is created for a module.
 
 ```js
 test('mocks a builtin module in both module systems', async (t) => {
-  // Create a mock of 'node:readline' with a named export named 'fn', which
+  // Create a mock of 'node:readline' with a named export named 'foo', which
   // does not exist in the original 'node:readline' module.
   const mock = t.mock.module('node:readline', {
-    namedExports: { fn() { return 42; } },
+    exports: { foo: () => 42 },
   });
 
   let esmImpl = await import('node:readline');
@@ -3343,6 +3413,32 @@ This event is guaranteed to be emitted in the same order as the tests are
 defined.
 The corresponding execution ordered event is `'test:complete'`.
 
+### Event: `'test:interrupted'`
+
+<!-- YAML
+added: v24.15.0
+-->
+
+* `data` {Object}
+  * `tests` {Array} An array of objects containing information about the
+    interrupted tests.
+    * `column` {number|undefined} The column number where the test is defined,
+      or `undefined` if the test was run through the REPL.
+    * `file` {string|undefined} The path of the test file,
+      `undefined` if test was run through the REPL.
+    * `line` {number|undefined} The line number where the test is defined, or
+      `undefined` if the test was run through the REPL.
+    * `name` {string} The test name.
+    * `nesting` {number} The nesting level of the test.
+
+Emitted when the test runner is interrupted by a `SIGINT` signal (e.g., when
+pressing <kbd>Ctrl</kbd>+<kbd>C</kbd>). The event contains information about
+the tests that were running at the time of interruption.
+
+When using process isolation (the default), the test name will be the file path
+since the parent runner only knows about file-level tests. When using
+`--test-isolation=none`, the actual test name is shown.
+
 ### Event: `'test:pass'`
 
 * `data` {Object}
@@ -3773,6 +3869,39 @@ added: v25.0.0
 
 Number of times the test has been attempted.
 
+### `context.workerId`
+
+<!-- YAML
+added: v24.15.0
+-->
+
+* Type: {number|undefined}
+
+The unique identifier of the worker running the current test file. This value is
+derived from the `NODE_TEST_WORKER_ID` environment variable. When running tests
+with `--test-isolation=process` (the default), each test file runs in a separate
+child process and is assigned a worker ID from 1 to N, where N is the number of
+concurrent workers. When running with `--test-isolation=none`, all tests run in
+the same process and the worker ID is always 1. This value is `undefined` when
+not running in a test context.
+
+This property is useful for splitting resources (like database connections or
+server ports) across concurrent test files:
+
+```mjs
+import { test } from 'node:test';
+import { process } from 'node:process';
+
+test('database operations', async (t) => {
+  // Worker ID is available via context
+  console.log(`Running in worker ${t.workerId}`);
+
+  // Or via environment variable (available at import time)
+  const workerId = process.env.NODE_TEST_WORKER_ID;
+  // Use workerId to allocate separate resources per worker
+});
+```
+
 ### `context.plan(count[,options])`
 
 <!-- YAML
@@ -4117,6 +4246,7 @@ Can be used to abort test subtasks when the test has been aborted.
 [`NODE_V8_COVERAGE`]: cli.md#node_v8_coveragedir
 [`SuiteContext`]: #class-suitecontext
 [`TestContext`]: #class-testcontext
+[`assert.throws`]: assert.md#assertthrowsfn-error-message
 [`context.diagnostic`]: #contextdiagnosticmessage
 [`context.skip`]: #contextskipmessage
 [`context.todo`]: #contexttodomessage
@@ -4130,6 +4260,7 @@ Can be used to abort test subtasks when the test has been aborted.
 [configuration files]: cli.md#--experimental-config-fileconfig
 [describe options]: #describename-options-fn
 [it options]: #testname-options-fn
+[module customization hooks]: module.md#customization-hooks
 [running tests from the command line]: #running-tests-from-the-command-line
 [stream.compose]: stream.md#streamcomposestreams
 [subtests]: #subtests

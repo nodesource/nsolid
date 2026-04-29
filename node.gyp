@@ -93,6 +93,7 @@
       'src/async_context_frame.cc',
       'src/async_wrap.cc',
       'src/base_object.cc',
+      'src/builtin_info.cc',
       'src/cares_wrap.cc',
       'src/cleanup_queue.cc',
       'src/compile_cache.cc',
@@ -143,6 +144,7 @@
       'src/node_main_instance.cc',
       'src/node_messaging.cc',
       'src/node_metadata.cc',
+      'src/node_diagnostics_channel.cc',
       'src/node_modules.cc',
       'src/node_options.cc',
       'src/node_os.cc',
@@ -219,6 +221,7 @@
       'src/base_object_types.h',
       'src/blob_serializer_deserializer.h',
       'src/blob_serializer_deserializer-inl.h',
+      "src/builtin_info.h",
       'src/callback_queue.h',
       'src/callback_queue-inl.h',
       'src/cleanup_queue.h',
@@ -278,6 +281,7 @@
       'src/node_messaging.h',
       'src/node_metadata.h',
       'src/node_mutex.h',
+      'src/node_diagnostics_channel.h',
       'src/node_modules.h',
       'src/node_object_wrap.h',
       'src/node_options.h',
@@ -1059,7 +1063,13 @@
           },
         }],
         [ 'node_builtin_modules_path!=""', {
-          'defines': [ 'NODE_BUILTIN_MODULES_PATH="<(node_builtin_modules_path)"' ]
+          'defines': [ 'NODE_BUILTIN_MODULES_PATH="<(node_builtin_modules_path)"' ],
+          # When loading builtins from disk, JS source files do not need to
+          # trigger rebuilds since the binary reads them at runtime.
+          'sources!': [
+            '<@(library_files)',
+            '<@(deps_files)',
+          ],
         }],
         [ 'node_shared=="true"', {
           'sources': [
@@ -1204,6 +1214,16 @@
             '<@(agents_files)',
             '<@(deps_files)',
             'config.gypi'
+          ],
+          'conditions': [
+            [ 'node_builtin_modules_path!=""', {
+              # When loading builtins from disk, JS source files do not need
+              # to trigger rebuilds since the binary reads them at runtime.
+              'inputs!': [
+                '<@(library_files)',
+                '<@(deps_files)',
+              ],
+            }],
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/node_javascript.cc',
@@ -1587,6 +1607,8 @@
         'tools/executable_wrapper.h',
         'src/embedded_data.h',
         'src/embedded_data.cc',
+        'src/builtin_info.h',
+        'src/builtin_info.cc',
       ],
       'conditions': [
         [ 'node_shared_simdutf=="false"', {

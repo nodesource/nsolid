@@ -1,6 +1,6 @@
 // Flags: --expose-internals
 import { mustCall, mustSucceed } from '../common/index.mjs';
-import { fixturesDir } from '../common/fixtures.mjs';
+import * as fixtures from '../common/fixtures.mjs';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -78,9 +78,9 @@ tests.push({
   name: 'should work for both cjs and esm scripts and fail for non-existent scripts on the main thread',
   test: async (getEnv) => {
     return new Promise((resolve) => {
-      const importPath = path.join(fixturesDir, 'nsolid-source-code', 'index.mjs');
-      const esmPath = path.join(fixturesDir, 'nsolid-source-code', 'esm.mjs');
-      const commonPath = path.join(fixturesDir, 'nsolid-source-code', 'common.js');
+      const importPath = path.join(fixtures.fixturesDir, 'nsolid-source-code', 'index.mjs');
+      const esmPath = path.join(fixtures.fixturesDir, 'nsolid-source-code', 'esm.mjs');
+      const commonPath = path.join(fixtures.fixturesDir, 'nsolid-source-code', 'common.js');
       const importPathUrl = pathToFileURL(importPath).toString();
       const esmPathUrl = pathToFileURL(esmPath).toString();
       const grpcServer = new GRPCServer();
@@ -185,9 +185,9 @@ tests.push({
   name: 'should work for both cjs and esm scripts and fail for non-existent scripts on a worker thread',
   test: async (getEnv) => {
     return new Promise((resolve) => {
-      const importPath = path.join(fixturesDir, 'nsolid-source-code', 'index.mjs');
-      const esmPath = path.join(fixturesDir, 'nsolid-source-code', 'esm.mjs');
-      const commonPath = path.join(fixturesDir, 'nsolid-source-code', 'common.js');
+      const importPath = path.join(fixtures.fixturesDir, 'nsolid-source-code', 'index.mjs');
+      const esmPath = path.join(fixtures.fixturesDir, 'nsolid-source-code', 'esm.mjs');
+      const commonPath = path.join(fixtures.fixturesDir, 'nsolid-source-code', 'common.js');
       const importPathUrl = pathToFileURL(importPath).toString();
       const esmPathUrl = pathToFileURL(esmPath).toString();
       const grpcServer = new GRPCServer();
@@ -277,7 +277,7 @@ tests.push({
   name: 'should also work for imported data urls',
   test: async (getEnv) => {
     return new Promise((resolve) => {
-      const importPath = path.join(fixturesDir, 'nsolid-source-code', 'data.mjs');
+      const importPath = path.join(fixtures.fixturesDir, 'nsolid-source-code', 'data.mjs');
       const importPathUrl = pathToFileURL(importPath).toString();
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {

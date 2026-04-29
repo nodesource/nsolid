@@ -1,6 +1,6 @@
 'use strict';
 
-require('../common');
+const common = require('../common');
 const assert = require('assert');
 const nsolid = require('nsolid');
 const metricsUtil = require('../common/nsolid-metrics-util.js');
@@ -14,15 +14,13 @@ assert.strictEqual(syncMetrics.loopIterations, 0);
 assert.strictEqual(syncMetrics.loopIterWithEvents, 0);
 assert(syncMetrics.loopEstimatedLag > 0);
 
-nsolid.metrics((er, m) => {
-  assert.strictEqual(er, null);
+nsolid.metrics(common.mustSucceed((m) => {
   metricsUtil.checkMetrics(m);
   assert.strictEqual(m.threadName, '');
   nsolid.setThreadName('my_thread');
   assert.strictEqual(nsolid.getThreadName(), 'my_thread');
-  nsolid.metrics((er, m) => {
-    assert.strictEqual(er, null);
+  nsolid.metrics(common.mustSucceed((m) => {
     metricsUtil.checkMetrics(m);
     assert.strictEqual(m.threadName, 'my_thread');
-  });
-});
+  }));
+}));

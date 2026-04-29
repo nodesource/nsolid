@@ -14,12 +14,15 @@ if (!isMainThread) {
     assert.strictEqual(nsolid.traceStats.httpClientAbortCount, 0);
     assert.strictEqual(nsolid.traceStats.httpServerCount, 0);
     assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 0);
-    setTimeout(() => {
-      const metrics = nsolid.metrics();
-      assert.ok(metrics.httpClientMedian > 0);
-      assert.ok(metrics.httpClient99Ptile > 0);
-    }, 5500);
-  });
+    return new Promise((resolve) => {
+      setTimeout(common.mustCall(() => {
+        const metrics = nsolid.metrics();
+        assert.ok(metrics.httpClientMedian > 0);
+        assert.ok(metrics.httpClient99Ptile > 0);
+        resolve();
+      }), 5500);
+    });
+  }).then(common.mustCall());
   return;
 }
 

@@ -1259,6 +1259,10 @@ The {CryptoKey} (secret key) generating algorithms supported include:
 <!-- YAML
 added: v15.0.0
 changes:
+  - version: v24.15.0
+    pr-url: https://github.com/nodejs/node/pull/62218
+    description: Importing ML-DSA and ML-KEM PKCS#8 keys
+      without a seed is no longer supported.
   - version: v24.8.0
     pr-url: https://github.com/nodejs/node/pull/59647
     description: KMAC algorithms are now supported.
@@ -1868,19 +1872,27 @@ the message.
 
 <!-- YAML
 added: v24.7.0
+changes:
+  - version: v24.15.0
+    pr-url: https://github.com/nodejs/node/pull/61875
+    description: Renamed `cShakeParams.length` to `cShakeParams.outputLength`.
 -->
 
-#### `cShakeParams.customization`
+#### `cShakeParams.name`
 
 <!-- YAML
 added: v24.7.0
 -->
 
-* Type: {ArrayBuffer|TypedArray|DataView|Buffer|undefined}
+* Type: {string} Must be `'cSHAKE128'`[^modern-algos] or `'cSHAKE256'`[^modern-algos]
 
-The `customization` member represents the customization string.
-The Node.js Web Crypto API implementation only supports zero-length customization
-which is equivalent to not providing customization at all.
+#### `cShakeParams.outputLength`
+
+<!-- YAML
+added: v24.15.0
+-->
+
+* Type: {number} represents the requested output length in bits.
 
 #### `cShakeParams.functionName`
 
@@ -1895,21 +1907,17 @@ functions based on cSHAKE.
 The Node.js Web Crypto API implementation only supports zero-length functionName
 which is equivalent to not providing functionName at all.
 
-#### `cShakeParams.length`
+#### `cShakeParams.customization`
 
 <!-- YAML
 added: v24.7.0
 -->
 
-* Type: {number} represents the requested output length in bits.
+* Type: {ArrayBuffer|TypedArray|DataView|Buffer|undefined}
 
-#### `cShakeParams.name`
-
-<!-- YAML
-added: v24.7.0
--->
-
-* Type: {string} Must be `'cSHAKE128'`[^modern-algos] or `'cSHAKE256'`[^modern-algos]
+The `customization` member represents the customization string.
+The Node.js Web Crypto API implementation only supports zero-length customization
+which is equivalent to not providing customization at all.
 
 ### Class: `EcdhKeyDeriveParams`
 
@@ -2386,6 +2394,10 @@ added: v24.8.0
 
 <!-- YAML
 added: v24.8.0
+changes:
+  - version: v24.15.0
+    pr-url: https://github.com/nodejs/node/pull/61875
+    description: Renamed `kmacParams.length` to `kmacParams.outputLength`.
 -->
 
 #### `kmacParams.algorithm`
@@ -2396,6 +2408,16 @@ added: v24.8.0
 
 * Type: {string} Must be `'KMAC128'` or `'KMAC256'`.
 
+#### `kmacParams.outputLength`
+
+<!-- YAML
+added: v24.15.0
+-->
+
+* Type: {number}
+
+The length of the output in bytes. This must be a positive integer.
+
 #### `kmacParams.customization`
 
 <!-- YAML
@@ -2405,16 +2427,6 @@ added: v24.8.0
 * Type: {ArrayBuffer|TypedArray|DataView|Buffer|undefined}
 
 The `customization` member represents the optional customization string.
-
-#### `kmacParams.length`
-
-<!-- YAML
-added: v24.8.0
--->
-
-* Type: {number}
-
-The length of the output in bytes. This must be a positive integer.
 
 ### Class: `Pbkdf2Params`
 

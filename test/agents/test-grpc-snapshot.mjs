@@ -200,7 +200,7 @@ tests.push({
           await child.shutdown(0);
           grpcServer.close();
           resolve();
-        });
+        }).then(mustCall());
 
         const { data, requestId } = await grpcServer.heapSnapshot(agentId, options);
         checkSnapshotError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
@@ -234,7 +234,7 @@ tests.push({
           await child.shutdown(0);
           grpcServer.close();
           resolve();
-        });
+        }).then(mustCall());
 
         const { data, requestId } = await grpcServer.heapSnapshot(agentId, options);
         checkSnapshotError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');

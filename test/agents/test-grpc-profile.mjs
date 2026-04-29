@@ -196,7 +196,7 @@ tests.push({
           await child.shutdown(0);
           grpcServer.close();
           resolve();
-        });
+        }).then(mustCall());
 
         const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
@@ -231,7 +231,7 @@ tests.push({
           await child.shutdown(0);
           grpcServer.close();
           resolve();
-        });
+        }).then(mustCall());
 
         const { data, requestId } = await grpcServer.cpuProfile(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
@@ -391,7 +391,7 @@ tests.push({
         grpcServer.cpuProfile(agentId, options).then(async ({ data, requestId }) => {
           reqId = requestId;
           checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
-        });
+        }).then(mustCall());
 
         await setTimeout(100);
         const exit = await child.shutdown(0);
@@ -428,15 +428,15 @@ tests.push({
           threadId: 0,
         };
 
-        grpcServer.cpuProfile(agentId, options).then(mustCall(async ({ data, requestId }) => {
+        grpcServer.cpuProfile(agentId, options).then(async ({ data, requestId }) => {
           console.log('cpuProfile', requestId);
           reqId = requestId;
           checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
-        }));
+        }).then(mustCall());
 
-        grpcServer.heapProfile(agentId, options).then(mustCall());
+        grpcServer.heapProfile(agentId, options).then(() => {}).then(mustCall());
 
-        grpcServer.heapSampling(agentId, options).then(mustCall());
+        grpcServer.heapSampling(agentId, options).then(() => {}).then(mustCall());
 
         await setTimeout(100);
         console.log('shutting down');

@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustSucceed } from '../common/index.mjs';
+import { mustCall, mustNotCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { setTimeout } from 'node:timers/promises';
 import validators from 'internal/validators';
@@ -87,7 +87,7 @@ tests.push({
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         let times = 0;
-        grpcServer.on('profile', async (data) => {
+        grpcServer.on('profile', mustCall(async (data) => {
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
           times++;
           if (times === 2) {
@@ -99,7 +99,7 @@ tests.push({
             grpcServer.close();
             resolve();
           }
-        });
+        }, 2));
         const env = getEnv(port);
 
         const opts = {
@@ -135,18 +135,15 @@ tests.push({
         };
 
         const child = new TestClient([], opts);
-        const agentId = await child.id();
+        await child.id();
 
-        let profileCount = 0;
-        grpcServer.on('profile', (data) => {
-          assert.strictEqual(data.metadata['nsolid-agent-id'][0], agentId);
-          profileCount++;
-        });
+        grpcServer.on(
+          'profile',
+          mustNotCall('continuous profiles should not be emitted when assets are disabled'),
+        );
 
         // Wait slightly longer than two intervals (100ms) to see if any profile arrives.
         await setTimeout(300);
-        assert.strictEqual(profileCount, 0);
-
         await child.shutdown(0);
         grpcServer.close();
         resolve();
@@ -267,7 +264,7 @@ tests.push({
         const workers = await child.workers();
         const wid = workers[0];
 
-        grpcServer.on('profile', async (data) => {
+        grpcServer.on('profile', mustCall(async (data) => {
           if (data.msg.threadId === '0') {
             timesMainThread++;
           } else {
@@ -289,7 +286,7 @@ tests.push({
             grpcServer.close();
             resolve();
           }
-        });
+        }, 4));
       }));
     });
   },
@@ -302,7 +299,7 @@ tests.push({
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         let times = 0;
-        grpcServer.on('profile', async (data) => {
+        grpcServer.on('profile', mustCall(async (data) => {
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
           times++;
           if (times === 2) {
@@ -314,7 +311,7 @@ tests.push({
             grpcServer.close();
             resolve();
           }
-        });
+        }, 2));
         const env = getEnv(port);
 
         const opts = {

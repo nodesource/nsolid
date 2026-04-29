@@ -2,7 +2,7 @@
 
 'use strict';
 
-require('../common');
+const common = require('../common');
 const assert = require('node:assert');
 const { EventEmitter } = require('node:events');
 const { after, afterEach, before, describe, it } = require('node:test');
@@ -145,6 +145,100 @@ async function startUdpServer(port, cb) {
   });
 }
 
+function testTcpStatsdServerReady() {
+  assert.strictEqual(nsolid.statsd.status(), 'unconfigured');
+  let tcpConnection;
+  let tcpServer;
+
+  function handleTcpConnection(conn) {
+    const recvMetrics = [];
+    tcpConnection = conn;
+    const rl = readline.createInterface({
+      input: conn,
+    });
+
+    function onLineHandler(line) {
+      assert.ok(line.startsWith(nsolid.statsd.format.bucket()));
+      recvMetrics.push(line.split(':')[0].split('.').pop());
+      if (recvMetrics.length === expectedMetrics.length) {
+        rl.close();
+      }
+    }
+
+    function onCloseHandler() {
+      const diff = expectedMetrics.filter((x) => !recvMetrics.includes(x));
+      assert.strictEqual(diff.length, 0);
+      tcpConnection.destroy();
+      tcpServer.close();
+    }
+
+    rl.on('line', common.mustCall(onLineHandler, expectedMetrics.length));
+    rl.on('close', common.mustCall(onCloseHandler));
+  }
+
+  return startTcpServer(8125, handleTcpConnection).then((server) => {
+    return new Promise((resolve, reject) => {
+      tcpServer = server;
+      tcpServer.on('close', resolve);
+      nsolid.start({
+        statsd: 'tcp://127.0.0.1:8125',
+      });
+      return waitForStatus('ready').then(() => {
+        assert.strictEqual(nsolid.statsd.tcpIp(), '127.0.0.1:8125');
+        assert.strictEqual(nsolid.statsd.udpIp(), null);
+      });
+    });
+  });
+}
+
+function testUdpStatsdServerReady() {
+  assert.strictEqual(nsolid.statsd.status(), 'unconfigured');
+  const bufferStream = new stream.PassThrough();
+  let udpServer;
+
+  function handleUdpMessage(message) {
+    bufferStream.write(message.toString());
+  }
+
+  return startUdpServer(8125, handleUdpMessage).then((server) => {
+    const recvMetrics = [];
+    udpServer = server;
+    const rl = readline.createInterface({
+      input: bufferStream,
+    });
+
+    function onLineHandler(line) {
+      assert.ok(line.startsWith(nsolid.statsd.format.bucket()));
+      recvMetrics.push(line.split(':')[0].split('.').pop());
+      if (recvMetrics.length === expectedMetrics.length) {
+        rl.close();
+      }
+    }
+
+    rl.on('line', common.mustCall(onLineHandler, expectedMetrics.length));
+    const closePromise = new Promise((resolve, reject) => {
+      function onCloseHandler() {
+        const diff = expectedMetrics.filter((x) => !recvMetrics.includes(x));
+        assert.strictEqual(diff.length, 0);
+        udpServer.close();
+        resolve();
+      }
+
+      rl.on('close', common.mustCall(onCloseHandler));
+    });
+
+    nsolid.start({
+      statsd: 'udp://127.0.0.1:8125',
+    });
+
+    return waitForStatus('ready').then(() => {
+      assert.strictEqual(nsolid.statsd.tcpIp(), null);
+      assert.strictEqual(nsolid.statsd.udpIp(), '127.0.0.1:8125');
+      return closePromise;
+    });
+  });
+}
+
 
 nsolid.start({
   interval: 100,
@@ -195,79 +289,6 @@ describe('StatsD status', () => {
     });
     await waitForStatus('connecting');
   });
-  it('should end up ready if started and configured using TCP with statsd server', async (t) => {
-    assert.strictEqual(nsolid.statsd.status(), 'unconfigured');
-    return startTcpServer(8125, (conn) => {
-      const recvMetrics = [];
-      this.tcpConnection = conn;
-      const rl = readline.createInterface({
-        input: conn,
-      });
-
-      rl.on('line', (line) => {
-        assert.ok(line.startsWith(nsolid.statsd.format.bucket()));
-        recvMetrics.push(line.split(':')[0].split('.').pop());
-        if (recvMetrics.length === expectedMetrics.length) {
-          rl.close();
-        }
-      });
-
-      rl.on('close', () => {
-        const diff = expectedMetrics.filter((x) => !recvMetrics.includes(x));
-        assert.strictEqual(diff.length, 0);
-        this.tcpConnection.destroy();
-        this.tcpServer.close();
-      });
-    }).then((tcpServer) => {
-      return new Promise((resolve, reject) => {
-        this.tcpServer = tcpServer;
-        this.tcpServer.on('close', resolve);
-        nsolid.start({
-          statsd: 'tcp://127.0.0.1:8125',
-        });
-        return waitForStatus('ready').then(() => {
-          assert.strictEqual(nsolid.statsd.tcpIp(), '127.0.0.1:8125');
-          assert.strictEqual(nsolid.statsd.udpIp(), null);
-        });
-      });
-    });
-  });
-  it('should end up ready if started and configured using UDP with statsd server', async (t) => {
-    assert.strictEqual(nsolid.statsd.status(), 'unconfigured');
-    const bufferStream = new stream.PassThrough();
-    return startUdpServer(8125, (message) => {
-      bufferStream.write(message.toString());
-    }).then((udpServer) => {
-      const recvMetrics = [];
-      this.udpServer = udpServer;
-      const rl = readline.createInterface({
-        input: bufferStream,
-      });
-
-      rl.on('line', (line) => {
-        assert.ok(line.startsWith(nsolid.statsd.format.bucket()));
-        recvMetrics.push(line.split(':')[0].split('.').pop());
-        if (recvMetrics.length === expectedMetrics.length) {
-          rl.close();
-        }
-      });
-
-      nsolid.start({
-        statsd: 'udp://127.0.0.1:8125',
-      });
-
-      return waitForStatus('ready').then(() => {
-        assert.strictEqual(nsolid.statsd.tcpIp(), null);
-        assert.strictEqual(nsolid.statsd.udpIp(), '127.0.0.1:8125');
-        return new Promise((resolve, reject) => {
-          rl.on('close', () => {
-            const diff = expectedMetrics.filter((x) => !recvMetrics.includes(x));
-            assert.strictEqual(diff.length, 0);
-            this.udpServer.close();
-            resolve();
-          });
-        });
-      });
-    });
-  });
+  it('should end up ready if started and configured using TCP with statsd server', testTcpStatsdServerReady);
+  it('should end up ready if started and configured using UDP with statsd server', testUdpStatsdServerReady);
 });

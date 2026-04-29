@@ -201,7 +201,7 @@ tests.push({
           await child.shutdown(0);
           grpcServer.close();
           resolve();
-        });
+        }).then(mustCall());
 
         const { data, requestId } = await grpcServer.heapSampling(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
@@ -236,7 +236,7 @@ tests.push({
           await child.shutdown(0);
           grpcServer.close();
           resolve();
-        });
+        }).then(mustCall());
 
         const { data, requestId } = await grpcServer.heapSampling(agentId, options);
         checkProfileError(data.msg, data.metadata, requestId, agentId, 409, 'Operation already in progress(1001)');
@@ -403,7 +403,7 @@ tests.push({
 
         grpcServer.heapSampling(agentId, options).then(async ({ data, requestId }) => {
           checkProfileData(data.msg, data.metadata, requestId, agentId, options, true);
-        });
+        }).then(mustCall());
 
         await setTimeout(100);
         const exit = await child.shutdown(0);

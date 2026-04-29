@@ -31,8 +31,6 @@ using json = nlohmann::json;
   NSOLID_DELETE_UNUSED_CONSTRUCTORS(name)                                      \
   name() = delete;
 
-#define NSOLID_UNUSED(expr) do { (void)(expr); } while (0)
-
 namespace node {
 namespace nsolid {
 namespace utils {

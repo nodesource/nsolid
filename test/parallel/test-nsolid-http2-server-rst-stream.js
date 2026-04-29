@@ -44,14 +44,14 @@ server.on('stream', (stream, headers) => {
 server.listen(0, common.mustCall(() => {
   const client = http2.connect(`http://localhost:${server.address().port}`);
 
-  const countdown = new Countdown(tests.length, () => {
+  const countdown = new Countdown(tests.length, common.mustCall(() => {
     client.close();
     server.close();
     assert.strictEqual(nsolid.traceStats.httpClientCount, 0);
     assert.strictEqual(nsolid.traceStats.httpClientAbortCount, 6);
     assert.strictEqual(nsolid.traceStats.httpServerCount, 0);
     assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 6);
-  });
+  }));
 
   tests.forEach((test) => {
     const req = client.request({

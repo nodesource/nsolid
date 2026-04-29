@@ -216,7 +216,7 @@ function runTest({ args, listener, command, ret, err, status }, done) {
         return done();
       }
 
-      assert.ok(false);
+      assert.fail('Expected callback to receive a result or error');
     })), 0);
 
   assert.strictEqual(binding.customCommand(requestId,

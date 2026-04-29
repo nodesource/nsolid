@@ -31,7 +31,7 @@ server.listen(0, '127.0.0.1', common.mustSucceed(async () => {
   assert.strictEqual(nsolid.traceStats.httpServerCount, REQUESTS);
   assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 0);
   // Wait for more than 3 secs for the percentiles to be updated
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     const metrics = require('nsolid').metrics();
     // As all requests but one are fast, the median should be less than 200ms
     // and the 99th percentile should be more than 1000ms due to the slow
@@ -39,5 +39,5 @@ server.listen(0, '127.0.0.1', common.mustSucceed(async () => {
     assert.ok(metrics.httpClientMedian < 200);
     assert.ok(metrics.httpClient99Ptile > 1000);
     server.close();
-  }, 5500);
+  }), 5500);
 }));

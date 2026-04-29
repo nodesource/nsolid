@@ -176,7 +176,7 @@ function runHeapSamplingStreamAssetsToggleTests() {
     assetsEnabled: false,
   });
 
-  setImmediate(() => {
+  setImmediate(common.mustCall(() => {
     assert.throws(
       () => {
         nsolid.heapSamplingStream(0, 1000);
@@ -189,7 +189,7 @@ function runHeapSamplingStreamAssetsToggleTests() {
 
     // Re-enable via helper and confirm success
     nsolid.enableAssets();
-    setImmediate(() => {
+    setImmediate(common.mustCall(() => {
       let profile = '';
       const enabledStream = nsolid.heapSamplingStream(0, 1200);
       enabledStream.on('data', (chunk) => {
@@ -201,7 +201,7 @@ function runHeapSamplingStreamAssetsToggleTests() {
 
         // Disable via helper and confirm failure again
         nsolid.disableAssets();
-        setImmediate(() => {
+        setImmediate(common.mustCall(() => {
           assert.throws(
             () => {
               nsolid.heapSamplingStream(0, 1000);
@@ -214,15 +214,13 @@ function runHeapSamplingStreamAssetsToggleTests() {
 
           // Re-enable once more to restore functionality
           nsolid.enableAssets();
-          setImmediate(() => {
+          setImmediate(common.mustCall(() => {
             const finalStream = nsolid.heapSamplingStream(0, 1200);
             finalStream.resume();
-            finalStream.on('end', common.mustCall(() => {
-              assert.ok(true);
-            }));
-          });
-        });
+            finalStream.on('end', common.mustCall());
+          }));
+        }));
       }));
-    });
-  });
+    }));
+  }));
 }

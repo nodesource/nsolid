@@ -119,7 +119,7 @@ nsolid.start({
   data: 'localhost:9002'
 });
 
-setTimeout(() => {
+setTimeout(common.mustCall(() => {
   // profile() should return an error if ongoing profile
   assert.strictEqual(nsolid.heapSampling(), undefined);
   assert.throws(
@@ -137,7 +137,7 @@ setTimeout(() => {
   }));
   assert.strictEqual(nsolid.heapSamplingEnd(), undefined);
 
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     // profileEnd() should return an error if no ongoing profile
     assert.throws(
       () => {
@@ -171,8 +171,8 @@ setTimeout(() => {
         }));
       }));
     }));
-  }, common.platformTimeout(100));
-}, common.platformTimeout(100));
+  }), common.platformTimeout(100));
+}), common.platformTimeout(100));
 
 function runHeapSamplingAssetsToggleTests() {
   // Disable assets through config update
@@ -182,7 +182,7 @@ function runHeapSamplingAssetsToggleTests() {
     assetsEnabled: false,
   });
 
-  setTimeout(() => {
+  setTimeout(common.mustCall(() => {
     assert.throws(
       () => {
         nsolid.heapSampling();
@@ -208,13 +208,13 @@ function runHeapSamplingAssetsToggleTests() {
 
     // Re-enable via helper
     nsolid.enableAssets();
-    setTimeout(() => {
+    setTimeout(common.mustCall(() => {
       // Start sampling and wait for it to complete before toggling assets
       nsolid.heapSampling(common.mustSucceed(() => {
         nsolid.heapSamplingEnd(common.mustSucceed(() => {
           // Only disable assets after sampling completes
           nsolid.disableAssets();
-          setTimeout(() => {
+          setTimeout(common.mustCall(() => {
             assert.throws(
               () => {
                 nsolid.heapSampling();
@@ -235,14 +235,14 @@ function runHeapSamplingAssetsToggleTests() {
 
             // Only re-enable after errors are confirmed
             nsolid.enableAssets();
-            setTimeout(() => {
+            setTimeout(common.mustCall(() => {
               nsolid.heapSampling(common.mustSucceed(() => {
                 nsolid.heapSamplingEnd(common.mustSucceed());
               }));
-            }, common.platformTimeout(100));
-          }, common.platformTimeout(100));
+            }), common.platformTimeout(100));
+          }), common.platformTimeout(100));
         }));
       }));
-    }, common.platformTimeout(100));
-  }, common.platformTimeout(100));
+    }), common.platformTimeout(100));
+  }), common.platformTimeout(100));
 }

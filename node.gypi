@@ -428,6 +428,7 @@
 
     [ 'node_shared_zstd=="false"', {
       'dependencies': [ 'deps/zstd/zstd.gyp:zstd' ],
+      'defines': [ 'NODE_BUNDLED_ZSTD' ],
     }],
 
     [ 'OS=="mac"', {
