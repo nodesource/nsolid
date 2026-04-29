@@ -202,7 +202,7 @@ static ResourceAttributes GetMetadataResourceAttributes(const json& info) {
 
   it = info.find("cpuCores");
   if (it != info.end() && it->is_number_unsigned()) {
-    attrs.SetAttribute("cpuCores", std::to_string(it->get<uint32_t>()));
+    attrs.SetAttribute("cpuCores", it->get<uint32_t>());
   }
 
   it = info.find("cpuModel");
