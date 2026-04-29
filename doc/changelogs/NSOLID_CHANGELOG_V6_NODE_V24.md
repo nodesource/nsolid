@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-04-30, Version 24.15.0-nsolid-v6.2.4 'Krypton'
+
+### Commits
+
+* \[[`dca18b3a55`](https://github.com/nodesource/nsolid/commit/dca18b3a55)] - **lib**: fix v24.15.0 merge error on present on v6.2.3 (Santiago Gimeno) [#461](https://github.com/nodesource/nsolid/pull/461)
+
 ## 2026-04-28, Version 24.15.0-nsolid-v6.2.3 'Krypton'
 
 ### Commits
