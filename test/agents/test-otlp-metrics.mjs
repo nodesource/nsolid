@@ -488,22 +488,37 @@ if (process.argv[2] === 'child') {
         assert.strictEqual(metric.unit, unit);
       }
 
-      assert.strictEqual(metric[aggregation].dataPoints.length, 1);
-      const dataPoint = metric[aggregation].dataPoints[0];
+      const dataPoints = metric[aggregation].dataPoints;
+      validateArray(dataPoints, `${name}.dataPoints`);
+      assert.ok(dataPoints.length > 0, `Expected datapoints for ${name}`);
+      let dataPoint;
       // eslint-disable-next-line eqeqeq
       if (context.threadId != undefined) {
-        const attrIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.id' && a.value.intValue === `${context.threadId}`);
-        if (attrIndex > -1) {
-          indicesToRemove.push(i);
-          const nameIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.name');
-          assert(nameIndex > -1);
-          if (context.threadId === 0) { // main-thread
-            assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'main-thread');
-          } else {  // worker-thread
-            assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'worker-thread');
+        const dataPointIndex = dataPoints.findIndex((dp) => {
+          if (!dp.attributes) {
+            return false;
           }
+          return dp.attributes.some((a) => a.key === 'thread.id' && a.value.intValue === `${context.threadId}`);
+        });
+        if (dataPointIndex === -1) {
+          // With batching, not all threads may have metrics in every batch
+          continue;
+        }
+        dataPoint = dataPoints[dataPointIndex];
+        const nameIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.name');
+        assert(nameIndex > -1);
+        if (context.threadId === 0) { // main-thread
+          assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'main-thread');
+        } else {  // worker-thread
+          assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'worker-thread');
+        }
+        dataPoints.splice(dataPointIndex, 1);
+        if (dataPoints.length === 0) {
+          indicesToRemove.push(i);
         }
       } else {
+        assert.strictEqual(dataPoints.length, 1);
+        dataPoint = dataPoints[0];
         indicesToRemove.push(i);
       }
 
@@ -539,6 +554,25 @@ if (process.argv[2] === 'child') {
 
     for (let i = indicesToRemove.length - 1; i >= 0; --i) {
       metrics.splice(indicesToRemove[i], 1);
+    }
+
+    // Log thread_ids present in this batch
+    const threadIdsInBatch = new Set();
+    metrics.forEach((metric) => {
+      const aggregation = metric.data;
+      if (metric[aggregation]?.dataPoints) {
+        metric[aggregation].dataPoints.forEach((dp) => {
+          if (dp.attributes) {
+            const threadIdAttr = dp.attributes.find((a) => a.key === 'thread.id');
+            if (threadIdAttr) {
+              threadIdsInBatch.add(threadIdAttr.value.intValue);
+            }
+          }
+        });
+      }
+    });
+    if (threadIdsInBatch.size > 0) {
+      console.log(`Batch contains metrics for threads: [${Array.from(threadIdsInBatch).join(', ')}]`);
     }
   }
 

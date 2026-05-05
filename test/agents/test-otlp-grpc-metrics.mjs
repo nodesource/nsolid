@@ -476,6 +476,9 @@ if (process.argv[2] === 'child') {
 
   function checkMetricsData(context) {
     const { metrics, expected } = context;
+    if (expected.length === 0) {
+      return;
+    }
     const indicesToRemove = [];
     for (let i = 0; i < metrics.length; ++i) {
       const metric = metrics[i];
@@ -486,23 +489,45 @@ if (process.argv[2] === 'child') {
         assert.strictEqual(metric.unit, unit);
       }
 
-      assert.strictEqual(metric[aggregation].dataPoints.length, 1);
-      const dataPoint = metric[aggregation].dataPoints[0];
+      const dataPoints = metric[aggregation].dataPoints;
+      validateArray(dataPoints, `${name}.dataPoints`);
+      assert.ok(dataPoints.length > 0);
+      let dataPoint;
+      // eslint-disable-next-line eqeqeq
+      if (context.threadId != undefined) {
+        const dataPointIndex = dataPoints.findIndex((dp) => {
+          if (!dp.attributes) {
+            return false;
+          }
+          return dp.attributes.some((a) => a.key === 'thread.id' && a.value.intValue === `${context.threadId}`);
+        });
+        if (dataPointIndex === -1) {
+          // With batching, not all threads may have metrics in every batch
+          continue;
+        }
+        dataPoint = dataPoints[dataPointIndex];
+        const nameIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.name');
+        assert(nameIndex > -1);
+        if (context.threadId === 0) { // main-thread
+          assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'main-thread');
+        } else {  // worker-thread
+          assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'worker-thread');
+        }
+        console.log(`Processing thread ${context.threadId}, attributes:`, dataPoint.attributes.map((a) => `${a.key}=${a.value.intValue || a.value.stringValue}`).join(', '));
+        dataPoints.splice(dataPointIndex, 1);
+        if (dataPoints.length === 0) {
+          indicesToRemove.push(i);
+        }
+      } else {
+        assert.strictEqual(dataPoints.length, 1);
+        dataPoint = dataPoints[0];
+        indicesToRemove.push(i);
+      }
+
       // eslint-disable-next-line eqeqeq
       if (context.threadId != undefined) {
         const attrIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.id' && a.value.intValue === `${context.threadId}`);
-        if (attrIndex > -1) {
-          indicesToRemove.push(i);
-          const nameIndex = dataPoint.attributes.findIndex((a) => a.key === 'thread.name');
-          assert(nameIndex > -1);
-          if (context.threadId === 0) { // main-thread
-            assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'main-thread');
-          } else {  // worker-thread
-            assert.strictEqual(dataPoint.attributes[nameIndex].value.stringValue, 'worker-thread');
-          }
-        }
-      } else {
-        indicesToRemove.push(i);
+        assert(attrIndex > -1);
       }
 
       const startTime = BigInt(dataPoint.startTimeUnixNano);
@@ -538,6 +563,25 @@ if (process.argv[2] === 'child') {
     for (let i = indicesToRemove.length - 1; i >= 0; --i) {
       metrics.splice(indicesToRemove[i], 1);
     }
+
+    // Log thread_ids present in this batch
+    const threadIdsInBatch = new Set();
+    metrics.forEach((metric) => {
+      const aggregation = metric.data;
+      if (metric[aggregation]?.dataPoints) {
+        metric[aggregation].dataPoints.forEach((dp) => {
+          if (dp.attributes) {
+            const threadIdAttr = dp.attributes.find((a) => a.key === 'thread.id');
+            if (threadIdAttr) {
+              threadIdsInBatch.add(threadIdAttr.value.intValue);
+            }
+          }
+        });
+      }
+    });
+    if (threadIdsInBatch.size > 0) {
+      console.log(`Batch contains metrics for threads: [${Array.from(threadIdsInBatch).join(', ')}]`);
+    }
   }
 
   function checkMetrics(metrics, context) {
@@ -561,6 +605,7 @@ if (process.argv[2] === 'child') {
             context.procMetricsDone = true;
           } else if (context.state === State.ThreadMetrics) {
             context.threadList.shift();
+            context.threadId = null;
           }
           context.state = State.None;
         }
@@ -585,12 +630,48 @@ if (process.argv[2] === 'child') {
 
     assert.ok(hasThreadMetrics || hasProcMetrics, 'No thread or process metrics found');
     if (hasThreadMetrics) {
-      assert.ok(context.threadList.length > 0, 'No more threads available');
-      context.state = State.ThreadMetrics;
+      // Find which thread is in the batch
+      const threadIdsInBatch = new Set();
+      context.metrics.forEach((metric) => {
+        if (metric[metric.data]?.dataPoints) {
+          metric[metric.data].dataPoints.forEach((dp) => {
+            if (dp.attributes) {
+              const threadIdAttr = dp.attributes.find((a) => a.key === 'thread.id');
+              if (threadIdAttr) {
+                threadIdsInBatch.add(parseInt(threadIdAttr.value.intValue, 10));
+              }
+            }
+          });
+        }
+      });
+      // Find the thread that is expected and in the batch
+      let foundThread = null;
+      console.log('threadIdsInBatch:', Array.from(threadIdsInBatch));
+      console.log('context.threadList:', context.threadList);
+      for (const tid of threadIdsInBatch) {
+        console.log('checking tid:', tid, 'includes:', context.threadList.includes(tid));
+        if (context.threadList.includes(tid)) {
+          foundThread = tid;
+          console.log('foundThread set to:', foundThread);
+          break;
+        }
+      }
+      console.log('final foundThread:', foundThread);
+      if (foundThread === null) {
+        // Skip this batch if no expected thread found
+        console.log('Skipping batch');
+        context.state = State.None;
+        return;
+      }
+      context.threadId = foundThread;
+      context.threadList = context.threadList.filter((t) => t !== foundThread);
       context.expected = [...expectedThreadMetrics];
-    } else {
+    } else if (hasProcMetrics) {
       context.state = State.ProcMetrics;
+      context.threadId = null;
       context.expected = [...expectedProcMetrics];
+    } else {
+      context.state = State.None;
     }
   }
 
@@ -599,7 +680,7 @@ if (process.argv[2] === 'child') {
     metrics: [],
     expected: [],
     threadId: null,
-    threadList: [ threadId ],
+    threadList: [],
     procMetricsDone: false,
   };
 
@@ -610,6 +691,7 @@ if (process.argv[2] === 'child') {
   }
 
   async function runTest(getEnv) {
+    context.threadList.push(threadId);
     return new Promise((resolve, reject) => {
       let childExited = false;
       const otlpServer = new OTLPGRPCServer();

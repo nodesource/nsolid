@@ -9,11 +9,14 @@
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "opentelemetry/version.h"
 #include "opentelemetry/sdk/trace/recordable.h"
+#include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
+#include "../../otlp/src/otlp_common.h"
 #include "../../src/profile_collector.h"
 #include "asset_stream.h"
 #include "command_stream.h"
 #include "grpc_client.h"
 #include "grpc_errors.h"
+#include "grpc_metrics_exporter.h"
 
 // Class pre-declaration
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -147,6 +150,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
     bool testing;
   };
 
+  static constexpr uint32_t kMaxMetricsExportRetries = 5;
+
   GrpcAgent();
 
   ~GrpcAgent();
@@ -185,6 +190,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   static void metrics_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
   static void metrics_timer_cb_(nsuv::ns_timer*, WeakGrpcAgent);
+
+  static void metrics_retry_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
   static void profile_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
@@ -254,6 +261,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void handle_command_request(CommandRequestStor&& req);
 
+  void on_metrics_timer();
+
   void parse_saas_token(const std::string& token);
 
   bool pending_profiles() const;
@@ -310,6 +319,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   // Blocked Loop
   std::shared_ptr<AsyncTSQueue<BlockedLoopStor>> blocked_loop_queue_;
 
+  std::shared_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcClient>
+    otlp_grpc_client_;
+  opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions
+    otlp_grpc_client_options_;
+
   // For the Tracing API
   uint32_t trace_flags_;
   std::shared_ptr<SpanCollector> span_collector_;
@@ -319,16 +333,17 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
     recordables_;
 
   // For the Metrics API
-  uint64_t metrics_interval_;
+  bool metrics_paused_;
   ProcessMetrics proc_metrics_;
   ProcessMetrics::MetricsStor proc_prev_stor_;
+  otlp::MetricDataBatch proc_metrics_batch_;
   std::map<uint64_t, JSThreadMetrics> env_metrics_map_;
   nsuv::ns_async metrics_msg_;
   TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
-  std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter>
-    metrics_exporter_;
   std::map<uint64_t, ThreadMetrics::MetricsStor> thr_metrics_cache_;
+  otlp::MetricDataBatch thr_metrics_batch_;
+  std::shared_ptr<GrpcMetricsExporter> metrics_exporter_;
 
   // For the Configuration API
   nsuv::ns_async config_msg_;

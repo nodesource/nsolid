@@ -18,6 +18,8 @@ message ReconfigureBody {
   optional uint32 tracingModulesBlacklist = 11;
   optional bool contCpuProfile = 12;
   optional bool assetsEnabled = 13;
+  optional uint32 metricsBatchSize = 14;
+  optional uint32 metricsBufferSize = 15;
 }
 
 message ReconfigureEvent {

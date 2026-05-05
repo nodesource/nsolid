@@ -4,12 +4,10 @@
 #include "nsolid/nsolid_api.h"
 #include "nsolid/continuous_profiler.h"
 #include "nsolid/nsolid_util.h"
-#include "../../otlp/src/otlp_common.h"
 #include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
-#include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/service_attributes.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_client.h"
@@ -18,8 +16,6 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_factory.h"
-#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
-#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 
 using std::chrono::duration_cast;
@@ -50,8 +46,6 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporter;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcLogRecordExporterOptions;
-using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter;
-using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
 using nsolid_grpc_async =
@@ -263,7 +257,7 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
 
   ResourceMetrics data;
   data.resource_ = otlp::GetResource();
-  std::vector<MetricData> metrics;
+  otlp::MetricDataBatch metrics;
 
   // As this is the cached we're sending, we pass the same value for prev_stor.
   otlp::fill_proc_metrics(metrics, proc_metrics, proc_metrics, false);
@@ -271,8 +265,15 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
     otlp::fill_env_metrics(metrics, env_metrics_stor, false);
   }
 
+  auto batched = metrics.DumpMetricsAndReset();
+  std::vector<opentelemetry::sdk::metrics::MetricData> metric_data;
+  for (const auto& bm : batched) {
+    metric_data.push_back(otlp::BatchedMetricToMetricData(bm));
+  }
+
   data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
+    std::vector<ScopeMetrics>{{ otlp::GetScope(),
+                                std::move(metric_data) }};
   OtlpMetricUtils::PopulateResourceMetrics(
     data, metrics_event->mutable_body()->mutable_resource_metrics()->Add());
 }
@@ -433,6 +434,7 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         ready_(false),
                         exiting_(false),
                         trace_flags_(0),
+                        metrics_paused_(false),
                         proc_metrics_(),
                         proc_prev_stor_(),
                         config_(json::object()),
@@ -941,20 +943,18 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  ResourceMetrics data;
-  data.resource_ = otlp::GetResource();
-  std::vector<MetricData> metrics;
-
   ThreadMetricsStor stor;
   while (agent->thr_metrics_msg_q_.dequeue(stor)) {
-    otlp::fill_env_metrics(metrics, stor, false);
+    otlp::fill_env_metrics(agent->thr_metrics_batch_, stor, false);
     agent->thr_metrics_cache_.insert_or_assign(stor.thread_id, std::move(stor));
   }
 
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
-  auto result = agent->metrics_exporter_->Export(data);
-  Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+  if (agent->thr_metrics_batch_.ShouldFlush()) {
+    auto metric_data = agent->thr_metrics_batch_.DumpMetricsAndReset();
+    if (!metric_data.empty()) {
+      agent->metrics_exporter_->enqueue(std::move(metric_data));
+    }
+  }
 }
 
 /*static*/void GrpcAgent::metrics_timer_cb_(nsuv::ns_timer*,
@@ -964,11 +964,29 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  agent->got_proc_metrics();
-  for (auto& item : agent->env_metrics_map_) {
+  agent->on_metrics_timer();
+}
+
+void GrpcAgent::on_metrics_timer() {
+  if (metrics_paused_) {
+    auto metric_data = proc_metrics_batch_.DumpMetricsAndReset();
+    if (!metric_data.empty()) {
+      metrics_exporter_->enqueue(std::move(metric_data));
+    }
+
+    metric_data = thr_metrics_batch_.DumpMetricsAndReset();
+    if (!metric_data.empty()) {
+      metrics_exporter_->enqueue(std::move(metric_data));
+    }
+
+    metrics_exporter_->flush();
+  }
+
+  got_proc_metrics();
+  for (auto& item : env_metrics_map_) {
     // Retrieve metrics from the Metrics API. Ignore any return error since
     // there's nothing to be done.
-    item.second.metrics_->Update(thr_metrics_cb_, agent_wp);
+    item.second.metrics_->Update(thr_metrics_cb_, weak_from_this());
   }
 }
 
@@ -1117,8 +1135,18 @@ int GrpcAgent::config(const json& config) {
           options.credentials = opts.credentials;
         }
 
-        metrics_exporter_ =
-          std::make_unique<OtlpGrpcMetricExporter>(options, client);
+        // Get metrics buffer size from config, default to 100
+        size_t buffer_size = 100;
+        auto it = config_.find("metricsBufferSize");
+        if (it != config_.end()) {
+          buffer_size = it->get<size_t>();
+        }
+
+        metrics_exporter_ = std::make_unique<GrpcMetricsExporter>(&loop_,
+                                                                  options,
+                                                                  client,
+                                                                  buffer_size);
+        metrics_exporter_->init();
       }
       {
         OtlpGrpcLogRecordExporterOptions options;
@@ -1178,6 +1206,28 @@ int GrpcAgent::config(const json& config) {
     update_tracer(trace_flags_);
   }
 
+  if (utils::find_any_fields_in_diff(diff, { "/metricsBatchSize" })) {
+    auto it = config_.find("metricsBatchSize");
+    if (it != config_.end()) {
+      size_t batch_size = it->get<size_t>();
+      if (batch_size > 0) {
+        proc_metrics_batch_.Resize(batch_size);
+        thr_metrics_batch_.Resize(batch_size);
+      }
+    }
+  }
+
+  if (utils::find_any_fields_in_diff(diff, { "/metricsBufferSize" })) {
+    auto it = config_.find("metricsBufferSize");
+    if (it != config_.end()) {
+      size_t buffer_size = it->get<size_t>();
+      if (buffer_size > 0 && metrics_exporter_) {
+        // Resize the metrics buffer instead of recreating the exporter
+        metrics_exporter_->resize_buffer(buffer_size);
+      }
+    }
+  }
+
   // If metrics timer is not active or if the diff contains metrics fields,
   // recalculate the metrics status. (stop/start/what period)
   if (!metrics_timer_.is_active() ||
@@ -1185,13 +1235,19 @@ int GrpcAgent::config(const json& config) {
     uint64_t period = 0;
     auto it = config_.find("pauseMetrics");
     if (it != config_.end()) {
-      bool pause = *it;
-      if (!pause) {
+      metrics_paused_ = *it;
+      if (!metrics_paused_) {
         it = config_.find("interval");
         if (it != config_.end()) {
           period = *it;
         }
+      } else {
+        period = 5000;
       }
+    }
+
+    if (period == 0) {
+      period = 5000;
     }
 
     ret = setup_metrics_timer(period);
@@ -1308,6 +1364,7 @@ void GrpcAgent::do_stop() {
   }
 
   log_exporter_.reset();
+  otlp_grpc_client_.reset();
   metrics_exporter_.reset();
   trace_exporter_.reset();
   ready_ = false;
@@ -1389,15 +1446,15 @@ void GrpcAgent::got_logs() {
 void GrpcAgent::got_proc_metrics() {
   ASSERT_EQ(0, proc_metrics_.Update());
   ProcessMetrics::MetricsStor stor = proc_metrics_.Get();
-  std::vector<MetricData> metrics;
-  otlp::fill_proc_metrics(metrics, stor, proc_prev_stor_, false);
-  ResourceMetrics data;
-  data.resource_ = otlp::GetResource();
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
-  auto result = metrics_exporter_->Export(data);
-  Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
+  otlp::fill_proc_metrics(proc_metrics_batch_, stor, proc_prev_stor_, false);
   proc_prev_stor_ = stor;
+
+  if (proc_metrics_batch_.ShouldFlush()) {
+    auto metric_data = proc_metrics_batch_.DumpMetricsAndReset();
+    if (!metric_data.empty()) {
+      metrics_exporter_->enqueue(std::move(metric_data));
+    }
+  }
 }
 
 void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
@@ -1769,6 +1826,13 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
       out["assetsEnabled"] = body.assetsenabled();
   }
 
+  if (body.has_metricsbatchsize()) {
+      out["metricsBatchSize"] = body.metricsbatchsize();
+  }
+  if (body.has_metricsbuffersize()) {
+      out["metricsBufferSize"] = body.metricsbuffersize();
+  }
+
   DebugJSON("Reconfigure out: \n%s\n", out);
 
   UpdateConfig(out.dump());
@@ -1807,7 +1871,9 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport<grpcagent::BlockedLoopEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::BlockedLoopEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportBlockedLoop,
     std::move(context), std::move(arena), std::move(*event),
@@ -1815,7 +1881,6 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
         std::unique_ptr<Arena> &&,
         const grpcagent::BlockedLoopEvent& event,
         grpcagent::EventResponse*) {
-      return true;
     });
 }
 
@@ -1849,7 +1914,9 @@ void GrpcAgent::send_exit() {
 
   uv_mutex_init(&lock);
   uv_cond_init(&cond);
-  GrpcClient::DelegateAsyncExport<grpcagent::ExitEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::ExitEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportExit,
     std::move(context), std::move(arena), std::move(*exit_event),
@@ -1861,7 +1928,6 @@ void GrpcAgent::send_exit() {
       signaled = true;
       uv_cond_signal(&cond);
       uv_mutex_unlock(&lock);
-      return true;
     });
 
   // wait for the exit event to be sent
@@ -1894,7 +1960,9 @@ void GrpcAgent::send_info_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport<grpcagent::InfoEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::InfoEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportInfo,
     std::move(context), std::move(arena), std::move(*info_event),
@@ -1902,7 +1970,6 @@ void GrpcAgent::send_info_event(const char* req_id) {
         std::unique_ptr<Arena>&&,
         const grpcagent::InfoEvent& info_event,
         grpcagent::EventResponse*) {
-      return true;
     });
 }
 
@@ -1922,7 +1989,9 @@ void GrpcAgent::send_metrics_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport<grpcagent::MetricsEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::MetricsEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportMetrics,
     std::move(context), std::move(arena), std::move(*metrics_event),
@@ -1930,7 +1999,6 @@ void GrpcAgent::send_metrics_event(const char* req_id) {
         std::unique_ptr<Arena>&&,
         const grpcagent::MetricsEvent& metrics_event,
         grpcagent::EventResponse*) {
-      return true;
     });
 }
 
@@ -1945,7 +2013,9 @@ void GrpcAgent::send_packages_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport<grpcagent::PackagesEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::PackagesEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportPackages,
     std::move(context), std::move(arena), std::move(*packages_event),
@@ -1953,7 +2023,6 @@ void GrpcAgent::send_packages_event(const char* req_id) {
         std::unique_ptr<Arena>&&,
         const grpcagent::PackagesEvent& info_event,
         grpcagent::EventResponse*) {
-      return true;
     });
 }
 
@@ -1969,7 +2038,9 @@ void GrpcAgent::send_reconfigure_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport<grpcagent::ReconfigureEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::ReconfigureEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportReconfigure,
     std::move(context), std::move(arena), std::move(*reconfigure_event),
@@ -1977,7 +2048,6 @@ void GrpcAgent::send_reconfigure_event(const char* req_id) {
         std::unique_ptr<Arena>&&,
         const grpcagent::ReconfigureEvent& info_event,
         grpcagent::EventResponse*) {
-      return true;
     });
 }
 
@@ -2020,7 +2090,9 @@ void GrpcAgent::send_source_code_event(const grpcagent::CommandRequest& req) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport<grpcagent::SourceCodeEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::SourceCodeEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportSourceCode,
     std::move(context), std::move(arena), std::move(*source_code_event),
@@ -2028,7 +2100,6 @@ void GrpcAgent::send_source_code_event(const grpcagent::CommandRequest& req) {
         std::unique_ptr<Arena>&&,
         const grpcagent::SourceCodeEvent& info_event,
         grpcagent::EventResponse*) {
-      return true;
     });
 }
 
@@ -2043,7 +2114,9 @@ void GrpcAgent::send_startup_times_event(const char* req_id) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport<grpcagent::StartupTimesEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::StartupTimesEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportStartupTimes,
     std::move(context), std::move(arena), std::move(*st_event),
@@ -2051,8 +2124,6 @@ void GrpcAgent::send_startup_times_event(const char* req_id) {
         std::unique_ptr<Arena>&&,
         const grpcagent::StartupTimesEvent& info_event,
         grpcagent::EventResponse*) {
-      Debug("StartupTimesEvent: %s\n", status.error_message().c_str());
-      return true;
     });
 }
 
@@ -2068,7 +2139,9 @@ void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
 
   auto context = GrpcClient::MakeClientContext(agent_id_, saas());
 
-  GrpcClient::DelegateAsyncExport<grpcagent::UnblockedLoopEvent>(
+  GrpcClient::DelegateAsyncExport<grpcagent::NSolidService::StubInterface,
+                                  grpcagent::UnblockedLoopEvent,
+                                  grpcagent::EventResponse>(
     nsolid_service_stub_.get(),
     &nsolid_grpc_async::ExportUnblockedLoop,
     std::move(context), std::move(arena), std::move(*event),
@@ -2076,7 +2149,6 @@ void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
         std::unique_ptr<Arena> &&,
         const grpcagent::UnblockedLoopEvent& event,
         grpcagent::EventResponse*) {
-      return true;
     });
 }
 

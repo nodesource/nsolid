@@ -16,6 +16,7 @@
 
 #include "uv.h"
 #include "nlohmann/json.hpp"
+#include "util.h"
 
 using string_vector = std::vector<std::string>;
 using json = nlohmann::json;
@@ -200,6 +201,7 @@ class RingBuffer {
         size_(0),
         head_(0),
         tail_(0) {
+    CHECK_GT(s, 0);
     buffer_ = new T[s];
   }
 
@@ -235,7 +237,7 @@ class RingBuffer {
   }
 
   void push(T&& value) {
-    buffer_[tail_] = value;
+    buffer_[tail_] = std::move(value);
     tail_ = (tail_ + 1) % capacity_;
 
     if (size_ == capacity_)
@@ -244,9 +246,47 @@ class RingBuffer {
       size_++;
   }
 
+  void resize(size_t new_capacity) {
+    if (new_capacity == capacity_) {
+      return;
+    }
+
+    CHECK_GT(new_capacity, 0);
+
+    T* new_buffer = new T[new_capacity];
+
+    // Copy existing elements to new buffer
+    // Keep the newest elements when resizing down
+    size_t elements_to_copy = std::min(size_, new_capacity);
+    for (size_t i = 0; i < elements_to_copy; ++i) {
+      // If we're resizing down, start from the newest elements
+      // The newest element is at (head_ + size_ - 1) % capacity_
+      // We want to copy the last 'elements_to_copy' elements
+      size_t start_idx = 0;
+      if (size_ > new_capacity) {
+        // We're truncating, start from the element that will become the new
+        // head
+        start_idx = (head_ + size_ - elements_to_copy) % capacity_;
+      } else {
+        // We're expanding, start from the current head
+        start_idx = head_;
+      }
+
+      size_t src_idx = (start_idx + i) % capacity_;
+      new_buffer[i] = std::move(buffer_[src_idx]);
+    }
+
+    delete[] buffer_;
+    buffer_ = new_buffer;
+    capacity_ = new_capacity;
+    size_ = elements_to_copy;
+    head_ = 0;
+    tail_ = size_ % new_capacity;
+  }
+
  private:
   T* buffer_;
-  const size_t capacity_;
+  size_t capacity_;
   size_t size_;
   size_t head_;
   size_t tail_;

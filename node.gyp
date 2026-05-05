@@ -458,6 +458,8 @@
       'agents/grpc/src/grpc_client.cc',
       'agents/grpc/src/grpc_client.h',
       'agents/grpc/src/grpc_errors.h',
+      'agents/grpc/src/grpc_metrics_exporter.cc',
+      'agents/grpc/src/grpc_metrics_exporter.h',
       'agents/grpc/src/proto/nsolid_service.grpc.pb.cc',
       'agents/grpc/src/proto/nsolid_service.pb.cc',
       'agents/grpc/src/proto/asset.grpc.pb.cc',

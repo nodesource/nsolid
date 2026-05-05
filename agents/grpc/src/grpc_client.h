@@ -29,20 +29,20 @@ namespace grpc {
 // Template class for managing async call data for DelegateAsyncExport
 // Moved from grpc_client.cc so it is visible to all template instantiations
 
-template <class EventType>
+template <class EventType, class ResponseType>
 class GrpcAsyncCallData {
  public:
   std::unique_ptr<google::protobuf::Arena> arena;
   ::grpc::Status grpc_status;
   std::unique_ptr<::grpc::ClientContext> grpc_context;
 
-  std::function<bool(::grpc::Status,
+  std::function<void(::grpc::Status,
                      std::unique_ptr<google::protobuf::Arena>&&,
                      const EventType&,
-                     grpcagent::EventResponse*)> result_callback;
+                     ResponseType*)> result_callback;
 
   EventType* event = nullptr;
-  grpcagent::EventResponse* event_response = nullptr;
+  ResponseType* event_response = nullptr;
   uint64_t start;
 
   GrpcAsyncCallData() = default;
@@ -86,39 +86,40 @@ class GrpcClient {
   /**
    * Generic DelegateAsyncExport for any event type.
    * Usage example:
-   *   GrpcClient::DelegateAsyncExport<EventType>(
+   *   GrpcClient::DelegateAsyncExport<Stub, EventType, ResponseType>(
    *     stub,
-   *     &grpcagent::NSolidService::StubInterface::async_interface::ExportEventType,
+   *     &Stub::async_interface::ExportEventType,
    *     std::move(context),
    *     std::move(arena),
    *     std::move(event),
    *     std::move(callback));
    */
-  template <typename EventT>
-  static int DelegateAsyncExport(
-    grpcagent::NSolidService::StubInterface* stub,
-    void(grpcagent::NSolidService::StubInterface::async_interface::*exportFunc)(
+  template <typename Stub, typename EventT, typename ResponseT>
+  static ::grpc::Status DelegateAsyncExport(
+    Stub* stub,
+    void(Stub::async_interface::*exportFunc)(
         ::grpc::ClientContext*,
         const EventT*,
-        ::grpcagent::EventResponse*,
+        ResponseT*,
         std::function<void(::grpc::Status)>),
     std::unique_ptr<::grpc::ClientContext>&& context,
     std::unique_ptr<google::protobuf::Arena>&& arena,
     EventT&& event,
-    std::function<bool(::grpc::Status,
-                      std::unique_ptr<google::protobuf::Arena>&&,
-                      const EventT&,
-                      grpcagent::EventResponse*)>&& result_callback) {
+    std::function<void(::grpc::Status,
+                       std::unique_ptr<google::protobuf::Arena>&&,
+                       const EventT&,
+                       ResponseT*)>&& result_callback) {
     ASSERT_NOT_NULL(stub);
-    auto call_data = std::make_shared<GrpcAsyncCallData<EventT>>();
+    auto call_data = std::make_shared<GrpcAsyncCallData<EventT, ResponseT>>();
     call_data->arena.swap(arena);
     call_data->result_callback.swap(result_callback);
     call_data->event = Arena::Create<EventT>(call_data->arena.get(),
                                              std::move(event));
     call_data->event_response =
-      Arena::Create<grpcagent::EventResponse>(call_data->arena.get());
+      Arena::Create<ResponseT>(call_data->arena.get());
     if (call_data->event == nullptr || call_data->event_response == nullptr) {
-      return -1;
+      return ::grpc::Status(::grpc::StatusCode::INTERNAL,
+                            "Failed to create event");
     }
 
     if (per_process::enabled_debug_list.enabled(
@@ -127,7 +128,6 @@ class GrpcClient {
     }
     call_data->grpc_context.swap(context);
 
-    // Call the correct async export method on the stub
     (stub->async()->*exportFunc)(call_data->grpc_context.get(),
                                  call_data->event,
                                  call_data->event_response,
@@ -153,7 +153,7 @@ class GrpcClient {
                                    call_data->event_response);
       });
 
-    return 0;
+    return ::grpc::Status::OK;
   }
 };
 

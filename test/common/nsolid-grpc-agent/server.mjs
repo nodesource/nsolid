@@ -8,6 +8,9 @@ import protoLoader from '@grpc/proto-loader';
 import fixtures from '../fixtures.js';
 
 const options = {
+  port: {
+    type: 'string',
+  },
   tls: {
     type: 'boolean',
     default: false,
@@ -66,7 +69,7 @@ async function injectDelay(serviceName, callback) {
 }
 
 // Create a local server to receive data from
-async function startServer(cb) {
+async function startServer(cb, port = 0) {
   const server = new grpc.Server();
   const opts = {
     keepCase: false,
@@ -319,9 +322,13 @@ async function startServer(cb) {
   }
 
   return new Promise((resolve, reject) => {
-    server.bindAsync('localhost:0', credentials, (err, port) => {
+    server.bindAsync(`localhost:${port}`, credentials, (err, actualPort) => {
+      if (err) {
+        return reject(err);
+      }
+
       server.start();
-      resolve({ server, port });
+      resolve({ server, port: actualPort });
     });
   });
 }
@@ -329,7 +336,7 @@ async function startServer(cb) {
 const { server, port } = await startServer((err, type, data) => {
   assert.ifError(err);
   process.send({ type, data });
-});
+}, args.values.port);
 
 process.send({ type: 'port', port });
 process.on('message', (message) => {
