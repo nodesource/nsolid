@@ -142,7 +142,7 @@ void GrpcAgent::RefreshRpcMetadata() {
 }
 
 void GrpcAgent::ResetGrpcClients() {
-  auth_timer_.stop();
+  USE(auth_timer_.stop());
   command_stream_.reset();
   nsolid_service_stub_.reset();
   log_exporter_.reset();
