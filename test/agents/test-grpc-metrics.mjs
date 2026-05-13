@@ -17,6 +17,7 @@ const expectedProcMetrics = [
   [ 'uptime', 's', 'asInt', 'sum' ],
   [ 'systemUptime', 's', 'asInt', 'sum' ],
   [ 'freeMem', 'byte', 'asInt', 'gauge' ],
+  [ 'totalMem', 'byte', 'asInt', 'gauge' ],
   [ 'blockInputOpCount', '', 'asInt', 'sum' ],
   [ 'blockOutputOpCount', '', 'asInt', 'sum' ],
   [ 'ctxSwitchInvoluntaryCount', '', 'asInt', 'sum' ],

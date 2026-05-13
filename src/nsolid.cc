@@ -256,6 +256,7 @@ int ProcessMetrics::Update() {
     (uv_hrtime() - node::per_process::node_start_time) / NANOS_PER_SEC;
   stor_.system_uptime = static_cast<uint64_t>(system_uptime);
   stor_.free_mem = uv_get_free_memory();
+  stor_.total_mem = uv_get_total_memory();
   stor_.block_input_op_count = rusage.ru_inblock;
   stor_.block_output_op_count = rusage.ru_oublock;
   stor_.ctx_switch_involuntary_count = rusage.ru_nivcsw;

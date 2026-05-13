@@ -53,6 +53,7 @@ if (process.argv[2] === 'child') {
     [ 'uptime', 's', 'asInt', 'sum' ],
     [ 'system_uptime', 's', 'asInt', 'sum' ],
     [ 'free_mem', 'byte', 'asInt', 'gauge' ],
+    [ 'total_mem', 'byte', 'asInt', 'gauge' ],
     [ 'block_input_op_count', undefined, 'asInt', 'sum' ],
     [ 'block_output_op_count', undefined, 'asInt', 'sum' ],
     [ 'ctx_switch_involuntary_count', undefined, 'asInt', 'sum' ],
