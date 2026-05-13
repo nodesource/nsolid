@@ -18,7 +18,7 @@ const numberKeys = [
   'loopUtilization', 'res5s', 'res1m', 'res5m', 'res15m', 'loopTotalCount',
   'loopAvgTasks', 'loopEstimatedLag', 'loopIdlePercent', 'uptime',
   'systemUptime', 'freeMem', 'blockInputOpCount', 'blockOutputOpCount',
-  'ctxSwitchInvoluntaryCount', 'ctxSwitchVoluntaryCount', 'ipcReceivedCount',
+  'totalMem', 'ctxSwitchInvoluntaryCount', 'ctxSwitchVoluntaryCount', 'ipcReceivedCount',
   'ipcSentCount', 'pageFaultHardCount', 'pageFaultSoftCount', 'signalCount',
   'swapCount', 'rss', 'load1m', 'load5m', 'load15m', 'cpuUserPercent',
   'cpuSystemPercent', 'cpuPercent', 'cpu', 'pipeServerCreatedCount',

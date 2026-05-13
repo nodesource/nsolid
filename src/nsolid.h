@@ -46,6 +46,7 @@ struct LogWriteInfo;
   V(uint64_t, uptime, uptime, ECounter, kNSSecs)                               \
   V(uint64_t, system_uptime, systemUptime, ECounter, kNSSecs)                  \
   V(uint64_t, free_mem, freeMem, EGauge, kNSByte)                              \
+  V(uint64_t, total_mem, totalMem, EGauge, kNSByte)                            \
   V(uint64_t, block_input_op_count, blockInputOpCount, ECounter, kNSNoUnit)    \
   V(uint64_t, block_output_op_count, blockOutputOpCount, ECounter, kNSNoUnit)  \
   V(uint64_t, ctx_switch_involuntary_count,                                    \

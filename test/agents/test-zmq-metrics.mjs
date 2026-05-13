@@ -127,6 +127,7 @@ function checkProcessMetrics(processMetrics) {
   validateNumber(processMetrics.uptime, 'processMetrics.uptime');
   validateNumber(processMetrics.systemUptime, 'processMetrics.systemUptime');
   validateNumber(processMetrics.freeMem, 'processMetrics.freeMem');
+  validateNumber(processMetrics.totalMem, 'processMetrics.totalMem');
   validateUint32(processMetrics.blockInputOpCount, 'processMetrics.blockInputOpCount');
   validateUint32(processMetrics.blockOutputOpCount, 'processMetrics.blockOutputOpCount');
   validateUint32(processMetrics.ctxSwitchInvoluntaryCount, 'processMetrics.ctxSwitchInvoluntaryCount');

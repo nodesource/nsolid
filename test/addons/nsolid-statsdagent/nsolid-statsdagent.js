@@ -12,6 +12,7 @@ let expectedProcMetrics = [
   'uptime',
   'systemUptime',
   'freeMem',
+  'totalMem',
   'blockInputOpCount',
   'blockOutputOpCount',
   'ctxSwitchInvoluntaryCount',
