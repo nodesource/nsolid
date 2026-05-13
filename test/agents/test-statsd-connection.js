@@ -23,6 +23,7 @@ const expectedMetrics = [
   'ctxSwitchInvoluntaryCount',
   'ctxSwitchVoluntaryCount',
   'freeMem',
+  'totalMem',
   'ipcReceivedCount',
   'ipcSentCount',
   'load15m',
