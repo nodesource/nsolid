@@ -18,6 +18,7 @@
 
 #include "src/core/ext/transport/chttp2/transport/http2_transport.h"
 
+#include <grpc/event_engine/event_engine.h>
 #include <grpc/grpc.h>
 #include <grpc/impl/channel_arg_names.h>
 
@@ -37,11 +38,11 @@
 #include "src/core/ext/transport/chttp2/transport/header_assembler.h"
 #include "src/core/ext/transport/chttp2/transport/hpack_parser.h"
 #include "src/core/ext/transport/chttp2/transport/http2_settings.h"
-#include "src/core/ext/transport/chttp2/transport/http2_settings_manager.h"
 #include "src/core/ext/transport/chttp2/transport/http2_settings_promises.h"
 #include "src/core/ext/transport/chttp2/transport/http2_status.h"
 #include "src/core/ext/transport/chttp2/transport/internal_channel_arg_names.h"
 #include "src/core/ext/transport/chttp2/transport/stream.h"
+#include "src/core/ext/transport/chttp2/transport/write_cycle.h"
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/event_engine/tcp_socket_utils.h"
 #include "src/core/lib/slice/slice_buffer.h"
@@ -49,7 +50,8 @@
 #include "src/core/util/ref_counted_ptr.h"
 #include "src/core/util/time.h"
 #include "absl/log/log.h"
-#include "absl/types/span.h"
+#include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 
 namespace grpc_core {
 namespace http2 {
@@ -87,12 +89,32 @@ constexpr Duration kServerKeepaliveTime = Duration::Hours(2);
 // familiar with the PH2 project (Moving chttp2 to promises.)
 
 ///////////////////////////////////////////////////////////////////////////////
+// Read and Write helpers
+
+// This is only called by the HTTP2 Server Transport to validate the incoming
+// connection preface. Since a server does not send a connection preface, this
+// validation is not needed for the client transport.
+Http2Status ValidateIncomingConnectionPreface(
+    const absl::StatusOr<Slice>& status) {
+  if (!status.ok()) {
+    return ToHttpOkOrConnError(status.status());
+  } else if (status.value() !=
+             Slice::FromStaticString(GRPC_CHTTP2_CLIENT_CONNECT_STRING)) {
+    return Http2Status::Http2ConnectionError(
+        Http2ErrorCode::kProtocolError,
+        std::string(RFC9113::kFirstSettingsFrameServer));
+  }
+  return Http2Status::Ok();
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Settings helpers
 
 void InitLocalSettings(Http2Settings& settings, const bool is_client) {
   if (is_client) {
     // gRPC has never supported PUSH_PROMISE and we have no plan to do so in the
-    // future.
+    // future. We are not setting this to false for Server to be consistent
+    // with the legacy CHTTP2 transport.
     settings.SetEnablePush(false);
     // This is to make it double-sure that server cannot initiate a stream.
     settings.SetMaxConcurrentStreams(0);
@@ -103,6 +125,21 @@ void InitLocalSettings(Http2Settings& settings, const bool is_client) {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Channel Args helpers
+
+std::string TransportChannelArgs::DebugString() const {
+  return absl::StrCat(
+      "keepalive_time: ", keepalive_time,
+      " keepalive_timeout: ", keepalive_timeout,
+      " ping_timeout: ", ping_timeout, " settings_timeout: ", settings_timeout,
+      " keepalive_permit_without_calls: ", keepalive_permit_without_calls,
+      " enable_preferred_rx_crypto_frame_advertisement: ",
+      enable_preferred_rx_crypto_frame_advertisement,
+      " max_header_list_size_soft_limit: ", max_header_list_size_soft_limit,
+      " max_usable_hpack_table_size: ", max_usable_hpack_table_size,
+      " initial_sequence_number: ", initial_sequence_number,
+      " test_only_ack_pings: ", test_only_ack_pings);
+}
+
 void ReadChannelArgs(const ChannelArgs& channel_args,
                      TransportChannelArgs& args, Http2Settings& local_settings,
                      chttp2::TransportFlowControl& flow_control,
@@ -276,7 +313,7 @@ void ProcessOutgoingDataFrameFlowControl(
 ValueOrHttp2Status<chttp2::FlowControlAction>
 ProcessIncomingDataFrameFlowControl(Http2FrameHeader& frame_header,
                                     chttp2::TransportFlowControl& flow_control,
-                                    RefCountedPtr<Stream> stream) {
+                                    Stream* stream) {
   GRPC_DCHECK_EQ(frame_header.type, 0u);
   if (frame_header.length > 0) {
     if (stream == nullptr) {
@@ -301,7 +338,7 @@ ProcessIncomingDataFrameFlowControl(Http2FrameHeader& frame_header,
       return action;
     } else {
       chttp2::StreamFlowControl::IncomingUpdateContext stream_fc(
-          &stream->flow_control);
+          &stream->GetStreamFlowControl());
       absl::Status fc_status = stream_fc.RecvData(frame_header.length);
       chttp2::FlowControlAction action = stream_fc.MakeAction();
       GRPC_HTTP2_COMMON_DLOG
@@ -325,14 +362,14 @@ ProcessIncomingDataFrameFlowControl(Http2FrameHeader& frame_header,
 
 bool ProcessIncomingWindowUpdateFrameFlowControl(
     const Http2WindowUpdateFrame& frame,
-    chttp2::TransportFlowControl& flow_control, RefCountedPtr<Stream> stream) {
+    chttp2::TransportFlowControl& flow_control, Stream* stream) {
   if (frame.stream_id != 0) {
     if (stream != nullptr) {
       GRPC_HTTP2_COMMON_DLOG
           << "ProcessIncomingWindowUpdateFrameFlowControl stream "
           << frame.stream_id << " increment " << frame.increment;
       chttp2::StreamFlowControl::OutgoingUpdateContext fc_update(
-          &stream->flow_control);
+          &stream->GetStreamFlowControl());
       fc_update.RecvUpdate(frame.increment);
     } else {
       // If stream id is non zero, and stream is nullptr, maybe the stream was
@@ -362,25 +399,36 @@ bool ProcessIncomingWindowUpdateFrameFlowControl(
   return false;
 }
 
-void MaybeAddStreamWindowUpdateFrame(RefCountedPtr<Stream> stream,
-                                     std::vector<Http2Frame>& frames) {
+void MaybeAddTransportWindowUpdateFrame(
+    chttp2::TransportFlowControl& flow_control, FrameSender& frame_sender) {
+  uint32_t window_size =
+      flow_control.DesiredAnnounceSize(/*writing_anyway=*/true);
+  if (window_size > 0) {
+    GRPC_HTTP2_COMMON_DLOG
+        << "MaybeGetWindowUpdateFrames Transport Window Update : "
+        << window_size;
+    frame_sender.AddRegularFrame(
+        Http2WindowUpdateFrame{/*stream_id=*/0, window_size});
+    flow_control.SentUpdate(window_size);
+  }
+}
+
+void MaybeAddStreamWindowUpdateFrame(Stream& stream,
+                                     FrameSender& frame_sender) {
   GRPC_HTTP2_COMMON_DLOG << "MaybeAddStreamWindowUpdateFrame stream="
-                         << ((stream == nullptr)
-                                 ? "null"
-                                 : absl::StrCat(
-                                       stream->GetStreamId(),
-                                       " CanSendWindowUpdateFrames=",
-                                       stream->CanSendWindowUpdateFrames()));
-  if (stream != nullptr && stream->CanSendWindowUpdateFrames()) {
-    const uint32_t increment = stream->flow_control.MaybeSendUpdate();
+                         << stream.GetStreamId()
+                         << " CanSendWindowUpdateFrames="
+                         << stream.CanSendWindowUpdateFrames();
+  if (stream.CanSendWindowUpdateFrames()) {
+    const uint32_t increment = stream.GetStreamFlowControl().MaybeSendUpdate();
     GRPC_HTTP2_COMMON_DLOG
         << "MaybeAddStreamWindowUpdateFrame MaybeSendUpdate { "
-        << stream->GetStreamId() << ", " << increment << " }"
+        << stream.GetStreamId() << ", " << increment << " }"
         << (increment == 0 ? ". The frame will NOT be sent for increment 0"
                            : "");
     if (increment > 0) {
-      frames.emplace_back(
-          Http2WindowUpdateFrame{stream->GetStreamId(), increment});
+      frame_sender.AddRegularFrame(
+          Http2WindowUpdateFrame{stream.GetStreamId(), increment});
     }
   }
 }
@@ -390,7 +438,7 @@ void MaybeAddStreamWindowUpdateFrame(RefCountedPtr<Stream> stream,
 
 Http2Status ParseAndDiscardHeaders(HPackParser& parser, SliceBuffer&& buffer,
                                    HeaderAssembler::ParseHeaderArgs args,
-                                   const RefCountedPtr<Stream> stream,
+                                   Stream* stream,
                                    Http2Status&& original_status) {
   GRPC_HTTP2_COMMON_DLOG << "ParseAndDiscardHeaders buffer "
                             "size: "
@@ -402,9 +450,8 @@ Http2Status ParseAndDiscardHeaders(HPackParser& parser, SliceBuffer&& buffer,
 
   if (stream != nullptr) {
     // Parse all the data in the header assembler
-    Http2Status result = stream->header_assembler.ParseAndDiscardHeaders(
-        parser, args.is_initial_metadata, args.is_client,
-        args.max_header_list_size_soft_limit,
+    Http2Status result = stream->GetHeaderAssembler().ParseAndDiscardHeaders(
+        parser, args.is_initial_metadata, args.max_header_list_size_soft_limit,
         args.max_header_list_size_hard_limit);
     if (!result.IsOk()) {
       GRPC_DCHECK(result.GetType() ==

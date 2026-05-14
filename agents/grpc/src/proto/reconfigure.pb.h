@@ -398,9 +398,10 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
 
   public:
   // optional double traceSampleRate = 14;
-  bool has_tracesamplerate() const;
+  [[nodiscard]] bool has_tracesamplerate()
+      const;
   void clear_tracesamplerate() ;
-  double tracesamplerate() const;
+  [[nodiscard]] double tracesamplerate() const;
   void set_tracesamplerate(double value);
 
   private:
