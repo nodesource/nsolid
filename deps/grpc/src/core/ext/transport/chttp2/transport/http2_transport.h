@@ -27,14 +27,12 @@
 #include "src/core/ext/transport/chttp2/transport/frame.h"
 #include "src/core/ext/transport/chttp2/transport/hpack_parser.h"
 #include "src/core/ext/transport/chttp2/transport/http2_settings.h"
-#include "src/core/ext/transport/chttp2/transport/http2_settings_manager.h"
-#include "src/core/ext/transport/chttp2/transport/http2_settings_promises.h"
 #include "src/core/ext/transport/chttp2/transport/http2_status.h"
 #include "src/core/ext/transport/chttp2/transport/stream.h"
+#include "src/core/ext/transport/chttp2/transport/write_cycle.h"
 #include "src/core/lib/promise/activity.h"
-#include "src/core/lib/promise/context.h"
 #include "src/core/lib/promise/poll.h"
-#include "src/core/lib/transport/promise_endpoint.h"
+#include "src/core/lib/slice/slice.h"
 #include "src/core/util/ref_counted_ptr.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -52,13 +50,14 @@ namespace http2 {
 #define GRPC_HTTP2_CLIENT_DLOG \
   DLOG_IF(INFO, GRPC_TRACE_FLAG_ENABLED(http2_ph2_transport))
 
+#define GRPC_HTTP2_SERVER_DLOG \
+  DLOG_IF(INFO, GRPC_TRACE_FLAG_ENABLED(http2_ph2_transport))
+
 #define GRPC_HTTP2_CLIENT_ERROR_DLOG \
   LOG_IF(ERROR, GRPC_TRACE_FLAG_ENABLED(http2_ph2_transport))
 
 #define GRPC_HTTP2_COMMON_DLOG \
   DLOG_IF(INFO, GRPC_TRACE_FLAG_ENABLED(http2_ph2_transport))
-
-constexpr uint32_t kMaxWriteSize = /*10 MB*/ 10u * 1024u * 1024u;
 
 constexpr uint32_t kGoawaySendTimeoutSeconds = 5u;
 
@@ -67,11 +66,21 @@ struct CloseStreamArgs {
   bool close_writes;
 };
 
+// TODO(akshitpatel) [PH2][P3] : Write a way to measure the total size of a
+// transport object. Reference :
+// https://github.com/grpc/grpc/pull/41294/files#diff-c685cc4847f228327938326e2a45083a2d0845bacff0ac004bd802027a670c4e
+
 ///////////////////////////////////////////////////////////////////////////////
 // Read and Write helpers
 
 class Http2ReadContext {
  public:
+  Http2ReadContext() = default;
+  Http2ReadContext(const Http2ReadContext&) = delete;
+  Http2ReadContext& operator=(const Http2ReadContext&) = delete;
+  Http2ReadContext(Http2ReadContext&&) = delete;
+  Http2ReadContext& operator=(Http2ReadContext&&) = delete;
+
   // Signals that the read loop should pause. If it's already paused, this is a
   // no-op.
   void SetPauseReadLoop() {
@@ -107,30 +116,8 @@ class Http2ReadContext {
   Waker read_loop_waker_;
 };
 
-inline PromiseEndpoint::WriteArgs GetWriteArgs(
-    const Http2Settings& peer_settings) {
-  PromiseEndpoint::WriteArgs args;
-  int max_frame_size = peer_settings.preferred_receive_crypto_message_size();
-  // Note: max frame size is 0 if the remote peer does not support adjusting the
-  // sending frame size.
-  if (max_frame_size == 0) {
-    max_frame_size = INT_MAX;
-  }
-  // `WriteArgs.max_frame_size` is a suggestion to the endpoint implementation
-  // to group data to be written into frames of the specified max_frame_size. It
-  // is different from HTTP2 SETTINGS_MAX_FRAME_SIZE. That setting limits HTTP2
-  // frame payload size.
-  args.set_max_frame_size(max_frame_size);
-
-  // TODO(akshitpatel) [PH2][P1] : Currently only the WriteArgs related to
-  // preferred_receive_crypto_message_size have been plumbed. The other write
-  // args may need to be plumbed for PH2.
-  // CHTTP2 : Reference :
-  // File : src/core/ext/transport/chttp2/transport/chttp2_transport.cc
-  // Function : write_action
-
-  return args;
-}
+Http2Status ValidateIncomingConnectionPreface(
+    const absl::StatusOr<Slice>& status);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Settings helpers
@@ -153,20 +140,7 @@ struct TransportChannelArgs {
   int max_usable_hpack_table_size;
   int initial_sequence_number;
 
-  std::string DebugString() const {
-    return absl::StrCat(
-        "keepalive_time: ", keepalive_time,
-        " keepalive_timeout: ", keepalive_timeout,
-        " ping_timeout: ", ping_timeout,
-        " settings_timeout: ", settings_timeout,
-        " keepalive_permit_without_calls: ", keepalive_permit_without_calls,
-        " enable_preferred_rx_crypto_frame_advertisement: ",
-        enable_preferred_rx_crypto_frame_advertisement,
-        " max_header_list_size_soft_limit: ", max_header_list_size_soft_limit,
-        " max_usable_hpack_table_size: ", max_usable_hpack_table_size,
-        " initial_sequence_number: ", initial_sequence_number,
-        " test_only_ack_pings: ", test_only_ack_pings);
-  }
+  std::string DebugString() const;
 };
 
 void ReadChannelArgs(const ChannelArgs& channel_args,
@@ -197,15 +171,17 @@ void ProcessOutgoingDataFrameFlowControl(
 ValueOrHttp2Status<chttp2::FlowControlAction>
 ProcessIncomingDataFrameFlowControl(Http2FrameHeader& frame,
                                     chttp2::TransportFlowControl& flow_control,
-                                    RefCountedPtr<Stream> stream);
+                                    Stream* stream);
 
 // Returns true if a write should be triggered
 bool ProcessIncomingWindowUpdateFrameFlowControl(
     const Http2WindowUpdateFrame& frame,
-    chttp2::TransportFlowControl& flow_control, RefCountedPtr<Stream> stream);
+    chttp2::TransportFlowControl& flow_control, Stream* stream);
 
-void MaybeAddStreamWindowUpdateFrame(RefCountedPtr<Stream> stream,
-                                     std::vector<Http2Frame>& frames);
+void MaybeAddTransportWindowUpdateFrame(
+    chttp2::TransportFlowControl& flow_control, FrameSender& frame_sender);
+
+void MaybeAddStreamWindowUpdateFrame(Stream& stream, FrameSender& frame_sender);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Header and Continuation frame processing helpers
@@ -242,7 +218,7 @@ void MaybeAddStreamWindowUpdateFrame(RefCountedPtr<Stream> stream,
 // it returns the original status.
 Http2Status ParseAndDiscardHeaders(HPackParser& parser, SliceBuffer&& buffer,
                                    HeaderAssembler::ParseHeaderArgs args,
-                                   RefCountedPtr<Stream> stream,
+                                   Stream* stream,
                                    Http2Status&& original_status);
 
 }  // namespace http2
