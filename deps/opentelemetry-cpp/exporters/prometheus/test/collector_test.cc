@@ -15,6 +15,7 @@
 #include "opentelemetry/sdk/metrics/metric_reader.h"
 #include "prometheus_test_helper.h"
 
+using namespace prometheus_test;
 using opentelemetry::exporter::metrics::PrometheusCollector;
 using opentelemetry::sdk::metrics::MetricProducer;
 using opentelemetry::sdk::metrics::ResourceMetrics;
@@ -77,7 +78,7 @@ TEST(PrometheusCollector, BasicTests)
   MockMetricReader reader;
   MockMetricProducer producer;
   reader.SetMetricProducer(&producer);
-  PrometheusCollector collector(&reader, true, false);
+  PrometheusCollector collector(&reader, true, false, false, false);
   auto data = collector.Collect();
 
   // Collection size should be the same as the size

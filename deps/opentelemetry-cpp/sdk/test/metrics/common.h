@@ -17,6 +17,8 @@ class MockMetricExporter : public opentelemetry::sdk::metrics::PushMetricExporte
 {
 public:
   MockMetricExporter() = default;
+  explicit MockMetricExporter(opentelemetry::sdk::metrics::AggregationTemporality temporality);
+
   opentelemetry::sdk::common::ExportResult Export(
       const opentelemetry::sdk::metrics::ResourceMetrics &) noexcept override;
 
@@ -26,6 +28,10 @@ public:
   bool ForceFlush(std::chrono::microseconds) noexcept override;
 
   bool Shutdown(std::chrono::microseconds) noexcept override;
+
+private:
+  opentelemetry::sdk::metrics::AggregationTemporality temporality_ =
+      opentelemetry::sdk::metrics::AggregationTemporality::kCumulative;
 };
 
 class MockMetricReader : public opentelemetry::sdk::metrics::MetricReader
@@ -52,6 +58,11 @@ class MockCollectorHandle : public opentelemetry::sdk::metrics::CollectorHandle
 {
 public:
   MockCollectorHandle(opentelemetry::sdk::metrics::AggregationTemporality);
+
+  MockCollectorHandle(const MockCollectorHandle &)            = delete;
+  MockCollectorHandle(MockCollectorHandle &&)                 = delete;
+  MockCollectorHandle &operator=(const MockCollectorHandle &) = delete;
+  MockCollectorHandle &operator=(MockCollectorHandle &&)      = delete;
 
   ~MockCollectorHandle() override = default;
 

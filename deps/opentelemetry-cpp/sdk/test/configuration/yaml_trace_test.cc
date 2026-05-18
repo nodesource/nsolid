@@ -2,12 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "opentelemetry/sdk/configuration/batch_span_processor_configuration.h"
+#include "opentelemetry/sdk/configuration/composable_always_off_sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/composable_always_on_sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/composable_parent_threshold_sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/composable_probability_sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/composable_rule_based_sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/composable_rule_based_sampler_rule_attribute_patterns_configuration.h"
+#include "opentelemetry/sdk/configuration/composable_rule_based_sampler_rule_attribute_values_configuration.h"
+#include "opentelemetry/sdk/configuration/composable_rule_based_sampler_rule_configuration.h"
 #include "opentelemetry/sdk/configuration/configuration.h"
 #include "opentelemetry/sdk/configuration/grpc_tls_configuration.h"
 #include "opentelemetry/sdk/configuration/headers_configuration.h"
@@ -18,10 +27,15 @@
 #include "opentelemetry/sdk/configuration/otlp_http_encoding.h"
 #include "opentelemetry/sdk/configuration/otlp_http_span_exporter_configuration.h"
 #include "opentelemetry/sdk/configuration/parent_based_sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/sampler_configuration_visitor.h"
 #include "opentelemetry/sdk/configuration/simple_span_processor_configuration.h"
 #include "opentelemetry/sdk/configuration/span_limits_configuration.h"
 #include "opentelemetry/sdk/configuration/span_processor_configuration.h"
 #include "opentelemetry/sdk/configuration/trace_id_ratio_based_sampler_configuration.h"
+#include "opentelemetry/sdk/configuration/tracer_config_configuration.h"
+#include "opentelemetry/sdk/configuration/tracer_configurator_configuration.h"
+#include "opentelemetry/sdk/configuration/tracer_matcher_and_config_configuration.h"
 #include "opentelemetry/sdk/configuration/tracer_provider_configuration.h"
 #include "opentelemetry/sdk/configuration/yaml_configuration_parser.h"
 
@@ -730,4 +744,440 @@ tracer_provider:
       reinterpret_cast<opentelemetry::sdk::configuration::TraceIdRatioBasedSamplerConfiguration *>(
           sampler);
   ASSERT_EQ(ratio->ratio, 3.14);
+}
+
+TEST(YamlTrace, no_tracer_configurator)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_EQ(config->tracer_provider->tracer_configurator, nullptr);
+}
+
+TEST(YamlTrace, tracer_configurator_default_only)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  tracer_configurator/development:
+    default_config:
+      enabled: false
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->tracer_configurator, nullptr);
+  ASSERT_EQ(config->tracer_provider->tracer_configurator->default_config.enabled, false);
+  ASSERT_EQ(config->tracer_provider->tracer_configurator->tracers.size(), 0);
+}
+
+TEST(YamlTrace, tracer_configurator_with_tracers)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  tracer_configurator/development:
+    default_config:
+      enabled: false
+    tracers:
+      - name: io.opentelemetry.contrib.*
+        config:
+          enabled: true
+      - name: my.exact.tracer
+        config:
+          enabled: false
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->tracer_configurator, nullptr);
+
+  auto &configurator = config->tracer_provider->tracer_configurator;
+  ASSERT_EQ(configurator->default_config.enabled, false);
+  ASSERT_EQ(configurator->tracers.size(), 2);
+
+  ASSERT_EQ(configurator->tracers[0].name, "io.opentelemetry.contrib.*");
+  ASSERT_EQ(configurator->tracers[0].config.enabled, true);
+
+  ASSERT_EQ(configurator->tracers[1].name, "my.exact.tracer");
+  ASSERT_EQ(configurator->tracers[1].config.enabled, false);
+}
+
+TEST(YamlTrace, tracer_configurator_default_enabled)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  tracer_configurator/development:
+    default_config:
+      enabled: true
+    tracers:
+      - name: noisy.library
+        config:
+          enabled: false
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->tracer_configurator, nullptr);
+
+  auto &configurator = config->tracer_provider->tracer_configurator;
+  ASSERT_EQ(configurator->default_config.enabled, true);
+  ASSERT_EQ(configurator->tracers.size(), 1);
+  ASSERT_EQ(configurator->tracers[0].name, "noisy.library");
+  ASSERT_EQ(configurator->tracers[0].config.enabled, false);
+}
+
+namespace
+{
+enum class SamplerType : std::uint8_t
+{
+  kUnmatched                 = 0,
+  kAlwaysOn                  = 1,
+  kAlwaysOff                 = 2,
+  kTraceIdRatioBased         = 3,
+  kParentBased               = 4,
+  kJaegerRemote              = 5,
+  kComposableAlwaysOn        = 6,
+  kComposableProbability     = 7,
+  kComposableRuleBased       = 8,
+  kComposableAlwaysOff       = 9,
+  kComposableParentThreshold = 10
+};
+
+class TestSamplerVisitor : public opentelemetry::sdk::configuration::SamplerConfigurationVisitor
+{
+public:
+  SamplerType type_matched = SamplerType::kUnmatched;
+  double ratio             = -1.0;
+
+  void VisitAlwaysOff(
+      const opentelemetry::sdk::configuration::AlwaysOffSamplerConfiguration *) override
+  {
+    type_matched = SamplerType::kAlwaysOff;
+  }
+  void VisitAlwaysOn(
+      const opentelemetry::sdk::configuration::AlwaysOnSamplerConfiguration *) override
+  {
+    type_matched = SamplerType::kAlwaysOn;
+  }
+  void VisitJaegerRemote(
+      const opentelemetry::sdk::configuration::JaegerRemoteSamplerConfiguration *) override
+  {
+    type_matched = SamplerType::kJaegerRemote;
+  }
+  void VisitParentBased(
+      const opentelemetry::sdk::configuration::ParentBasedSamplerConfiguration *) override
+  {
+    type_matched = SamplerType::kParentBased;
+  }
+  void VisitTraceIdRatioBased(
+      const opentelemetry::sdk::configuration::TraceIdRatioBasedSamplerConfiguration *model)
+      override
+  {
+    type_matched = SamplerType::kTraceIdRatioBased;
+    ratio        = model->ratio;
+  }
+  void VisitExtension(
+      const opentelemetry::sdk::configuration::ExtensionSamplerConfiguration *) override
+  {}
+
+  void VisitComposableAlwaysOff(
+      const opentelemetry::sdk::configuration::ComposableAlwaysOffSamplerConfiguration *) override
+  {
+    type_matched = SamplerType::kComposableAlwaysOff;
+  }
+  void VisitComposableAlwaysOn(
+      const opentelemetry::sdk::configuration::ComposableAlwaysOnSamplerConfiguration *) override
+  {
+    type_matched = SamplerType::kComposableAlwaysOn;
+  }
+  void VisitComposableProbability(
+      const opentelemetry::sdk::configuration::ComposableProbabilitySamplerConfiguration *model)
+      override
+  {
+    type_matched = SamplerType::kComposableProbability;
+    ratio        = model->ratio;
+  }
+  void VisitComposableParentThreshold(
+      const opentelemetry::sdk::configuration::ComposableParentThresholdSamplerConfiguration *)
+      override
+  {
+    type_matched = SamplerType::kComposableParentThreshold;
+  }
+  void VisitComposableRuleBased(
+      const opentelemetry::sdk::configuration::ComposableRuleBasedSamplerConfiguration *) override
+  {
+    type_matched = SamplerType::kComposableRuleBased;
+  }
+};
+}  // namespace
+
+TEST(YamlTrace, composable_always_on_sampler)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  sampler:
+    composite/development:
+      always_on:
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->sampler, nullptr);
+
+  TestSamplerVisitor visitor;
+  config->tracer_provider->sampler->Accept(&visitor);
+  EXPECT_EQ(visitor.type_matched, SamplerType::kComposableAlwaysOn);
+}
+
+TEST(YamlTrace, composable_probability_sampler)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  sampler:
+    composite/development:
+      probability:
+        ratio: 0.25
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->sampler, nullptr);
+
+  TestSamplerVisitor visitor;
+  config->tracer_provider->sampler->Accept(&visitor);
+
+  EXPECT_EQ(visitor.type_matched, SamplerType::kComposableProbability);
+  EXPECT_DOUBLE_EQ(visitor.ratio, 0.25);
+}
+
+TEST(YamlTrace, composable_rule_based_sampler)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  sampler:
+    composite/development:
+      rule_based:
+        rules:
+          - sampler:
+              always_on:
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->sampler, nullptr);
+
+  TestSamplerVisitor visitor;
+  config->tracer_provider->sampler->Accept(&visitor);
+  EXPECT_EQ(visitor.type_matched, SamplerType::kComposableRuleBased);
+}
+
+TEST(YamlTrace, composable_always_off_sampler)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  sampler:
+    composite/development:
+      always_off:
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->sampler, nullptr);
+
+  TestSamplerVisitor visitor;
+  config->tracer_provider->sampler->Accept(&visitor);
+  EXPECT_EQ(visitor.type_matched, SamplerType::kComposableAlwaysOff);
+}
+
+TEST(YamlTrace, composable_parent_threshold_sampler)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  sampler:
+    composite/development:
+      parent_threshold:
+        root:
+          always_on:
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->sampler, nullptr);
+
+  TestSamplerVisitor visitor;
+  config->tracer_provider->sampler->Accept(&visitor);
+  EXPECT_EQ(visitor.type_matched, SamplerType::kComposableParentThreshold);
+}
+
+TEST(YamlTrace, composable_rule_based_sampler_comprehensive)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          console:
+  sampler:
+    composite/development:
+      rule_based:
+        rules:
+          - attribute_values:
+              key: "http.method"
+              values:
+                - "GET"
+                - "POST"
+            attribute_patterns:
+              key: "http.url"
+              included:
+                - ".*/api/.*"
+              excluded:
+                - ".*/healthz"
+            parent:
+              - remote
+              - local
+            span_kinds:
+              - server
+              - client
+            sampler:
+              always_on:
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_NE(config, nullptr);
+  ASSERT_NE(config->tracer_provider, nullptr);
+  ASSERT_NE(config->tracer_provider->sampler, nullptr);
+
+  TestSamplerVisitor visitor;
+  config->tracer_provider->sampler->Accept(&visitor);
+  ASSERT_EQ(visitor.type_matched, SamplerType::kComposableRuleBased);
+
+  auto *rule_based_sampler =
+      static_cast<opentelemetry::sdk::configuration::ComposableRuleBasedSamplerConfiguration *>(
+          config->tracer_provider->sampler.get());
+  ASSERT_NE(rule_based_sampler, nullptr);
+  ASSERT_EQ(rule_based_sampler->rules.size(), 1);
+
+  const auto &rule = rule_based_sampler->rules[0];
+
+  // 1. Check attribute_values
+  ASSERT_NE(rule->attribute_values, nullptr);
+  EXPECT_EQ(rule->attribute_values->key, "http.method");
+  ASSERT_EQ(rule->attribute_values->values.size(), 2);
+  EXPECT_EQ(rule->attribute_values->values[0], "GET");
+
+  // 2. Check attribute_patterns
+  ASSERT_NE(rule->attribute_patterns, nullptr);
+  EXPECT_EQ(rule->attribute_patterns->key, "http.url");
+  ASSERT_EQ(rule->attribute_patterns->included.size(), 1);
+  EXPECT_EQ(rule->attribute_patterns->included[0], ".*/api/.*");
+  ASSERT_EQ(rule->attribute_patterns->excluded.size(), 1);
+  EXPECT_EQ(rule->attribute_patterns->excluded[0], ".*/healthz");
+
+  // 3. Check parent flags
+  EXPECT_TRUE(rule->match_parent_remote);
+  EXPECT_TRUE(rule->match_parent_local);
+  EXPECT_FALSE(rule->match_parent_none);
+
+  // 4. Check span kinds
+  EXPECT_TRUE(rule->match_span_kind_server);
+  EXPECT_TRUE(rule->match_span_kind_client);
+  EXPECT_FALSE(rule->match_span_kind_internal);
+
+  // 5. Check inner sampler
+  ASSERT_NE(rule->sampler, nullptr);
+}
+
+TEST(YamlTrace, composable_rule_based_sampler_illegal_parent)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  sampler:
+    composite/development:
+      rule_based:
+        rules:
+          - parent:
+              - illegal_parent_value
+            sampler:
+              always_on:
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_EQ(config, nullptr);
+}
+
+TEST(YamlTrace, composable_rule_based_sampler_illegal_spankind)
+{
+  std::string yaml = R"(
+file_format: "1.0-trace"
+tracer_provider:
+  sampler:
+    composite/development:
+      rule_based:
+        rules:
+          - span_kinds:
+              - illegal_span_kind
+            sampler:
+              always_on:
+)";
+
+  auto config = DoParse(yaml);
+  ASSERT_EQ(config, nullptr);
 }
