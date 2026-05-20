@@ -16,7 +16,6 @@ const {
 } = validators;
 
 function checkProfileData(profile, metadata, requestId, agentId, options) {
-  console.dir(profile, { depth: null });
   validateString(profile.common.requestId, 'requestId');
   assert.ok(profile.common.requestId.length > 0);
   if (requestId) {
@@ -59,7 +58,6 @@ function checkProfileData(profile, metadata, requestId, agentId, options) {
 }
 
 function checkProfileError(profile, metadata, requestId, agentId, code, msg) {
-  console.dir(profile, { depth: null });
   assert.strictEqual(profile.common.requestId, requestId);
   assert.strictEqual(profile.common.command, 'heap_profile');
   // From here check at least that all the fields are present
@@ -468,7 +466,6 @@ const testConfigs = [
   {
     getEnv: (port) => {
       return {
-        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
         NSOLID_GRPC_INSECURE: 1,
         NSOLID_GRPC: `localhost:${port}`,
       };
@@ -477,7 +474,6 @@ const testConfigs = [
   {
     getEnv: (port) => {
       return {
-        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
         NSOLID_GRPC_INSECURE: 1,
         NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
       };

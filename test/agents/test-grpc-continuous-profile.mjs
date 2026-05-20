@@ -16,7 +16,6 @@ const {
 } = validators;
 
 function checkContinuousProfileData(profile, metadata, agentId, options, interval = 100) {
-  console.dir(profile, { depth: null });
   validateString(profile.common.requestId, 'requestId');
   assert.ok(profile.common.requestId.length > 0);
 
@@ -58,7 +57,6 @@ function checkContinuousProfileData(profile, metadata, agentId, options, interva
 }
 
 function checkProfileError(profile, metadata, requestId, agentId, code, msg) {
-  console.dir(profile, { depth: null });
   assert.strictEqual(profile.common.requestId, requestId);
   assert.strictEqual(profile.common.command, 'profile');
   // From here check at least that all the fields are present
@@ -92,7 +90,6 @@ tests.push({
           times++;
           if (times === 2) {
             const diff = process.hrtime(startTime);
-            console.log('diff', diff);
             assert.strictEqual(diff[0], 0);
             assert.ok(diff[1] > 200000000);
             await child.shutdown(0);
@@ -224,12 +221,10 @@ tests.push({
         const countAfterDisable = profileCount;
 
         await setTimeout(500);
-        console.log('profileCount after disableAssets:', profileCount, 'countAfterDisable:', countAfterDisable);
         assert.ok(profileCount - countAfterDisable <= 1);
 
         await child.enableAssets();
         await setTimeout(500);
-        console.log('profileCount after enableAssets:', profileCount, 'countAfterDisable:', countAfterDisable);
         assert.ok(profileCount > countAfterDisable);
 
         const currentConfig = await child.config();
@@ -279,7 +274,6 @@ tests.push({
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
           if (timesMainThread === 2 && timesWorker === 2) {
             const diff = process.hrtime(startTime);
-            console.log('diff', diff);
             assert.strictEqual(diff[0], 0);
             assert.ok(diff[1] > 200000000);
             await child.shutdown(0);
@@ -304,7 +298,6 @@ tests.push({
           times++;
           if (times === 2) {
             const diff = process.hrtime(startTime);
-            console.log('diff', diff);
             assert.strictEqual(diff[0], 0);
             assert.ok(diff[1] > 200000000);
             await child.shutdown(0);
@@ -356,7 +349,6 @@ tests.push({
         const agentId = await child.id();
 
         // Start a CPU profile with a longer duration to give us time to enable continuous profiling
-        console.log('Starting CPU profile');
         const options = {
           duration: 1000,
           threadId: 0,
@@ -381,7 +373,6 @@ tests.push({
 
         // Wait a short time to ensure the profile has started
         await setTimeout(200);
-        console.log('Enabling continuous profiling during CPU profile');
         // Enable continuous profiling by updating the configuration
         await child.config({
           contCpuProfile: true,
@@ -403,7 +394,6 @@ tests.push({
         grpcServer.on('profile', async (data) => {
           if (data.continuous) {
             continuousProfilesReceived++;
-            console.log(`Received continuous profile #${continuousProfilesReceived}`);
             const options = {
               threadId: 0,
             };
@@ -431,7 +421,6 @@ tests.push({
 
         // Wait for continuous profiling to start
         await setTimeout(400);
-        console.log('Attempting manual CPU profile while continuous profiling is active');
         // Try to perform a manual CPU profile - this should fail with EInProgressError
         const options = {
           duration: 100,
@@ -448,7 +437,6 @@ tests.push({
           'Operation already in progress(1001)',
         );
 
-        console.log('Received expected error for manual CPU profile');
         profileErrorTested = true;
       }));
     });
@@ -459,7 +447,6 @@ const testConfigs = [
   {
     getEnv: (port) => {
       return {
-        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
         NSOLID_GRPC_INSECURE: 1,
         NSOLID_GRPC: `localhost:${port}`,
         NSOLID_CONT_CPU_PROFILE: 'true',
@@ -470,7 +457,6 @@ const testConfigs = [
   {
     getEnv: (port) => {
       return {
-        NODE_DEBUG_NATIVE: 'nsolid_grpc_agent',
         NSOLID_GRPC_INSECURE: 1,
         NSOLID_SAAS: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbtesting.localhost:${port}`,
         NSOLID_CONT_CPU_PROFILE: 'true',
