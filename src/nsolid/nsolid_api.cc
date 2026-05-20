@@ -1257,7 +1257,9 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     }
 
     it = config.find("grpc");
-    if (it != config.end() && !it->is_null()) {
+    auto saas = config.find("saas");
+    if ((it != config.end() && !it->is_null()) ||
+        (saas != config.end() && !saas->is_null())) {
       grpc::GrpcAgent::Inst()->start();
     }
 
