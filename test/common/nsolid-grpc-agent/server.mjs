@@ -89,8 +89,6 @@ async function startServer(cb) {
       process.send({ type: 'command', data: { agentId, metadata: call.metadata } });
     },
     ExportAsset: async (call) => {
-      console.log('ExportAsset');
-      console.dir(call.metadata, { depth: null });
       const asset = {
         common: null,
         threadId: null,
@@ -100,7 +98,6 @@ async function startServer(cb) {
       };
       call._my_data = '';
       call.on('data', (data) => {
-        console.log('[ExportAsset] data', data.data.length);
         asset.common = data.common;
         asset.threadId = data.threadId;
         asset.metadata = data.metadata;
@@ -133,8 +130,6 @@ async function startServer(cb) {
       callback(null, {});
     },
     ExportContinuousProfile: async (call) => {
-      console.log('ExportContinuousProfile');
-      console.dir(call.metadata, { depth: null });
       const asset = {
         common: null,
         threadId: null,
@@ -145,7 +140,6 @@ async function startServer(cb) {
         endTs: null,
       };
       call.on('data', (data) => {
-        console.log('[ExportContinuousProfile] data', data.data.length);
         asset.common = data.common;
         asset.threadId = data.threadId;
         asset.metadata = data.metadata;
@@ -294,7 +288,6 @@ async function sendCommand(command, agentId, requestId, args = {}) {
 
     call.write(req);
     call.once('data', (runtimeResponse) => {
-      console.log(`${command} response`, runtimeResponse);
       resolve();
     });
   });
