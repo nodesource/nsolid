@@ -2,6 +2,7 @@
 #define AGENTS_GRPC_SRC_ASSET_STREAM_H_
 
 #include "./proto/nsolid_service.grpc.pb.h"
+#include "grpc_client.h"
 #include "grpcpp/grpcpp.h"
 #include "nsolid/thread_safe.h"
 #include "../../src/profile_collector.h"
@@ -54,8 +55,7 @@ class AssetStream: public ::grpc::ClientWriteReactor<grpcagent::Asset> {
   explicit AssetStream(grpcagent::NSolidService::StubInterface* stub,
                        AssetStor&& stor,
                        std::weak_ptr<AssetStreamObserver> observer,
-                       const std::string& agent_id,
-                       const std::string& saas,
+                       const GrpcMetadata& metadata,
                        AssetStreamRpcType rpc_type = EXPORT_ASSET);
 
   ~AssetStream();

@@ -2,6 +2,7 @@
 #define AGENTS_GRPC_SRC_COMMAND_STREAM_H_
 
 #include "./proto/nsolid_service.grpc.pb.h"
+#include "grpc_client.h"
 #include "grpcpp/grpcpp.h"
 #include "nsolid/thread_safe.h"
 #include "nsuv-inl.h"
@@ -31,8 +32,7 @@ class CommandStream:
  public:
   explicit CommandStream(grpcagent::NSolidService::StubInterface* stub,
                          std::weak_ptr<CommandStreamObserver> observer,
-                         const std::string& agent_id,
-                         const std::string& saas);
+                         const GrpcMetadata& metadata);
 
   ~CommandStream();
 

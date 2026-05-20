@@ -17,15 +17,11 @@ AssetStream::AssetStream(
     NSolidService::StubInterface* stub,
     AssetStor&& stor,
     std::weak_ptr<AssetStreamObserver> observer,
-    const std::string& agent_id,
-    const std::string& saas,
+    const GrpcMetadata& metadata,
     AssetStreamRpcType rpc_type): observer_(observer),
                                   stor_(std::move(stor)) {
   ASSERT_EQ(0, lock_.init(true));
-  context_.AddMetadata("nsolid-agent-id", agent_id);
-  if (!saas.empty()) {
-    context_.AddMetadata("nsolid-saas-token", saas);
-  }
+  GrpcClient::AddMetadata(&context_, metadata);
 
   // Call the appropriate RPC method based on the rpc_type parameter
   if (rpc_type == EXPORT_CONTINUOUS_PROFILE) {

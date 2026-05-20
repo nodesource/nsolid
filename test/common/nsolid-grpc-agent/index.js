@@ -13,6 +13,14 @@ const {
   validateString,
 } = require('internal/validators');
 
+function checkRpcMetadata(metadata, agentId) {
+  validateArray(metadata['user-agent'], 'metadata.user-agent');
+  validateString(metadata['user-agent'][0], 'metadata.user-agent[0]');
+  assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
+  assert.strictEqual(metadata['nsolid-version'][0],
+                     `node-${process.version}-nsolid-v${process.versions.nsolid}`);
+}
+
 function checkExitData(data, metadata, agentId, expectedData) {
   console.dir(data, { depth: null });
   validateString(data.common.requestId, 'common.requestId');
@@ -35,9 +43,7 @@ function checkExitData(data, metadata, agentId, expectedData) {
     validateString(data.body.error.stack, 'error.stack');
   }
 
-  validateArray(metadata['user-agent'], 'metadata.user-agent');
-  validateString(metadata['user-agent'][0], 'metadata.user-agent[0]');
-  assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
+  checkRpcMetadata(metadata, agentId);
 }
 
 function checkResource(resource, agentId, config, metrics) {
@@ -637,6 +643,7 @@ class TestClient {
 
 module.exports = {
   checkExitData,
+  checkRpcMetadata,
   checkResource,
   GRPCServer,
   TestClient,
