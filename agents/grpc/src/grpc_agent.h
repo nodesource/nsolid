@@ -110,6 +110,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
     return saas_ ? saas_->token : empty;
   }
 
+  const GrpcMetadata& rpc_metadata() const { return rpc_metadata_; }
+
  private:
   struct CommandRequestStor {
     grpcagent::CommandRequest request;
@@ -256,6 +258,13 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void parse_saas_token(const std::string& token);
 
+  static GrpcMetadata BuildRpcMetadata(const std::string& agent_id,
+                                       const std::string& saas);
+
+  void RefreshRpcMetadata();
+
+  void ResetGrpcClients();
+
   bool pending_profiles() const;
 
   void reconfigure(const grpcagent::CommandRequest& config);
@@ -335,6 +344,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   TSQueue<nlohmann::json> config_msg_q_;
   nlohmann::json config_;
   std::string agent_id_;
+  GrpcMetadata rpc_metadata_;
   std::unique_ptr<SaaSInfo> saas_;
 
   nsuv::ns_timer auth_timer_;

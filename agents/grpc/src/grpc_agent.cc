@@ -21,6 +21,7 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
+#include "../../src/node_version.h"
 
 using std::chrono::duration_cast;
 using std::chrono::nanoseconds;
@@ -120,6 +121,33 @@ ErrorType translate_error(int err) {
     default:
       return ErrorType::EUnknown;
   }
+}
+
+GrpcMetadata GrpcAgent::BuildRpcMetadata(const std::string& agent_id,
+                                         const std::string& saas) {
+  GrpcMetadata metadata = {
+    {"nsolid-agent-id", agent_id},
+    {"nsolid-version",
+     "node-v" NODE_VERSION_STRING "-nsolid-v" NSOLID_VERSION_STRING},
+  };
+  if (!saas.empty()) {
+    metadata.emplace("nsolid-saas", saas);
+  }
+
+  return metadata;
+}
+
+void GrpcAgent::RefreshRpcMetadata() {
+  rpc_metadata_ = BuildRpcMetadata(agent_id_, saas());
+}
+
+void GrpcAgent::ResetGrpcClients() {
+  USE(auth_timer_.stop());
+  command_stream_.reset();
+  nsolid_service_stub_.reset();
+  log_exporter_.reset();
+  metrics_exporter_.reset();
+  trace_exporter_.reset();
 }
 
 void PopulateCommon(grpcagent::CommonResponse* common,
@@ -436,6 +464,7 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         proc_prev_stor_(),
                         config_(json::object()),
                         agent_id_(GetAgentId()),
+                        rpc_metadata_(BuildRpcMetadata(agent_id_, "")),
                         auth_retries_(0),
                         unauthorized_(false),
                         assets_enabled_(true),
@@ -506,8 +535,7 @@ void GrpcAgent::reset_command_stream() {
   Debug("Resetting command stream\n");
   command_stream_ = std::make_unique<CommandStream>(nsolid_service_stub_.get(),
                                                     weak_from_this(),
-                                                    agent_id_,
-                                                    saas());
+                                                    rpc_metadata());
 }
 
 void GrpcAgent::set_asset_cb(SharedEnvInst envinst,
@@ -1023,21 +1051,25 @@ int GrpcAgent::config(const json& config) {
   json old_config = config_;
   config_ = config;
   json diff = json::diff(old_config, config_);
+  const bool saas_changed = utils::find_any_fields_in_diff(diff, { "/saas" });
+  const bool grpc_changed = utils::find_any_fields_in_diff(diff, { "/grpc" });
   DebugJSON("Old Config: \n%s\n", old_config);
   DebugJSON("NewConfig: \n%s\n", config_);
   DebugJSON("Diff: \n%s\n", diff);
 
-  if (utils::find_any_fields_in_diff(diff, { "/saas" })) {
+  if (saas_changed) {
     auto it = config_.find("saas");
     saas_.reset();
     if (it != config_.end()) {
       parse_saas_token(*it);
     }
+    RefreshRpcMetadata();
   }
 
-  if (utils::find_any_fields_in_diff(diff, { "/grpc" })) {
+  if (grpc_changed || saas_changed) {
+    ResetGrpcClients();
     auto it = config_.find("grpc");
-    if (it != config_.end()) {
+    if (it != config_.end() || saas_) {
       // Setup the client/s
 
       bool insecure = false;
@@ -1058,8 +1090,7 @@ int GrpcAgent::config(const json& config) {
       OtlpGrpcClientOptions opts;
       opts.compression = "gzip";
       opts.endpoint = endpoint;
-      opts.metadata = {{"nsolid-agent-id", agent_id_},
-                       {"nsolid-saas", saas()}};
+      opts.metadata = rpc_metadata();
       opts.timeout = DEFAULT_GRPC_TIMEOUT;
       // Make sure the client is initialized. We set it to the same
       // default value as ax_concurrent_requests as the exporters.
@@ -1091,8 +1122,7 @@ int GrpcAgent::config(const json& config) {
         OtlpGrpcExporterOptions options;
         options.compression = "gzip";
         options.endpoint = endpoint;
-        options.metadata = {{"nsolid-agent-id", agent_id_},
-                            {"nsolid-saas", saas()}};
+        options.metadata = rpc_metadata();
         options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
           options.credentials = opts.credentials;
@@ -1104,8 +1134,7 @@ int GrpcAgent::config(const json& config) {
         OtlpGrpcMetricExporterOptions options;
         options.compression = "gzip";
         options.endpoint = endpoint;
-        options.metadata = {{"nsolid-agent-id", agent_id_},
-                            {"nsolid-saas", saas()}};
+        options.metadata = rpc_metadata();
         options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
           options.credentials = opts.credentials;
@@ -1118,8 +1147,7 @@ int GrpcAgent::config(const json& config) {
         OtlpGrpcLogRecordExporterOptions options;
         options.compression = "gzip";
         options.endpoint = endpoint;
-        options.metadata = {{"nsolid-agent-id", agent_id_},
-                            {"nsolid-saas", saas()}};
+        options.metadata = rpc_metadata();
         options.timeout = DEFAULT_GRPC_TIMEOUT;
         if (!insecure) {
           options.credentials = opts.credentials;
@@ -1539,8 +1567,7 @@ void GrpcAgent::got_continuous_profile(
     AssetStream* stream = new AssetStream(nsolid_service_stub_.get(),
                                           AssetStor{stor.type, thread_id},
                                           weak_from_this(),
-                                          agent_id_,
-                                          saas(),
+                                          rpc_metadata(),
                                           EXPORT_CONTINUOUS_PROFILE);
     it = cont_profile_stor_map_.emplace(thread_id, ProfileStor{
       utils::generate_unique_id(),
@@ -1803,7 +1830,7 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
     Arena::Create<grpcagent::BlockedLoopEvent>(arena.get());
   PopulateBlockedLoopEvent(event, stor);
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
 
   GrpcClient::DelegateAsyncExport<grpcagent::BlockedLoopEvent>(
     nsolid_service_stub_.get(),
@@ -1840,7 +1867,7 @@ void GrpcAgent::send_exit() {
     exit_body->set_profile(cpu_profile_state.last_main_profile);
   }
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
   uv_cond_t cond;
   uv_mutex_t lock;
   bool signaled = false;
@@ -1890,7 +1917,7 @@ void GrpcAgent::send_info_event(const char* req_id) {
     PopulateInfoEvent(info_event, info, req_id);
   }
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
 
   GrpcClient::DelegateAsyncExport<grpcagent::InfoEvent>(
     nsolid_service_stub_.get(),
@@ -1918,7 +1945,7 @@ void GrpcAgent::send_metrics_event(const char* req_id) {
                        thr_metrics_cache_,
                        req_id);
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
 
   GrpcClient::DelegateAsyncExport<grpcagent::MetricsEvent>(
     nsolid_service_stub_.get(),
@@ -1941,7 +1968,7 @@ void GrpcAgent::send_packages_event(const char* req_id) {
   auto packages_event = Arena::Create<grpcagent::PackagesEvent>(arena.get());
   PopulatePackagesEvent(packages_event, req_id);
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
 
   GrpcClient::DelegateAsyncExport<grpcagent::PackagesEvent>(
     nsolid_service_stub_.get(),
@@ -1965,7 +1992,7 @@ void GrpcAgent::send_reconfigure_event(const char* req_id) {
     Arena::Create<grpcagent::ReconfigureEvent>(arena.get());
   PopulateReconfigureEvent(reconfigure_event, req_id);
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
 
   GrpcClient::DelegateAsyncExport<grpcagent::ReconfigureEvent>(
     nsolid_service_stub_.get(),
@@ -2016,7 +2043,7 @@ void GrpcAgent::send_source_code_event(const grpcagent::CommandRequest& req) {
     }
   }
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
 
   GrpcClient::DelegateAsyncExport<grpcagent::SourceCodeEvent>(
     nsolid_service_stub_.get(),
@@ -2039,7 +2066,7 @@ void GrpcAgent::send_startup_times_event(const char* req_id) {
   auto st_event = Arena::Create<grpcagent::StartupTimesEvent>(arena.get());
   PopulateStartupTimesEvent(st_event, req_id);
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
 
   GrpcClient::DelegateAsyncExport<grpcagent::StartupTimesEvent>(
     nsolid_service_stub_.get(),
@@ -2064,7 +2091,7 @@ void GrpcAgent::send_unblocked_loop_event(BlockedLoopStor&& stor) {
     Arena::Create<grpcagent::UnblockedLoopEvent>(arena.get());
   PopulateUnblockedLoopEvent(event, stor);
 
-  auto context = GrpcClient::MakeClientContext(agent_id_, saas());
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
 
   GrpcClient::DelegateAsyncExport<grpcagent::UnblockedLoopEvent>(
     nsolid_service_stub_.get(),
@@ -2179,8 +2206,7 @@ ErrorType GrpcAgent::do_start_prof_end(ErrorType err,
   auto stream = new AssetStream(nsolid_service_stub_.get(),
                                 AssetStor{type, thread_id},
                                 weak_from_this(),
-                                agent_id_,
-                                saas(),
+                                rpc_metadata(),
                                 EXPORT_ASSET);
   if (err != ErrorType::ESuccess) {
     send_asset_error(type, req_id, std::move(opts), stream, err);

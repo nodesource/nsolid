@@ -12,14 +12,11 @@ namespace grpc {
 
 CommandStream::CommandStream(NSolidService::StubInterface* stub,
                              std::weak_ptr<CommandStreamObserver> observer,
-                             const std::string& agent_id,
-                             const std::string& saas): observer_(observer) {
+                             const GrpcMetadata& metadata):
+                                observer_(observer) {
   ASSERT_EQ(0, lock_.init(true));
   ASSERT_EQ(0, uv_cond_init(&on_done_cond_));
-  context_.AddMetadata("nsolid-agent-id", agent_id);
-  if (!saas.empty()) {
-    context_.AddMetadata("nsolid-saas-token", saas);
-  }
+  GrpcClient::AddMetadata(&context_, metadata);
   context_.set_wait_for_ready(true);
   stub->async()->Command(&context_, this);
   StartRead(&server_request_);

@@ -82,15 +82,18 @@ std::shared_ptr<Channel>
   * Create gRPC client context to call RPC.
   */
 std::unique_ptr<ClientContext>
-GrpcClient::MakeClientContext(const std::string& agent_id,
-                              const std::string& saas) {
+GrpcClient::MakeClientContext(const GrpcMetadata& metadata) {
   std::unique_ptr<ClientContext> context = std::make_unique<ClientContext>();
-  context->AddMetadata("nsolid-agent-id", agent_id);
-  if (!saas.empty()) {
-    context->AddMetadata("nsolid-saas-token", saas);
-  }
+  AddMetadata(context.get(), metadata);
 
   return context;
+}
+
+void GrpcClient::AddMetadata(ClientContext* context,
+                             const GrpcMetadata& metadata) {
+  for (const auto& [key, value] : metadata) {
+    context->AddMetadata(key, value);
+  }
 }
 
 /**
