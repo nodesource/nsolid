@@ -64,12 +64,13 @@
         'ENABLE_ASYNC_EXPORT',
         'ENABLE_OTLP_GRPC_CREDENTIAL_PREVIEW',
         'OPENTELEMETRY_STL_VERSION=2020',
+        'ENABLE_OTLP_RETRY_PREVIEW',
       ],
       'dependencies': [
         '../protobuf/protobuf.gyp:protobuf',
         '../curl/curl.gyp:curl',
         '../grpc/grpc.gyp:grpc++',
-	'../protobuf/abseil.gyp:abseil_proto',
+        '../protobuf/abseil.gyp:abseil_proto',
         '../zlib/zlib.gyp:zlib',
       ],
       'direct_dependent_settings': {
@@ -77,6 +78,7 @@
           'ENABLE_ASYNC_EXPORT',
           'ENABLE_OTLP_GRPC_CREDENTIAL_PREVIEW',
           'OPENTELEMETRY_STL_VERSION=2020',
+          'ENABLE_OTLP_RETRY_PREVIEW',
         ],
         'include_dirs': [
           'api/include',
