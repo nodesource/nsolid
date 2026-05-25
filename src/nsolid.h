@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <variant>
 
 /**
  * @file nsolid.h
@@ -850,11 +851,50 @@ class NODE_EXTERN MetricsStream {
     kGc = 120 /**< kGcRegular | kGcForced | kGcFull | kGcMajor */
   };
 
+  enum class HttpMethod : uint8_t {
+    kGet,
+    kHead,
+    kPost,
+    kPut,
+    kDelete,
+    kConnect,
+    kOptions,
+    kTrace,
+    kPatch,
+    kOther
+  };
+
+  enum class HttpProtocolVersion : uint8_t {
+    k10,   /**< HTTP/1.0 */
+    k11,   /**< HTTP/1.1 */
+    k2,   /**< HTTP/2 */
+    kOther
+  };
+
+  enum class HttpUrlScheme : uint8_t {
+    kHttp,
+    kHttps,
+    kOther
+  };
+
+  struct HttpDatapointAttrs {
+    HttpMethod method;  /**< http.request.method */
+    uint16_t status_code;  /**< http.response.status_code */
+    std::string server_address;  /**< server.address (client only) */
+    uint16_t server_port;  /**< server.port (client only) */
+    HttpUrlScheme url_scheme;  /**< url.scheme (server only) */
+    HttpProtocolVersion protocol_version;  /**< network.protocol.version */
+    std::string route;  /**< http.route (server only, route template) */
+  };
+
+  using DatapointAttrs = std::variant<std::monostate, HttpDatapointAttrs>;
+
   struct Datapoint {
     uint64_t thread_id;
     double timestamp; /**< Datapoint timestamp in milliseconds */
     Type type;
     double value;
+    DatapointAttrs attrs; /**< Type-specific attributes (monostate = none) */
   };
 
   using metrics_stream_bucket = std::vector<Datapoint>;
