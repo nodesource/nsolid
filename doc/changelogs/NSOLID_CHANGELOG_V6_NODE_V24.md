@@ -2,11 +2,28 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
-## 2026-06-11, Version 24.15.0-nsolid-v6.2.5 'Krypton'
+## 2026-06-15, Version 24.16.0-nsolid-v6.3.0 'Krypton'
 
 ### Commits
 
-* \[[`47e5a9ed2e`](https://github.com/nodesource/nsolid/commit/47e5a9ed2e)] - **deps**: update ncm-ng to 2.9.9 (Minwoo) [#478](https://github.com/nodesource/nsolid/pull/478)
+* \[[`b5071eddfc`](https://github.com/nodesource/nsolid/commit/b5071eddfc)] - Merge tag 'v24.16.0' into node-v24.16.0-nsolid-v6.3.0-release (Santiago Gimeno)
+* \[[`59aa320eca`](https://github.com/nodesource/nsolid/commit/59aa320eca)] - **agents**: add nsolidVersion attr to metrics (Santiago Gimeno) [#477](https://github.com/nodesource/nsolid/pull/477)
+* \[[`26d106b6b7`](https://github.com/nodesource/nsolid/commit/26d106b6b7)] - **agents**: add nsolid-version and add it to metadata (Santiago Gimeno) [#460](https://github.com/nodesource/nsolid/pull/460)
+* \[[`8aee9af689`](https://github.com/nodesource/nsolid/commit/8aee9af689)] - **agents,lib,src,test**: add traceSampleRate support (Santiago Gimeno) [#430](https://github.com/nodesource/nsolid/pull/430)
+* \[[`ad25589e26`](https://github.com/nodesource/nsolid/commit/ad25589e26)] - **deps**: update grpc to 1.80.0 (Santiago Gimeno) [#471](https://github.com/nodesource/nsolid/pull/471)
+* \[[`7b22f7490c`](https://github.com/nodesource/nsolid/commit/7b22f7490c)] - **deps**: update libcurl to 8.20.0 (Santiago Gimeno) [#470](https://github.com/nodesource/nsolid/pull/470)
+* \[[`5b63c75805`](https://github.com/nodesource/nsolid/commit/5b63c75805)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#422](https://github.com/nodesource/nsolid/pull/422)
+* \[[`1668729c49`](https://github.com/nodesource/nsolid/commit/1668729c49)] - **deps**: update opentelemetry-cpp to 1.27.0 (Santiago Gimeno) [#422](https://github.com/nodesource/nsolid/pull/422)
+* \[[`f65527b88d`](https://github.com/nodesource/nsolid/commit/f65527b88d)] - **deps**: update opentelemetry-cpp to 1.25.0 (Santiago Gimeno) [#422](https://github.com/nodesource/nsolid/pull/422)
+* \[[`1023131c0b`](https://github.com/nodesource/nsolid/commit/1023131c0b)] - **deps**: update grpc to 1.78.1 (Santiago Gimeno) [#434](https://github.com/nodesource/nsolid/pull/434)
+* \[[`740484b910`](https://github.com/nodesource/nsolid/commit/740484b910)] - **deps**: update libcurl to 8.19.0 (Santiago Gimeno) [#435](https://github.com/nodesource/nsolid/pull/435)
+* \[[`1dedb48d9f`](https://github.com/nodesource/nsolid/commit/1dedb48d9f)] - **deps**: update to protobuf v34.0 (Santiago Gimeno) [#433](https://github.com/nodesource/nsolid/pull/433)
+* \[[`c96d57e082`](https://github.com/nodesource/nsolid/commit/c96d57e082)] - **lib**: route saas asset APIs through grpc (Santiago Gimeno) [#460](https://github.com/nodesource/nsolid/pull/460)
+* \[[`d779b5e037`](https://github.com/nodesource/nsolid/commit/d779b5e037)] - **lib,src**: autostart grpc agent for saas configs (Santiago Gimeno) [#460](https://github.com/nodesource/nsolid/pull/460)
+* \[[`8444f6d941`](https://github.com/nodesource/nsolid/commit/8444f6d941)] - **src**: enrich OTLP metrics resource attributes (Santiago Gimeno) [#454](https://github.com/nodesource/nsolid/pull/454)
+* \[[`ccdcd1f132`](https://github.com/nodesource/nsolid/commit/ccdcd1f132)] - **src,test**: add totalMem process metric (Santiago Gimeno) [#469](https://github.com/nodesource/nsolid/pull/469)
+* \[[`ac2544563b`](https://github.com/nodesource/nsolid/commit/ac2544563b)] - **src,test**: preserve Latin1 strings in fastSpan APIs (Santiago Gimeno) [#450](https://github.com/nodesource/nsolid/pull/450)
+* \[[`37f19cd6d3`](https://github.com/nodesource/nsolid/commit/37f19cd6d3)] - **test**: trim noisy grpc asset logging (Santiago Gimeno) [#460](https://github.com/nodesource/nsolid/pull/460)
 
 ## 2026-04-30, Version 24.15.0-nsolid-v6.2.4 'Krypton'
 
