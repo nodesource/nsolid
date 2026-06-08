@@ -476,9 +476,9 @@ if (process.argv[2] === 'child') {
       'main': { type: 'stringValue', value: nsolidInfo.main },
       'deployment.environment.name': { type: 'stringValue', value: nsolidInfo.nodeEnv },
       'process.runtime.version': { type: 'stringValue', value: nsolidInfo.versions.node },
-      'process.runtime.description': {
+      'nsolidVersion': {
         type: 'stringValue',
-        value: `N|Solid ${nsolidInfo.versions.nsolid}`,
+        value: nsolidInfo.versions.nsolid,
       },
       'process.runtime.name': { type: 'stringValue', value: 'nodejs' },
       'cpuCores': { type: 'intValue', value: `${nsolidInfo.cpuCores}` },
