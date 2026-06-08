@@ -193,8 +193,7 @@ static ResourceAttributes GetMetadataResourceAttributes(const json& info) {
     version_it = it->find("nsolid");
     if (version_it != it->end() && version_it->is_string()) {
       std::string nsolid_version = version_it->get<std::string>();
-      attrs.SetAttribute(kProcessRuntimeDescription,
-                         "N|Solid " + nsolid_version);
+      attrs.SetAttribute("nsolidVersion", std::move(nsolid_version));
     }
   }
 

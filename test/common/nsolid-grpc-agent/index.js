@@ -85,7 +85,7 @@ function checkResource(resource, agentId, config, metrics, info) {
     expectedAttributes.main = info.main;
     expectedAttributes['deployment.environment.name'] = info.nodeEnv;
     expectedAttributes['process.runtime.version'] = info.versions.node;
-    expectedAttributes['process.runtime.description'] = `N|Solid ${info.versions.nsolid}`;
+    expectedAttributes.nsolidVersion = info.versions.nsolid;
     expectedAttributes['process.runtime.name'] = 'nodejs';
     expectedAttributes['host.cpu.model.name'] = info.cpuModel;
     expectedAttributes['process.creation.time'] =
