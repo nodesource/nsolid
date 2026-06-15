@@ -1172,7 +1172,7 @@ changes:
 * `options` {Object} [`stream.transform` options][]
   * `plaintextLength` {number}
   * `encoding` {string} String encoding to use when `buffer` is a string.
-* Returns: {Decipheriv} The same Decipher for method chaining.
+* Returns: {Decipheriv} The same `Decipheriv` instance for method chaining.
 
 When using an authenticated encryption mode (`GCM`, `CCM`, `OCB`, and
 `chacha20-poly1305` are
@@ -1214,7 +1214,7 @@ changes:
 
 * `buffer` {string|Buffer|ArrayBuffer|TypedArray|DataView}
 * `encoding` {string} String encoding to use when `buffer` is a string.
-* Returns: {Decipheriv} The same Decipher for method chaining.
+* Returns: {Decipheriv} The same `Decipheriv` instance for method chaining.
 
 When using an authenticated encryption mode (`GCM`, `CCM`, `OCB`, and
 `chacha20-poly1305` are
@@ -1249,7 +1249,7 @@ added: v0.7.1
 -->
 
 * `autoPadding` {boolean} **Default:** `true`
-* Returns: {Decipheriv} The same Decipher for method chaining.
+* Returns: {Decipheriv} The same `Decipheriv` instance for method chaining.
 
 When data has been encrypted without standard block padding, calling
 `decipher.setAutoPadding(false)` will disable automatic padding to prevent
@@ -1393,8 +1393,10 @@ If `encoding` is provided a string is returned; otherwise a
 [`Buffer`][] is returned.
 
 This function is a thin wrapper around [`DH_generate_key()`][]. In particular,
-once a private key has been generated or set, calling this function only updates
-the public key but does not generate a new private key.
+once a private key has been generated or set, calling this function only
+recomputes the public key from the existing private key. Since the public key is
+determined by the private key, the result will be the same unless the private key
+has been changed via [`diffieHellman.setPrivateKey()`][].
 
 ### `diffieHellman.getGenerator([encoding])`
 
@@ -3304,14 +3306,14 @@ added: v24.7.0
   * `nonce` {string|ArrayBuffer|Buffer|TypedArray|DataView} REQUIRED, must be at
     least 8 bytes long. This is the salt for password hashing applications of Argon2.
   * `parallelism` {number} REQUIRED, degree of parallelism determines how many computational chains (lanes)
-    can be run. Must be greater than 1 and less than `2**24-1`.
-  * `tagLength` {number} REQUIRED, the length of the key to generate. Must be greater than 4 and
-    less than `2**32-1`.
-  * `memory` {number} REQUIRED, memory cost in 1KiB blocks. Must be greater than
-    `8 * parallelism` and less than `2**32-1`. The actual number of blocks is rounded
+    can be run. Must be at least `1` and at most `2**24-1`.
+  * `tagLength` {number} REQUIRED, the length of the key to generate. Must be at least `4` and
+    at most `2**32-1`.
+  * `memory` {number} REQUIRED, memory cost in 1KiB blocks. Must be at least
+    `8 * parallelism` and at most `2**32-1`. The actual number of blocks is rounded
     down to the nearest multiple of `4 * parallelism`.
-  * `passes` {number} REQUIRED, number of passes (iterations). Must be greater than 1 and less
-    than `2**32-1`.
+  * `passes` {number} REQUIRED, number of passes (iterations). Must be at least `1` and at most
+    `2**32-1`.
   * `secret` {string|ArrayBuffer|Buffer|TypedArray|DataView|undefined} OPTIONAL, Random additional input,
     similar to the salt, that should **NOT** be stored with the derived key. This is known as pepper in
     password hashing applications. If used, must have a length not greater than `2**32-1` bytes.
@@ -3390,14 +3392,14 @@ added: v24.7.0
   * `nonce` {string|ArrayBuffer|Buffer|TypedArray|DataView} REQUIRED, must be at
     least 8 bytes long. This is the salt for password hashing applications of Argon2.
   * `parallelism` {number} REQUIRED, degree of parallelism determines how many computational chains (lanes)
-    can be run. Must be greater than 1 and less than `2**24-1`.
-  * `tagLength` {number} REQUIRED, the length of the key to generate. Must be greater than 4 and
-    less than `2**32-1`.
-  * `memory` {number} REQUIRED, memory cost in 1KiB blocks. Must be greater than
-    `8 * parallelism` and less than `2**32-1`. The actual number of blocks is rounded
+    can be run. Must be at least 1 and at most `2**24-1`.
+  * `tagLength` {number} REQUIRED, the length of the key to generate. Must be at least `4` and
+    at most `2**32-1`.
+  * `memory` {number} REQUIRED, memory cost in 1KiB blocks. Must be at least
+    `8 * parallelism` and at most `2**32-1`. The actual number of blocks is rounded
     down to the nearest multiple of `4 * parallelism`.
-  * `passes` {number} REQUIRED, number of passes (iterations). Must be greater than 1 and less
-    than `2**32-1`.
+  * `passes` {number} REQUIRED, number of passes (iterations). Must be at least `1` and at most
+    `2**32-1`.
   * `secret` {string|ArrayBuffer|Buffer|TypedArray|DataView|undefined} OPTIONAL, Random additional input,
     similar to the salt, that should **NOT** be stored with the derived key. This is known as pepper in
     password hashing applications. If used, must have a length not greater than `2**32-1` bytes.
@@ -5303,7 +5305,7 @@ changes:
 
 <!--lint enable maximum-line-length remark-lint-->
 
-Decrypts `buffer` with `key`.`buffer` was previously encrypted using
+Decrypts `buffer` with `key`. `buffer` was previously encrypted using
 the corresponding private key, for example using [`crypto.privateEncrypt()`][].
 
 If `key` is not a [`KeyObject`][], this function behaves as if
@@ -5805,6 +5807,27 @@ added:
 Generates a random [RFC 4122][] version 4 UUID. The UUID is generated using a
 cryptographic pseudorandom number generator.
 
+### `crypto.randomUUIDv7([options])`
+
+<!-- YAML
+added: v24.16.0
+-->
+
+* `options` {Object}
+  * `disableEntropyCache` {boolean} By default, to improve performance,
+    Node.js generates and caches enough
+    random data to generate up to 128 random UUIDs. To generate a UUID
+    without using the cache, set `disableEntropyCache` to `true`.
+    **Default:** `false`.
+* Returns: {string}
+
+Generates a random [RFC 9562][] version 7 UUID. The UUID contains a millisecond
+precision Unix timestamp in the most significant 48 bits, followed by
+cryptographically secure random bits for the remaining fields, making it
+suitable for use as a database key with time-based sorting. The embedded
+timestamp relies on a non-monotonic clock and is not guaranteed to be strictly
+increasing.
+
 ### `crypto.scrypt(password, salt, keylen[, options], callback)`
 
 <!-- YAML
@@ -6039,6 +6062,9 @@ Throws an error if FIPS mode is not available.
 <!-- YAML
 added: v12.0.0
 changes:
+  - version: v24.16.0
+    pr-url: https://github.com/nodejs/node/pull/62474
+    description: Add support for Ed25519 context parameter.
   - version: v24.8.0
     pr-url: https://github.com/nodejs/node/pull/59570
     description: Add support for ML-DSA, Ed448, and SLH-DSA context parameter.
@@ -6102,9 +6128,10 @@ additional properties can be passed:
   `crypto.constants.RSA_PSS_SALTLEN_DIGEST` sets the salt length to the digest
   size, `crypto.constants.RSA_PSS_SALTLEN_MAX_SIGN` (default) sets it to the
   maximum permissible value.
-* `context` {ArrayBuffer|Buffer|TypedArray|DataView} For Ed448, ML-DSA, and SLH-DSA,
-  this option specifies the optional context to differentiate signatures generated
-  for different purposes with the same key.
+* `context` {ArrayBuffer|Buffer|TypedArray|DataView} For Ed25519[^openssl32]
+  (using Ed25519ctx from [RFC 8032][]), Ed448, ML-DSA, and SLH-DSA,
+  this option specifies the optional context to differentiate signatures
+  generated for different purposes with the same key.
 
 If the `callback` function is provided this function uses libuv's threadpool.
 
@@ -6164,6 +6191,9 @@ not introduce timing vulnerabilities.
 <!-- YAML
 added: v12.0.0
 changes:
+  - version: v24.16.0
+    pr-url: https://github.com/nodejs/node/pull/62474
+    description: Add support for Ed25519 context parameter.
   - version: v24.8.0
     pr-url: https://github.com/nodejs/node/pull/59570
     description: Add support for ML-DSA, Ed448, and SLH-DSA context parameter.
@@ -6233,9 +6263,10 @@ additional properties can be passed:
   `crypto.constants.RSA_PSS_SALTLEN_DIGEST` sets the salt length to the digest
   size, `crypto.constants.RSA_PSS_SALTLEN_MAX_SIGN` (default) sets it to the
   maximum permissible value.
-* `context` {ArrayBuffer|Buffer|TypedArray|DataView} For Ed448, ML-DSA, and SLH-DSA,
-  this option specifies the optional context to differentiate signatures generated
-  for different purposes with the same key.
+* `context` {ArrayBuffer|Buffer|TypedArray|DataView} For Ed25519[^openssl32]
+  (using Ed25519ctx from [RFC 8032][]), Ed448, ML-DSA, and SLH-DSA,
+  this option specifies the optional context to differentiate signatures
+  generated for different purposes with the same key.
 
 The `signature` argument is the previously calculated signature for the `data`.
 
@@ -6835,6 +6866,8 @@ See the [list of SSL OP Flags][] for details.
 [RFC 5208]: https://www.rfc-editor.org/rfc/rfc5208.txt
 [RFC 5280]: https://www.rfc-editor.org/rfc/rfc5280.txt
 [RFC 7517]: https://www.rfc-editor.org/rfc/rfc7517.txt
+[RFC 8032]: https://www.rfc-editor.org/rfc/rfc8032.txt
+[RFC 9562]: https://www.rfc-editor.org/rfc/rfc9562.txt
 [Web Crypto API documentation]: webcrypto.md
 [`BN_is_prime_ex`]: https://www.openssl.org/docs/man1.1.1/man3/BN_is_prime_ex.html
 [`Buffer`]: buffer.md
@@ -6876,6 +6909,7 @@ See the [list of SSL OP Flags][] for details.
 [`decipher.final()`]: #decipherfinaloutputencoding
 [`decipher.update()`]: #decipherupdatedata-inputencoding-outputencoding
 [`diffieHellman.generateKeys()`]: #diffiehellmangeneratekeysencoding
+[`diffieHellman.setPrivateKey()`]: #diffiehellmansetprivatekeyprivatekey-encoding
 [`diffieHellman.setPublicKey()`]: #diffiehellmansetpublickeypublickey-encoding
 [`ecdh.generateKeys()`]: #ecdhgeneratekeysencoding-format
 [`ecdh.setPrivateKey()`]: #ecdhsetprivatekeyprivatekey-encoding
