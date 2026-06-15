@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-06-11, Version 24.15.0-nsolid-v6.2.5 'Krypton'
+
+### Commits
+
+* \[[`47e5a9ed2e`](https://github.com/nodesource/nsolid/commit/47e5a9ed2e)] - **deps**: update ncm-ng to 2.9.9 (Minwoo) [#478](https://github.com/nodesource/nsolid/pull/478)
+
 ## 2026-04-30, Version 24.15.0-nsolid-v6.2.4 'Krypton'
 
 ### Commits
