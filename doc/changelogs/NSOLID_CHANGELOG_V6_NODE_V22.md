@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-06-18, Version 22.23.0-nsolid-v6.3.1 'Jod'
+
+### Commits
+
+* \[[`2a767bcae0`](https://github.com/nodesource/nsolid/commit/2a767bcae0)] - Merge tag 'v22.23.0' into node-v22.23.0-nsolid-v6.3.1-release (Santiago Gimeno)
+
 ## 2026-06-15, Version 22.22.3-nsolid-v6.3.0 'Jod'
 
 ### Commits
