@@ -16,6 +16,10 @@ instructions.
 
 * [Dependencies](./doc/contributing/pull-requests.md#dependencies)
 * [Setting up your local environment](./doc/contributing/pull-requests.md#setting-up-your-local-environment)
+* [The Process of Making Changes](./doc/contributing/pull-requests.md#the-process-of-making-changes)
+* [Reviewing Pull Requests](./doc/contributing/pull-requests.md#reviewing-pull-requests)
+* [Large Pull Requests](./doc/contributing/large-pull-requests.md)
+* [Notes](./doc/contributing/pull-requests.md#notes)
 
 ## Documentation
 

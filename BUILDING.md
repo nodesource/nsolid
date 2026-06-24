@@ -210,6 +210,15 @@ Please refer to <https://docs.openssl.org/1.1.1/man3/OPENSSL_ia32cap/> for detai
 If compiling without one of the above, use `configure` with the
 `--openssl-no-asm` flag. Otherwise, `configure` will fail.
 
+### Previous versions of this document
+
+Supported platforms and toolchains change with each major version of N|Solid.
+This document is only valid for the current version of N|Solid, and is expected
+to be valid for the entire lifetime of this release line.
+
+To consult the version of this document for another version, download its source
+tarball and/or browse the git repository checked out at the relevant tag.
+
 ## Building N|Solid on supported platforms
 
 ### Prerequisites
@@ -628,7 +637,7 @@ Refs:
   To install it, select the following two optional components:
   * C++ Clang Compiler for Windows (Microsoft.VisualStudio.Component.VC.Llvm.Clang)
   * MSBuild support for LLVM (clang-cl) toolset (Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset)
-* As an alternative to Visual Studio 2026, download Visual Studio 2022 Current channel Version 17.4 from the
+* As an alternative to Visual Studio 2026, download Visual Studio 2022 Current channel Version 17.14 from the
   [Evergreen bootstrappers](https://learn.microsoft.com/en-us/visualstudio/releases/2022/release-history#evergreen-bootstrappers)
   table and install using the same workload and optional component selection as described above.
 * Basic Unix tools required for some tests,
