@@ -1,6 +1,6 @@
 {
   "name": "nsolid-cli",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "description": "N|Solid CLI",
   "main": "cli.js",
   "dependencies": {
@@ -26,5 +26,9 @@
   "bugs": {
     "url": "https://github.com/nodesource/nsolid-epm-cli/issues"
   },
-  "homepage": "https://github.com/nodesource/nsolid-epm-cli"
+  "homepage": "https://github.com/nodesource/nsolid-epm-cli",
+  "overrides": {
+    "minimatch": ">=3.1.4",
+    "brace-expansion": ">=1.1.13"
+  }
 }
