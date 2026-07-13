@@ -388,7 +388,7 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   if (it != config.end()) {
     body->set_statsdbucket(it->get<std::string>());
   }
-  it = config.find("statsdtags");
+  it = config.find("statsdTags");
   if (it != config.end()) {
     body->set_statsdtags(it->get<std::string>());
   }
