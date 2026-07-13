@@ -32,12 +32,28 @@ function checkReconfigureData(reconfigure, metadata, requestId, agentId, nsolidC
   // Normalize the configuration objects for comparison
   const normalizedReconfigBody = {};
   const normalizedNsolidConfig = {};
+  const configKeys = [
+    'blockedLoopThreshold',
+    'interval',
+    'pauseMetrics',
+    'promiseTracking',
+    'redactSnapshots',
+    'statsd',
+    'statsdBucket',
+    'statsdTags',
+    'tags',
+    'tracingEnabled',
+    'tracingModulesBlacklist',
+    'contCpuProfile',
+    'assetsEnabled',
+    'traceSampleRate',
+  ];
 
   // Process reconfigure.body - remove properties starting with underscore
   for (const [key, value] of Object.entries(reconfigure.body)) {
     if (!key.startsWith('_')) {
-      // Convert string numbers to actual numbers for comparison
-      if (typeof value === 'string' && !Number.isNaN(Number(value))) {
+      const expectedValue = nsolidConfig[key];
+      if (typeof expectedValue === 'number' && typeof value === 'string') {
         normalizedReconfigBody[key] = Number(value);
       } else {
         normalizedReconfigBody[key] = value;
@@ -45,8 +61,9 @@ function checkReconfigureData(reconfigure, metadata, requestId, agentId, nsolidC
     }
   }
 
-  // Process nsolidConfig - include only keys that exist in normalizedReconfigBody
-  for (const key of Object.keys(normalizedReconfigBody)) {
+  // Compare against the expected reconfigure keys, not only the keys already
+  // present in the response, so missing fields fail the test.
+  for (const key of configKeys) {
     if (key in nsolidConfig) {
       normalizedNsolidConfig[key] = nsolidConfig[key];
     }
@@ -148,7 +165,19 @@ tests.push({
           checkReconfigureData(data.msg, data.metadata, requestId, agentId, nsolidConfig);
 
           // Verify that the specific field has been updated correctly
-          console.log(`Checking if ${key} was updated to ${val}`);
+          console.log('Checking if ' + key + ' was updated to ' + val);
+
+          const bodyVal = data.msg.body[key];
+          const normalizedBodyVal =
+            typeof val === 'number' && typeof bodyVal === 'string' ?
+              Number(bodyVal) :
+              bodyVal;
+
+          assert.deepStrictEqual(
+            normalizedBodyVal,
+            val,
+            'Expected reconfigure body ' + key + ' to be ' + val + ', but got ' + bodyVal,
+          );
 
           // Compare the values
           assert.deepStrictEqual(
