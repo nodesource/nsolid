@@ -22,6 +22,10 @@ GCOV ?= gcov
 PWD = $(CURDIR)
 BUILD_WITH ?= make
 FIND ?= find
+OBJCOPY ?= objcopy
+STRIP ?= strip
+# Split-debug artifacts require Linux and GNU binutils.
+SEPARATE_DEBUG_SYMBOLS ?= 0
 
 ifdef JOBS
 	PARALLEL_ARGS = -j $(JOBS)
@@ -87,11 +91,28 @@ NODE ?= $(PWD)/$(NODE_EXE)
 # when generating coverage reports or running toolings as
 # debug build is be slower.
 OUT_NODE ?= $(PWD)/out/$(BUILDTYPE)/node$(EXEEXT)
+RELEASE_NODE ?= $(PWD)/out/Release/$(NODE_EXE)
+RELEASE_DEBUG_SYMBOLS ?= $(RELEASE_NODE).debug
+BINARY_DEBUG_SYMBOLS ?= $(BINARYNAME)/bin/$(NODE_EXE).debug
+
+define split_debug_symbols
+	$(OBJCOPY) --only-keep-debug $(1) $(2)
+	$(STRIP) --strip-debug --strip-unneeded $(1)
+endef
+
+define add_debuglink
+	$(OBJCOPY) --add-gnu-debuglink=$(2) $(1)
+endef
 
 # Flags for packaging.
 BUILD_DOWNLOAD_FLAGS ?= --download=all
 BUILD_INTL_FLAGS ?= --with-intl=full-icu
 BUILD_RELEASE_FLAGS ?= $(BUILD_DOWNLOAD_FLAGS) $(BUILD_INTL_FLAGS)
+ifeq ($(OSTYPE),linux)
+ifeq ($(SEPARATE_DEBUG_SYMBOLS),1)
+BUILD_RELEASE_FLAGS += --debug-symbols-minimal
+endif
+endif
 
 # Default to quiet/pretty builds.
 # To do verbose builds, run `make V=1` or set the V environment variable.
@@ -629,6 +650,18 @@ test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tes
 build-ci: ## Build everything (CI).
 	$(PYTHON) ./configure --verbose $(CONFIG_FLAGS)
 	$(MAKE)
+
+.PHONY: release-debug-artifacts
+release-debug-artifacts: ## Build Linux Release with -g1, save debug symbols, and strip the binary.
+ifeq ($(OSTYPE),linux)
+	$(RM) -r out/Release
+	$(PYTHON) ./configure --verbose $(CONFIG_FLAGS) --debug-symbols-minimal
+	$(MAKE) $(NODE_EXE)
+	$(call split_debug_symbols,$(RELEASE_NODE),$(RELEASE_DEBUG_SYMBOLS))
+	$(call add_debuglink,$(RELEASE_NODE),$(RELEASE_DEBUG_SYMBOLS))
+else
+	$(error release-debug-artifacts requires Linux and GNU binutils)
+endif
 
 .PHONY: run-ci
 # Run by CI tests, exceptions:
@@ -1325,6 +1358,12 @@ $(BINARYTAR): release-only
 		--release-urlbase=$(RELEASE_URLBASE) \
 		$(CONFIG_FLAGS) $(BUILD_RELEASE_FLAGS)
 	$(MAKE) install DESTDIR=$(BINARYNAME) V=$(V) PORTABLE=1
+ifeq ($(OSTYPE),linux)
+ifeq ($(SEPARATE_DEBUG_SYMBOLS),1)
+	$(call split_debug_symbols,$(BINARYNAME)/bin/$(NODE_EXE),$(BINARY_DEBUG_SYMBOLS))
+	$(call add_debuglink,$(BINARYNAME)/bin/$(NODE_EXE),$(BINARY_DEBUG_SYMBOLS))
+endif
+endif
 	cp README.md $(BINARYNAME)
 	cp LICENSE $(BINARYNAME)
 	cp LICENSE_NSOLID $(BINARYNAME)

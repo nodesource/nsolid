@@ -111,6 +111,12 @@ parser.add_argument('--debug-symbols',
     default=None,
     help='add debugging symbols to release builds (adds -g without enabling DCHECKs)')
 
+parser.add_argument('--debug-symbols-minimal',
+    action='store_true',
+    dest='debug_symbols_minimal',
+    default=None,
+    help='add minimal debugging symbols to release builds (adds -g1 without enabling DCHECKs)')
+
 parser.add_argument('--dest-cpu',
     action='store',
     dest='dest_cpu',
@@ -1682,8 +1688,13 @@ def configure_node(o):
   o['variables']['control_flow_guard'] = b(options.enable_cfg)
   o['variables']['node_use_amaro'] = b(not options.without_amaro)
   o['variables']['debug_node'] = b(options.debug_node)
-  o['variables']['debug_symbols'] = b(options.debug_symbols)
-  if options.debug_symbols:
+  if options.debug_symbols and options.debug_symbols_minimal:
+    raise Exception('--debug-symbols is incompatible with --debug-symbols-minimal.')
+  o['variables']['debug_symbols'] = b(
+      options.debug_symbols or options.debug_symbols_minimal)
+  if options.debug_symbols_minimal:
+    o['cflags'] += ['-g1']
+  elif options.debug_symbols:
     o['cflags'] += ['-g']
   o['default_configuration'] = 'Debug' if options.debug else 'Release'
   if options.error_on_warn and options.suppress_all_error_on_warn:
