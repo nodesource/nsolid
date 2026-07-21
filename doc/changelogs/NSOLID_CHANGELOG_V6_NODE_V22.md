@@ -2,6 +2,17 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-07-22, Version 22.23.1-nsolid-v6.3.3 'Jod'
+
+### Commits
+
+* \[[`34972b9e90`](https://github.com/nodesource/nsolid/commit/34972b9e90)] - **agents**: fix statsdTags in reconfigure response (Santiago Gimeno) [#495](https://github.com/nodesource/nsolid/pull/495)
+* \[[`09cecf29c4`](https://github.com/nodesource/nsolid/commit/09cecf29c4)] - **deps**: upgrade to ip-address\@10.2.0 (Santiago Gimeno)
+* \[[`4239b2b709`](https://github.com/nodesource/nsolid/commit/4239b2b709)] - **deps**: upgrade to tar\@7.5.20 (Santiago Gimeno)
+* \[[`cceb847a26`](https://github.com/nodesource/nsolid/commit/cceb847a26)] - **deps**: update libcurl to 8.21.0 (Santiago Gimeno) [#497](https://github.com/nodesource/nsolid/pull/497)
+* \[[`0f61d1defe`](https://github.com/nodesource/nsolid/commit/0f61d1defe)] - **deps**: fix versions of minimatch & brace-expansion (Minwoo Jung)
+* \[[`a0aee02543`](https://github.com/nodesource/nsolid/commit/a0aee02543)] - **test**: fix test-http-agent-keepalive again (Santiago Gimeno) [#488](https://github.com/nodesource/nsolid/pull/488)
+
 ## 2026-06-24, Version 22.23.1-nsolid-v6.3.2 'Jod'
 
 ### Commits
