@@ -2,6 +2,15 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-07-22, Version 24.18.0-nsolid-v6.3.3 'Krypton'
+
+### Commits
+
+* \[[`13c74c037f`](https://github.com/nodesource/nsolid/commit/13c74c037f)] - **agents**: fix statsdTags in reconfigure response (Santiago Gimeno) [#495](https://github.com/nodesource/nsolid/pull/495)
+* \[[`bf7ae9b9d6`](https://github.com/nodesource/nsolid/commit/bf7ae9b9d6)] - **deps**: update libcurl to 8.21.0 (Santiago Gimeno) [#497](https://github.com/nodesource/nsolid/pull/497)
+* \[[`2bd464bd04`](https://github.com/nodesource/nsolid/commit/2bd464bd04)] - **deps**: fix versions of minimatch & brace-expansion (Minwoo Jung)
+* \[[`e5b2a4c557`](https://github.com/nodesource/nsolid/commit/e5b2a4c557)] - **test**: fix test-http-agent-keepalive again (Santiago Gimeno) [#488](https://github.com/nodesource/nsolid/pull/488)
+
 ## 2026-06-24, Version 24.18.0-nsolid-v6.3.2 'Krypton'
 
 ### Commits
