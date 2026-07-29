@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-07-29, Version 24.18.1-nsolid-v6.3.4 'Krypton'
+
+### Commits
+
+* \[[`70692695cc`](https://github.com/nodesource/nsolid/commit/70692695cc)] - Merge tag 'v24.18.1' into node-v24.18.1-nsolid-v6.3.4-release (Santiago Gimeno)
+
 ## 2026-07-22, Version 24.18.0-nsolid-v6.3.3 'Krypton'
 
 ### Commits
