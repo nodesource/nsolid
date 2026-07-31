@@ -9,13 +9,13 @@ objects.
 
 ## Important Security Consideration!
 
-> [!WARNING]
+> [!WARNING]  
 > This library uses JavaScript regular expressions. Please read
 > the following warning carefully, and be thoughtful about what
 > you provide to this library in production systems.
 
 _Any_ library in JavaScript that deals with matching string
-patterns using regular expressions will be  subject to
+patterns using regular expressions will be subject to
 [ReDoS](https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS)
 if the pattern is generated using untrusted input.
 
@@ -28,7 +28,7 @@ matching system that uses JavaScript regular expressions.
 
 To be extremely clear:
 
-> [!WARNING]
+> [!WARNING]  
 > **If you create a system where you take user input, and use
 > that input as the source of a Regular Expression pattern, in
 > this or any extant glob matcher in JavaScript, you will be
