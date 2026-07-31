@@ -2,6 +2,14 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-07-31, Version 22.23.2-nsolid-v6.3.5 'Jod'
+
+### Commits
+
+* \[[`2fd01b359d`](https://github.com/nodesource/nsolid/commit/2fd01b359d)] - **deps**: update minimatch to 10.2.6 (Santiago Gimeno)
+* \[[`56021b72fb`](https://github.com/nodesource/nsolid/commit/56021b72fb)] - **deps**: update npm brace-expansion\@2.1.4 (Santiago Gimeno)
+* \[[`8e6bd06ac9`](https://github.com/nodesource/nsolid/commit/8e6bd06ac9)] - **deps**: update npm tar\@7.5.22 (Santiago Gimeno)
+
 ## 2026-07-29, Version 22.23.2-nsolid-v6.3.4 'Jod'
 
 ### Commits
