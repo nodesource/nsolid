@@ -115,6 +115,7 @@
     "text-table": "~0.2.0",
     "tiny-relative-date": "^2.0.2",
     "treeverse": "^3.0.0",
+    "undici": "^6.28.0",
     "validate-npm-package-name": "^7.0.2",
     "which": "^6.0.1"
   },
@@ -183,6 +184,7 @@
     "text-table",
     "tiny-relative-date",
     "treeverse",
+    "undici",
     "validate-npm-package-name",
     "which"
   ],
