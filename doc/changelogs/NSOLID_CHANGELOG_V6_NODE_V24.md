@@ -2,6 +2,14 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-08-10, Version 24.19.0-nsolid-v6.3.6 'Krypton'
+
+### Commits
+
+* \[[`82a47f2824`](https://github.com/nodesource/nsolid/commit/82a47f2824)] - Merge tag 'v24.19.0' into node-v24.19.0-nsolid-v6.3.6-release (Santiago Gimeno)
+* \[[`63edada534`](https://github.com/nodesource/nsolid/commit/63edada534)] - **deps**: update npm ip-address\@10.5.0 (Santiago Gimeno)
+* \[[`1a8d196250`](https://github.com/nodesource/nsolid/commit/1a8d196250)] - **deps**: update npm undici\@6.28.0 (Santiago Gimeno)
+
 ## 2026-07-31, Version 24.18.1-nsolid-v6.3.5 'Krypton'
 
 ### Commits
