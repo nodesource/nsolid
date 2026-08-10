@@ -2,6 +2,12 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-08-10, Version 22.23.2-nsolid-v6.3.6 'Jod'
+
+### Commits
+
+* \[[`eb8adbc501`](https://github.com/nodesource/nsolid/commit/eb8adbc501)] - **deps**: update npm ip-address\@10.5.0 (Santiago Gimeno)
+
 ## 2026-07-31, Version 22.23.2-nsolid-v6.3.5 'Jod'
 
 ### Commits
