@@ -25,7 +25,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           persist-credentials: false
       - name: Use Node.js ${{ env.NODE_VERSION }}
@@ -40,7 +40,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           persist-credentials: false
       - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -55,7 +55,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           persist-credentials: false
       - name: Use Node.js ${{ env.NODE_VERSION }}
@@ -80,7 +80,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -107,7 +107,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -121,7 +121,7 @@ jobs:
     if: ${{ github.event.pull_request }}
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           fetch-depth: 2
           persist-credentials: false
@@ -129,13 +129,15 @@ jobs:
             /tools/lint-pr-url.mjs
             /doc/api/
           sparse-checkout-cone-mode: false
-      # GH Actions squashes all PR commits, HEAD^ refers to the base branch.
-      - run: git diff HEAD^ HEAD -G"pr-url:" -- "*.md" | ./tools/lint-pr-url.mjs ${{ github.event.pull_request.html_url }}
+      # We've checked out a merge commit, HEAD^ refers to the base branch.
+      - run: git diff HEAD^ HEAD -G"pr-url:" -- "*.md" | ./tools/lint-pr-url.mjs "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
   lint-readme:
     if: false  # Disable for N|Solid
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: |
