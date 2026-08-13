@@ -3716,8 +3716,11 @@ bool Heap::HasLowOldGenerationAllocationRate() {
 }
 
 bool Heap::HasLowEmbedderAllocationRate() {
+  const double allocation_throughput =
+      tracer()->EmbedderAllocationThroughputInBytesPerMillisecond();
+  if (allocation_throughput == 0) return true;
   double mu = ComputeMutatorUtilization(
-      "Embedder", tracer()->EmbedderAllocationThroughputInBytesPerMillisecond(),
+      "Embedder", allocation_throughput,
       tracer()->EmbedderSpeedInBytesPerMillisecond());
   const double kHighMutatorUtilization = 0.993;
   return mu > kHighMutatorUtilization;
