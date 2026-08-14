@@ -3668,9 +3668,9 @@ namespace {
 
 double ComputeMutatorUtilizationImpl(double mutator_speed,
                                      std::optional<double> gc_speed) {
-  constexpr double kMinMutatorUtilization = 0.0;
+  constexpr double kMaxMutatorUtilization = 1.0;
   constexpr double kConservativeGcSpeedInBytesPerMillisecond = 200000;
-  if (mutator_speed == 0) return kMinMutatorUtilization;
+  if (mutator_speed == 0) return kMaxMutatorUtilization;
   if (!gc_speed) gc_speed = kConservativeGcSpeedInBytesPerMillisecond;
   // Derivation:
   // mutator_utilization = mutator_time / (mutator_time + gc_time)
