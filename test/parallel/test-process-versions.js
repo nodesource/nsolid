@@ -7,6 +7,7 @@ const acorn = require('../../deps/acorn/acorn/package.json');
 
 const expected_keys = [
   'ares',
+  'bpf',
   'brotli',
   'zstd',
   'modules',
