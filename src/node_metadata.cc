@@ -8,6 +8,9 @@
 #include "curl/curlver.h"
 #include "grpcpp/version_info.h"
 #include "llhttp.h"
+#ifdef __linux__
+#include "libbpf_version.h"
+#endif
 #include "merve.h"
 #include "nbytes.h"
 #include "nghttp2/nghttp2ver.h"
@@ -168,6 +171,12 @@ Metadata::Versions::Versions() {
 #endif  // HAVE_SQLITE
   ada = ADA_VERSION;
   nbytes = NBYTES_VERSION;
+  bpf =
+    NODE_STRINGIFY(LIBBPF_MAJOR_VERSION)
+    "."
+    NODE_STRINGIFY(LIBBPF_MINOR_VERSION)
+    "."
+    NODE_STRINGIFY(LIBBPF_PATCH_VERSION);
   curl = LIBCURL_VERSION;
   grpc = GRPC_CPP_VERSION_STRING;
   nlohmann =
