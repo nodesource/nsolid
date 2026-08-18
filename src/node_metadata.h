@@ -70,6 +70,7 @@ namespace node {
   NODE_VERSIONS_KEY_AMARO(V)                                                   \
   NODE_VERSIONS_KEY_UNDICI(V)                                                  \
   V(merve)                                                                     \
+  V(bpf)                                                                       \
   V(curl)                                                                      \
   V(grpc)                                                                      \
   V(sodium)                                                                    \
