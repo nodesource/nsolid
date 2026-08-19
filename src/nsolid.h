@@ -27,6 +27,8 @@ namespace nsolid {
 
 class EnvInst;
 struct LogWriteInfo;
+class CodeEventHook;
+struct CodeEventInfo;
 
 #define kNSByte "byte"
 #define kNSMhz "MHz"
@@ -286,6 +288,7 @@ using on_log_write_hook_proxy_sig = void(*)(SharedEnvInst, LogWriteInfo, void*);
 using at_exit_hook_proxy_sig = void(*)(bool, bool, void*);
 using thread_added_hook_proxy_sig = void(*)(SharedEnvInst, void*);
 using thread_removed_hook_proxy_sig = thread_added_hook_proxy_sig;
+using code_event_hook_proxy_sig = void(*)(SharedEnvInst, CodeEventInfo, void*);
 using deleter_sig = void(*)(void*);
 using user_data = std::unique_ptr<void, deleter_sig>;
 
@@ -314,6 +317,8 @@ template <typename G>
 void thread_added_hook_proxy_(SharedEnvInst, void* data);
 template <typename G>
 void thread_removed_hook_proxy_(SharedEnvInst, void* data);
+template <typename G>
+void code_event_hook_proxy_(SharedEnvInst, CodeEventInfo, void*);
 template <typename G>
 void delete_proxy_(void* g);
 
@@ -349,7 +354,9 @@ NODE_EXTERN void thread_added_hook_(void*,
 NODE_EXTERN void thread_removed_hook_(void*,
                                       thread_removed_hook_proxy_sig,
                                       deleter_sig);
-
+NODE_EXTERN CodeEventHook* add_code_event_hook_(void*,
+                                                code_event_hook_proxy_sig,
+                                                deleter_sig);
 }  // namespace internal
 
 /** @endcond */
@@ -648,6 +655,52 @@ NODE_EXTERN int ThreadAddedHook(Cb&& cb, Data&&... data);
 template <typename Cb, typename... Data>
 NODE_EXTERN int ThreadRemovedHook(Cb&& cb, Data&&... data);
 
+template <typename Cb, typename... Data>
+NODE_EXTERN CodeEventHook* AddCodeEventHook(Cb&& cb, Data&&... data);
+
+struct CodeEventInfo {
+  uint64_t thread_id;
+  uint64_t timestamp;
+  v8::CodeEventType type;
+  uintptr_t code_start;
+  uintptr_t prev_code_start;
+  size_t code_len;
+  std::string fn_name;
+  std::string script_name;
+  int script_line;
+  int script_column;
+  std::string comment;
+};
+
+/**
+ * @brief Opaque handle for a code event hook registered with AddCodeEventHook.
+ *
+ * Only Dispose() should be used to remove the hook and release resources.
+ */
+class NODE_EXTERN CodeEventHook {
+ public:
+  /**
+  * @brief Dispose and remove the registered code event hook.
+  *
+  * After calling Dispose(), this object must not be used again.
+  */
+  void Dispose();
+
+ private:
+  CodeEventHook();
+  ~CodeEventHook();
+  friend CodeEventHook* internal::add_code_event_hook_(
+    void*, internal::code_event_hook_proxy_sig, internal::deleter_sig);
+  CodeEventHook(const CodeEventHook&) = delete;
+  CodeEventHook& operator=(const CodeEventHook&) = delete;
+
+  void DoSetup(internal::code_event_hook_proxy_sig cb,
+               internal::deleter_sig deleter,
+               void* data);
+
+  class Impl;
+  std::unique_ptr<Impl> impl_;
+};
 
 /**
  * @brief Defines the types of metrics supported
@@ -1777,6 +1830,40 @@ int ThreadRemovedHook(Cb&& cb, Data&&... data) {
 }
 
 
+/**
+ * @brief Register a hook (function) to be called on code events.
+ *
+ * @tparam Cb Callback type. The callback will be invoked with
+ *     (SharedEnvInst, CodeEventInfo, ...Data) arguments.
+ * @tparam Data Variable argument types to be propagated to the callback.
+ * @param cb Hook function with signature:
+ *     cb(SharedEnvInst, CodeEventInfo, ...Data)
+ * @param data Variable number of arguments to be propagated to the callback.
+ * @return Pointer to CodeEventHook if successful, nullptr otherwise.
+ */
+template <typename Cb, typename... Data>
+inline CodeEventHook* AddCodeEventHook(Cb&& cb, Data&&... data) {
+  // NOLINTNEXTLINE(build/namespaces)
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  // _1 - SharedEnvInst
+  // _2 - CodeEventInfo
+  auto bound = std::bind(
+      std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...);
+  using UserData = decltype(bound);
+  UserData* user_data = new (std::nothrow) UserData(std::move(bound));
+  if (user_data == nullptr) {
+    return nullptr;
+  }
+
+  return internal::add_code_event_hook_(
+    user_data,
+    internal::code_event_hook_proxy_<UserData>,
+    internal::delete_proxy_<UserData>);
+}
+
+
+
 namespace internal {
 
 template <typename G>
@@ -1841,6 +1928,13 @@ void thread_added_hook_proxy_(SharedEnvInst envinst, void* data) {
 template <typename G>
 void thread_removed_hook_proxy_(SharedEnvInst envinst, void* data) {
   (*static_cast<G*>(data))(envinst);
+}
+
+template <typename G>
+void code_event_hook_proxy_(SharedEnvInst envinst,
+                            CodeEventInfo info,
+                            void* data) {
+  (*static_cast<G*>(data))(envinst, std::move(info));
 }
 
 template <typename G>
