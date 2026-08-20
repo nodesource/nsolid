@@ -17,11 +17,7 @@ set "CI_NATIVE_SUITES=%NATIVE_SUITES% benchmark"
 set "CI_JS_SUITES=%JS_SUITES% pummel"
 set CI_DOC=doctool
 @rem Same as the test-ci target in Makefile
-<<<<<<< ours
-set "common_test_suites=%JS_SUITES% %NATIVE_SUITES%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1&set build_ffi_tests=1"
-=======
 set "common_test_suites=%JS_SUITES% %NATIVE_SUITES%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1&set test-agents-prereqs=1"
->>>>>>> theirs
 
 @rem Process arguments.
 set config=Release
@@ -71,11 +67,7 @@ set dll=
 set enable_static=
 set build_js_native_api_tests=
 set build_node_api_tests=
-<<<<<<< ours
-set build_ffi_tests=
-=======
 set test-agents-prereqs=
->>>>>>> theirs
 set test_node_inspect=
 set test_check_deopts=
 set v8_test_options=
@@ -126,21 +118,12 @@ if /i "%1"=="v8temporal"    set v8temporal=1&goto arg-ok
 if /i "%1"=="v8windbg"      set v8windbg=1&goto arg-ok
 if /i "%1"=="licensertf"    set licensertf=1&goto arg-ok
 if /i "%1"=="test"          set test_args=%test_args% %common_test_suites%&set lint_cpp=1&set lint_js=1&set lint_md=1&goto arg-ok
-<<<<<<< ours
-if /i "%1"=="test-ci-native" set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_NATIVE_SUITES% %CI_DOC%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1&set build_ffi_tests=1&set cctest_args=%cctest_args% --gtest_output=xml:cctest.junit.xml&goto arg-ok
-if /i "%1"=="test-ci-js"    set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_JS_SUITES%&set build_ffi_tests=1&set no_cctest=1&goto arg-ok
-if /i "%1"=="build-addons"   set build_addons=1&goto arg-ok
-if /i "%1"=="build-js-native-api-tests"   set build_js_native_api_tests=1&goto arg-ok
-if /i "%1"=="build-node-api-tests"   set build_node_api_tests=1&goto arg-ok
-if /i "%1"=="build-ffi-tests"   set build_ffi_tests=1&goto arg-ok
-=======
 if /i "%1"=="test-ci-native" set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_NATIVE_SUITES% %CI_DOC%&set build_addons=1&set build_js_native_api_tests=1&set build_node_api_tests=1&set cctest_args=%cctest_args% --gtest_output=xml:cctest.junit.xml&goto arg-ok
 if /i "%1"=="test-ci-js"    set test_args=%test_args% %test_ci_args% -p tap --logfile test.tap %CI_JS_SUITES%&set no_cctest=1&set test-agents-prereqs=1&goto arg-ok
 if /i "%1"=="build-addons"   set build_addons=1&goto arg-ok
 if /i "%1"=="build-js-native-api-tests"   set build_js_native_api_tests=1&goto arg-ok
 if /i "%1"=="build-node-api-tests"   set build_node_api_tests=1&goto arg-ok
 if /i "%1"=="test-agents-prereqs"   set test-agents-prereqs=1&goto arg-ok
->>>>>>> theirs
 if /i "%1"=="test-addons"   set test_args=%test_args% addons&set build_addons=1&goto arg-ok
 if /i "%1"=="test-doc"      set test_args=%test_args% %CI_DOC%&set doc=1&&set lint_js=1&set lint_md=1&goto arg-ok
 if /i "%1"=="test-js-native-api"   set test_args=%test_args% js-native-api&set build_js_native_api_tests=1&goto arg-ok
@@ -770,17 +753,10 @@ endlocal
 goto build-node-api-tests
 
 :build-node-api-tests
-<<<<<<< ours
-if not defined build_node_api_tests goto build-ffi-tests
-if not exist "%node_exe%" (
-  echo Failed to find node.exe
-  goto build-ffi-tests
-=======
 if not defined build_node_api_tests goto test-agents-prereqs
 if not exist "%node_exe%" (
   echo Failed to find nsolid.exe
   goto test-agents-prereqs
->>>>>>> theirs
 )
 echo Building node-api
 :: clear
@@ -792,19 +768,6 @@ setlocal
 python "%~dp0tools\build_addons.py" "%~dp0test\node-api" --config %config%
 if errorlevel 1 exit /b 1
 endlocal
-<<<<<<< ours
-goto build-ffi-tests
-
-:build-ffi-tests
-if not defined build_ffi_tests goto run-tests
-if not exist "%node_exe%" (
-  echo Failed to find node.exe
-  goto run-tests
-)
-echo Building ffi tests
-setlocal
-python "%~dp0tools\build_addons.py" "%~dp0test\ffi" --config %config%
-=======
 goto test-agents-prereqs
 
 :test-agents-prereqs
@@ -828,7 +791,6 @@ if exist "%~dp0test\common\nsolid-zmq-agent\node_modules\zeromq\binding.gyp" (
 %npm_exe% run build:libzmq --prefix "%~dp0test\common\nsolid-zmq-agent\node_modules\zeromq"
 %npm_exe% install @opentelemetry/otlp-proto-exporter-base @grpc/grpc-js @grpc/proto-loader --prefix "%~dp0test\common\nsolid-otlp-agent" --no-save --no-package-lock
 %npm_exe% install @grpc/grpc-js @grpc/proto-loader --prefix "%~dp0test\common\nsolid-grpc-agent" --no-save --no-package-lock
->>>>>>> theirs
 if errorlevel 1 exit /b 1
 endlocal
 goto run-tests
