@@ -1,10 +1,10 @@
 # Security
 
-## Reporting a bug in Node.js
+## Reporting a security issue in N|Solid
 
-Report security bugs in Node.js via [HackerOne](https://hackerone.com/nodejs).
+Report security bugs in the N|Solid Runtime via <security@nodesource.com>
 
-Normally, your report will be acknowledged within 5 days, and you'll receive
+Normally your report will be acknowledged within 5 days, and you'll receive
 a more detailed response to your report within 10 days indicating the
 next steps in handling your submission. These timelines may extend when
 our triage volunteers are away on holiday, particularly at the end of the
@@ -15,34 +15,24 @@ you informed of the progress being made towards a fix and full announcement,
 and may ask for additional information or guidance surrounding the reported
 issue.
 
-If you do not receive an acknowledgement of your report within 6 business
-days, or if you cannot find a private security contact for the project, you
-may escalate to the OpenJS Foundation CNA at `security@lists.openjsf.org`.
+## Reporting a bug in a third party module
 
-If the project acknowledges your report but does not provide any further
-response or engagement within 14 days, escalation is also appropriate.
-
-### Node.js bug bounty program
-
-The Node.js project no longer has a bug bounty program.
-
-## Reporting a bug in a third-party module
-
-Security bugs in third-party modules should be reported to their respective
+Security bugs in third party modules should be reported to their respective
 maintainers.
 
 ## Disclosure policy
 
-Here is the security disclosure policy for Node.js
+Here is the security disclosure policy for N|Solid
 
 * The security report is received and is assigned a primary handler. This
   person will coordinate the fix and release process. The problem is validated
-  against all supported Node.js versions. Once confirmed, a list of all affected
+  against all supported versions. Once confirmed, a list of all affected
   versions is determined. Code is audited to find any potential similar
   problems. Fixes are prepared for all supported releases.
   These fixes are not committed to the public repository but rather held locally
   pending the announcement.
 
+<<<<<<< ours
 * A suggested embargo date for this vulnerability is chosen and a CVE (Common
   Vulnerabilities and Exposures (CVE®)) is requested for the vulnerability.
 
@@ -510,136 +500,12 @@ application's responsibility.
 Experimental features are eligible for security reports just like any other
 stable feature of Node.js. They may also receive the same severity score that a
 stable feature would.
+=======
+* If deemed necessary, an embargo date may be set and a delayed announcement
+  may be coordinated to time the announcement with the release. Some NodeSource
+  customers may be invited to be a part of the embargo and review team.
+>>>>>>> theirs
 
 ## Receiving security updates
 
-Security notifications will be distributed via the following methods.
-
-* <https://groups.google.com/group/nodejs-sec>
-* <https://nodejs.org/en/blog/vulnerability>
-
-### CVE publication timeline
-
-When security releases are published, there is a built-in delay before the
-corresponding CVEs are publicly disclosed. This delay occurs because:
-
-1. After the security release, we request the vulnerability reporter to disclose
-   the details on HackerOne.
-2. If the reporter does not disclose within one day, we proceed with forced
-   disclosure to publish the CVEs.
-3. The disclosure then goes through HackerOne's approval process before the CVEs
-   become publicly available.
-
-As a result, CVEs may not be immediately available when security releases are
-published, but will typically be disclosed within a few days of the release.
-
-## Comments on this policy
-
-If you have suggestions on how this process could be improved, please visit
-the [nodejs/security-wg](https://github.com/nodejs/security-wg)
-repository.
-
-## Incident Response Plan
-
-In the event of a security incident, please refer to the
-[Security Incident Response Plan](https://github.com/nodejs/security-wg/blob/main/INCIDENT_RESPONSE_PLAN.md).
-
-## Node.js Security Team
-
-Node.js security team members are expected to keep all information that they
-have privileged access to by being on the team completely private to the team.
-This includes agreeing to not notify anyone outside the team of issues that have
-not yet been disclosed publicly, including the existence of issues, expectations
-of upcoming releases, and patching of any issues other than in the process of
-their work as a member of the security team.
-
-### Node.js Security Team Membership Policy
-
-The Node.js Security Team has access to security-sensitive issues and patches
-that aren't appropriate for public availability.
-
-The policy for inclusion is as follows:
-
-1. All members of @nodejs/TSC have access to private security reports and
-   private patches.
-2. Members of the @nodejs/releasers team
-   have access to private security patches in order to produce releases.
-3. On a case-by-case basis, individuals outside the Technical Steering
-   Committee are invited by the TSC to have access to private security reports
-   or private patches so that their expertise can be applied to an issue or
-   patch. This access may be temporary or permanent, as decided by the TSC.
-
-Membership on the security teams can be requested via an issue in the TSC repo.
-
-## Team responsible for Triaging security reports
-
-The responsibility of Triage is to determine whether Node.js must take any
-action to mitigate the issue, and if so, to ensure that the action is taken.
-
-Mitigation may take many forms, for example, a Node.js security release that
-includes a fix, documentation, an informational CVE or blog post.
-
-* [@mcollina](https://github.com/mcollina) - Matteo Collina
-* [@RafaelGSS](https://github.com/RafaelGSS) - Rafael Gonzaga
-* [@vdeturckheim](https://github.com/vdeturckheim) - Vladimir de Turckheim
-* [@BethGriggs](https://github.com/BethGriggs) - Beth Griggs
-
-## Team with access to private security reports against Node.js
-
-[TSC voting members](https://github.com/nodejs/node#tsc-voting-members)
-have access.
-
-In addition, these individuals have access:
-
-* [BethGriggs](https://github.com/BethGriggs) - **Beth Griggs**
-* [MylesBorins](https://github.com/MylesBorins) -  **Myles Borins**
-* [bengl](https://github.com/bengl)- **Bryan English**
-* [bnoordhuis](https://github.com/bnoordhuis) **Ben Noordhuis**
-* [cjihrig](https://github.com/cjihrig) **Colin Ihrig**
-* [joesepi](https://github.com/joesepi) - **Joe Sepi**
-* [juanarbol](https://github.com/juanarbol) **Juan Jose Arboleda**
-* [sxa](https://github.com/sxa) - **Stewart X Addison**
-* [ulisesgascon](https://github.com/ulisesgascon) **Ulises Gascón**
-* [vdeturckheim](https://github.com/vdeturckheim) - **Vladimir de Turckheim**
-
-The list is from the [member page](https://hackerone.com/organizations/nodejs/settings/users) for
-the Node.js program on HackerOne.
-
-## Team with access to private security patches to Node.js
-
-<!-- ncu-team-sync.team(nodejs-private/security) -->
-
-* [@aduh95](https://github.com/aduh95) - Antoine du Hamel
-* [@anonrig](https://github.com/anonrig) - Yagiz Nizipli
-* [@bengl](https://github.com/bengl) - Bryan English
-* [@benjamingr](https://github.com/benjamingr) - Benjamin Gruenbaum
-* [@BethGriggs](https://github.com/BethGriggs) - Beth Griggs
-* [@bmeck](https://github.com/bmeck) - Bradley Farias
-* [@bnoordhuis](https://github.com/bnoordhuis) - Ben Noordhuis
-* [@BridgeAR](https://github.com/BridgeAR) - Ruben Bridgewater
-* [@gireeshpunathil](https://github.com/gireeshpunathil) - Gireesh Punathil
-* [@guybedford](https://github.com/guybedford) - Guy Bedford
-* [@indutny](https://github.com/indutny) - Fedor Indutny
-* [@jasnell](https://github.com/jasnell) - James M Snell
-* [@joaocgreis](https://github.com/joaocgreis) - João Reis
-* [@joesepi](https://github.com/joesepi) - Joe Sepi
-* [@joyeecheung](https://github.com/joyeecheung) - Joyee Cheung
-* [@juanarbol](https://github.com/juanarbol) - Juan José
-* [@legendecas](https://github.com/legendecas) - Chengzhong Wu
-* [@marco-ippolito](https://github.com/marco-ippolito) - Marco Ippolito
-* [@mcollina](https://github.com/mcollina) - Matteo Collina
-* [@MoLow](https://github.com/MoLow) - Moshe Atlow
-* [@panva](https://github.com/panva) - Filip Skokan
-* [@RafaelGSS](https://github.com/RafaelGSS) - Rafael Gonzaga
-* [@richardlau](https://github.com/richardlau) - Richard Lau
-* [@ronag](https://github.com/ronag) - Robert Nagy
-* [@ruyadorno](https://github.com/ruyadorno) - Ruy Adorno
-* [@santigimeno](https://github.com/santigimeno) - Santiago Gimeno
-* [@ShogunPanda](https://github.com/ShogunPanda) - Paolo Insogna
-* [@sxa](https://github.com/sxa) - Stewart X Addison
-* [@targos](https://github.com/targos) - Michaël Zasso
-* [@tniessen](https://github.com/tniessen) - Tobias Nießen
-* [@UlisesGascon](https://github.com/UlisesGascon) - Ulises Gascón
-* [@vdeturckheim](https://github.com/vdeturckheim) - Vladimir de Turckheim
-
-<!-- ncu-team-sync end -->
+Security notifications will be distributed via <https://nodesource.com/blog/>

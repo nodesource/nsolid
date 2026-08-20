@@ -365,6 +365,7 @@ inline void FileHandle::Close() {
 
   AfterClose();
 
+<<<<<<< ours
   // Even though we closed the file descriptor, we still throw an error
   // if the FileHandle object was not closed before garbage collection.
   // Because this method is called during garbage collection, we will defer
@@ -375,6 +376,31 @@ inline void FileHandle::Close() {
   // it is being thrown from within the SetImmediate handler and
   // there is no JS stack to bubble it to. In other words, tearing
   // down the process is the only reasonable thing we can do here.
+=======
+  if (ret < 0) {
+    // Do not unref this
+    env()->SetImmediate([detail](Environment* env) {
+      char msg[70];
+      snprintf(msg, arraysize(msg),
+              "Closing file descriptor %d on garbage collection failed",
+              detail.fd);
+      // This exception will end up being fatal for the process because
+      // it is being thrown from within the SetImmediate handler and
+      // there is no JS stack to bubble it to. In other words, tearing
+      // down the process is the only reasonable thing we can do here.
+      HandleScope handle_scope(env->isolate());
+      env->ThrowUVException(detail.ret, "close", msg);
+    });
+    return;
+  }
+
+  env()->envinst_->inc_fs_handles_closed();
+
+  // If the close was successful, we still want to emit a process warning
+  // to notify that the file descriptor was gc'd. We want to be noisy about
+  // this because not explicitly closing the FileHandle is a bug.
+
+>>>>>>> theirs
   env()->SetImmediate([detail](Environment* env) {
     HandleScope handle_scope(env->isolate());
     static constexpr std::string_view unknown_path = "<unknown path>";
@@ -503,6 +529,7 @@ MaybeLocal<Promise> FileHandle::ClosePromise() {
       close->Reject(
           UVException(isolate, static_cast<int>(req->result), "close"));
     } else {
+      close->env()->envinst_->inc_fs_handles_closed();
       close->Resolve();
     }
   }};
@@ -1063,6 +1090,7 @@ void Close(const FunctionCallbackInfo<Value>& args) {
     FS_SYNC_TRACE_BEGIN(close);
     SyncCallAndThrowOnError(env, &req_wrap_sync, uv_fs_close, fd);
     FS_SYNC_TRACE_END(close);
+    env->envinst_->inc_fs_handles_closed();
   }
 }
 
@@ -2351,6 +2379,7 @@ static void Open(const FunctionCallbackInfo<Value>& args) {
     FS_SYNC_TRACE_END(open);
     if (is_uv_error(result)) return;
     env->AddUnmanagedFd(result);
+    env->envinst_->inc_fs_handles_opened();
     args.GetReturnValue().Set(result);
   }
 }
@@ -2412,6 +2441,7 @@ static void OpenFileHandle(const FunctionCallbackInfo<Value>& args) {
     }
     FileHandle* fd = FileHandle::New(binding_data, result, {}, path.ToString());
     if (fd == nullptr) return;
+    env->envinst_->inc_fs_handles_opened();
     args.GetReturnValue().Set(fd->object());
   }
 }

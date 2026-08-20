@@ -10,6 +10,7 @@ const expected_keys = [
   'brotli',
   'zstd',
   'modules',
+  'nsolid',
   'uv',
   'v8',
   'zlib',
@@ -25,6 +26,13 @@ const expected_keys = [
   'ada',
   'nbytes',
   'merve',
+  'curl',
+  'grpc',
+  'nlohmann',
+  'opentelemetry',
+  'zmq',
+  'sodium',
+  'protobuf',
 ];
 
 

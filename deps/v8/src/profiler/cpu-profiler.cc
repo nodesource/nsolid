@@ -49,6 +49,18 @@ class CpuSampler : public sampler::Sampler {
           ProfilerStats::Reason::kIsolateNotLocked);
       return;
     }
+<<<<<<< ours
+=======
+#if V8_HEAP_USE_PKU_JIT_WRITE_PROTECT
+    i::RwxMemoryWriteScope::SetDefaultPermissionsForSignalHandler();
+#endif
+
+    // (santigimeno): It prevents a crash when handling a `SIGPROF` signal while
+    // shutting down the profiler.
+    if (!processor_->running()) {
+      return;
+    }
+>>>>>>> theirs
     TickSample* sample = processor_->StartTickSample();
     if (sample == nullptr) {
       ProfilerStats::Instance()->AddReason(

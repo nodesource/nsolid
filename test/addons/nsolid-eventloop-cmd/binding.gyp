@@ -1,0 +1,26 @@
+{
+  'targets': [
+    {
+      'target_name': 'binding',
+      'sources': [ 'binding.cc' ],
+      'includes': ['../common.gypi'],
+      'defines': [ 'NODE_WANT_INTERNALS=1' ],
+      'include_dirs': [
+        '../../../deps/nsuv/include',
+        '../../../deps/protobuf/src',
+        '../../../deps/protobuf/third_party/abseil-cpp',
+        '../../../deps/v8',
+        '../../../deps/v8/include',
+        '../../../src/',
+      ],
+      'cflags_cc': [ '-std=c++20' ],
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'CLANG_CXX_LANGUAGE_STANDARD': 'c++20',
+          }
+        }],
+      ],
+    }
+  ]
+}

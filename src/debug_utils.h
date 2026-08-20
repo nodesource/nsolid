@@ -65,7 +65,11 @@ void NODE_EXTERN_PRIVATE FWrite(FILE* file, const std::string& str);
   V(PERMISSION_MODEL)                                                          \
   V(PLATFORM_MINIMAL)                                                          \
   V(PLATFORM_VERBOSE)                                                          \
-  V(QUIC)
+  V(QUIC)                                                                      \
+  V(NSOLID_GRPC_AGENT)                                                         \
+  V(NSOLID_OTLP_AGENT)                                                         \
+  V(NSOLID_STATSD_AGENT)                                                       \
+  V(NSOLID_ZMQ_AGENT)
 
 enum class DebugCategory : unsigned int {
 #define V(name) name,

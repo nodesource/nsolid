@@ -1,0 +1,7 @@
+{
+  "name": "nsolid-trace-sample-rate-fixture",
+  "version": "1.0.0",
+  "nsolid": {
+    "traceSampleRate": 0.7
+  }
+}

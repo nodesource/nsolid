@@ -1,0 +1,17 @@
+diff --git a/deps/v8/src/profiler/cpu-profiler.cc b/deps/v8/src/profiler/cpu-profiler.cc
+index c94e8f95457..d22ce2c1400 100644
+--- a/deps/v8/src/profiler/cpu-profiler.cc
++++ b/deps/v8/src/profiler/cpu-profiler.cc
+@@ -51,6 +51,12 @@ class CpuSampler : public sampler::Sampler {
+ #if V8_HEAP_USE_PKU_JIT_WRITE_PROTECT
+     i::RwxMemoryWriteScope::SetDefaultPermissionsForSignalHandler();
+ #endif
++
++    // (santigimeno): It prevents a crash when handling a `SIGPROF` signal while
++    // shutting down the profiler.
++    if (!processor_->running()) {
++      return;
++    }
+     TickSample* sample = processor_->StartTickSample();
+     if (sample == nullptr) {
+       ProfilerStats::Instance()->AddReason(

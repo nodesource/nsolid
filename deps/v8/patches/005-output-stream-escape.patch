@@ -1,0 +1,83 @@
+diff --git a/deps/v8/src/profiler/output-stream-writer.h b/deps/v8/src/profiler/output-stream-writer.h
+index 208018d3f5a..5a4776d795b 100644
+--- a/deps/v8/src/profiler/output-stream-writer.h
++++ b/deps/v8/src/profiler/output-stream-writer.h
+@@ -19,6 +19,66 @@
+ namespace v8 {
+ namespace internal {
+ 
++template <int bytes>
++struct MaxDecimalDigitsIn;
++template <>
++struct MaxDecimalDigitsIn<1> {
++  static const int kSigned = 3;
++  static const int kUnsigned = 3;
++};
++template <>
++struct MaxDecimalDigitsIn<4> {
++  static const int kSigned = 11;
++  static const int kUnsigned = 10;
++};
++template <>
++struct MaxDecimalDigitsIn<8> {
++  static const int kSigned = 20;
++  static const int kUnsigned = 20;
++};
++
++namespace {
++  void EscapeAndAppendString(const char* value, std::string* result) {
++  *result += '"';
++  while (*value) {
++    unsigned char c = *value++;
++    switch (c) {
++      case '\b':
++        *result += "\\b";
++        break;
++      case '\f':
++        *result += "\\f";
++        break;
++      case '\n':
++        *result += "\\n";
++        break;
++      case '\r':
++        *result += "\\r";
++        break;
++      case '\t':
++        *result += "\\t";
++        break;
++      case '\"':
++        *result += "\\\"";
++        break;
++      case '\\':
++        *result += "\\\\";
++        break;
++      default:
++        if (c < '\x20' || c == '\x7F') {
++          char number_buffer[8];
++          base::OS::SNPrintF(number_buffer, arraysize(number_buffer), "\\u%04X",
++                             static_cast<unsigned>(c));
++          *result += number_buffer;
++        } else {
++          *result += c;
++        }
++    }
++  }
++  *result += '"';
++}
++}  // namespace
++
+ class OutputStreamWriter {
+  public:
+   explicit OutputStreamWriter(v8::OutputStream* stream)
+@@ -67,6 +127,11 @@ class OutputStreamWriter {
+       AddNumber(n);
+     }
+   }
++  void EscapeAndAddString(const char* s) {
++    std::string escaped;
++    EscapeAndAppendString(s, &escaped);
++    AddString(escaped.c_str());
++  }
+   void Finalize() {
+     if (aborted_) return;
+     DCHECK(chunk_pos_ < chunk_size_);

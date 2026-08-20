@@ -1,0 +1,34 @@
+{
+  "name": "nsolid-cli",
+  "version": "4.0.3",
+  "description": "N|Solid CLI",
+  "main": "cli.js",
+  "dependencies": {
+    "client-request": "~2.3.0",
+    "ini": "~2.0.0",
+    "minimist-lite": "^2.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "standard": "^17.1.2",
+    "tape": "~4.8.0",
+    "terminus": "~1.1.0"
+  },
+  "scripts": {
+    "test": "node --no-warnings test/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nodesource/nsolid-epm-cli.git"
+  },
+  "author": "NodeSource",
+  "license": "See LICENSE in LICENSE",
+  "bugs": {
+    "url": "https://github.com/nodesource/nsolid-epm-cli/issues"
+  },
+  "homepage": "https://github.com/nodesource/nsolid-epm-cli",
+  "overrides": {
+    "minimatch": ">=3.1.4",
+    "brace-expansion": ">=1.1.13"
+  }
+}

@@ -31,6 +31,7 @@
         '-Werror=undefined-inline',
         '-Werror=extra-semi',
         '-Werror=ctad-maybe-unsupported',
+        '-Wno-c++98-compat-extra-semi',
       ],
     }],
     [ '"<(_type)"=="executable"', {
@@ -249,8 +250,188 @@
       'dependencies': [ 'deps/sqlite/sqlite.gyp:sqlite' ],
     }],
 
+<<<<<<< ours
     [ 'node_use_ffi=="true" and node_shared_ffi=="false"', {
       'dependencies': [ 'deps/libffi/libffi.gyp:libffi' ],
+=======
+    [ 'node_shared_sodium=="false"', {
+      'dependencies': [ 'deps/sodium/sodium.gyp:sodium', ],
+      'conditions': [
+        [ 'force_load=="true"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)sodium<(STATIC_LIB_SUFFIX)',
+            ],
+          },
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'AdditionalOptions': [
+                '/WHOLEARCHIVE:<(PRODUCT_DIR)/lib/sodium<(STATIC_LIB_SUFFIX)',
+              ],
+            },
+          },
+          'conditions': [
+            ['OS!="aix" and node_shared=="false"', {
+              'ldflags': [
+                '-Wl,--whole-archive',
+                '<(obj_dir)/deps/sodium/<(STATIC_LIB_PREFIX)sodium<(STATIC_LIB_SUFFIX)',
+                '-Wl,--no-whole-archive',
+              ],
+            }],
+          ],
+        }],
+      ],
+    }],
+
+    [ 'node_shared_zmq=="false"', {
+      'dependencies': [ 'deps/zmq/zmq.gyp:zmq', ],
+      'conditions': [
+        [ 'force_load=="true"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)zmq<(STATIC_LIB_SUFFIX)',
+            ],
+          },
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'AdditionalOptions': [
+                '/WHOLEARCHIVE:<(PRODUCT_DIR)/lib/zmq<(STATIC_LIB_SUFFIX)',
+              ],
+            },
+          },
+          'conditions': [
+            ['OS!="aix" and node_shared=="false"', {
+              'ldflags': [
+                '-Wl,--whole-archive',
+                '<(obj_dir)/deps/zmq/<(STATIC_LIB_PREFIX)zmq<(STATIC_LIB_SUFFIX)',
+                '-Wl,--no-whole-archive',
+              ],
+            }],
+          ],
+        }],
+      ],
+    }],
+
+    [ 'node_shared_curl=="false"', {
+      'dependencies': [ 'deps/curl/curl.gyp:curl' ],
+      'conditions': [
+        [ 'force_load=="true"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)curl<(STATIC_LIB_SUFFIX)',
+            ],
+          },
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'AdditionalOptions': [
+                '/WHOLEARCHIVE:<(PRODUCT_DIR)/lib/curl<(STATIC_LIB_SUFFIX)',
+              ],
+            },
+          },
+          'conditions': [
+            ['OS!="aix" and node_shared=="false"', {
+              'ldflags': [
+                '-Wl,--whole-archive',
+                '<(obj_dir)/deps/curl/<(STATIC_LIB_PREFIX)curl<(STATIC_LIB_SUFFIX)',
+                '-Wl,--no-whole-archive',
+              ],
+            }],
+          ],
+        }],
+      ],
+    }],
+
+    [ 'node_shared_protobuf=="false"', {
+      'dependencies': [ 'deps/protobuf/protobuf.gyp:protobuf' ],
+      'conditions': [
+        [ 'force_load=="true"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)protobuf<(STATIC_LIB_SUFFIX)',
+            ],
+          },
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'AdditionalOptions': [
+                '/WHOLEARCHIVE:<(PRODUCT_DIR)/lib/protobuf<(STATIC_LIB_SUFFIX)',
+              ],
+            },
+          },
+          'conditions': [
+            ['OS!="aix" and node_shared=="false"', {
+              'ldflags': [
+                '-Wl,--whole-archive',
+                '<(obj_dir)/deps/protobuf/<(STATIC_LIB_PREFIX)protobuf<(STATIC_LIB_SUFFIX)',
+                '-Wl,--no-whole-archive',
+              ],
+            }],
+          ],
+        }],
+      ],
+    }],
+
+    [ 'node_shared_otlp_http_exporter=="false"', {
+      'dependencies': [ 'deps/opentelemetry-cpp/otlp-http-exporter.gyp:otlp-http-exporter' ],
+      'direct_dependent_settings': {
+        'cflags': [
+          '-Wno-c++98-compat-extra-semi',
+        ],
+      },
+      'conditions': [
+        [ 'force_load=="true"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)otlp-http-exporter<(STATIC_LIB_SUFFIX)',
+            ],
+          },
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'AdditionalOptions': [
+                '/WHOLEARCHIVE:<(PRODUCT_DIR)/lib/otlp-http-exporter<(STATIC_LIB_SUFFIX)',
+              ],
+            },
+          },
+          'conditions': [
+            ['OS!="aix" and node_shared=="false"', {
+              'ldflags': [
+                '-Wl,--whole-archive',
+                '<(obj_dir)/deps/opentelemetry-cpp/<(STATIC_LIB_PREFIX)otlp-http-exporter<(STATIC_LIB_SUFFIX)',
+                '-Wl,--no-whole-archive',
+              ],
+            }],
+          ],
+        }],
+      ],
+    }],
+
+    [ 'node_shared_grpc=="false"', {
+      'dependencies': [ 'deps/grpc/grpc.gyp:grpc' ],
+      'conditions': [
+        [ 'force_load=="true"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)grpc<(STATIC_LIB_SUFFIX)',
+            ],
+          },
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'AdditionalOptions': [
+                '/WHOLEARCHIVE:<(PRODUCT_DIR)/lib/grpc<(STATIC_LIB_SUFFIX)',
+              ],
+            },
+          },
+          'conditions': [
+            ['OS!="aix" and node_shared=="false"', {
+              'ldflags': [
+                '-Wl,--whole-archive',
+                '<(obj_dir)/deps/grpc/<(STATIC_LIB_PREFIX)grpc<(STATIC_LIB_SUFFIX)',
+                '-Wl,--no-whole-archive',
+              ],
+            }],
+          ],
+        }],
+      ],
+>>>>>>> theirs
     }],
 
     [ 'node_shared_zstd=="false"', {
@@ -260,9 +441,12 @@
 
     [ 'OS=="mac"', {
       # linking Corefoundation is needed since certain macOS debugging tools
-      # like Instruments require it for some features. Security is needed for
-      # --use-system-ca.
-      'libraries': [ '-framework CoreFoundation -framework Security' ],
+      # like Instruments require it for some features
+      'libraries': [
+        '-framework CoreFoundation',
+        '-framework Security',
+        '-framework SystemConfiguration' # For libcurl
+      ],
       'defines!': [
         'NODE_PLATFORM="mac"',
       ],
@@ -381,7 +565,7 @@
     [ 'OS=="sunos"', {
       'ldflags': [ '-Wl,-M,/usr/lib/ld/map.noexstk' ],
     }],
-    [ 'OS=="linux" or OS=="openharmony"', {
+    [ '(OS=="linux" and not nsolid_use_librt) or OS=="openharmony"', {
       'libraries!': [
         '-lrt'
       ],

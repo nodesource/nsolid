@@ -1,15 +1,20 @@
 #include "node_metadata.h"
+#include <zmq.h>
 #include "acorn_version.h"
 #include "ada.h"
 #include "amaro_version.h"
 #include "ares.h"
 #include "brotli/encode.h"
+#include "curl/curlver.h"
+#include "grpcpp/version_info.h"
 #include "llhttp.h"
 #include "merve.h"
 #include "nbytes.h"
 #include "nghttp2/nghttp2ver.h"
+#include "nlohmann/json.h"
 #include "node.h"
 #include "simdjson.h"
+#include "opentelemetry/version.h"
 #include "simdutf.h"
 #if HAVE_SQLITE
 #include "quic/guard.h"
@@ -24,6 +29,8 @@
 #include "uvwasi.h"
 #include "v8.h"
 #include "zstd.h"
+#include "sodium/version.h"
+#include <google/protobuf/message.h>
 
 #ifdef NODE_BUNDLED_ZLIB
 #include "zlib_version.h"
@@ -106,6 +113,7 @@ void Metadata::Versions::InitializeIntlVersions() {
 
 Metadata::Versions::Versions() {
   node = NODE_VERSION_STRING;
+  nsolid = NSOLID_VERSION_STRING;
   v8 = v8::V8::GetVersion();
   uv = uv_version_string();
 #ifdef NODE_BUNDLED_ZLIB
@@ -177,6 +185,23 @@ Metadata::Versions::Versions() {
 #endif  // HAVE_FFI
   ada = ADA_VERSION;
   nbytes = NBYTES_VERSION;
+  curl = LIBCURL_VERSION;
+  grpc = GRPC_CPP_VERSION_STRING;
+  nlohmann =
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MAJOR)
+    "."
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_MINOR)
+    "."
+    NODE_STRINGIFY(NLOHMANN_JSON_VERSION_PATCH);
+  opentelemetry = OPENTELEMETRY_VERSION;
+  zmq =
+    NODE_STRINGIFY(ZMQ_VERSION_MAJOR)
+    "."
+    NODE_STRINGIFY(ZMQ_VERSION_MINOR)
+    "."
+    NODE_STRINGIFY(ZMQ_VERSION_PATCH);
+  sodium = SODIUM_VERSION_STRING;
+  protobuf = google::protobuf::internal::VersionString(GOOGLE_PROTOBUF_VERSION);
 }
 
 std::array<std::pair<std::string_view, std::string_view>,
@@ -207,8 +232,10 @@ Metadata::Release::Release() : name(NODE_RELEASE) {
 #endif  // NODE_VERSION_IS_LTS
 
 #ifdef NODE_HAS_RELEASE_URLS
-#define NODE_RELEASE_URLPFX NODE_RELEASE_URLBASE "v" NODE_VERSION_STRING "/"
-#define NODE_RELEASE_URLFPFX NODE_RELEASE_URLPFX "node-v" NODE_VERSION_STRING
+#  define NODE_RELEASE_URLPFX NODE_RELEASE_URLBASE "v" \
+  NSOLID_VERSION_STRING "/"
+#  define NODE_RELEASE_URLFPFX NODE_RELEASE_URLPFX "nsolid-v" \
+  NSOLID_VERSION_STRING
 
   source_url = NODE_RELEASE_URLFPFX ".tar.gz";
   headers_url = NODE_RELEASE_URLFPFX "-headers.tar.gz";

@@ -29,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238  # v6.2.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Lint addon docs
@@ -48,6 +48,7 @@ jobs:
           allow-prereleases: true
       - name: Lint C/C++ files
         run: make lint-cpp
+<<<<<<< ours
   format-cpp:
     if: ${{ github.event.pull_request && github.event.pull_request.draft == false && github.base_ref == github.event.repository.default_branch }}
     runs-on: ubuntu-slim
@@ -85,6 +86,8 @@ jobs:
             echo 'to format the commits in your branch.'
             exit "$EXIT_CODE"
           fi
+=======
+>>>>>>> theirs
   lint-js-and-md:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
@@ -93,37 +96,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238  # v6.2.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Lint JavaScript files
-        run: |
-          set +e
-          NODE=$(command -v node) make lint-js
-          EXIT_CODE="$?"
-          if [ "$EXIT_CODE" != "0" ]; then
-            echo
-            echo 'ERROR: The JavaScript lint validation failed (the errors are logged above).'
-            echo '       Please fix the lint errors.'
-            if NODE=$(command -v node) make lint-js-fix > /dev/null 2>&1; then
-              echo '       Run:'
-              echo '          make lint-js-fix'
-              echo '       to fix the lint issues.'
-              git --no-pager diff
-            elif git diff --quiet --exit-code; then
-              echo '       None of the issue is auto-fixable, so manual fixes for'
-              echo '       all of the issues are required.'
-            else
-              echo '       Run:'
-              echo '          make lint-js-fix'
-              echo '       to fix the auto-fixable lint issues.'
-              echo '       Note that some manual fixes are also required.'
-            fi
-            echo
-            exit "$EXIT_CODE"
-          fi
+        run: NODE=$(command -v node) make lint-js
       - name: Get release version numbers
-        if: ${{ github.event.pull_request && github.event.pull_request.base.ref == github.event.pull_request.base.repo.default_branch }}
+        if: ${{ github.event.pull_request && github.event.pull_request.base.ref == github.event.pull_request.base.repo.default_branch && false }}
         id: get-released-versions
         run: ./tools/lint-md/list-released-versions-from-changelogs.mjs >> $GITHUB_OUTPUT
       - name: Lint markdown files
@@ -159,6 +138,7 @@ jobs:
         run: |
           make lint-py-build
           make lint-py
+<<<<<<< ours
   lint-yaml:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
@@ -182,6 +162,8 @@ jobs:
           make lint-yaml-build || true
           make lint-yaml
 
+=======
+>>>>>>> theirs
   lint-sh:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
@@ -196,6 +178,7 @@ jobs:
       - run: shellcheck -V
       - name: Lint Shell scripts
         run: tools/lint-sh.mjs .
+<<<<<<< ours
   lint-codeowners:
     if: github.event.pull_request.draft == false
     # cannot use ubuntu-slim here because mszostok/codeowners-validator is dockerized
@@ -208,6 +191,8 @@ jobs:
       - uses: mszostok/codeowners-validator@7f3f5e28c6d7b8dfae5731e54ce2272ca384592f
         with:
           checks: files,duppatterns
+=======
+>>>>>>> theirs
   lint-pr-url:
     if: ${{ github.event.pull_request }}
     runs-on: ubuntu-slim
@@ -225,6 +210,7 @@ jobs:
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
   lint-readme:
+    if: false  # Disable for N|Solid
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0

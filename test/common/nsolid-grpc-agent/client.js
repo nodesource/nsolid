@@ -1,0 +1,288 @@
+'use strict';
+
+const http = require('node:http');
+const { parseArgs } = require('node:util');
+const { pathToFileURL } = require('node:url');
+const { isMainThread, parentPort, Worker, threadId } = require('node:worker_threads');
+const nsolid = require('nsolid');
+const { fixturesDir } = require('../fixtures');
+
+const options = {
+  trace: {
+    type: 'string',
+    short: 't',
+  },
+  workers: {
+    type: 'string',
+    short: 'w',
+  },
+};
+const args = parseArgs({ options });
+
+const interval = setInterval(() => {
+}, 100);
+
+function execHttpTransaction() {
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Hello World\n');
+  });
+
+  server.listen(0, () => {
+    const port = server.address().port;
+    const req = http.request({
+      host: '127.0.0.1',
+      port,
+      method: 'GET',
+      path: '/',
+    }, (res) => {
+      res.on('data', () => {
+      });
+      res.on('end', () => {
+        server.close();
+      });
+    });
+    req.end();
+  });
+}
+
+function execFetchTransaction() {
+  const server = http.createServer((req, res) => {
+    req.resume();
+    setTimeout(() => {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('Hello World\n');
+    }, 10);
+  });
+
+  server.listen(0, '127.0.0.1', async () => {
+    const port = server.address().port;
+    const url = `http://127.0.0.1:${port}/`;
+    for (let i = 0; i < 25; i++) {
+      const responses = await Promise.all(Array.from({ length: 32 }, () => {
+        return fetch(url, {
+          method: 'POST',
+          body: 'payload',
+        });
+      }));
+
+      await Promise.all(responses.map((response) => response.text()));
+    }
+
+    server.close();
+  });
+}
+
+function execDnsTransaction() {
+  const dns = require('node:dns');
+  dns.lookup('example.org', () => {
+    dns.lookupService('127.0.0.1', 22, () => {
+      dns.resolve('example.org', () => {
+      });
+    });
+  });
+}
+
+function execCustomTrace() {
+  // Just to make sure the trace is recorded.
+  setTimeout(() => {
+    const api = require(require.resolve('@opentelemetry/api',
+                                        { paths: [fixturesDir] }));
+    try {
+      nsolid.otel.register(api);
+    } catch (err) {
+      if (err.code !== 'ERR_NSOLID_OTEL_API_ALREADY_REGISTERED')
+        throw err;
+    }
+    const tracer = api.trace.getTracer('test');
+    const span = tracer.startSpan('initial_name', { attributes: { a: 1, b: 2 },
+                                                    kind: api.SpanKind.CLIENT });
+    span.setAttributes({ c: 3, d: 4 })
+        .setAttribute('latin1', 'Espa\u00f1a')
+        .setAttribute('e', [ 'abAD', 'cdCF'])
+        .addEvent('my_event 1', Date.now())
+        .addEvent('my_event 2', { attr1: 'val1', attr2: 'val2' }, Date.now());
+    span.recordException(new Error('my_exception'));
+    span.setStatus({ code: api.SpanStatusCode.ERROR, message: 'my_message' });
+    span.end();
+  }, 1000);
+}
+
+function blockFor(duration) {
+  const start = Date.now();
+  while (Date.now() - start < duration);
+}
+
+async function handleImport(msg) {
+  const { url } = msg;
+  const { blockFor } = await import(pathToFileURL(url));
+  blockFor(500);
+}
+
+function handleTrace(msg) {
+  if (msg.type === 'trace') {
+    switch (msg.kind) {
+      case 'http':
+        execHttpTransaction();
+        break;
+      case 'fetch':
+        execFetchTransaction();
+        break;
+      case 'dns':
+        execDnsTransaction();
+        break;
+      case 'custom':
+        execCustomTrace();
+        break;
+    }
+  }
+}
+
+if (isMainThread) {
+  const workers = new Map();
+  process.on('message', (msg) => {
+    if (msg.type === 'block') {
+      if (threadId === msg.threadId) {
+        blockFor(msg.duration);
+      } else {
+        workers.get(msg.threadId).postMessage(msg);
+      }
+    } else if (msg.type === 'config') {
+      if (msg.config) {
+        nsolid.start(msg.config);
+      }
+
+      process.send({ type: 'config', config: nsolid.config });
+    } else if (msg.type === 'enable_assets') {
+      nsolid.enableAssets();
+      process.send({ type: 'enable_assets' });
+    } else if (msg.type === 'disable_assets') {
+      nsolid.disableAssets();
+      process.send({ type: 'disable_assets' });
+    } else if (msg.type === 'enable_traces') {
+      nsolid.enableTraces();
+      process.send({ type: 'enable_traces' });
+    } else if (msg.type === 'disable_traces') {
+      nsolid.disableTraces();
+      process.send({ type: 'disable_traces' });
+    } else if (msg.type === 'heap_profile') {
+      nsolid.heapProfile(msg.duration);
+    } else if (msg.type === 'heap_sampling') {
+      nsolid.heapSampling(msg.duration);
+    } else if (msg.type === 'id') {
+      process.send({ type: 'id', id: nsolid.id });
+    } else if (msg.type === 'info') {
+      process.send({ type: 'info', info: nsolid.info() });
+    } else if (msg.type === 'import') {
+      console.log(msg);
+      if (threadId === msg.threadId) {
+        handleImport(msg).then(() => {
+          process.send(msg);
+        });
+      } else {
+        const worker = workers.get(msg.threadId);
+        worker.on('message', (msg) => {
+          process.send(msg);
+        });
+
+        worker.postMessage(msg);
+      }
+    } else if (msg.type === 'log') {
+      if (threadId === msg.threadId) {
+        nsolid.logger[msg.level](msg.message);
+      } else {
+        workers.get(msg.threadId).postMessage(msg);
+      }
+
+      process.send({ type: 'log' });
+    } else if (msg.type === 'metrics') {
+      process.send({ type: 'metrics', metrics: nsolid.metrics() });
+    } else if (msg.type === 'profile') {
+      nsolid.profile(msg.duration);
+    } else if (msg.type === 'shutdown') {
+      clearInterval(interval);
+      if (!msg.error) {
+        process.exit(msg.code || 0);
+      } else {
+        throw new Error('error');
+      }
+    } else if (msg.type === 'snapshot') {
+      nsolid.snapshot();
+    } else if (msg.type === 'startupTimes') {
+      process.recordStartupTime(msg.name);
+      process.send(msg);
+    } else if (msg.type === 'threadName') {
+      if (threadId === msg.threadId) {
+        nsolid.setThreadName(msg.name);
+        process.send(msg);
+      } else {
+        const worker = workers.get(msg.threadId);
+        worker.once('message', (msg) => {
+          process.send(msg);
+        });
+        worker.postMessage(msg);
+      }
+    } else if (msg.type === 'trace') {
+      if (threadId === msg.threadId) {
+        handleTrace(msg);
+      } else {
+        workers.get(msg.threadId).postMessage(msg);
+      }
+    } else if (msg.type === 'workers') {
+      process.send({ type: 'workers', ids: Array.from(workers.keys()) });
+    }
+  });
+
+  if (args.values.workers) {
+    const NUM_WORKERS = parseInt(args.values.workers, 10);
+    if (!Number.isNaN(NUM_WORKERS)) {
+      for (let i = 0; i < NUM_WORKERS; i++) {
+        const worker = new Worker(__filename);
+        workers.set(worker.threadId, worker);
+      }
+    }
+  }
+
+  if (args.values.trace) {
+    const trace = args.values.trace;
+    if (trace === 'http') {
+      // TODO(santigimeno): ideally we should be able to collect traces
+      // immediately without the need of calling nsolid.start()
+      nsolid.start();
+      execHttpTransaction();
+    } else if (trace === 'fetch') {
+      // TODO(santigimeno): ideally we should be able to collect traces
+      // immediately without the need of calling nsolid.start()
+      nsolid.start();
+      execFetchTransaction();
+    } else if (trace === 'dns') {
+      execDnsTransaction();
+    } else if (trace === 'custom') {
+      execCustomTrace();
+    }
+  }
+} else {
+  parentPort.on('message', (msg) => {
+    console.log('message', msg);
+    switch (msg.type) {
+      case 'block':
+        blockFor(msg.duration);
+        break;
+      case 'import':
+        handleImport(msg).then(() => {
+          parentPort.postMessage(msg);
+        });
+        break;
+      case 'log':
+        nsolid.logger[msg.level](msg.message);
+        break;
+      case 'threadName':
+        nsolid.setThreadName(msg.name);
+        parentPort.postMessage(msg);
+        break;
+      case 'trace':
+        handleTrace(msg);
+        break;
+    }
+  });
+}

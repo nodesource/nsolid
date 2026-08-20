@@ -18,4 +18,4 @@ codesign \
   --entitlements tools/osx-entitlements.plist \
   --options runtime \
   --timestamp \
-  "$PKGDIR"/bin/node
+  "$PKGDIR"/bin/nsolid

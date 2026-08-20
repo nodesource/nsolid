@@ -32,6 +32,12 @@
     'node_shared_uvwasi%': 'false',
     'node_shared_zlib%': 'false',
     'node_shared_zstd%': 'false',
+    'node_shared_sodium%': 'false',
+    'node_shared_zmq%': 'false',
+    'node_shared_curl%': 'false',
+    'node_shared_grpc%': 'false',
+    'node_shared_protobuf%': 'false',
+    'node_shared_otlp_http_exporter': 'false',
     'node_shared%': 'false',
     'node_snapshot_main%': '',
     'node_use_amaro%': 'true',
@@ -46,6 +52,8 @@
     'node_enable_v8_vtunejit%': 'false',
     'node_v8_options%': '',
     'node_write_snapshot_as_string_literals': 'true',
+    'node_core_target_name%': 'nsolid',
+    'node_lib_target_name%': 'libnsolid',
     'ossfuzz' : 'false',
     'linked_module_files': [
     ],
@@ -57,6 +65,14 @@
     'library_files': [
       '<@(node_library_files)',
       '<@(linked_module_files)',
+    ],
+    'agents_files': [
+      'agents/grpc/lib/nsolid.js',
+      'agents/grpc/lib/agent.js',
+      'agents/statsd/lib/nsolid.js',
+      'agents/statsd/lib/agent.js',
+      'agents/zmq/lib/nsolid.js',
+      'agents/zmq/lib/agent.js',
     ],
     'deps_files': [
       'deps/v8/tools/splaytree.mjs',
@@ -445,6 +461,7 @@
       'src/node_crypto.cc',
       'src/node_crypto.h',
     ],
+<<<<<<< ours
     'node_tracing_perfetto_sources': [
       'src/tracing/agent_perfetto.cc',
       'src/tracing/agent_perfetto.h',
@@ -460,6 +477,122 @@
       'src/tracing/node_trace_writer.h',
       'src/tracing/trace_event_legacy_inl.h',
       'src/tracing/trace_event_legacy.h',
+=======
+    'nsolid_sources': [
+      'agents/src/http_client.cc',
+      'agents/src/http_client.h',
+      'agents/src/profile_collector.cc',
+      'agents/src/profile_collector.h',
+      'agents/src/root_certs.cc',
+      'agents/src/root_certs.h',
+      'agents/src/span_collector.cc',
+      'agents/src/span_collector.h',
+      'agents/grpc/src/asset_stream.cc',
+      'agents/grpc/src/asset_stream.h',
+      'agents/grpc/src/binding.cc',
+      'agents/grpc/src/command_stream.cc',
+      'agents/grpc/src/command_stream.h',
+      'agents/grpc/src/grpc_agent.cc',
+      'agents/grpc/src/grpc_agent.h',
+      'agents/grpc/src/grpc_client.cc',
+      'agents/grpc/src/grpc_client.h',
+      'agents/grpc/src/grpc_errors.h',
+      'agents/grpc/src/proto/nsolid_service.grpc.pb.cc',
+      'agents/grpc/src/proto/nsolid_service.pb.cc',
+      'agents/grpc/src/proto/asset.grpc.pb.cc',
+      'agents/grpc/src/proto/asset.pb.cc',
+      'agents/grpc/src/proto/blocked_loop.grpc.pb.cc',
+      'agents/grpc/src/proto/blocked_loop.pb.cc',
+      'agents/grpc/src/proto/command.grpc.pb.cc',
+      'agents/grpc/src/proto/command.pb.cc',
+      'agents/grpc/src/proto/common.grpc.pb.cc',
+      'agents/grpc/src/proto/common.pb.cc',
+      'agents/grpc/src/proto/exit.grpc.pb.cc',
+      'agents/grpc/src/proto/exit.pb.cc',
+      'agents/grpc/src/proto/info.grpc.pb.cc',
+      'agents/grpc/src/proto/info.pb.cc',
+      'agents/grpc/src/proto/metrics.grpc.pb.cc',
+      'agents/grpc/src/proto/metrics.pb.cc',
+      'agents/grpc/src/proto/packages.grpc.pb.cc',
+      'agents/grpc/src/proto/packages.pb.cc',
+      'agents/grpc/src/proto/profile.grpc.pb.cc',
+      'agents/grpc/src/proto/profile.pb.cc',
+      'agents/grpc/src/proto/reconfigure.grpc.pb.cc',
+      'agents/grpc/src/proto/reconfigure.pb.cc',
+      'agents/grpc/src/proto/source_code.grpc.pb.cc',
+      'agents/grpc/src/proto/source_code.pb.cc',
+      'agents/grpc/src/proto/startup_times.grpc.pb.cc',
+      'agents/grpc/src/proto/startup_times.pb.cc',
+      'agents/grpc/src/proto/nsolid_service.grpc.pb.h',
+      'agents/grpc/src/proto/nsolid_service.pb.h',
+      'agents/grpc/src/proto/asset.grpc.pb.h',
+      'agents/grpc/src/proto/asset.pb.h',
+      'agents/grpc/src/proto/blocked_loop.grpc.pb.h',
+      'agents/grpc/src/proto/blocked_loop.pb.h',
+      'agents/grpc/src/proto/command.grpc.pb.h',
+      'agents/grpc/src/proto/command.pb.h',
+      'agents/grpc/src/proto/common.grpc.pb.h',
+      'agents/grpc/src/proto/common.pb.h',
+      'agents/grpc/src/proto/exit.grpc.pb.h',
+      'agents/grpc/src/proto/exit.pb.h',
+      'agents/grpc/src/proto/info.grpc.pb.h',
+      'agents/grpc/src/proto/info.pb.h',
+      'agents/grpc/src/proto/metrics.grpc.pb.h',
+      'agents/grpc/src/proto/metrics.pb.h',
+      'agents/grpc/src/proto/packages.grpc.pb.h',
+      'agents/grpc/src/proto/packages.pb.h',
+      'agents/grpc/src/proto/profile.grpc.pb.h',
+      'agents/grpc/src/proto/profile.pb.h',
+      'agents/grpc/src/proto/reconfigure.grpc.pb.h',
+      'agents/grpc/src/proto/reconfigure.pb.h',
+      'agents/grpc/src/proto/source_code.grpc.pb.h',
+      'agents/grpc/src/proto/source_code.pb.h',
+      'agents/grpc/src/proto/startup_times.grpc.pb.h',
+      'agents/grpc/src/proto/startup_times.pb.h',
+      'agents/otlp/src/datadog_metrics.cc',
+      'agents/otlp/src/dynatrace_metrics.cc',
+      'agents/otlp/src/http_client.cc',
+      'agents/otlp/src/http_client.h',
+      'agents/otlp/src/newrelic_metrics.cc',
+      'agents/otlp/src/otlp_agent.cc',
+      'agents/otlp/src/otlp_common.cc',
+      'agents/otlp/src/otlp_metrics.cc',
+      'agents/otlp/src/datadog_metrics.h',
+      'agents/otlp/src/dynatrace_metrics.h',
+      'agents/otlp/src/metrics_exporter.h',
+      'agents/otlp/src/newrelic_metrics.h',
+      'agents/otlp/src/otlp_agent.h',
+      'agents/otlp/src/otlp_common.h',
+      'agents/otlp/src/otlp_metrics.h',
+      'agents/statsd/src/binding.cc',
+      'agents/statsd/src/statsd_agent.cc',
+      'agents/statsd/src/statsd_endpoint.cc',
+      'agents/statsd/src/statsd_agent.h',
+      'agents/statsd/src/statsd_endpoint.h',
+      'agents/statsd/src/statsd_utils.h',
+      'agents/zmq/src/binding.cc',
+      'agents/zmq/src/http_client.cc',
+      'agents/zmq/src/http_client.h',
+      'agents/zmq/src/zmq_agent.cc',
+      'agents/zmq/src/zmq_agent.h',
+      'agents/zmq/src/zmq_endpoint.h',
+      'agents/zmq/src/zmq_errors.h',
+      'src/nsolid.cc',
+      'src/nsolid/continuous_profiler.cc',
+      'src/nsolid/nsolid_api.cc',
+      'src/nsolid/nsolid_trace.cc',
+      'src/nsolid/nsolid_cpu_profiler.cc',
+      'src/nsolid/nsolid_heap_snapshot.cc',
+      'src/nsolid.h',
+      'src/nsolid/continuous_profiler.h',
+      'src/nsolid/nsolid_api.h',
+      'src/nsolid/nsolid_output_stream.h',
+      'src/nsolid/nsolid_trace.h',
+      'src/nsolid/nsolid_cpu_profiler.h',
+      'src/nsolid/nsolid_heap_snapshot.h',
+      'deps/nsuv/include/nsuv.h',
+      'deps/nsuv/include/nsuv-inl.h',
+>>>>>>> theirs
     ],
     'node_cctest_openssl_sources': [
       'test/cctest/test_crypto_clienthello.cc',
@@ -532,7 +665,7 @@
     # Putting these explicitly here so not to depend on `common.gypi`.
     # `common.gypi` need to be more general because it is used to build userland native addons.
     # Refs: https://github.com/nodejs/node-gyp/issues/1118
-    'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', ],
+    'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-c++98-compat-extra-semi', ],
     'xcode_settings': {
       'WARNING_CFLAGS': [
         '-Wall',
@@ -542,12 +675,13 @@
         '-Werror=undefined-inline',
         '-Werror=extra-semi',
         '-Werror=ctad-maybe-unsupported',
+        '-Wno-c++98-compat-extra-semi',
       ],
     },
 
     'conditions': [
       ['clang==0 and OS!="win"', {
-        'cflags': [ '-Wno-restrict', ],
+        'cflags': [ '-Wno-restrict', '-Wno-c++98-compat-extra-semi', ],
       }],
       # TODO(joyeecheung): investigate if it breaks addons.
       # ['OS=="mac"', {
@@ -583,6 +717,7 @@
         ],
       }],
       ['OS=="linux" and clang==1', {
+        'cflags': [ '-Wno-c++98-compat-extra-semi', ],
         'libraries': ['-latomic'],
       }],
     ],
@@ -619,6 +754,7 @@
       'include_dirs': [
         'src',
         'deps/v8/include',
+        'deps/nsuv/include',
         'deps/postject'
       ],
 
@@ -657,7 +793,7 @@
           ],
         }],
         [ 'error_on_warn=="true"', {
-          'cflags': ['-Werror'],
+          'cflags': ['-Werror', '-Wno-c++98-compat-extra-semi'],
           'xcode_settings': {
             'WARNING_CFLAGS': [ '-Werror' ],
           },
@@ -873,15 +1009,23 @@
 
       'include_dirs': [
         'src',
+        'deps/nsuv/include',
+        'agents',
         'deps/postject',
         '<(SHARED_INTERMEDIATE_DIR)' # for node_natives.h
       ],
       'dependencies': [
+<<<<<<< ours
+=======
+        'deps/protobuf/abseil.gyp:abseil_proto',
+        'tools/v8_gypfiles/abseil.gyp:abseil',
+>>>>>>> theirs
         'node_js2c#host',
       ],
 
       'sources': [
         '<@(node_sources)',
+        '<@(nsolid_sources)',
         # Dependency headers
         'deps/v8/include/v8.h',
         'deps/postject/postject-api.h',
@@ -1082,6 +1226,7 @@
           'inputs': [
             '<(node_js2c_exec)',
             '<@(library_files)',
+            '<@(agents_files)',
             '<@(deps_files)',
             'config.gypi'
           ],
@@ -1104,6 +1249,7 @@
             '<@(_outputs)',
             'lib',
             'config.gypi',
+            '<@(agents_files)',
             '<@(deps_files)',
             '<@(linked_module_files)',
           ],
@@ -1409,6 +1555,11 @@
 
       'dependencies': [
         '<(node_lib_target_name)',
+<<<<<<< ours
+=======
+        'deps/protobuf/abseil.gyp:abseil_proto',
+        'tools/v8_gypfiles/abseil.gyp:abseil',
+>>>>>>> theirs
       ],
 
       'includes': [
@@ -1422,6 +1573,8 @@
         'deps/cares/include',
         'deps/uv/include',
         'test/cctest',
+        'agents',
+        'deps/nsuv/include',
       ],
 
       'defines': [
@@ -1756,6 +1909,7 @@
         'deps/v8/include',
         'deps/cares/include',
         'deps/uv/include',
+        'deps/nsuv/include',
       ],
 
       'defines': [ 'NODE_WANT_INTERNALS=1' ],

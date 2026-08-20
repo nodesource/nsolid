@@ -181,3 +181,10 @@ compile_commands.json
 .devcontainer/**
 !.devcontainer/base/
 !.devcontainer/base/devcontainer.json
+
+# NSolid specifics
+/nsolid
+/nsolid_g
+# Ignore asserts-cpp and nlohmann paths in src/
+src/asserts-cpp/
+src/nlohmann/

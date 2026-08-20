@@ -7,8 +7,7 @@ SIGN ?=
 PREFIX ?= /usr/local
 FLAKY_TESTS ?= run
 TEST_CI_ARGS ?=
-STAGINGSERVER ?= node-www
-CLOUDFLARE_BUCKET ?= r2:dist-staging
+STAGINGSERVER ?= nsolid-staging
 LOGLEVEL ?= silent
 OSTYPE := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ifeq ($(findstring os/390,$OSTYPE),os/390)
@@ -77,8 +76,8 @@ BUILDTYPE_LOWER := $(shell echo $(BUILDTYPE) | tr '[:upper:]' '[:lower:]')
 EXEEXT := $(shell $(PYTHON) -c \
 		"import sys; print('.exe' if sys.platform == 'win32' else '')")
 
-NODE_EXE = node$(EXEEXT)
-NODE_G_EXE = node_g$(EXEEXT)
+NODE_EXE = nsolid$(EXEEXT)
+NODE_G_EXE = nsolid_g$(EXEEXT)
 NPM ?= ./deps/npm/bin/npm-cli.js
 
 # Release build of node.
@@ -214,6 +213,7 @@ clean: ## Remove build artifacts.
 	$(RM) test.tap
 	$(MAKE) testclean
 	$(MAKE) test-addons-clean
+	$(MAKE) test-agents-prereqs-clean
 	$(MAKE) bench-addons-clean
 
 .PHONY: testclean
@@ -318,7 +318,12 @@ v8: ## Build deps/v8.
 		tools/make-v8.sh $(V8_ARCH).$(BUILDTYPE_LOWER) $(V8_BUILD_OPTIONS)
 
 .PHONY: jstest
+<<<<<<< ours
 jstest: build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests build-ffi-tests ## Run addon tests and JS tests.
+=======
+jstest: build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests test-agents-prereqs ## Runs addon tests and JS tests.
+	NSOLID_DELAY_INIT="" \
+>>>>>>> theirs
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) --mode=$(BUILDTYPE_LOWER) \
 		$(TEST_CI_ARGS) \
 		--skip-tests=$(CI_SKIP_TESTS) \
@@ -414,10 +419,17 @@ ADDONS_HEADERS_PREREQS := tools/install.py \
 	$(wildcard deps/uv/include/*/*.h) \
 	$(wildcard deps/v8/include/*.h) \
 	$(wildcard deps/v8/include/*/*.h) \
+<<<<<<< ours
 	$(wildcard deps/zlib/z*.h) \
+=======
+	$(wildcard deps/nsuv/include/*.h) \
+	deps/zlib/zconf.h deps/zlib/zlib.h \
+>>>>>>> theirs
 	src/node.h src/node_api.h src/js_native_api.h src/js_native_api_types.h \
 	src/node_api_types.h src/node_buffer.h src/node_object_wrap.h \
-	src/node_version.h
+	src/node_version.h src/nsolid.h
+# These are added for some specific N|Solid addons testing internals
+ADDONS_HEADERS_PREREQS += src/nsolid/nsolid_api.h
 
 ADDONS_HEADERS_DIR = out/$(BUILDTYPE)/addons_headers
 
@@ -640,7 +652,11 @@ test-ci-js: | clear-stalled ## Build and test JavaScript with building anything 
 .PHONY: test-ci
 # Related CI jobs: most CI tests, excluding node-test-commit-arm-fanned
 test-ci: LOGLEVEL := info ## Build and test everything (CI).
+<<<<<<< ours
 test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests build-ffi-tests doc-only
+=======
+test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests doc-only test-agents-prereqs
+>>>>>>> theirs
 	out/Release/cctest --gtest_output=xml:out/junit/cctest.xml
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) -p tap --logfile test.tap \
 		--mode=$(BUILDTYPE_LOWER) --flaky-tests=$(FLAKY_TESTS) \
@@ -961,6 +977,11 @@ docserve: doc-only ## Serve the documentation on localhost:8000.
 docclean: ## Remove the generated documentation.
 	$(RM) -r out/doc
 
+<<<<<<< ours
+=======
+RAWVER=$(shell $(PYTHON) tools/getnsolidversion.py)
+VERSION=v$(RAWVER)
+>>>>>>> theirs
 CHANGELOG=doc/changelogs/CHANGELOG_V$(firstword $(subst ., ,$(RAWVER))).md
 
 # For nightly builds, you must set DISTTYPE to "nightly", "next-nightly" or
@@ -1097,12 +1118,16 @@ ifeq ($(DESTCPU),ia32)
 override DESTCPU=x86
 endif
 
+<<<<<<< ours
 TARNAME=node-$(FULLVERSION)
 # Supply SKIP_SHARED_DEPS=1 to explicitly skip all dependencies that can be included as shared deps
 SKIP_SHARED_DEPS ?= 0
 ifeq ($(SKIP_SHARED_DEPS), 1)
 TARNAME:=$(TARNAME)-slim
 endif
+=======
+TARNAME=nsolid-$(FULLVERSION)
+>>>>>>> theirs
 TARBALL=$(TARNAME).tar
 # Custom user-specified variation, use it directly
 ifdef VARIATION
@@ -1270,11 +1295,10 @@ corepack-update: ## Update Corepack to the latest version.
 .PHONY: pkg-upload
 # Note: this is strictly for release builds on release machines only.
 pkg-upload: pkg
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)"
 	chmod 664 $(TARNAME).pkg
-	scp -p $(TARNAME).pkg $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg
-	ssh $(STAGINGSERVER) "rclone copyto nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg $(CLOUDFLARE_BUCKET)/nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg"
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg.done"
+	scp -p $(TARNAME).pkg $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).pkg.done"
 
 TARBALL_DEPS=release-only
 ifneq ($(SKIP_SHARED_DEPS), 1)
@@ -1285,7 +1309,7 @@ $(TARBALL): $(TARBALL_DEPS)
 	git checkout-index -a -f --prefix=$(TARNAME)/
 ifneq ($(SKIP_SHARED_DEPS), 1)
 	mkdir -p $(TARNAME)/doc/api
-	cp doc/node.1 $(TARNAME)/doc/node.1
+	cp doc/nsolid.1 $(TARNAME)/doc/nsolid.1
 	cp -r out/doc/api/* $(TARNAME)/doc/api/
 endif
 	sed 's/fileset = fileset.intersection (fileset.gitTracked root)/fileset =/' tools/nix/v8.nix > $(TARNAME)/tools/nix/v8.nix 
@@ -1357,26 +1381,23 @@ tar: $(TARBALL) ## Create a source tarball.
 .PHONY: tar-upload
 # Note: this is strictly for release builds on release machines only.
 tar-upload: tar
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)"
 	chmod 664 $(TARNAME).tar.gz
-	scp -p $(TARNAME).tar.gz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz
-	ssh $(STAGINGSERVER) "rclone copyto nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz $(CLOUDFLARE_BUCKET)/nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz"
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz.done"
+	scp -p $(TARNAME).tar.gz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.gz.done"
 ifeq ($(XZ), 1)
 	chmod 664 $(TARNAME).tar.xz
-	scp -p $(TARNAME).tar.xz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz
-	ssh $(STAGINGSERVER) "rclone copyto nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz $(CLOUDFLARE_BUCKET)/nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz"
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz.done"
+	scp -p $(TARNAME).tar.xz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME).tar.xz.done"
 endif
 
 .PHONY: doc-upload
 # Note: this is strictly for release builds on release machines only.
 doc-upload: doc
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/docs/"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/docs/"
 	chmod -R ug=rw-x+X,o=r+X out/doc/
-	scp -pr out/doc/* $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/docs/
-	ssh $(STAGINGSERVER) "rclone copy nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/docs/ $(CLOUDFLARE_BUCKET)/nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/docs/"
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/docs.done"
+	scp -pr out/doc/* $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/docs/
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/docs.done"
 
 .PHONY: $(TARBALL)-headers
 $(TARBALL)-headers: release-only
@@ -1401,16 +1422,14 @@ tar-headers: $(TARBALL)-headers ## Build the node header tarball.
 
 .PHONY: tar-headers-upload
 tar-headers-upload: tar-headers
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)"
 	chmod 664 $(TARNAME)-headers.tar.gz
-	scp -p $(TARNAME)-headers.tar.gz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz
-	ssh $(STAGINGSERVER) "rclone copyto nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz $(CLOUDFLARE_BUCKET)/nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz"
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz.done"
+	scp -p $(TARNAME)-headers.tar.gz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.gz.done"
 ifeq ($(XZ), 1)
 	chmod 664 $(TARNAME)-headers.tar.xz
-	scp -p $(TARNAME)-headers.tar.xz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz
-	ssh $(STAGINGSERVER) "rclone copyto nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz $(CLOUDFLARE_BUCKET)/nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz"
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz.done"
+	scp -p $(TARNAME)-headers.tar.xz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-headers.tar.xz.done"
 endif
 
 $(BINARYTAR): release-only
@@ -1425,6 +1444,7 @@ $(BINARYTAR): release-only
 	$(MAKE) install DESTDIR=$(BINARYNAME) V=$(V) PORTABLE=1
 	cp README.md $(BINARYNAME)
 	cp LICENSE $(BINARYNAME)
+	cp LICENSE_NSOLID $(BINARYNAME)
 ifeq ("$(wildcard $(CHANGELOG))","")
 	cp CHANGELOG.md $(BINARYNAME)
 else
@@ -1448,16 +1468,14 @@ binary: $(BINARYTAR) ## Build release binary tarballs.
 .PHONY: binary-upload
 # Note: this is strictly for release builds on release machines only.
 binary-upload: binary
-	ssh $(STAGINGSERVER) "mkdir -p nodejs/$(DISTTYPEDIR)/$(FULLVERSION)"
+	ssh $(STAGINGSERVER) "mkdir -p staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)"
 	chmod 664 $(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz
-	scp -p $(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz
-	ssh $(STAGINGSERVER) "rclone copyto nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz $(CLOUDFLARE_BUCKET)/nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz"
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz.done"
+	scp -p $(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.gz.done"
 ifeq ($(XZ), 1)
 	chmod 664 $(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz
-	scp -p $(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz $(STAGINGSERVER):nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz
-	ssh $(STAGINGSERVER) "rclone copyto nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz $(CLOUDFLARE_BUCKET)/nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz"
-	ssh $(STAGINGSERVER) "touch nodejs/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz.done"
+	scp -p $(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz $(STAGINGSERVER):staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz
+	ssh $(STAGINGSERVER) "touch staging/nsolid-node/$(DISTTYPEDIR)/$(FULLVERSION)/$(TARNAME)-$(OSTYPE)-$(ARCH).tar.xz.done"
 endif
 
 .PHONY: bench-all
@@ -1525,7 +1543,8 @@ format-md: tools/lint-md/node_modules/remark-parse/package.json ## Format the ma
 
 
 
-LINT_JS_TARGETS = eslint.config.mjs benchmark doc lib test tools
+LINT_JS_TARGETS = eslint.config.mjs benchmark doc lib test tools \
+		  agents/*/lib
 
 run-lint-js = tools/eslint/node_modules/eslint/bin/eslint.js --cache \
 	--max-warnings=0 --report-unused-disable-directives $(LINT_JS_TARGETS)
@@ -1571,6 +1590,9 @@ LINT_CPP_ADDON_DOC_FILES = $(wildcard $(LINT_CPP_ADDON_DOC_FILES_GLOB))
 LINT_CPP_EXCLUDE ?=
 LINT_CPP_EXCLUDE += src/node_root_certs.h
 LINT_CPP_EXCLUDE += $(LINT_CPP_ADDON_DOC_FILES)
+LINT_CPP_EXCLUDE += $(wildcard test/js-native-api/??_*/*.cc test/js-native-api/??_*/*.h test/node-api/??_*/*.cc test/node-api/??_*/*.h)
+LINT_CPP_EXCLUDE += src/asserts-cpp/asserts.h
+LINT_CPP_EXCLUDE += src/nlohmann/json.h
 # These files were copied more or less verbatim from V8.
 LINT_CPP_EXCLUDE += src/tracing/trace_event_legacy.h src/tracing/trace_event_legacy_inl.h
 
@@ -1580,6 +1602,16 @@ LINT_CPP_EXCLUDE += src/tracing/trace_event_legacy.h src/tracing/trace_event_leg
 LINT_CPP_DEPS = deps/ncrypto/*.cc deps/ncrypto/*.h
 
 LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
+	agents/grpc/src/*.cc \
+	agents/grpc/src/*.h \
+	agents/otlp/src/*.cc \
+	agents/otlp/src/*.h \
+	agents/src/*.cc \
+	agents/src/*.h \
+	agents/statsd/src/*.cc \
+	agents/statsd/src/*.h \
+	agents/zmq/src/*.cc \
+	agents/zmq/src/*.h \
 	benchmark/napi/*/*.cc \
 	src/*.c \
 	src/*.cc \
@@ -1607,6 +1639,12 @@ LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	tools/code_cache/*.h \
 	tools/snapshot/*.cc \
 	tools/snapshot/*.h \
+	deps/nsolid_cpu_profiler/bindings/*.cc \
+	deps/nsolid_cpu_profiler/src/*.cc \
+	deps/nsolid_cpu_profiler/include/*.h \
+	deps/nsolid_heap_profiler/bindings/*.cc \
+	deps/nsolid_heap_profiler/src/*.cc \
+	deps/nsolid_heap_profiler/include/*.h \
 	$(LINT_CPP_DEPS) \
 	))
 
@@ -1762,6 +1800,37 @@ lint-clean: ## Remove linting artifacts.
 	$(RM) -r tools/eslint/node_modules
 	$(RM) -r tools/lint-md/node_modules
 	$(RM) tools/pip/site_packages
+
+.PHONY: get-nsolid-version
+get-nsolid-version:
+	@$(PYTHON) ./tools/getnsolidversion.py
+
+.PHONY: test-with-console
+test-with-console: export NSOLID_COMMAND = localhost:9001
+test-with-console:
+	@$(NODE) ./tools/check-for-console.js
+	$(MAKE) build-addons
+	$(MAKE) build-js-native-api-tests
+	$(MAKE) build-node-api-tests
+	# This is broken and won't allow testing to continue.
+	#$(MAKE) cctest
+	$(MAKE) jstest
+	$(MAKE) tooltest
+
+.PHONY: test-agents-prereqs
+test-agents-prereqs:
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 base85 --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock --ignore-scripts
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install nan@latest --no-save --no-package-lock --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
+	# Patch zeromq binding.gyp to use C++20 instead of C++17 before building
+	sed -i.bak 's/c++17/c++20/g' test/common/nsolid-zmq-agent/node_modules/zeromq/binding.gyp && rm -f test/common/nsolid-zmq-agent/node_modules/zeromq/binding.gyp.bak
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm run build:libzmq --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install @opentelemetry/otlp-proto-exporter-base @grpc/grpc-js @grpc/proto-loader --prefix test/common/nsolid-otlp-agent --no-save --no-package-lock
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install @grpc/grpc-js @grpc/proto-loader --prefix test/common/nsolid-grpc-agent --no-save --no-package-lock
+
+.PHONY: test-agents-prereqs-clean
+test-agents-prereqs-clean:
+	$(RM) -r test/common/nsolid-zmq-agent/node_modules
+	$(RM) -r test/common/nsolid-otlp-agent/node_modules
 
 HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 1 || echo 0)
 

@@ -1,0 +1,646 @@
+/**
+ * @callback CustomCommandRequestReturn
+ * @param {Object} value
+ */
+
+/**
+ * @callback CustomCommandRequestThrow
+ * @param {Object} error
+ */
+
+/**
+ * @typedef {Object} CustomCommandRequest
+ * @property {Object} value - An optional piece of data sent with the command,
+ * using the nsolid-cli parameter --data.
+ * @property {CustomCommandRequestReturn} return - The function to call when you
+ * are ready to return the result of this command. The N|Solid Agent will reply
+ * with the value passed as a parameter.
+ * @property {CustomCommandRequestThrow} throw - A function to call if an error
+ * is encountered. The N|Solid Agent will reply with the error passed as a
+ * parameter.
+ */
+
+/**
+  * The custom command function implementing the command.
+  * @callback CustomCommandHandler
+  * @param {CustomCommandRequest} request
+  */
+
+/**
+ * @typedef {Object} LicenseHandlerData
+ * @property {bolean} license - Whether the runtime is licensed.
+ * @property {integer} expires - I case it's licensed, when the license expires
+ * (in microsends).
+ */
+
+/**
+  * The custom command function implementing the command.
+  * @callback OnLicenseHandler
+  * @param {LicenseHandlerData} data
+  */
+
+/**
+ * @typedef {Object} ProcessVersions
+ * @property {string} ares - The version of Node.js's bundled c-ares.
+ * @property {string} brotli - The version of Node.js's bundled brotli.
+ * @property {string} cldr - The version of the CLDR used by Node.js's bundled
+ * ICU.
+ * @property {string} http_parser - The version of Node.js's bundled
+ * http_parser.
+ * @property {string} icu - The version of Node.js's bundled ICU dataset.
+ * @property {string} modules - The Node.js native modules ABI version.
+ * @property {string} napi - The version of N\|Solid's bundled napi.
+ * @property {string} nghttp2 - The version of Node.js's bundled nghttp2.
+ * @property {string} node - The Node.js version.
+ * @property {string} nsolid - The N\|Solid runtime version.
+ * @property {string} openssl - The version of Node.js's bundled OpenSSL.
+ * @property {string} tz - The version of the TZ used by Node.js's bundled
+ * ICU.
+ * @property {string} unicode - The version of Unicode used by Node.js's bundled
+ * ICU.
+ * @property {string} uv - The version of Node.js's bundled libuv.
+ * @property {string} v8 - The version of the V8 JavaScript engine within
+ * Node.js.
+ * @property {string} zlib - The version of Node.js's bundled zlib.
+ */
+
+/**
+ * @typedef {Object} Info
+ * @property {string} app - The user-specified application name as set in
+ * package.json or the NSOLID_APP environment variable.
+ * @property {string} appVersion - The user-specified application version
+ * as set in package.json.
+ * @property {string} arch - The host system's CPU architecture.
+ * @property {number} cpuCores - The host system's number of CPU cores.
+ * @property {string} cpuModel - The host system's CPU model.
+ * @property {string} execPath - The absolute path of the N\|Solid executable
+ * running the application.
+ * @property {string} hostname - The host system's name.
+ * @property {string} id - The unique N\|Solid agent ID. Unique per N\|Solid
+ * process.
+ * @property {string} main - The absolute path to the root module in the
+ * process's module tree.
+ * @property {string} nodeEnv - The user-specified NODE_ENV environment
+ * variable.
+ * @property {number} pid - The system process ID for the process.
+ * @property {string} platform - The host system's operating system platform.
+ * @property {number} processStart - The time at which the process started, in
+ * seconds.
+ * @property {string[]} tags - The user-specified tags as set by the NSOLID_TAGS
+ * environment variable.
+ * @property {number} totalMem - The host system's total available memory.
+ * @property {ProcessVersions} versions - object listing the
+ * version strings of Node.js and its dependencies.
+ * @example
+ * {
+ *  id: 'da1e21360148400d1dbdc8da11f7870d014a4de6',
+ *  app: 'untitled application',
+ *  appVersion: undefined,
+ *  tags: [],
+ *  pid: 20921,
+ *  processStart: 1599746209748,
+ *  nodeEnv: 'prod',
+ *  execPath: '/usr/local/bin/nsolid',
+ *  main: '',
+ *  arch: 'x64',
+ *  platform: 'linux',
+ *  hostname: 'my-hostname',
+ *  totalMem: 33445855232,
+ *  versions: {
+ *    node: '12.18.3',
+ *    nsolid: '4.0.0',
+ *    v8: '7.8.279.23-node.39',
+ *    uv: '1.38.0',
+ *    zlib: '1.2.11',
+ *    brotli: '1.0.7',
+ *    ares: '1.16.0',
+ *    modules: '72',
+ *    nghttp2: '1.41.0',
+ *    napi: '6',
+ *    llhttp: '2.0.4',
+ *    http_parser: '2.9.3',
+ *    openssl: '1.1.1g',
+ *    cldr: '37.0',
+ *    icu: '67.1',
+ *    tz: '2019c',
+ *    unicode: '13.0'
+ *  },
+ *  cpuCores: 12,
+ *  cpuModel: 'Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz'
+ * }
+ */
+
+/**
+ * info() callback.
+ * @callback InfoCallback
+ * @param {Error} error
+ * @param {Info} info
+ */
+
+
+/**
+ * @typedef {Object} NSolidConfig
+ * @property {string} app - The name of the application that the instance is
+ * running. Use this in order to create logical groupings of the processes in
+ * the console. If omitted, the value defaults to the name field of your
+ * package.json. If this is also omitted, the value defaults to untitled
+ * application.
+ * @property {string} appVersion - To specify the version of the application.
+ * @property {string} blockedLoopThreshold - Threshold in milliseconds the
+ * event loop has to be blocked for the runtime to emit a `loop_blocked` event.
+ * @property {string|number} bulk - The route to the console bulk port.
+ * It should be formatted as "host:port". The default host is localhost, and
+ * the default port is 9003.
+ * The host can be provided via several formats:
+ * - `IPv4` 10.0.0.21
+ * - `IPv6` [2001:cdba::3257:9652]
+ * - `hostname` nsolid_hub.local
+ * @property {string|number} command - The route to the console command port.
+ * It should be formatted as "host:port". The default host is localhost, and
+ * the default port is 9001.
+ * The host can be provided via several formats:
+ * - `IPv4` 10.0.0.21
+ * - `IPv6` [2001:cdba::3257:9652]
+ * - `hostname` nsolid_hub.local
+ * @property {string|number} data - The route to the console data port.
+ * It should be formatted as "host:port". The default host is localhost, and
+ * the default port is 9002.
+ * The host can be provided via several formats:
+ * - `IPv4` 10.0.0.21
+ * - `IPv6` [2001:cdba::3257:9652]
+ * - `hostname` nsolid_hub.local
+ * @property {boolean} disableIpv6 - Whether to support IPv6 or only IPv4999.
+ * @property {string} disableSnapshots - The version of the package.
+ * @property {string} env - Overrides the NODE_ENV variable. Defaults to 'prod'.
+ * @property {string} hostname - The hostname the N\|Solid process is running
+ * on (overrides system-determined hostname).
+ * @property {string} interval - The interval, in milliseconds, in which the
+ * N\|Solid Agent will collect and report metrics to the console and/or the
+ * StatsD collector if either are connected. This value defaults to 3000
+ * (3 seconds) and cannot be lower than 1000.
+ * @property {boolean} pauseMetrics - Whether the agent is periodically
+ * retrieving metrics or not.
+ * @property {boolean} promiseTracking - Whether the agent is to track the
+ * promises created / resolved by the runtime.
+ * @property {string} pubkey - The ZMQ public key used with the N\|Solid Console
+ * server.
+ * @property {boolean} redactSnapshots - Boolean to indicate if you want heap
+ * snapshots to obscure string variable contents. This may impede your ability
+ * to debug and is meant for sensitive production environments.
+ * @property {string|number} statsd - The route to a StatsD collector if you
+ * wish to send metrics directly to an external data collection service from the
+ * N\|Solid process. Without this environment variable, the N\|Solid Agent will
+ * not attempt to send StatsD data.
+ * It should be formatted as "protocol://host:port". If unspecified, the default
+ * protocol is udp, host is localhost and port is 8125. Hosts and IP addresses
+ * are accepted in the same format as in `command`.
+ * @property {string} statsdBucket - An override for the default StatsD bucket
+ * (key prefix) when using the NSOLID_STATSD functionality.
+ * @property {string} statsdTags - Optional tags to append to StatsD metric data
+ * when using the NSOLID_STATSD functionality.
+ * @property {Array<string>} tags - The list of tags associated with your instance,
+ * which can be used to identify and filter instances in Console views.
+ * @property {boolean} tracingEnabled - Whether the agent is to automatically
+ * generate OpenTelemetry-like traces.
+ * @property {Array<string>} tracingModulesBlacklist - The list of modules that
+ * aren't going to be generating traces event thought tracingEnabled is set.
+ * @example
+ * {
+ *  app: 'application name',
+ *  blockedLoopThreshold: 200,
+ *  bulk: 'localhost:9003',
+ *  command: 'localhost:9001',
+ *  data: 'localhost:9002',
+ *  env: 'prod',
+ *  hostname: 'my-hostname',
+ *  interval: 3000,
+ *  pauseMetrics: false,
+ *  pubkey: '^kvyYYYzzzXXCCVSSSSSSSS',
+ *  statsd: 'localhost',
+ *  statsdBucket: 'nsolid.${env}.${app}.${hostname}.${shortId}',
+ *  tags: []
+ * }
+ */
+
+/**
+ * @typedef {Object} Metrics
+ * @property {number} activeHandles - The number of active long-term resources
+ * held by the process.
+ * @property {number} activeRequests - The number of active short-term resources
+ * held by the process.
+ * @property {number} blockInputOpCount - The total number of block input
+ * operations on the process.
+ * @property {number} blockOutputOpCount - The total number of block output
+ * operations on the process.
+ * @property {number} cpu - The percent CPU used by the process.
+ * @property {number} cpuPercent - The percent CPU used by the process.
+ * @property {number} cpuSystemPercent - The percent CPU used by the process in
+ * system calls.
+ * @property {number} cpuUserPercent - The percent CPU used by the process in
+ * user code.
+ * @property {number} ctxSwitchInvoluntaryCount - The number of involuntary
+ * context switches away from the process.
+ * @property {number} ctxSwitchVoluntaryCount - The number of voluntary context
+ * switches away from the process.
+ * @property {number} dns99Ptile - The process's 99th percentile duration of DNS
+ * lookups performed, in milliseconds.
+ * @property {number} dnsCount - The process's total number of DNS lookups
+ * performed.
+ * @property {number} dnsMedian - The process's median duration of DNS lookups
+ * performed, in milliseconds.
+ * @property {number} eventsProcessed - The cumulative count of events the event
+ * loop has processed.
+ * @property {number} eventsWaiting - The cumulative count of events waiting to
+ * be processed when the event loop enters the event provider.
+ * @property {number} externalMem - The process's memory allocated by Node.js
+ * outside of V8's heap, in bytes. This may exceed RSS if large Buffers are
+ * soft-allocated by V8.
+ * @property {number} freeMem - The host system's amount of free (unused)
+ * memory, in bytes.
+ * @property {number} gcCount - The total number of garbage collections done by
+ * the process.
+ * @property {number} gcDurUs99Ptile - The process's 99th percentile duration of
+ * garbage collections, in microseconds.
+ * @property {number} gcDurUsMedian - The process's median duration of garbage
+ * collections, in microseconds.
+ * @property {number} gcForcedCount - The process's number of externally forced
+ * garbage collections.
+ * @property {number} gcFullCount - The number of garbage collections run by the
+ * process which collected all available garbage. Usually only observed when the
+ * heapTotal is approaching heapSizeLimit.
+ * @property {number} gcMajorCount - The number of significant garbage
+ * collections done by the process. An example of a "significant" garbage
+ * collection is a "Mark-Sweep".
+ * @property {number} heapSizeLimit - The maximum amount of memory reserved for
+ * the heap by the process, as allocated by the host system, in bytes. V8 will
+ * terminate with allocation failures if memory is used beyond this.
+ * @property {number} heapTotal - The process's total allocated JavaScript heap
+ * size, in bytes.
+ * @property {number} heapUsed - The process's total used JavaScript heap size,
+ * in bytes.
+ * @property {number} httpClient99Ptile - The process's 99th percentile duration
+ * of outgoing HTTP(s) client requests completed, in milliseconds.
+ * @property {number} httpClientAbortCount - The process's total number of
+ * outgoing HTTP(S) client requests canceled due to inactivity.
+ * @property {number} httpClientCount - The process's total number of outgoing
+ * HTTP(S) client requests performed.
+ * @property {number} httpClientMedian - The process's median duration of
+ * outgoing HTTP(S) client requests completed, in milliseconds.
+ * @property {number} httpServer99Ptile - The process's 99th percentile duration
+ * of served incoming HTTP(S) requests completed, in milliseconds.
+ * @property {number} httpServerAbortCount - The process's total number of
+ * served incoming HTTP(S) requests canceled.
+ * @property {number} httpServerCount - The process's total number of incoming
+ * HTTP(s) requests served.
+ * @property {number} httpServerMedian - The process's median duration of served
+ * incoming HTTP(S) requests completed, in milliseconds.
+ * @property {number} ipcReceivedCount - The number of IPC messages received by
+ * the process.
+ * @property {number} ipcSentCount - The number of IPC messages sent by the
+ * process.
+ * @property {number} load1m - The host system's one-minute load average.
+ * @property {number} load5m - The host system's five-minute load average.
+ * @property {number} load15m - The host system's fifteen-minute load average.
+ * @property {number} loopAvgTasks - The process's average number of async
+ * JavaScript entries per event loop cycle.
+ * @property {number} loopEstimatedLag - The estimated amount of time a I/O
+ * response may have to wait in the process, in milliseconds.
+ * @property {number} loopIdlePercent - The percent time that the process is
+ * waiting (idle) for I/O or timers.
+ * @property {number} loopIdleTime - Same as
+ * `perf_hooks.performance.nodeTiming.idleTime`, except as nanoseconds.
+ * @property {number} loopIterations - The cumulative count of all event loop
+ * iterations as counted by libuv.
+ * @property {number} loopIterWithEvents - The cumulative count of all event
+ * loop iterations that processed an event.
+ * @property {number} loopTotalCount - The cumulative count of all event loop
+ * cycles in the process (now the same as loopIterations).
+ * @property {number} loopUtilization - Same as `utilization` as returned by
+ * `perf_hooks.performance.eventLoopUtilization()`.
+ * @property {number} mallocedMemory - Current malloced memory by the v8 heap.
+ * @property {number} numberOfDetachedContexts - Same as
+ * `number_of_detached_contexts` as returned by `v8.getHeapStatistics()`.
+ * @property {number} numberOfNativeContexts - Same as
+ * `number_of_native_contexts` as returned by `v8.getHeapStatistics()`.
+ * @property {number} pageFaultHardCount - The number of hard page faults
+ * triggered by the process.
+ * @property {number} pageFaultSoftCount - The number of soft page faults (page
+ * reclaims) triggered by the process.
+ * @property {number} peakMallocedMemory - Peak malloced memory by the v8 heap.
+ * @property {number} pipeServerCreatedCount - Number of pipe servers created in
+ * the current JS thread.
+ * @property {number} pipeServerDestroyedCount - Number of pipe servers
+ * destroyed in the current JS thread.
+ * @property {number} pipeSocketCreatedCount - Number of pipe clients created in
+ * the current JS thread.
+ * @property {number} pipeSocketDestroyedCount - Number of pipe clients
+ * destroyed in the current JS thread.
+ * @property {number} processingDelay - The aggregate time in nanoseconds all
+ * events waited to be processed after being received by the event provider.
+ * @property {number} promiseCreatedCount - Number of promises created in the
+ * current JS thread.
+ * @property {number} promiseResolvedCount - Number of promises resolved in the
+ * in the current JS thread.
+ * @property {number} providerDelay - The aggregate time in nanoseconds all
+ * events waited to be received by the event provider after entering the event
+ * queue.
+ * @property {number} res5s - 5 second average of the application's
+ * Responsiveness.
+ * @property {number} res1m - 1 minute average of the application's
+ * Responsiveness.
+ * @property {number} res5m - 5 minute average of the application's
+ * Responsiveness.
+ * @property {number} res15m - 15 minute average of the application's
+ * Responsiveness.
+ * @property {number} rss - The resident set size (total memory) used by the
+ * process, in bytes.
+ * @property {number} signalCount - The number of signals received by the
+ * process.
+ * @property {number} swapCount - The number of times the process has been
+ * swapped out of memory.
+ * @property {number} systemUptime - The host system's uptime, in seconds.
+ * from.
+ * @property {number} tcpServerCreatedCount - Number of TCP servers created in
+ * the current JS thread.
+ * @property {number} tcpServerDestroyedCount - Number of TCP servers
+ * destroyed in the current JS thread.
+ * @property {number} tcpSocketCreatedCount - Number of TCP clients created in
+ * the current JS thread.
+ * @property {number} tcpSocketDestroyedCount - Number of TCP clients
+ * destroyed in the current JS thread.
+ * @property {number} threadId - Id of the thread the metrics are gathered
+ * from.
+ * @property {number} timestamp - UNIX timestamp of when the metrics were taken.
+ * @property {string} title - The current system title of the process.
+ * @property {number} totalAvailableSize - The remaining amount of memory the
+ * heap can allocate on the process before hitting the maximum heap size.
+ * @property {number} totalHeapSizeExecutable - The total amount of executable
+ * memory allocated in the process's heap, in bytes.
+ * @property {number} totalPhysicalSize - The amount of physical memory
+ * currently committed for the heap of the process, in bytes.
+ * @property {number} udpServerCreatedCount - Number of UDP servers created in
+ * the current JS thread.
+ * @property {number} udpServerDestroyedCount - Number of UDP servers
+ * destroyed in the current JS thread.
+ * @property {number} udpSocketCreatedCount - Number of UDP clients created in
+ * the current JS thread.
+ * @property {number} udpSocketDestroyedCount - Number of UDP clients
+ * destroyed in the current JS thread.
+ * @property {number} uptime - The process's uptime, in seconds.
+ * @property {string} user - The system's user the process is running from.
+ * @example
+ * {
+ *   threadId: 0,
+ *   timestamp: 0,
+ *   activeHandles: 1,
+ *   activeRequests: 0,
+ *   heapTotal: 5484544,
+ *   totalHeapSizeExecutable: 573440,
+ *   totalPhysicalSize: 3420792,
+ *   totalAvailableSize: 2194609400,
+ *   heapUsed: 3054456,
+ *   heapSizeLimit: 2197815296,
+ *   mallocedMemory: 65592,
+ *   externalMem: 1574914,
+ *   peakMallocedMemory: 965856,
+ *   numberOfNativeContexts: 1,
+ *   numberOfDetachedContexts: 0,
+ *   gcCount: 11,
+ *   gcForcedCount: 0,
+ *   gcFullCount: 0,
+ *   gcMajorCount: 7,
+ *   gcDurUs99Ptile: 5158,
+ *   gcDurUsMedian: 1263,
+ *   dnsCount: 0,
+ *   httpClientAbortCount: 0,
+ *   httpClientCount: 0,
+ *   httpServerAbortCount: 0,
+ *   httpServerCount: 0,
+ *   dns99Ptile: 0,
+ *   dnsMedian: 0,
+ *   httpClient99Ptile: 0,
+ *   httpClientMedian: 0,
+ *   httpServer99Ptile: 0,
+ *   httpServerMedian: 0,
+ *   loopIdleTime: 123990806640,
+ *   loopIterations: 171,
+ *   loopIterWithEvents: 45,
+ *   eventsProcessed: 164,
+ *   eventsWaiting: 45,
+ *   providerDelay: 98522773,
+ *   processingDelay: 0,
+ *   loopUtilization: 0.001727,
+ *   res5s: 0.004098,
+ *   res1m: 0.000577,
+ *   res5m: 0.000247,
+ *   res15m: 0.000099,
+ *   loopTotalCount: 171,
+ *   loopAvgTasks: 0,
+ *   loopEstimatedLag: 0.001027,
+ *   loopIdlePercent: 99.827258,
+ *   title: '/usr/local/bin/nsolid',
+ *   user: 'username',
+ *   uptime: 124,
+ *   systemUptime: 12183,
+ *   freeMem: 10324070400,
+ *   blockInputOpCount: 0,
+ *   blockOutputOpCount: 64,
+ *   ctxSwitchInvoluntaryCount: 38,
+ *   ctxSwitchVoluntaryCount: 3008,
+ *   ipcReceivedCount: 0,
+ *   ipcSentCount: 0,
+ *   pageFaultHardCount: 0,
+ *   pageFaultSoftCount: 4293,
+ *   signalCount: 0,
+ *   swapCount: 0,
+ *   rss: 43081728,
+ *   load1m: 4.482422,
+ *   load5m: 3.903809,
+ *   load15m: 3.44873,
+ *   cpuUserPercent: 0.295568,
+ *   cpuSystemPercent: 0.065722,
+ *   cpuPercent: 0.36129,
+ *   cpu: 0.36129
+ * }
+ */
+
+/**
+ * metrics() callback.
+ * @callback MetricsCallback
+ * @param {Error} error
+ * @param {Metrics} metrics
+ */
+
+
+/**
+ * @typedef {Object} Package
+ * @property {string} name - The name of the package.
+ * @property {string} version - The version of the package.
+ * @property {string} path - The path of the package.
+ * @property {string} [main] - The main module of the package.
+ * @property {string[]} dependencies - Array listing dependencies of the
+ * package.
+ * @property {boolean} required - Whether this package has been required by the
+ * process or not.
+ * @example
+ * {
+ *   path: '/home/username/http-server/node_modules/serve-static',
+ *   name: 'serve-static',
+ *   version: '1.11.2',
+ *   main: undefined,
+ *   dependencies: [
+ *     '../encodeurl',
+ *     '../escape-html',
+ *     '../parseurl',
+ *     'node_modules/send'
+ *   ],
+ *   required: true
+ * }
+ */
+
+/**
+ * packages() callback.
+ * @callback PackagesCallback
+ * @param {Error} error
+ * @param {Package[]} packages
+ */
+
+/**
+  * Callback called when profiling start has completed.
+  * @callback ProfileCallback
+  * @param {Error} error
+  */
+
+/**
+  * Callback called when profiling end has completed.
+  * @callback ProfileEndCallback
+  * @param {Error} error
+  */
+
+ /**
+   * Callback called when a snaphost operation has completed..
+   * @callback SnapshotCallback
+   * @param {Error} error
+   */
+
+/**
+ * @typedef {Object} StartupTimes
+ * @property {Number[]} initialized_node - When the node initialization was
+ * complete. The value is specified in a high-resolution tuple of
+ * [seconds, nanoseconds].
+ * @property {Number[]} initialized_v8 - When v8 initializaiton was complete.
+ * The value is specified in a high-resolution tuple of [seconds, nanoseconds].
+ * @property {Number[]} loaded_environment - When the complete environment was
+ * loaded. . The value is specified in a high-resolution tuple of
+ * [seconds, nanoseconds].
+ * @example
+ * {
+ *   initialized_node: [ 0, 2556008 ],
+ *   initialized_v8: [ 0, 542146 ],
+ *   loaded_environment: [ 0, 11965633 ]
+ * }
+ */
+
+/**
+ * startupTimes() callback.
+ * @callback StartupTimesCallback
+ * @param {Error} error
+ * @param {StartupTimes} startup_times
+ */
+
+
+/**
+ * @callback StatsDStrMethod
+ * @returns {string}
+ */
+
+/**
+ * @callback StatsDFormatMethod
+ * @param {string} name
+ * @param {string} value
+ */
+
+/**
+ * @typedef {Object} StatsDFormat
+ * @property {StatsDStrMethod} bucket - Returns the "bucket"
+ * string prepended to all auto-generated statsd metric strings.
+ * @property {StatsDStrMethod} tags - Returns the "tags" string
+ * appended to all auto-generated statsd metric strings, includes the |#
+ * prefix. This value is an empty string if no tags are configured for statsd.
+ * @property {StatsDFormatMethod} counter - Format a "counter"
+ * string for name and value suitable for statsd.
+ * @property {StatsDFormatMethod} gauge - Format a "gauge"
+ * string for name and value suitable for statsd.
+ * @property {StatsDFormatMethod} set - Format a "set" string
+ * for name and value suitable for statsd.
+ * @property {StatsDFormatMethod} timing - Format a "timing"
+ * string for name and value suitable for statsd.
+ */
+
+/**
+ * @callback StatsDSendRawMethod
+ * @param {(string|string[])} data
+ */
+
+/**
+ * @callback StatsDSendMethod
+ * @description Sends that to the StatsD server configured using the
+ * configured bucket and tags.
+ * @param {string} name
+ * @param {string} value
+ */
+
+/**
+ * @typedef {Object} StatsD
+ * @property {('unconfigured'|
+ *             'initializing'|
+ *             'connecting'|
+ *             'ready')} status - The status of the StatsD agent.
+ * @property {StatsDStrMethod} udpIp - If configured, returns
+ * the ip address udp statsd data will be sent to.
+ * @property {StatsDStrMethod} tcpIp - If configured, returns
+ * the ip address tcp statsd data will be sent to.
+ * @property {StatsDSendRawMethod} sendRaw - Send a raw string
+ * to statsd. Caller is required to comply to statsd format (terminating
+ * newline not required). An array of strings is also permissible, they will
+ * be sent newline separated. If connected via UDP, data sent via sendRaw()
+ * will be split up into 1400Kb batches to fit within a standard MTU window,
+ * this applies to newline separated strings or an array of strings passed to
+ * this interface.
+ * @property {StatsDSendMethod} counter - Send a "counter" type
+ * value to statsd. Will use NSOLID_STATSD_BUCKET and NSOLID_STATSD_TAGS if
+ * configured.
+ * @property {StatsDSendMethod} gauge - Send a "gauge" type
+ * value to statsd. Will use NSOLID_STATSD_BUCKET and NSOLID_STATSD_TAGS if
+ * configured.
+ * @property {StatsDSendMethod} set - Send a "set" type value
+ * to statsd. Will use NSOLID_STATSD_BUCKET and NSOLID_STATSD_TAGS if
+ * configured.
+ * @property {StatsDSendMethod} timing - Send a "timing" type
+ * value to statsd. Will use NSOLID_STATSD_BUCKET and NSOLID_STATSD_TAGS if
+ * configured.
+ * @property {StatsDFormat} format
+ */
+
+/**
+ * @typedef {Object} TraceStats
+ * @property {number} dnsCount - The process's total number of DNS lookups
+ * performed.
+ * @property {number} httpClientAbortCount - The process's total number of
+ * outgoing HTTP(S) client requests canceled due to inactivity.
+ * @property {number} httpClientCount - The process's total number of outgoing
+ * HTTP(S) client requests performed.
+ * @property {number} httpServerAbortCount -  The process's total number of
+ * served incoming HTTP(S) requests canceled.
+ * @property {number} httpServerCount - The process's total number of incoming
+ * HTTP(s) requests served.
+ */
+
+/**
+ * @typedef {Object} Zmq
+ * @property {('unconfigured'|
+ *             'initializing'|
+ *             'connecting'|
+ *             'buffering'|
+ *             'ready')} status - The status of the ZMQ agent.
+ */

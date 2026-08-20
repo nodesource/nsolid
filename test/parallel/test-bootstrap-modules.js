@@ -107,6 +107,9 @@ expected.beforePreExec = new Set([
   'NativeModule internal/modules/package_map',
   'NativeModule diagnostics_channel',
   'Internal Binding diagnostics_channel',
+  'Internal Binding nsolid_api',
+  'Internal Binding worker',
+  'NativeModule internal/nsolid_module',
   'Internal Binding wasm_web_api',
   'NativeModule internal/events/abort_listener',
   'NativeModule internal/modules/typescript',
@@ -123,6 +126,21 @@ expected.beforePreExec = new Set([
 
 expected.atRunTime = new Set([
   'NativeModule internal/process/pre_execution',
+  'NativeModule internal/async_local_storage/async_context_frame',
+  'Internal Binding nsolid_statsd_agent',
+  'Internal Binding nsolid_zmq_agent',
+  'NativeModule internal/agents/statsd/lib/agent',
+  'NativeModule internal/agents/statsd/lib/nsolid',
+  'NativeModule internal/agents/zmq/lib/agent',
+  'NativeModule internal/agents/zmq/lib/nsolid',
+  'NativeModule internal/nsolid_assets',
+  'NativeModule internal/nsolid_loader',
+  'NativeModule internal/nsolid_promise_tracking',
+  'NativeModule internal/nsolid_diag',
+  'NativeModule internal/nsolid_trace',
+  'NativeModule internal/otel/api',
+  'NativeModule internal/otel/context',
+  'NativeModule internal/otel/core',
 ]);
 
 const { isMainThread } = require('worker_threads');

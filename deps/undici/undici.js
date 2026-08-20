@@ -2516,6 +2516,10 @@ var require_diagnostics = __commonJS({
     var undiciDebugLog = util.debuglog("undici");
     var fetchDebuglog = util.debuglog("fetch");
     var websocketDebuglog = util.debuglog("websocket");
+    var tracingChannel;
+    if (diagnosticsChannel.tracingChannel) {
+      tracingChannel = diagnosticsChannel.tracingChannel("undici:fetch");
+    }
     var channels = {
       // Client
       beforeConnect: diagnosticsChannel.channel("undici:client:beforeConnect"),
@@ -2537,7 +2541,9 @@ var require_diagnostics = __commonJS({
       ping: diagnosticsChannel.channel("undici:websocket:ping"),
       pong: diagnosticsChannel.channel("undici:websocket:pong"),
       // ProxyAgent
-      proxyConnected: diagnosticsChannel.channel("undici:proxy:connected")
+      proxyConnected: diagnosticsChannel.channel("undici:proxy:connected"),
+      // Fetch channels
+      tracingChannel
     };
     var isTrackingClientEvents = false;
     function trackClientEvents(debugLog = undiciDebugLog) {
@@ -13607,6 +13613,7 @@ var require_fetch = __commonJS({
     var { isomorphicEncode } = require_infra();
     var GET_OR_HEAD = ["GET", "HEAD"];
     var defaultUserAgent = typeof __UNDICI_IS_NODE__ !== "undefined" || true ? "node" : "undici";
+    var channels = require_diagnostics().channels.tracingChannel;
     var resolveObjectURL;
     function appendHeadersListFromResponseHeaders(headersList, headers, rawHeaders) {
       if (Array.isArray(rawHeaders)) {
@@ -13671,25 +13678,66 @@ var require_fetch = __commonJS({
       finalizeAndReportTiming(response, "fetch");
     }
     __name(handleFetchDone, "handleFetchDone");
+    function ifSubscribersRunStores(req, input, init, callback) {
+      const hasSubscribers = subscribersCheck();
+      if (hasSubscribers) {
+        const context = { req, input, init, result: null, error: null };
+        return channels.start.runStores(context, () => {
+          try {
+            return callback(createInstrumentedDeferredPromise(context));
+          } catch (e) {
+            context.error = e;
+            channels.error.publish(context);
+            throw e;
+          } finally {
+            channels.end.publish(context);
+          }
+        });
+      } else {
+        return callback(createDeferredPromise());
+      }
+    }
+    __name(ifSubscribersRunStores, "ifSubscribersRunStores");
+    function subscribersCheck() {
+      return channels && (channels.start.hasSubscribers || channels.end.hasSubscribers || channels.asyncStart.hasSubscribers || channels.asyncEnd.hasSubscribers || channels.error.hasSubscribers);
+    }
+    __name(subscribersCheck, "subscribersCheck");
+    function createInstrumentedDeferredPromise(context) {
+      let res;
+      let rej;
+      const promise = new Promise((resolve, reject) => {
+        res = /* @__PURE__ */ __name(function(result) {
+          context.result = result;
+          channels.asyncStart.runStores(context, () => {
+            resolve(result);
+            channels.asyncEnd.publish(context);
+          });
+        }, "res");
+        rej = /* @__PURE__ */ __name(function(error) {
+          context.error = error;
+          channels.error.publish(context);
+          channels.asyncStart.runStores(context, () => {
+            reject(error);
+            channels.asyncEnd.publish(context);
+          });
+        }, "rej");
+      });
+      return { promise, resolve: res, reject: rej };
+    }
+    __name(createInstrumentedDeferredPromise, "createInstrumentedDeferredPromise");
     function fetch2(input, init = void 0) {
       webidl.argumentLengthCheck(arguments, 1, "globalThis.fetch");
+<<<<<<< ours
       let p = Promise.withResolvers();
+=======
+>>>>>>> theirs
       let requestObject;
       try {
         requestObject = new Request(input, init);
       } catch (e) {
-        p.reject(e);
-        return p.promise;
+        return Promise.reject(e);
       }
-      const request = getRequestState(requestObject);
-      if (requestObject.signal.aborted) {
-        abortFetch(p, request, null, requestObject.signal.reason, null);
-        return p.promise;
-      }
-      const globalObject = request.client.globalObject;
-      if (globalObject?.constructor?.name === "ServiceWorkerGlobalScope") {
-        request.serviceWorkers = "none";
-      }
+<<<<<<< ours
       let responseObject = null;
       let locallyAborted = false;
       let controller = null;
@@ -13737,8 +13785,59 @@ var require_fetch = __commonJS({
         // Keep requestObject alive to prevent its AbortController from being GC'd
         // See https://github.com/nodejs/undici/issues/4627
         requestObject
+=======
+      return ifSubscribersRunStores(requestObject, input, init, (p) => {
+        const request = getRequestState(requestObject);
+        if (requestObject.signal.aborted) {
+          abortFetch(p, request, null, requestObject.signal.reason, null);
+          return p.promise;
+        }
+        const globalObject = request.client.globalObject;
+        if (globalObject?.constructor?.name === "ServiceWorkerGlobalScope") {
+          request.serviceWorkers = "none";
+        }
+        let responseObject = null;
+        let locallyAborted = false;
+        let controller = null;
+        addAbortListener(
+          requestObject.signal,
+          () => {
+            locallyAborted = true;
+            assert(controller != null);
+            controller.abort(requestObject.signal.reason);
+            const realResponse = responseObject?.deref();
+            abortFetch(p, request, realResponse, requestObject.signal.reason, controller.controller);
+          }
+        );
+        const processResponse = /* @__PURE__ */ __name((response) => {
+          if (locallyAborted) {
+            return;
+          }
+          if (response.aborted) {
+            abortFetch(p, request, responseObject, controller.serializedAbortReason, controller.controller);
+            return;
+          }
+          if (response.type === "error") {
+            p.reject(new TypeError("fetch failed", { cause: response.error }));
+            return;
+          }
+          responseObject = new WeakRef(fromInnerResponse(response, "immutable"));
+          p.resolve(responseObject.deref());
+          p = null;
+        }, "processResponse");
+        controller = fetching({
+          request,
+          processResponseEndOfBody: handleFetchDone,
+          processResponse,
+          dispatcher: getRequestDispatcher(requestObject),
+          // undici
+          // Keep requestObject alive to prevent its AbortController from being GC'd
+          // See https://github.com/nodejs/undici/issues/4627
+          requestObject
+        });
+        return p.promise;
+>>>>>>> theirs
       });
-      return p.promise;
     }
     __name(fetch2, "fetch");
     function finalizeAndReportTiming(response, initiatorType = "other") {
@@ -13842,7 +13941,7 @@ var require_fetch = __commonJS({
         request.window = request.client?.globalObject?.constructor?.name === "Window" ? request.client : "no-window";
       }
       if (request.origin === "client") {
-        request.origin = request.client.origin;
+        request.origin = request.client?.origin;
       }
       if (request.policyContainer === "client") {
         if (request.client != null) {

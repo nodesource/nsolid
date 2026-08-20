@@ -24,9 +24,11 @@
 #include "env-inl.h"
 #include "node_external_reference.h"
 #include "util-inl.h"
+#include "nsolid/nsolid_api.h"
 
 namespace node {
 
+using JSMetricsFields = nsolid::EnvInst::JSMetricsFields;
 using v8::Context;
 using v8::FunctionCallbackInfo;
 using v8::FunctionTemplate;
@@ -129,6 +131,26 @@ HandleWrap::HandleWrap(Environment* env,
   HandleScope scope(env->isolate());
   CHECK(env->has_run_bootstrapping_code());
   env->handle_wrap_queue()->PushBack(this);
+  double* counts = env->envinst_->count_fields;
+  switch (provider) {
+    case PROVIDER_PIPESERVERWRAP:
+      counts[JSMetricsFields::kAsyncPipeServerCreatedCount]++;
+    break;
+    case PROVIDER_PIPEWRAP:
+      counts[JSMetricsFields::kAsyncPipeSocketCreatedCount]++;
+    break;
+    case PROVIDER_TCPSERVERWRAP:
+      counts[JSMetricsFields::kAsyncTcpServerCreatedCount]++;
+    break;
+    case PROVIDER_TCPWRAP:
+      counts[JSMetricsFields::kAsyncTcpSocketCreatedCount]++;
+    break;
+    case PROVIDER_UDPWRAP:
+      counts[JSMetricsFields::kAsyncUdpSocketCreatedCount]++;
+    break;
+    default:
+      return;
+  }
 }
 
 
@@ -147,6 +169,27 @@ void HandleWrap::OnClose(uv_handle_t* handle) {
 
   wrap->OnClose();
   wrap->handle_wrap_queue_.Remove();
+
+  double* counts = env->envinst_->count_fields;
+  switch (wrap->provider_type()) {
+    case PROVIDER_PIPESERVERWRAP:
+      counts[JSMetricsFields::kAsyncPipeServerDestroyedCount]++;
+    break;
+    case PROVIDER_PIPEWRAP:
+      counts[JSMetricsFields::kAsyncPipeSocketDestroyedCount]++;
+    break;
+    case PROVIDER_TCPSERVERWRAP:
+      counts[JSMetricsFields::kAsyncTcpServerDestroyedCount]++;
+    break;
+    case PROVIDER_TCPWRAP:
+      counts[JSMetricsFields::kAsyncTcpSocketDestroyedCount]++;
+    break;
+    case PROVIDER_UDPWRAP:
+      counts[JSMetricsFields::kAsyncUdpSocketDestroyedCount]++;
+    break;
+    default: {
+    }
+  }
 
   if (!wrap->persistent().IsEmpty() &&
       wrap->object()
