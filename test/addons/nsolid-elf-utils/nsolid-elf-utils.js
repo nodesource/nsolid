@@ -29,10 +29,23 @@ assert.strictEqual(buildId,
 const fixtureHex = fixtures.readSync(['elf', 'build-id-no-sections.hex'], 'utf8');
 const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nsolid-elf-utils-'));
 const fixturePath = path.join(fixtureDir, 'build-id-no-sections');
-fs.writeFileSync(fixturePath, Buffer.from(fixtureHex.replace(/\s/g, ''), 'hex'));
+const replacementPath = path.join(fixtureDir, 'replacement');
+const fixture = Buffer.from(fixtureHex.replace(/\s/g, ''), 'hex');
 try {
+  fs.writeFileSync(fixturePath, fixture);
   assert.strictEqual(binding.getBuildId(fixturePath),
                      '00112233445566778899aabbccddeeff00112233');
+
+  const replacement = Buffer.from(fixture);
+  const buildId = Buffer.from('00112233445566778899aabbccddeeff00112233',
+                              'hex');
+  const buildIdOffset = replacement.indexOf(buildId);
+  assert.notStrictEqual(buildIdOffset, -1);
+  replacement[buildIdOffset] = 0xff;
+  fs.writeFileSync(replacementPath, replacement);
+  fs.renameSync(replacementPath, fixturePath);
+  assert.strictEqual(binding.getBuildId(fixturePath),
+                     'ff112233445566778899aabbccddeeff00112233');
 } finally {
   fs.rmSync(fixtureDir, { recursive: true, force: true });
 }
