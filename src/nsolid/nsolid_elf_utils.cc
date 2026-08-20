@@ -6,9 +6,11 @@
 #include <elf.h>
 #include <libelf.h>
 #include <gelf.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <limits>
 #include <unordered_map>
 #include "uv.h"
@@ -18,6 +20,22 @@ namespace nsolid {
 namespace elf_utils {
 
 namespace {
+
+struct FileIdentity {
+  dev_t device;
+  ino_t inode;
+
+  bool operator==(const FileIdentity& other) const {
+    return device == other.device && inode == other.inode;
+  }
+};
+
+struct FileIdentityHash {
+  size_t operator()(const FileIdentity& identity) const {
+    return std::hash<dev_t>{}(identity.device) ^
+           (std::hash<ino_t>{}(identity.inode) << 1);
+  }
+};
 
 bool ParseBuildIdNotes(const void* buffer, size_t size, std::string* build_id) {
   const auto* data = static_cast<const uint8_t*>(buffer);
@@ -45,7 +63,8 @@ bool ParseBuildIdNotes(const void* buffer, size_t size, std::string* build_id) {
 
 
 int GetBuildId(const std::string& path, std::string* build_id) {
-  static std::unordered_map<std::string, std::string> build_id_cache_;
+  static std::unordered_map<FileIdentity, std::string, FileIdentityHash>
+      build_id_cache_;
 
   // Not thread-safe; call only from the EnvList thread.
   DCHECK(utils::are_threads_equal(uv_thread_self(), EnvList::Inst()->thread()));
@@ -54,20 +73,29 @@ int GetBuildId(const std::string& path, std::string* build_id) {
   Elf_Scn* scn = nullptr;
   GElf_Shdr shdr;
 
-  auto it = build_id_cache_.find(path);
-  if (it != build_id_cache_.end()) {
-    *build_id = it->second;
-    return 0;
-  }
-
   int ret = 0;
-  if (elf_version(EV_CURRENT) == EV_NONE) {
-    return elf_errno();
-  }
-
   int fd = open(path.c_str(), O_RDONLY);
   if (fd < 0) {
     return -errno;
+  }
+
+  struct stat st;
+  if (fstat(fd, &st) < 0) {
+    const int err = -errno;
+    close(fd);
+    return err;
+  }
+
+  const FileIdentity identity{st.st_dev, st.st_ino};
+  auto it = build_id_cache_.find(identity);
+  if (it != build_id_cache_.end()) {
+    *build_id = it->second;
+    goto error;
+  }
+
+  if (elf_version(EV_CURRENT) == EV_NONE) {
+    ret = elf_errno();
+    goto error;
   }
 
   e = elf_begin(fd, ELF_C_READ, nullptr);
@@ -120,7 +148,7 @@ int GetBuildId(const std::string& path, std::string* build_id) {
   if (build_id->empty()) {
     ret = UV_ENOENT;
   } else {
-    build_id_cache_[path] = *build_id;
+    build_id_cache_[identity] = *build_id;
   }
 
 end_error:

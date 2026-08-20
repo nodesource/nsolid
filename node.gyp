@@ -563,6 +563,7 @@
       'src/nsolid/nsolid_trace.cc',
       'src/nsolid/nsolid_cpu_profiler.cc',
       'src/nsolid/nsolid_heap_snapshot.cc',
+      'src/nsolid/nsolid_memory_mappings.cc',
       'src/nsolid.h',
       'src/nsolid/continuous_profiler.h',
       'src/nsolid/nsolid_api.h',
@@ -570,6 +571,7 @@
       'src/nsolid/nsolid_trace.h',
       'src/nsolid/nsolid_cpu_profiler.h',
       'src/nsolid/nsolid_heap_snapshot.h',
+      'src/nsolid/nsolid_memory_mappings.h',
       'deps/nsuv/include/nsuv.h',
       'deps/nsuv/include/nsuv-inl.h',
     ],
@@ -1505,6 +1507,9 @@
       'sources': [ '<@(node_cctest_sources)' ],
 
       'conditions': [
+        [ 'OS!="linux"', {
+          'sources!': ['test/cctest/test_nsolid_memory_mappings.cc'],
+        }],
         [ 'node_shared_gtest=="false"', {
           'dependencies': [
             'deps/googletest/googletest.gyp:gtest',
