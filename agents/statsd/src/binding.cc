@@ -174,7 +174,7 @@ void InitStatsDAgent(Local<Object> exports,
   // Only for testing
   NODE_SET_METHOD(exports, "config", Config);
   NODE_SET_METHOD(exports, "_registerStatusCb", RegisterStatusCb);
-  node::AddEnvironmentCleanupHook(context->GetIsolate(), at_exit, nullptr);
+  node::AddEnvironmentCleanupHook(Isolate::GetCurrent(), at_exit, nullptr);
 }
 
 }  // namespace statsd
