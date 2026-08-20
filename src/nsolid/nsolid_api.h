@@ -254,6 +254,7 @@ class EnvInst {
    * the instance won't be cleaned up early.
    */
   static SharedEnvInst GetInst(uint64_t thread_id);
+  static SharedEnvInst GetInstByOsThreadId(uint64_t os_tid);
   static SharedEnvInst GetCurrent(v8::Isolate* isolate);
   static SharedEnvInst GetCurrent(v8::Local<v8::Context> context);
   // This should only be run within the thread and during the lifetime of the
@@ -269,6 +270,7 @@ class EnvInst {
   inline Environment* env() const;
   constexpr v8::Isolate* isolate() const;
   constexpr uint64_t thread_id() const;
+  constexpr uint64_t os_tid() const;
   constexpr uv_loop_t* event_loop() const;
   constexpr uv_thread_t creation_thread() const;
   constexpr bool is_main_thread() const;
@@ -350,6 +352,7 @@ class EnvInst {
   v8::Isolate* isolate_;
   uv_loop_t* event_loop_;
   uint64_t thread_id_ = UINT64_MAX;
+  uint64_t os_tid_ = 0;
   uv_thread_t creation_thread_;
   bool is_main_thread_;
   nsuv::ns_async interrupt_msg_;
@@ -706,6 +709,7 @@ class EnvList {
   nsuv::ns_mutex code_event_hooks_lock_;
   // A map of all Environments in the process.
   std::map<uint64_t, SharedEnvInst> env_map_;
+  std::map<uint64_t, SharedEnvInst> env_map_by_os_tid_;
   std::atomic<uint64_t> main_thread_id_ = {0xFFFFFFFFFFFFFFFF};
   // Lock EnvList while all command queues are being processed. This is to
   // prevent ~EnvList from running while processing all commands.
@@ -950,6 +954,10 @@ constexpr v8::Isolate* EnvInst::isolate() const {
 
 constexpr uint64_t EnvInst::thread_id() const {
   return thread_id_;
+}
+
+constexpr uint64_t EnvInst::os_tid() const {
+  return os_tid_;
 }
 
 constexpr uv_loop_t* EnvInst::event_loop() const {

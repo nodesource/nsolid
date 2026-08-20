@@ -26,6 +26,8 @@
 
 #if defined(__linux__)
 #include <sys/utsname.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 #endif
 
 #define MICROS_PER_SEC 1000000
@@ -116,6 +118,9 @@ EnvInst::EnvInst(Environment* env)
       isolate_(env->isolate()),
       event_loop_(env->event_loop()),
       thread_id_(env->thread_id()),
+#if defined(__linux__)
+      os_tid_(static_cast<uint64_t>(::syscall(SYS_gettid))),
+#endif
       creation_thread_(uv_thread_self()),
       is_main_thread_(env->is_main_thread()),
       module_info_(),
@@ -443,6 +448,19 @@ SharedEnvInst EnvInst::GetInst(uint64_t thread_id) {
   auto item = envlist->env_map_.find(thread_id);
   return item != envlist->env_map_.end() ?
     item->second : SharedEnvInst();
+}
+
+
+SharedEnvInst EnvInst::GetInstByOsThreadId(uint64_t os_tid) {
+#if defined(__linux__)
+  auto* envlist = EnvList::Inst();
+  ns_mutex::scoped_lock lock(envlist->map_lock_);
+  auto item = envlist->env_map_by_os_tid_.find(os_tid);
+  return item != envlist->env_map_by_os_tid_.end() ?
+    item->second : SharedEnvInst();
+#else
+  return nullptr;
+#endif
 }
 
 
@@ -1135,6 +1153,9 @@ void EnvList::AddEnv(Environment* env) {
       main_thread_id_ = env->thread_id();
     }
     env_map_.emplace(env->thread_id(), envinst_sp);
+#if defined(__linux__)
+    env_map_by_os_tid_.emplace(envinst_sp->os_tid(), envinst_sp);
+#endif
   }
 
   {
@@ -1190,6 +1211,9 @@ void EnvList::RemoveEnv(Environment* env) {
       main_thread_id_ = 0xFFFFFFFFFFFFFFFF;
     }
     env_map_.erase(env->thread_id());
+#if defined(__linux__)
+    env_map_by_os_tid_.erase(envinst_sp->os_tid());
+#endif
   }
 
   // End any pending CPU profiles. This has to be done before removing the
