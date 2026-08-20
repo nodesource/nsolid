@@ -6,6 +6,7 @@
 #include "nsolid/nsolid_util.h"
 #include "../../otlp/src/otlp_common.h"
 #include "../../src/root_certs.h"
+#include "../../src/node_file_utils.h"
 #include "../../src/span_collector.h"
 #include "absl/log/initialize.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
