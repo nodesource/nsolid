@@ -26,14 +26,9 @@
 #define NODE_MINOR_VERSION 7
 #define NODE_PATCH_VERSION 0
 
-<<<<<<< ours
-#define NODE_VERSION_IS_LTS 0
-#define NODE_VERSION_LTS_CODENAME ""
-=======
 #define NODE_VERSION_IS_LTS 1
 #define NODE_VERSION_LTS_CODENAME "Krypton"
 #define NODE_VERSION_LTS_CODENAME_LC "krypton"
->>>>>>> theirs
 
 #define NODE_VERSION_IS_RELEASE 1
 

@@ -55,14 +55,8 @@ file a new issue.
     * [Unix/macOS](#unixmacos-3)
     * [Windows](#windows-4)
 * [Configuring OpenSSL config appname](#configure-openssl-appname)
-<<<<<<< ours
-* [Building Node.js with FIPS-compliant OpenSSL](#building-nodejs-with-fips-compliant-openssl)
-* [Building Node.js with Temporal support](#building-nodejs-with-temporal-support)
-* [Building Node.js with external core modules](#building-nodejs-with-external-core-modules)
-=======
 * [Building N|Solid with FIPS-compliant OpenSSL](#building-nsolid-with-fips-compliant-openssl)
 * [Building N|Solid with external core modules](#building-nsolid-with-external-core-modules)
->>>>>>> theirs
   * [Unix/macOS](#unixmacos-4)
   * [Windows](#windows-5)
 * [Note for downstream distributors of N|Solid](#note-for-downstream-distributors-of-nsolid)
@@ -108,27 +102,6 @@ N|Solid does not support a platform version if a vendor has expired support
 for it. In other words, N|Solid does not support running on End-of-Life (EoL)
 platforms. This is true regardless of entries in the table below.
 
-<<<<<<< ours
-| Operating System | Architectures    | Versions                          | Support Type | Notes                                                      |
-| ---------------- | ---------------- | --------------------------------- | ------------ | ---------------------------------------------------------- |
-| GNU/Linux        | x64              | kernel >= 4.18[^1], glibc >= 2.28 | Tier 1       | e.g. Ubuntu 20.04, Debian 10, RHEL 8                       |
-| GNU/Linux        | x64              | kernel >= 3.10, musl >= 1.1.19    | Experimental | e.g. Alpine 3.8                                            |
-| GNU/Linux        | x86              | kernel >= 3.10, glibc >= 2.17     | Experimental | Downgraded as of Node.js 10                                |
-| GNU/Linux        | arm64            | kernel >= 4.18[^1], glibc >= 2.28 | Tier 1       | e.g. Ubuntu 20.04, Debian 10, RHEL 8                       |
-| GNU/Linux        | armv7            | kernel >= 4.18[^1], glibc >= 2.28 | Experimental | Downgraded as of Node.js 24                                |
-| GNU/Linux        | ppc64le >=power9 | kernel >= 4.18[^1], glibc >= 2.28 | Tier 2       | e.g. Ubuntu 20.04, RHEL 8                                  |
-| GNU/Linux        | s390x >=z14      | kernel >= 4.18[^1], glibc >= 2.28 | Tier 2       | e.g. RHEL 8                                                |
-| GNU/Linux        | loong64          | kernel >= 5.19, glibc >= 2.36     | Experimental |                                                            |
-| GNU/Linux        | riscv64          | kernel >= 5.19, glibc >= 2.36     | Experimental | GCC >= 14 or Clang >= 19 for native builds[^5]             |
-| Windows          | x64              | >= Windows 10/Server 2016         | Tier 1       | [^2],[^3]                                                  |
-| Windows          | arm64            | >= Windows 10                     | Tier 2       |                                                            |
-| macOS            | x64              | >= 13.5                           | Tier 2       | Until early 2028[^8]. For notes about compilation see [^4] |
-| macOS            | arm64            | >= 13.5                           | Tier 1       |                                                            |
-| SmartOS          | x64              | >= 18                             | Tier 2       |                                                            |
-| AIX              | ppc64be >=power9 | >= 7.2 TL04                       | Tier 2       |                                                            |
-| FreeBSD          | x64              | >= 13.2                           | Experimental |                                                            |
-| OpenHarmony      | arm64            | >= 5.0                            | Experimental |                                                            |
-=======
 | Operating System | Architectures    | Versions                          | Support Type | Notes                                |
 | ---------------- | ---------------- | --------------------------------- | ------------ | ------------------------------------ |
 | GNU/Linux        | x64              | kernel >= 4.18[^1], glibc >= 2.28 | Tier 1       | e.g. Ubuntu 20.04, Debian 10, RHEL 8 |
@@ -149,7 +122,6 @@ platforms. This is true regardless of entries in the table below.
 | AIX              | ppc64be >=power8 | >= 7.2 TL04                       | Tier 2       |                                      |
 | FreeBSD          | x64              | >= 13.2                           | Experimental |                                      |
 | OpenHarmony      | arm64            | >= 5.0                            | Experimental |                                      |
->>>>>>> theirs
 
 <!--lint disable final-definition-->
 
@@ -304,86 +276,7 @@ installed, you can find them under the menu `Xcode -> Open Developer Tool ->
 More Developer Tools...`. This step will install `clang`, `clang++`, and
 `make`.
 
-<<<<<<< ours
-#### Nix integration
-
-If you are using Nix and direnv, you can use the following to get started:
-
-```bash
-echo 'use_nix --arg sharedLibDeps {} --argstr icu small' > .envrc
-direnv allow .
-make build-ci -j12
-```
-
-Most dependencies will likely be available in the official nixpkgs cache,
-although for some dependencies we have to deviate for the upstream repository,
-in which case those will be built locally, or you can use the Cachix repository
-for the project: `cachix use nodejs`. See <https://docs.cachix.org/> for more
-information.
-
-The use of `make build-ci` is to ensure you are using the `CONFIG_FLAGS`
-environment variable. You can also specify it manually:
-
-```bash
-./configure $CONFIG_FLAGS
-make -j12
-```
-
-Passing the `--arg sharedLibDeps {}` instructs direnv and Nix to generate an
-environment that uses the vendored-in native dependencies. Using the vendored-in
-dependencies result in a result closer to the official binaries, the tradeoff
-being the build will take longer to complete as you'd have to build those
-dependencies instead of using the cached ones from the Nix cache. You can omit
-that flag to use all the shared dependencies, or specify only some dependencies:
-
-```bash
-cat -> .envrc <<'EOF'
-use nix --arg sharedLibDeps '{
-  inherit (import ./tools/nix/sharedLibDeps.nix {})
-    openssl
-    zlib
-  ;
-}'
-EOF
-```
-
-Passing the `--argstr icu small` instructs direnv and Nix to pass `--with-intl=small` in
-the `CONFIG_FLAGS` environment variable. If you omit this, the prebuilt ICU from Nix cache
-will be used, which should speed up greatly compilation time.
-
-The use of `direnv` is completely optional, you can also use `nix-shell` directly,
-e.g. here's a command you can use to build a binary for benchmarking purposes:
-
-```bash
-# Passing `--arg loadJSBuiltinsDynamically false` to instruct the compiler to
-# embed the JS core files so it is no longer affected by local changes
-# (necessary for getting useful benchmark results).
-# Passing `--arg devTools '[]' --arg benchmarkTools '[]'` since we don't need
-# those to build node.
-nix-shell \
-  --arg loadJSBuiltinsDynamically false \
-  --arg devTools '[]' --arg benchmarkTools '[]' \
-  --run 'make build-ci -j12'
-
-mv out/Release/node ./node_old
-
-# ...
-# Make your local changes, and re-build node
-
-nix-shell \
-  --arg loadJSBuiltinsDynamically false \
-  --arg devTools '[]' --arg benchmarkTools '[]' \
-  --run 'make build-ci -j12'
-
-nix-shell --pure --run './node benchmark/compare.js --old ./node_old  --new ./node http | Rscript benchmark/compare.R'
-```
-
-There are additional attributes you can pass, see `shell.nix` file for more details.
-
-#### Building Node.js
-=======
 #### Building N|Solid
->>>>>>> theirs
 
 If the path to your build directory contains a space, the build will likely
 fail.
@@ -1088,41 +981,7 @@ It is not necessary to rebuild N|Solid to enable support for FIPS.
 See [FIPS mode](./doc/api/crypto.md#fips-mode) for more information on how to
 enable FIPS support in N|Solid.
 
-<<<<<<< ours
-## Building Node.js with Temporal support
-
-Node.js supports the [Temporal](https://github.com/tc39/proposal-temporal) APIs, when
-linking statically or dynamically with a version of [temporal\_rs](https://github.com/boa-dev/temporal).
-Building it requires a Rust toolchain:
-
-* rustc >= 1.86 (with LLVM >= 19)
-* cargo >= 1.86
-
-Refer to [Install Rust](https://rust-lang.org/tools/install/) for instructions.
-Individual packages such as `rust` and `cargo` in some operating system distributions may be considered
-as an alternative, for example in CI environments.
-Consult with relevant operating system documentation to ensure that packages
-meet the minimum version specified above,
-as packaged versions may lag behind the `stable` version installed by the official instructions.
-Avoid mixing `rustup` together with `rust` and `cargo` package installations, due to
-potential version conflicts.
-
-If `--v8-enable-temporal-support` and `--v8-disable-temporal-support` are both
-omitted, `configure.py` probes for `cargo` and `rustc`. If either is missing,
-a warning is printed and Temporal support is disabled.
-
-* Pass `--v8-enable-temporal-support` to `configure.py` to require Temporal
-  support. The build will stop with an error if `cargo` or `rustc` cannot be
-  found.
-* Pass `--v8-disable-temporal-support` to opt out of Temporal support and
-  remove the Rust toolchain requirement.
-
-Passing both options to `configure.py` is an error.
-
-## Building Node.js with external core modules
-=======
 ## Building N|Solid with external core modules
->>>>>>> theirs
 
 It is possible to specify one or more JavaScript text files to be bundled in
 the binary as built-in modules when building N|Solid.

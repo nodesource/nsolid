@@ -250,10 +250,6 @@
       'dependencies': [ 'deps/sqlite/sqlite.gyp:sqlite' ],
     }],
 
-<<<<<<< ours
-    [ 'node_use_ffi=="true" and node_shared_ffi=="false"', {
-      'dependencies': [ 'deps/libffi/libffi.gyp:libffi' ],
-=======
     [ 'node_shared_sodium=="false"', {
       'dependencies': [ 'deps/sodium/sodium.gyp:sodium', ],
       'conditions': [
@@ -431,7 +427,6 @@
           ],
         }],
       ],
->>>>>>> theirs
     }],
 
     [ 'node_shared_zstd=="false"', {

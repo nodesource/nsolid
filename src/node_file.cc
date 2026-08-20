@@ -365,18 +365,6 @@ inline void FileHandle::Close() {
 
   AfterClose();
 
-<<<<<<< ours
-  // Even though we closed the file descriptor, we still throw an error
-  // if the FileHandle object was not closed before garbage collection.
-  // Because this method is called during garbage collection, we will defer
-  // throwing the error until the next immediate queue tick so as not
-  // to interfere with the gc process.
-  //
-  // This exception will end up being fatal for the process because
-  // it is being thrown from within the SetImmediate handler and
-  // there is no JS stack to bubble it to. In other words, tearing
-  // down the process is the only reasonable thing we can do here.
-=======
   if (ret < 0) {
     // Do not unref this
     env()->SetImmediate([detail](Environment* env) {
@@ -400,7 +388,6 @@ inline void FileHandle::Close() {
   // to notify that the file descriptor was gc'd. We want to be noisy about
   // this because not explicitly closing the FileHandle is a bug.
 
->>>>>>> theirs
   env()->SetImmediate([detail](Environment* env) {
     HandleScope handle_scope(env->isolate());
     static constexpr std::string_view unknown_path = "<unknown path>";

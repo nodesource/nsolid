@@ -17,8 +17,6 @@ const cliMdContentsStream = createReadStream(cliMdPath);
 const manPagePath = join(rootDir, 'doc', 'node.1');
 const manPageContents = readFileSync(manPagePath, { encoding: 'utf8' });
 
-<<<<<<< ours
-=======
 // TODO(dario-piotrowicz): add the missing flags to the node.1 and remove this set
 //                         (refs: https://github.com/nodejs/node/issues/58895)
 const knownFlagsMissingFromManPage = new Set([
@@ -62,7 +60,6 @@ const knownFlagsMissingFromManPage = new Set([
 ]);
 
 const optionsEncountered = { dash: 0, dashDash: 0, named: 0 };
->>>>>>> theirs
 let insideOptionsSection = false;
 
 const rl = createInterface({

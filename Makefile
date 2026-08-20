@@ -318,12 +318,8 @@ v8: ## Build deps/v8.
 		tools/make-v8.sh $(V8_ARCH).$(BUILDTYPE_LOWER) $(V8_BUILD_OPTIONS)
 
 .PHONY: jstest
-<<<<<<< ours
-jstest: build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests build-ffi-tests ## Run addon tests and JS tests.
-=======
 jstest: build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests test-agents-prereqs ## Runs addon tests and JS tests.
 	NSOLID_DELAY_INIT="" \
->>>>>>> theirs
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) --mode=$(BUILDTYPE_LOWER) \
 		$(TEST_CI_ARGS) \
 		--skip-tests=$(CI_SKIP_TESTS) \
@@ -419,12 +415,8 @@ ADDONS_HEADERS_PREREQS := tools/install.py \
 	$(wildcard deps/uv/include/*/*.h) \
 	$(wildcard deps/v8/include/*.h) \
 	$(wildcard deps/v8/include/*/*.h) \
-<<<<<<< ours
-	$(wildcard deps/zlib/z*.h) \
-=======
 	$(wildcard deps/nsuv/include/*.h) \
 	deps/zlib/zconf.h deps/zlib/zlib.h \
->>>>>>> theirs
 	src/node.h src/node_api.h src/js_native_api.h src/js_native_api_types.h \
 	src/node_api_types.h src/node_buffer.h src/node_object_wrap.h \
 	src/node_version.h src/nsolid.h
@@ -652,11 +644,7 @@ test-ci-js: | clear-stalled ## Build and test JavaScript with building anything 
 .PHONY: test-ci
 # Related CI jobs: most CI tests, excluding node-test-commit-arm-fanned
 test-ci: LOGLEVEL := info ## Build and test everything (CI).
-<<<<<<< ours
-test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests build-ffi-tests doc-only
-=======
 test-ci: | clear-stalled bench-addons-build build-addons build-js-native-api-tests build-node-api-tests build-sqlite-tests doc-only test-agents-prereqs
->>>>>>> theirs
 	out/Release/cctest --gtest_output=xml:out/junit/cctest.xml
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) -p tap --logfile test.tap \
 		--mode=$(BUILDTYPE_LOWER) --flaky-tests=$(FLAKY_TESTS) \
@@ -977,11 +965,8 @@ docserve: doc-only ## Serve the documentation on localhost:8000.
 docclean: ## Remove the generated documentation.
 	$(RM) -r out/doc
 
-<<<<<<< ours
-=======
 RAWVER=$(shell $(PYTHON) tools/getnsolidversion.py)
 VERSION=v$(RAWVER)
->>>>>>> theirs
 CHANGELOG=doc/changelogs/CHANGELOG_V$(firstword $(subst ., ,$(RAWVER))).md
 
 # For nightly builds, you must set DISTTYPE to "nightly", "next-nightly" or
@@ -1118,16 +1103,7 @@ ifeq ($(DESTCPU),ia32)
 override DESTCPU=x86
 endif
 
-<<<<<<< ours
-TARNAME=node-$(FULLVERSION)
-# Supply SKIP_SHARED_DEPS=1 to explicitly skip all dependencies that can be included as shared deps
-SKIP_SHARED_DEPS ?= 0
-ifeq ($(SKIP_SHARED_DEPS), 1)
-TARNAME:=$(TARNAME)-slim
-endif
-=======
 TARNAME=nsolid-$(FULLVERSION)
->>>>>>> theirs
 TARBALL=$(TARNAME).tar
 # Custom user-specified variation, use it directly
 ifdef VARIATION

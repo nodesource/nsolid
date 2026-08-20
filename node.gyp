@@ -461,23 +461,6 @@
       'src/node_crypto.cc',
       'src/node_crypto.h',
     ],
-<<<<<<< ours
-    'node_tracing_perfetto_sources': [
-      'src/tracing/agent_perfetto.cc',
-      'src/tracing/agent_perfetto.h',
-      'src/tracing/trace_event_perfetto.cc',
-      'src/tracing/trace_event_perfetto.h',
-    ],
-    'node_tracing_legacy_sources': [
-      'src/tracing/agent_legacy.cc',
-      'src/tracing/agent_legacy.h',
-      'src/tracing/node_trace_buffer.cc',
-      'src/tracing/node_trace_buffer.h',
-      'src/tracing/node_trace_writer.cc',
-      'src/tracing/node_trace_writer.h',
-      'src/tracing/trace_event_legacy_inl.h',
-      'src/tracing/trace_event_legacy.h',
-=======
     'nsolid_sources': [
       'agents/src/http_client.cc',
       'agents/src/http_client.h',
@@ -592,7 +575,6 @@
       'src/nsolid/nsolid_heap_snapshot.h',
       'deps/nsuv/include/nsuv.h',
       'deps/nsuv/include/nsuv-inl.h',
->>>>>>> theirs
     ],
     'node_cctest_openssl_sources': [
       'test/cctest/test_crypto_clienthello.cc',
@@ -1015,11 +997,8 @@
         '<(SHARED_INTERMEDIATE_DIR)' # for node_natives.h
       ],
       'dependencies': [
-<<<<<<< ours
-=======
         'deps/protobuf/abseil.gyp:abseil_proto',
         'tools/v8_gypfiles/abseil.gyp:abseil',
->>>>>>> theirs
         'node_js2c#host',
       ],
 
@@ -1555,11 +1534,8 @@
 
       'dependencies': [
         '<(node_lib_target_name)',
-<<<<<<< ours
-=======
         'deps/protobuf/abseil.gyp:abseil_proto',
         'tools/v8_gypfiles/abseil.gyp:abseil',
->>>>>>> theirs
       ],
 
       'includes': [

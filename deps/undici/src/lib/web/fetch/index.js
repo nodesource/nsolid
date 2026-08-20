@@ -218,10 +218,6 @@ function fetch (input, init = undefined) {
   webidl.argumentLengthCheck(arguments, 1, 'globalThis.fetch')
 
   // 1. Let p be a new promise.
-<<<<<<< ours
-  let p = Promise.withResolvers()
-=======
->>>>>>> theirs
 
   // 2. Let requestObject be the result of invoking the initial value of
   // Request as constructor with input and init as arguments. If this throws
@@ -268,21 +264,12 @@ function fetch (input, init = undefined) {
     // 10. Let controller be null.
     let controller = null
 
-<<<<<<< ours
-  // 11. Add the following abort steps to requestObject’s signal:
-  const removeAbortListener = addAbortListener(
-    requestObject.signal,
-    () => {
-      // 1. Set locallyAborted to true.
-      locallyAborted = true
-=======
     // 11. Add the following abort steps to requestObject’s signal:
     addAbortListener(
       requestObject.signal,
       () => {
         // 1. Set locallyAborted to true.
         locallyAborted = true
->>>>>>> theirs
 
         // 2. Assert: controller is non-null.
         assert(controller != null)
@@ -298,24 +285,9 @@ function fetch (input, init = undefined) {
       }
     )
 
-<<<<<<< ours
-  // Remove the `abort` listeners registered above and in the Request
-  // constructor once the fetch has settled. Without this, reusing a single
-  // signal across many requests leaks listeners and Node.js emits a
-  // MaxListenersExceededWarning. See https://github.com/nodejs/undici/issues/5285
-  const cleanupAbortListeners = () => {
-    removeAbortListener()
-    removeRequestAbortListener(requestObject)
-  }
-
-  // 12. Let handleFetchDone given response response be to finalize and
-  // report timing with response, globalObject, and "fetch".
-  // see function handleFetchDone
-=======
     // 12. Let handleFetchDone given response response be to finalize and
     // report timing with response, globalObject, and "fetch".
     // see function handleFetchDone
->>>>>>> theirs
 
     // 13. Set controller to the result of calling fetch given request,
     // with processResponseEndOfBody set to handleFetchDone, and processResponse
@@ -336,20 +308,6 @@ function fetch (input, init = undefined) {
         // 2. Abort the fetch() call with p, request, responseObject, and
         //    deserializedError.
 
-<<<<<<< ours
-      abortFetch(p, request, responseObject, controller.serializedAbortReason, controller.controller)
-      cleanupAbortListeners()
-      return
-    }
-
-    // 3. If response is a network error, then reject p with a TypeError
-    // and terminate these substeps.
-    if (response.type === 'error') {
-      p.reject(new TypeError('fetch failed', { cause: response.error }))
-      cleanupAbortListeners()
-      return
-    }
-=======
         abortFetch(p, request, responseObject, controller.serializedAbortReason, controller.controller)
         return
       }
@@ -360,7 +318,6 @@ function fetch (input, init = undefined) {
         p.reject(new TypeError('fetch failed', { cause: response.error }))
         return
       }
->>>>>>> theirs
 
       // 4. Set responseObject to the result of creating a Response object,
       // given response, "immutable", and relevantRealm.
@@ -371,20 +328,6 @@ function fetch (input, init = undefined) {
       p = null
     }
 
-<<<<<<< ours
-  controller = fetching({
-    request,
-    processResponseEndOfBody: (response) => {
-      handleFetchDone(response)
-      cleanupAbortListeners()
-    },
-    processResponse,
-    dispatcher: getRequestDispatcher(requestObject), // undici
-    // Keep requestObject alive to prevent its AbortController from being GC'd
-    // See https://github.com/nodejs/undici/issues/4627
-    requestObject
-  })
-=======
     controller = fetching({
       request,
       processResponseEndOfBody: handleFetchDone,
@@ -394,7 +337,6 @@ function fetch (input, init = undefined) {
       // See https://github.com/nodejs/undici/issues/4627
       requestObject
     })
->>>>>>> theirs
 
     // 14. Return p.
     return p.promise

@@ -13727,65 +13727,12 @@ var require_fetch = __commonJS({
     __name(createInstrumentedDeferredPromise, "createInstrumentedDeferredPromise");
     function fetch2(input, init = void 0) {
       webidl.argumentLengthCheck(arguments, 1, "globalThis.fetch");
-<<<<<<< ours
-      let p = Promise.withResolvers();
-=======
->>>>>>> theirs
       let requestObject;
       try {
         requestObject = new Request(input, init);
       } catch (e) {
         return Promise.reject(e);
       }
-<<<<<<< ours
-      let responseObject = null;
-      let locallyAborted = false;
-      let controller = null;
-      const removeAbortListener = addAbortListener(
-        requestObject.signal,
-        () => {
-          locallyAborted = true;
-          assert(controller != null);
-          controller.abort(requestObject.signal.reason);
-          const realResponse = responseObject?.deref();
-          abortFetch(p, request, realResponse, requestObject.signal.reason, controller.controller);
-        }
-      );
-      const cleanupAbortListeners = /* @__PURE__ */ __name(() => {
-        removeAbortListener();
-        removeRequestAbortListener(requestObject);
-      }, "cleanupAbortListeners");
-      const processResponse = /* @__PURE__ */ __name((response) => {
-        if (locallyAborted) {
-          return;
-        }
-        if (response.aborted) {
-          abortFetch(p, request, responseObject, controller.serializedAbortReason, controller.controller);
-          cleanupAbortListeners();
-          return;
-        }
-        if (response.type === "error") {
-          p.reject(new TypeError("fetch failed", { cause: response.error }));
-          cleanupAbortListeners();
-          return;
-        }
-        responseObject = new WeakRef(fromInnerResponse(response, "immutable"));
-        p.resolve(responseObject.deref());
-        p = null;
-      }, "processResponse");
-      controller = fetching({
-        request,
-        processResponseEndOfBody: /* @__PURE__ */ __name((response) => {
-          handleFetchDone(response);
-          cleanupAbortListeners();
-        }, "processResponseEndOfBody"),
-        processResponse,
-        dispatcher: getRequestDispatcher(requestObject),
-        // undici
-        // Keep requestObject alive to prevent its AbortController from being GC'd
-        // See https://github.com/nodejs/undici/issues/4627
-        requestObject
-=======
       return ifSubscribersRunStores(requestObject, input, init, (p) => {
         const request = getRequestState(requestObject);
         if (requestObject.signal.aborted) {
@@ -13836,7 +13783,6 @@ var require_fetch = __commonJS({
           requestObject
         });
         return p.promise;
->>>>>>> theirs
       });
     }
     __name(fetch2, "fetch");
