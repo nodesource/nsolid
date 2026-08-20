@@ -399,6 +399,16 @@
       'src/quic/tlscontext.h',
       'src/quic/guard.h',
     ],
+    'node_tracing_legacy_sources': [
+      'src/tracing/agent_legacy.cc',
+      'src/tracing/agent_legacy.h',
+      'src/tracing/node_trace_buffer.cc',
+      'src/tracing/node_trace_buffer.h',
+      'src/tracing/node_trace_writer.cc',
+      'src/tracing/node_trace_writer.h',
+      'src/tracing/trace_event_legacy_inl.h',
+      'src/tracing/trace_event_legacy.h',
+    ],
     'node_crypto_sources': [
       'src/crypto/crypto_aes.cc',
       'src/crypto/crypto_argon2.cc',
