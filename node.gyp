@@ -1094,10 +1094,6 @@
           'dependencies': [
             'deps/perfetto/perfetto.gyp:perfetto_sdk',
           ],
-        }, {
-          'sources': [
-            '<@(node_tracing_legacy_sources)',
-          ],
         }],
         [ 'v8_enable_inspector==1', {
           'includes' : [ 'src/inspector/node_inspector.gypi' ],
