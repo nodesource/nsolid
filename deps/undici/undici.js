@@ -13694,7 +13694,7 @@ var require_fetch = __commonJS({
           }
         });
       } else {
-        return callback(createDeferredPromise());
+        return callback(Promise.withResolvers());
       }
     }
     __name(ifSubscribersRunStores, "ifSubscribersRunStores");

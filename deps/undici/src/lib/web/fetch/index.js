@@ -175,7 +175,7 @@ function ifSubscribersRunStores (req, input, init, callback) {
       }
     })
   } else {
-    return callback(createDeferredPromise())
+    return callback(Promise.withResolvers())
   }
 }
 
