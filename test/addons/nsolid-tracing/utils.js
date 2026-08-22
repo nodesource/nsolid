@@ -21,10 +21,13 @@ function setupNSolid(options, cb) {
   if (options.lookup === true) {
     const dns = require('dns');
     dns.lookup('localhost', { all: true }, common.mustSucceed((addresses) => {
-      binding.setupTracing();
+      require('nsolid').enableTraces();
+    require('nsolid').enableTraces();
+    binding.setupTracing();
       cb(null, { addresses });
     }));
   } else {
+    require('nsolid').enableTraces();
     binding.setupTracing();
     cb();
   }
