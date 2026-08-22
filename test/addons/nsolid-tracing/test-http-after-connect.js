@@ -16,7 +16,7 @@ function setupTracesCheck(port, addresses) {
         'http.method': 'CONNECT',
         'http.status_code': 200,
         'http.status_text': 'Connection established',
-        'http.url': `http://localhost:${port}`,
+        'http.url': `http://google.com:80`,
         'network.protocol.version': '1.1',
       },
       end_reason: binding.kTraceEndOk,
@@ -42,7 +42,7 @@ function setupTracesCheck(port, addresses) {
         {
           attributes: {
             'http.method': 'CONNECT',
-            'http.url': `http://localhost:${port}`,
+            'http.url': `http://google.com:80`,
             'network.protocol.version': '1.1',
           },
           end_reason: binding.kSpanEndExit,
