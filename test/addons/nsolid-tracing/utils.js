@@ -22,7 +22,6 @@ function setupNSolid(options, cb) {
     const dns = require('dns');
     dns.lookup('localhost', { all: true }, common.mustSucceed((addresses) => {
       require('nsolid').enableTraces();
-    require('nsolid').enableTraces();
     binding.setupTracing();
       cb(null, { addresses });
     }));
