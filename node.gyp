@@ -567,6 +567,8 @@
       'src/nsolid.h',
       'src/nsolid/continuous_profiler.h',
       'src/nsolid/nsolid_api.h',
+      'src/nsolid/nsolid_bpf.h',
+      'src/nsolid/nsolid_ebpf_profiler.h',
       'src/nsolid/nsolid_output_stream.h',
       'src/nsolid/nsolid_trace.h',
       'src/nsolid/nsolid_cpu_profiler.h',
@@ -1127,9 +1129,13 @@
           'dependencies': [
             'deps/libbpf/libbpf.gyp:libbpf',
           ],
+	  'include_dirs': [
+            'deps/libbpf/src',
+          ],
           'sources': [
             'src/nsolid/nsolid_bpf.cc',
             'src/nsolid/nsolid_bpf.h',
+            'src/nsolid/nsolid_ebpf_profiler.cc',
           ],
           'actions': [
             {
@@ -1527,7 +1533,10 @@
 
       'conditions': [
         [ 'OS!="linux"', {
-          'sources!': ['test/cctest/test_nsolid_memory_mappings.cc'],
+          'sources!': [
+            'test/cctest/test_nsolid_ebpf_profiler.cc',
+            'test/cctest/test_nsolid_memory_mappings.cc',
+          ],
         }],
         [ 'node_shared_gtest=="false"', {
           'dependencies': [
