@@ -2,6 +2,11 @@
 
 #include "nsolid/nsolid_memory_mappings.h"
 
+#include <fcntl.h>
+#include <elf.h>
+#include <gelf.h>
+#include <unistd.h>
+
 #include <fstream>
 #include <sstream>
 
@@ -9,6 +14,45 @@
 
 namespace node {
 namespace nsolid {
+
+namespace {
+
+bool GetElfVaddr(const std::string& path, uintptr_t file_offset,
+                 uintptr_t* elf_vaddr) {
+  if (elf_version(EV_CURRENT) == EV_NONE)
+    return false;
+
+  int fd = open(path.c_str(), O_RDONLY);
+  if (fd < 0)
+    return false;
+  Elf* elf = elf_begin(fd, ELF_C_READ, nullptr);
+  if (elf == nullptr) {
+    close(fd);
+    return false;
+  }
+
+  size_t phnum;
+  bool found = false;
+  if (elf_getphdrnum(elf, &phnum) == 0) {
+    for (size_t i = 0; i < phnum; ++i) {
+      GElf_Phdr phdr;
+      if (gelf_getphdr(elf, static_cast<int>(i), &phdr) != &phdr ||
+          phdr.p_type != PT_LOAD || file_offset < phdr.p_offset ||
+          file_offset - phdr.p_offset >= phdr.p_filesz) {
+        continue;
+      }
+      *elf_vaddr = phdr.p_vaddr + (file_offset - phdr.p_offset);
+      found = true;
+      break;
+    }
+  }
+
+  elf_end(elf);
+  close(fd);
+  return found;
+}
+
+}  // namespace
 
 const Mapping* Mappings::get_mapping(uintptr_t addr) const {
   for (const auto& mapping : mappings) {
@@ -100,8 +144,15 @@ bool ProcessMemoryMappings::Read(pid_t pid, Mappings* mappings) {
       continue;
     }
 
-    mappings->mappings.push_back({
-        start, end, file_offset, mappings->get_or_add_pathname(clean_path)});
+    uintptr_t elf_vaddr;
+    const bool has_elf_vaddr =
+        GetElfVaddr(clean_path, file_offset, &elf_vaddr);
+    mappings->mappings.push_back({start,
+                                  end,
+                                  file_offset,
+                                  mappings->get_or_add_pathname(clean_path),
+                                  elf_vaddr,
+                                  has_elf_vaddr});
   }
   return true;
 }

@@ -1124,6 +1124,25 @@
           'dependencies': [
             'deps/libbpf/libbpf.gyp:libbpf',
           ],
+          'sources': [
+            'src/nsolid/nsolid_bpf.cc',
+            'src/nsolid/nsolid_bpf.h',
+          ],
+          'actions': [
+            {
+              'action_name': 'build_ebpf_profiler_skeleton',
+              'inputs': [
+                'src/ebpf/Makefile',
+                'src/ebpf/profiler/profiler.bpf.c',
+                'src/ebpf/profiler/profiler.h',
+              ],
+              'outputs': [
+                'src/ebpf/profiler/profiler.bpf.o',
+                'src/ebpf/profiler/profiler.skel.h',
+              ],
+              'action': [ 'make', '-C', 'src/ebpf', 'all' ],
+            },
+          ],
         }],
         [ 'debug_nghttp2==1', {
           'defines': [ 'NODE_DEBUG_NGHTTP2=1' ]

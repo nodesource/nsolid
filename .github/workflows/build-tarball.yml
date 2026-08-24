@@ -86,7 +86,24 @@ jobs:
         with:
           version: v0.16.0
       - name: Install eBPF deps
-        run: sudo apt install -y libelf-dev
+        run: |
+          kernel_release=$(uname -r)
+          kernel_version=${kernel_release%-*}
+          kernel_flavor=${kernel_release##*-}
+          kernel_series=$(echo "$kernel_version" | cut -d. -f1,2)
+          sudo apt install -y libelf-dev linux-tools-generic linux-tools-azure linux-cloud-tools-azure \
+            "linux-${kernel_flavor}-${kernel_series}-tools-${kernel_version}" \
+            "linux-${kernel_flavor}-${kernel_series}-cloud-tools-${kernel_version}"
+      - name: Inspect eBPF tools
+        run: |
+          uname -a
+          apt-cache policy linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) || true
+          dpkg-query -W -f='${Package} ${Version}\n' 'linux-tools*' 'linux-cloud-tools*' 2>/dev/null || true
+          type -a bpftool || true
+          ls -l /usr/sbin/bpftool || true
+          find /usr/lib -type f -path "*/linux-tools*/bpftool" -ls 2>/dev/null || true
+          find /usr -type f -name bpftool -executable -ls 2>/dev/null || true
+          dpkg -L linux-tools-common linux-tools-generic linux-tools-azure linux-cloud-tools-azure 2>/dev/null | grep -E "/bpftool$" || true
       - name: Environment Information
         run: npx envinfo
       - name: Download tarball
