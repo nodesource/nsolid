@@ -1,0 +1,7 @@
+{
+  "name": "nsolid-ebpf-profiling-fixture",
+  "version": "1.0.0",
+  "nsolid": {
+    "ebpfProfiling": true
+  }
+}

@@ -1,6 +1,27 @@
 #ifndef SRC_NSOLID_NSOLID_UTIL_H_
 #define SRC_NSOLID_NSOLID_UTIL_H_
 
+#include <cstdint>
+
+namespace node {
+namespace nsolid {
+
+struct AddressRange {
+  uintptr_t start = 0;
+  uintptr_t end = 0;
+
+  bool contains(uintptr_t addr) const {
+    return !empty() && start <= addr && addr < end;
+  }
+
+  bool empty() const {
+    return start == 0 || start >= end;
+  }
+};
+
+}  // namespace nsolid
+}  // namespace node
+
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #include <algorithm>
@@ -33,6 +54,7 @@ using json = nlohmann::json;
 
 namespace node {
 namespace nsolid {
+
 namespace utils {
 
 template <typename Fn, typename... Args>

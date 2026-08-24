@@ -1,4 +1,7 @@
 #include "nsolid_api.h"
+#ifdef __linux__
+#include "nsolid_ebpf_profiler.h"
+#endif
 #include "nsolid/nsolid_code_event_handler.h"
 #include "nsolid/nsolid_heap_snapshot.h"
 #include "nsolid_bindings.h"
@@ -20,8 +23,10 @@
 #include "node_url.h"
 #include "simdutf.h"
 #include "v8-fast-api-calls.h"
+#include "debug_utils-inl.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cmath>
 
 #if defined(__linux__)
@@ -151,6 +156,15 @@ EnvInst::EnvInst(Environment* env)
   CHECK_EQ(er, 0);
   er = source_files_lock_.init(true);
   CHECK_EQ(er, 0);
+
+  void* code_range_start = nullptr;
+  size_t code_range_len = 0;
+  isolate_->GetCodeRange(&code_range_start, &code_range_len);
+  if (code_range_start != nullptr && code_range_len > 0) {
+    code_range_.start = reinterpret_cast<uintptr_t>(code_range_start);
+    code_range_.end = code_range_.start + code_range_len;
+  }
+
 
   eloop_cmds_msg_.unref();
   interrupt_msg_.unref();
@@ -892,7 +906,6 @@ void EnvInst::disable_code_event_handler() {
   code_event_handler_.reset();
 }
 
-
 EnvList::EnvList(): info_(nlohmann::json()) {
   int er;
   // Create event loop and new thread to run EnvList commands.
@@ -919,6 +932,11 @@ EnvList::EnvList(): info_(nlohmann::json()) {
   CHECK_EQ(er, 0);
   er = configuration_lock_.init(true);
   CHECK_EQ(er, 0);
+#ifdef __linux__
+  er = ebpf_profiler_lock_.init(true);
+  CHECK_EQ(er, 0);
+  ebpf_profiler_ = std::make_shared<EBPFProfiler>(&thread_loop_);
+#endif
   er = exit_lock_.init(true);
   CHECK_EQ(er, 0);
   er = thread_.create(env_list_routine_, this);
@@ -956,6 +974,88 @@ EnvList* EnvList::Inst() {
 
 std::string EnvList::AgentId() {
   return agent_id_;
+}
+
+bool EnvList::EBPFProfilingSupported() {
+  EbpfProfilingState state =
+      ebpf_profiling_state_.load(std::memory_order_acquire);
+  if (state != EbpfProfilingState::kUnknown)
+    return state != EbpfProfilingState::kUnsupported;
+
+#ifdef __linux__
+  const bool value = EBPFProfiler::IsSupported();
+#else
+  const bool value = false;
+#endif
+  EbpfProfilingState expected = EbpfProfilingState::kUnknown;
+  ebpf_profiling_state_.compare_exchange_strong(
+      expected,
+      value ? EbpfProfilingState::kOff : EbpfProfilingState::kUnsupported,
+      std::memory_order_release,
+      std::memory_order_acquire);
+  return value;
+}
+
+#ifdef __linux__
+bool EnvList::configure_ebpf_profiling_(bool enabled) {
+  DCHECK(utils::are_threads_equal(uv_thread_self(), thread()));
+  ns_mutex::scoped_lock lock(ebpf_profiler_lock_);
+  if (!enabled) {
+    if (!EBPFProfilingSupported())
+      return true;
+    ebpf_profiler_->Disable();
+    ebpf_profiling_state_.store(EbpfProfilingState::kOff,
+                                std::memory_order_release);
+    return true;
+  }
+
+  if (!ebpf_profiler_->Enable()) {
+    ebpf_profiling_state_.store(EbpfProfilingState::kUnsupported,
+                                std::memory_order_release);
+    return false;
+  }
+
+  std::vector<pid_t> tids;
+  {
+    ns_mutex::scoped_lock map_lock(map_lock_);
+    for (const auto& [tid, envinst] : env_map_by_os_tid_) {
+      if (!envinst->is_main_thread())
+        tids.push_back(static_cast<pid_t>(tid));
+    }
+  }
+  for (pid_t tid : tids)
+    ebpf_profiler_->AddThread(tid);
+  ebpf_profiling_state_.store(EbpfProfilingState::kOn,
+                              std::memory_order_release);
+  return true;
+}
+#endif
+
+bool EnvList::ConfigureEBPFProfiling(bool enabled) {
+#ifdef __linux__
+  if (utils::are_threads_equal(uv_thread_self(), thread()))
+    return configure_ebpf_profiling_(enabled);
+
+  struct Request {
+    EnvList* envlist;
+    bool enabled;
+    bool result = false;
+    uv_sem_t done = {};
+  } request{this, enabled};
+  CHECK_EQ(uv_sem_init(&request.done, 0), 0);
+  CHECK_EQ(QueueCallback([](void* data) {
+    auto* request = static_cast<Request*>(data);
+    request->result =
+        request->envlist->configure_ebpf_profiling_(request->enabled);
+    uv_sem_post(&request->done);
+  }, &request), 0);
+  // Keep the configuration result synchronous without touching the loop here.
+  uv_sem_wait(&request.done);
+  uv_sem_destroy(&request.done);
+  return request.result;
+#else
+  return !enabled;
+#endif
 }
 
 void EnvList::OnConfigurationHook(
@@ -1158,6 +1258,17 @@ void EnvList::AddEnv(Environment* env) {
 #endif
   }
 
+#if defined(__linux__)
+  if (!envinst_sp->is_main_thread()) {
+    ns_mutex::scoped_lock lock(ebpf_profiler_lock_);
+    // A concurrent enable snapshot may already have attached this thread.
+    if (ebpf_profiling_state_.load(std::memory_order_acquire) ==
+        EbpfProfilingState::kOn) {
+      ebpf_profiler_->AddThread(envinst_sp->os_tid());
+    }
+  }
+#endif
+
   {
     ns_mutex::scoped_lock lock(envinst_sp->startup_times_lock_);
     const AliasedFloat64Array& ps = env->performance_state()->milestones;
@@ -1215,6 +1326,15 @@ void EnvList::RemoveEnv(Environment* env) {
     env_map_by_os_tid_.erase(envinst_sp->os_tid());
 #endif
   }
+
+#if defined(__linux__)
+  if (!envinst_sp->is_main_thread()) {
+    ns_mutex::scoped_lock lock(ebpf_profiler_lock_);
+    // Wait for an in-flight enable snapshot before detaching the thread.
+    if (ebpf_profiler_ != nullptr)
+      ebpf_profiler_->RemoveThread(envinst_sp->os_tid());
+  }
+#endif
 
   // End any pending CPU profiles. This has to be done before removing the
   // EnvList from env_map_ so the checks in StopProfilingSync() pass.
@@ -1333,6 +1453,27 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
   }
 
   auto diff = nlohmann::json::diff(old, curr);
+  const bool ebpf_changed = old.empty() ||
+    utils::find_any_fields_in_diff(diff, { "/ebpfProfiling" });
+  if (ebpf_changed) {
+    auto ebpf = validated_config.find("ebpfProfiling");
+    const bool enabled = ebpf != validated_config.end() &&
+                         ebpf->is_number_integer() && *ebpf == 1;
+    EbpfProfilingState state = EbpfProfilingState::kUnsupported;
+    if (enabled) {
+      state = ConfigureEBPFProfiling(true) ?
+        EbpfProfilingState::kOn : EbpfProfilingState::kUnsupported;
+    } else if (EBPFProfilingSupported()) {
+      state = ConfigureEBPFProfiling(false) ?
+        EbpfProfilingState::kOff : EbpfProfilingState::kUnsupported;
+    }
+    {
+      ns_mutex::scoped_lock lock(configuration_lock_);
+      current_config_["ebpfProfiling"] = static_cast<int>(state);
+      curr = current_config_;
+    }
+    diff = nlohmann::json::diff(old, curr);
+  }
   // If the actual configuration hasn't changed, don't call the hook
   if (!diff.empty()) {
     current_config_version_++;
@@ -1865,6 +2006,13 @@ void EnvList::removed_env_cb_(ns_async*, EnvList* envlist) {
   if (envlist->continuous_profiler_) {
     envlist->continuous_profiler_.reset();
   }
+#ifdef __linux__
+  {
+    ns_mutex::scoped_lock lock(envlist->ebpf_profiler_lock_);
+    envlist->ebpf_profiler_->shutdown();
+    envlist->ebpf_profiler_.reset();
+  }
+#endif
 
   envlist->removed_env_msg_.close();
   envlist->process_callbacks_msg_.close();
@@ -1904,6 +2052,9 @@ void EnvList::env_list_routine_(ns_thread*, EnvList* envlist) {
   });
   CHECK_EQ(er, 0);
   envlist->continuous_profiler_->Initialize();
+#ifdef __linux__
+  envlist->ebpf_profiler_->Initialize();
+#endif
   er = uv_run(&envlist->thread_loop_, UV_RUN_DEFAULT);
   CHECK_EQ(er, 0);
 }
@@ -2130,9 +2281,8 @@ void EnvList::fill_trace_id_q() {
 
 void EnvList::got_code_event(CodeEventInfo&& info) {
   auto envinst_sp = EnvInst::GetInst(info.thread_id);
-  if (envinst_sp == nullptr) {
+  if (envinst_sp == nullptr)
     return;
-  }
 
   std::vector<CodeEventHookStor> hooks;
   code_event_hook_list_.for_each([&hooks](const auto& stor) {
