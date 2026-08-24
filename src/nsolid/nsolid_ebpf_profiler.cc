@@ -103,7 +103,6 @@ bool EBPFProfiler::enable() {
   skel_ = EbpfLoader::LoadProfiler(status);
   if (skel_ == nullptr)
     return false;
-
   ProcessMemoryMappings::Read(static_cast<pid_t>(pid_), &mappings_);
 
   prog_ = bpf_object__find_program_by_name(skel_->obj,
@@ -186,7 +185,46 @@ void EBPFProfiler::handle_poll_cb(nsuv::ns_poll*,
   ring_buffer__consume(profiler->rb_);
 }
 
-void EBPFProfiler::process_event(void*, size_t) {}
+void EBPFProfiler::process_event(void* data, size_t data_size) {
+  if (data == nullptr || data_size < sizeof(profiler_event)) return;
+  auto* event = static_cast<profiler_event*>(data);
+  if (event->type == EVENT_STACK_TRACE) process_stack_trace(data, data_size);
+}
+
+void EBPFProfiler::process_stack_trace(void* data, size_t data_size) {
+  auto* event = static_cast<profiler_event*>(data);
+  if (event->stack_trace.user_stack_depth == 0 ||
+      event->stack_trace.user_stack_depth > MAX_STACK_FRAMES ||
+      data_size < sizeof(profiler_event)) return;
+  Stack stack(event->stack_trace.user_stack_depth);
+  stack.timestamp = event->timestamp;
+  stack.tid = event->tid;
+  SharedEnvInst envinst = EnvInst::GetInstByOsThreadId(stack.tid);
+  const AddressRange code_range =
+      envinst == nullptr ? AddressRange{} : envinst->code_range();
+  if (envinst != nullptr)
+    stack.node_thread_id = envinst->thread_id();
+  for (size_t i = 0; i < stack.frames.size(); ++i) {
+    const Mapping* mapping = nullptr;
+    stack.frames[i].addr = event->stack_trace.user_stack[i];
+    stack.frames[i].kind =
+        ClassifyFrame(stack.frames[i].addr, code_range, mappings_, mapping);
+    PopulateNativeFrameInfo(&stack.frames[i], mappings_, mapping);
+  }
+  DispatchStackTrace(std::move(stack));
+}
+
+void EBPFProfiler::DispatchStackTrace(Stack&& stack) {
+  stack_trace_hooks_.for_each([&stack](auto& holder, size_t) {
+    holder.fn(stack);
+  });
+}
+
+void StackHook::Dispose() {
+  if (disposed_) return;
+  if (auto profiler = profiler_.lock()) profiler->stack_trace_hooks_.erase(it_);
+  disposed_ = true;
+}
 
 }  // namespace nsolid
 }  // namespace node
