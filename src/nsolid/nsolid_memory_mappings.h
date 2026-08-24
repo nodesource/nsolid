@@ -23,13 +23,15 @@ struct Mapping {
   uintptr_t end;
   uintptr_t file_offset;
   size_t pathname_index;
+  uintptr_t elf_vaddr = 0;
+  bool has_elf_vaddr = false;
 
   bool contains(uintptr_t addr) const {
     return addr >= start && addr < end;
   }
 
-  uintptr_t file_offset_for(uintptr_t addr) const {
-    return (addr - start) + file_offset;
+  uintptr_t elf_address_for(uintptr_t addr) const {
+    return elf_vaddr + (addr - start);
   }
 };
 

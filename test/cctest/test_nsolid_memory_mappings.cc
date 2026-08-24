@@ -1,12 +1,17 @@
 #ifdef __linux__
 
+#include <sys/mman.h>
 #include <unistd.h>
+#include <cstdio>
+#include <memory>
 #include <algorithm>
 
+#include "nsolid/nsolid_api.h"
 #include "nsolid/nsolid_memory_mappings.h"
 #include "nsolid/nsolid_elf_utils.h"
 
 #include "gtest/gtest.h"
+#include "node_test_fixture.h"
 
 using node::nsolid::Mappings;
 using node::nsolid::ProcessMemoryMappings;
@@ -52,6 +57,43 @@ TEST(NsolidMemoryMappingsTest, IgnoresPseudoMappings) {
   // This address is in the current process stack mapping ([stack]).
   EXPECT_EQ(mappings.get_mapping(
                 reinterpret_cast<uintptr_t>(&mappings)), nullptr);
+}
+
+TEST_F(NodeZeroIsolateTestFixture, MemoryMappingWithoutElfAddress) {
+  // tmpfile() unlinks its backing file, so the mapping's pathname cannot
+  // be opened for ELF lookup even though the mapping remains accessible.
+  std::unique_ptr<FILE, decltype(&std::fclose)> file(
+      std::tmpfile(), std::fclose);
+  ASSERT_NE(file, nullptr);
+  const size_t size = getpagesize();
+  ASSERT_EQ(ftruncate(fileno(file.get()), size), 0);
+  void* addr =
+      mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fileno(file.get()), 0);
+  ASSERT_NE(addr, MAP_FAILED);
+  auto cleanup = node::OnScopeLeave([addr, size] {
+    EXPECT_EQ(munmap(addr, size), 0);
+  });
+
+  struct Request {
+    Mappings mappings;
+    uv_sem_t done = {};
+    bool read = false;
+  } request;
+  ASSERT_EQ(uv_sem_init(&request.done, 0), 0);
+  ASSERT_EQ(node::nsolid::EnvList::Inst()->QueueCallback([](void* data) {
+    auto* request = static_cast<Request*>(data);
+    request->read = ProcessMemoryMappings::Read(getpid(), &request->mappings);
+    uv_sem_post(&request->done);
+  }, &request), 0);
+  uv_sem_wait(&request.done);
+  uv_sem_destroy(&request.done);
+
+  ASSERT_TRUE(request.read);
+  const auto* mapping =
+      request.mappings.get_mapping(reinterpret_cast<uintptr_t>(addr));
+  ASSERT_NE(mapping, nullptr);
+  EXPECT_FALSE(mapping->has_elf_vaddr);
+  EXPECT_EQ(mapping->elf_vaddr, 0U);
 }
 
 TEST(NsolidMemoryMappingsTest, RejectsInvalidInputs) {
