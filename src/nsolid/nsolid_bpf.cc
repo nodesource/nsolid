@@ -4,7 +4,6 @@ namespace node {
 namespace nsolid {
 namespace EbpfLoader {
 
-#ifdef __linux__
 profiler_bpf* LoadProfiler(EbpfLoadStatus& status) {
   profiler_bpf* profiler = profiler_bpf__open();
   if (profiler == nullptr) {
@@ -21,7 +20,6 @@ profiler_bpf* LoadProfiler(EbpfLoadStatus& status) {
   status = EbpfLoadStatus::SUCCESS;
   return profiler;
 }
-#endif
 
 }  // namespace EbpfLoader
 }  // namespace nsolid

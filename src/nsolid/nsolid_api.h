@@ -5,13 +5,16 @@
 
 #define NSOLID_EXTERN_PRIVATE NODE_EXTERN
 
+#include <algorithm>
 #include <atomic>
+#include <deque>
 #include <functional>
 #include <list>
 #include <map>
 #include <memory>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 #include "node.h"
@@ -33,6 +36,13 @@
 
 namespace node {
 namespace nsolid {
+
+enum class EbpfProfilingState : uint32_t {
+  kOff = 0,
+  kOn = 1,
+  kUnsupported = 2,
+  kUnknown = 3,
+};
 
 
 #define NSOLID_JS_METRICS_COUNTERS(V)                                          \
@@ -58,6 +68,11 @@ class EnvInst;
 class EnvList;
 class ContinuousProfiler;
 class NSolidCodeEventHandler;
+#ifdef __linux__
+class EBPFProfiler;
+using SharedEBPFProfiler = std::shared_ptr<EBPFProfiler>;
+struct Frame;
+#endif
 
 
 template <typename DataType>
@@ -102,7 +117,6 @@ class DispatchQueue {
 
   DQStor* stor_;
 };
-
 
 /**
  * Class contains info and other calls necessary for accessing the associated
@@ -246,7 +260,6 @@ class EnvInst {
 
   void setup_code_event_handler();
   void disable_code_event_handler();
-
   /*
    * Return a shared_ptr<EnvInst> instead of a normal pointer because the
    * lifetime of the EnvInst instance depends on the state of several things
@@ -274,6 +287,7 @@ class EnvInst {
   constexpr uv_loop_t* event_loop() const;
   constexpr uv_thread_t creation_thread() const;
   constexpr bool is_main_thread() const;
+  const AddressRange& code_range() const { return code_range_; }
   inline uv_metrics_t* metrics_info();
   inline void inc_makecallback_count();
   // <last entry, last exit>
@@ -424,7 +438,7 @@ class EnvInst {
   uint32_t trace_flags_;
   double trace_sample_rate_;
   bool has_metrics_stream_hooks_;
-
+  AddressRange code_range_;
   nsuv::ns_mutex source_files_lock_;
   std::map<int, SourceCodeInfo> source_files_;
 
@@ -636,11 +650,28 @@ class EnvList {
     return continuous_profiler_;
   }
 
+#ifdef __linux__
+  std::shared_ptr<EBPFProfiler> GetEBPFProfiler() {
+    nsuv::ns_mutex::scoped_lock lock(ebpf_profiler_lock_);
+    return ebpf_profiler_;
+  }
+
+#endif
+  bool EBPFProfilingSupported();
+  bool ConfigureEBPFProfiling(bool enabled);
+
+
  private:
   friend class EnvInst;
   friend class Metrics;
+#ifdef __linux__
+  bool configure_ebpf_profiling_(bool enabled);
+#endif
   friend class NSolidCodeEventHandler;
   friend class tracing::TracerImpl;
+#ifdef __linux__
+  friend class EBPFProfiler;
+#endif
 
   EnvList();
   // This runs as the stack unwinds after main() returns. This way we know the
@@ -661,7 +692,6 @@ class EnvList {
   void fill_trace_id_q();
 
   void got_code_event(CodeEventInfo&& info);
-
   void update_continuous_profiler(bool enabled, uint64_t interval);
   void refresh_min_blocked_threshold();
 
@@ -693,6 +723,9 @@ class EnvList {
   static void datapoint_cb_(std::queue<MetricsStream::Datapoint>&&);
   static void setup_code_event_handler(SharedEnvInst envinst_sp);
   static void disable_code_event_handler(SharedEnvInst envinst_sp);
+
+
+  uint64_t last_v8_symbol_stats_log_ns_ = 0;
 
   std::atomic<bool> is_alive_ = { true };
   std::atomic<double> trace_sample_rate_ = { 1.0 };
@@ -770,12 +803,18 @@ class EnvList {
   DispatchQueue<tracing::SpanItem> span_item_q_;
 
   NSolidHeapSnapshot heap_snapshot_;
+#ifdef __linux__
+  nsuv::ns_mutex ebpf_profiler_lock_;
+  SharedEBPFProfiler ebpf_profiler_;
+#endif
 
   // ContinuousProfiler instance
   std::shared_ptr<ContinuousProfiler> continuous_profiler_;
 
   std::shared_ptr<AsyncTSQueue<CodeEventInfo>> on_code_event_q_;
   TSList<CodeEventHookStor> code_event_hook_list_;
+  std::atomic<EbpfProfilingState> ebpf_profiling_state_{
+      EbpfProfilingState::kUnknown};
 };
 
 
