@@ -61,7 +61,7 @@ jobs:
       - name: Install eBPF deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev
+          sudo apt-get install -y libelf-dev linux-tools-generic
       - name: Build
         run: make build-ci -j4 V=1 CONFIG_FLAGS="--error-on-warn"
       - name: Test Internet

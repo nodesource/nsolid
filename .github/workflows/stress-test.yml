@@ -98,7 +98,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev
+          sudo apt-get install -y libelf-dev linux-tools-generic
       - name: Build
         run: make -C node build-ci -j"$(getconf _NPROCESSORS_ONLN)" V=1 CONFIG_FLAGS="--error-on-warn --v8-enable-temporal-support"
       - name: Stress run ${{ inputs.test_path }} x${{ inputs.repeat }}

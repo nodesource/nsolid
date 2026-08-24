@@ -186,3 +186,5 @@ compile_commands.json
 # Ignore asserts-cpp and nlohmann paths in src/
 src/asserts-cpp/
 src/nlohmann/
+/src/ebpf/profiler/profiler.bpf.o
+/src/ebpf/profiler/profiler.skel.h
