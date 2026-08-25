@@ -63,8 +63,16 @@ using v8::Local;
 using v8::StackTrace;
 
 void EnabledDebugList::Parse(Environment* env) {
-  std::string cats;
-  credentials::SafeGetenv("NODE_DEBUG_NATIVE", &cats, env);
+  std::shared_ptr<KVStore> env_vars;
+  if (env == nullptr) {
+    env_vars = per_process::system_environment;
+  } else {
+    env_vars = env->env_vars();
+  }
+
+  std::string cats =
+    env_vars->Get("NODE_DEBUG_NATIVE").value_or(std::string());
+  TraceEnvVar(env, "get", "NODE_DEBUG_NATIVE");
   Parse(cats);
 }
 
