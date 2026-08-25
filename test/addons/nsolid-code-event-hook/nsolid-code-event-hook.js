@@ -3,6 +3,7 @@
 const common = require('../../common');
 const { buildType, skip } = common;
 const assert = require('assert');
+const nsolid = require('nsolid');
 const bindingPath = require.resolve(`./build/${buildType}/binding`);
 const binding = require(bindingPath);
 const { Worker, isMainThread, threadId } = require('worker_threads');
@@ -49,7 +50,10 @@ function doTest(hookIndex1, hookIndex2) {
   registerHook(state1);
   registerHook(state2);
 
-  // Trigger a code event (function definition)
+  if (isMainThread)
+    nsolid.start({ ebpfProfiling: true });
+
+  // Trigger code events on both threads while profiling is enabled.
   binding.triggerCodeEvent();
 
   // Wait a tick to allow the hook to fire
@@ -58,6 +62,10 @@ function doTest(hookIndex1, hookIndex2) {
     assert.ok(state1.customFnNameReceived, 'Custom function name was not received');
     assert.ok(state2.called, 'Code event hook was not called');
     assert.ok(state2.customFnNameReceived, 'Custom function name was not received');
+
+    // Disabling profiling must preserve delivery of queued and new code events.
+    if (isMainThread)
+      nsolid.start({ ebpfProfiling: false });
 
     // Unregister the hooks
     binding.unregisterCodeEventHook(hookIndex1);

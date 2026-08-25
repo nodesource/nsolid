@@ -25,6 +25,7 @@
 #include "nsolid_heap_snapshot.h"
 #include "nsolid_trace.h"
 #include "nsolid_util.h"
+#include "v8_code_symbol_table.h"
 #include "spinlock.h"
 #include "thread_safe.h"
 #include "v8.h"
@@ -260,6 +261,16 @@ class EnvInst {
 
   void setup_code_event_handler();
   void disable_code_event_handler();
+  void IngestCodeEvent(const CodeEventInfo& info);
+#ifdef __linux__
+  bool ResolveV8CodeSymbol(uintptr_t pc,
+                           uint64_t sample_ts,
+                           Frame* frame) const;
+#endif
+  void EvictClosedV8CodeSymbols(uint64_t min_valid_to_ts);
+  const V8CodeSymbolTable& v8_code_symbol_table() const {
+    return v8_code_symbol_table_;
+  }
   /*
    * Return a shared_ptr<EnvInst> instead of a normal pointer because the
    * lifetime of the EnvInst instance depends on the state of several things
@@ -439,6 +450,7 @@ class EnvInst {
   double trace_sample_rate_;
   bool has_metrics_stream_hooks_;
   AddressRange code_range_;
+  V8CodeSymbolTable v8_code_symbol_table_;
   nsuv::ns_mutex source_files_lock_;
   std::map<int, SourceCodeInfo> source_files_;
 

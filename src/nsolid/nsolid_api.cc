@@ -906,6 +906,22 @@ void EnvInst::disable_code_event_handler() {
   code_event_handler_.reset();
 }
 
+void EnvInst::IngestCodeEvent(const CodeEventInfo& info) {
+  v8_code_symbol_table_.Ingest(info);
+}
+
+#ifdef __linux__
+bool EnvInst::ResolveV8CodeSymbol(uintptr_t pc,
+                                  uint64_t sample_ts,
+                                  Frame* frame) const {
+  return v8_code_symbol_table_.Resolve(pc, sample_ts, frame);
+}
+#endif
+
+void EnvInst::EvictClosedV8CodeSymbols(uint64_t min_valid_to_ts) {
+  v8_code_symbol_table_.EvictClosed(min_valid_to_ts);
+}
+
 EnvList::EnvList(): info_(nlohmann::json()) {
   int er;
   // Create event loop and new thread to run EnvList commands.
@@ -2288,9 +2304,33 @@ void EnvList::fill_trace_id_q() {
 }
 
 void EnvList::got_code_event(CodeEventInfo&& info) {
+  DCHECK(utils::are_threads_equal(uv_thread_self(), thread()));
   auto envinst_sp = EnvInst::GetInst(info.thread_id);
-  if (envinst_sp == nullptr)
+  if (envinst_sp == nullptr) {
+    per_process::Debug(DebugCategory::NSOLID_EBPF,
+      "V8 code event drop thread_id=%llu"
+      "code_start=%llx len=%llu type=%u env=no\n",
+      static_cast<uint64_t>(info.thread_id),
+      static_cast<uint64_t>(info.code_start),
+      static_cast<uint64_t>(info.code_len),
+      static_cast<uint16_t>(info.type));
     return;
+  }
+
+  per_process::Debug(DebugCategory::NSOLID_EBPF,
+    "V8 code event ingest thread_id=%llu"
+    "code_start=%llx len=%llu type=%u env=yes\n",
+    static_cast<uint64_t>(info.thread_id),
+    static_cast<uint64_t>(info.code_start),
+    static_cast<uint64_t>(info.code_len),
+    static_cast<uint16_t>(info.type));
+  envinst_sp->IngestCodeEvent(info);
+#ifdef __linux__
+  // Configuration and shutdown also run on this thread.
+  if (ebpf_profiling_state_.load(std::memory_order_acquire) ==
+      EbpfProfilingState::kOn)
+    ebpf_profiler_->OnCodeEvent(uv_hrtime());
+#endif
 
   std::vector<CodeEventHookStor> hooks;
   code_event_hook_list_.for_each([&hooks](const auto& stor) {

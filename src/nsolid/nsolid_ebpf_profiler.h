@@ -1,8 +1,11 @@
 #ifndef SRC_NSOLID_NSOLID_EBPF_PROFILER_H_
 #define SRC_NSOLID_NSOLID_EBPF_PROFILER_H_
 
+#ifdef __linux__
+
 #include <memory>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <string>
 #include <vector>
@@ -104,6 +107,16 @@ class EBPFProfiler : public std::enable_shared_from_this<EBPFProfiler> {
   friend class StackHook;
 
   void DispatchStackTrace(Stack&& stack);
+  void QueueEBPFStack(Stack&& stack);
+  void OnCodeEvent(uint64_t now_ns);
+  void flush_pending_ebpf_stacks(uint64_t now_ns);
+  void evict_closed_v8_code_symbols(uint64_t min_valid_to_ts);
+  void schedule_ebpf_stack_flush(uint64_t now_ns);
+  static void ebpf_stack_flush_timer_cb_(nsuv::ns_timer*);
+
+  struct PendingEBPFStack {
+    Stack stack;
+  };
 
   static int handle_event(void* ctx, void* data, size_t data_size);
   static void handle_poll_cb(nsuv::ns_poll* poll,
@@ -111,8 +124,8 @@ class EBPFProfiler : public std::enable_shared_from_this<EBPFProfiler> {
                          int events,
                          WeakEBPFProfiler profiler);
 
-  bool enable();
   void shutdown();
+  bool enable();
   bool init_ring_buffer();
   void process_event(void* data, size_t data_size);
   void process_stack_trace(void* data, size_t data_size);
@@ -129,6 +142,7 @@ class EBPFProfiler : public std::enable_shared_from_this<EBPFProfiler> {
   TSList<StackTraceHookFnHolder> stack_trace_hooks_;
   Mappings mappings_;
   nsuv::ns_timer* ebpf_stack_flush_timer_ = nullptr;
+  std::deque<PendingEBPFStack> pending_ebpf_stacks_;
 };
 
 
@@ -154,5 +168,7 @@ StackHook* EBPFProfiler::AddStackTraceHook(Cb&& cb) {
 
 }  // namespace nsolid
 }  // namespace node
+
+#endif  // __linux__
 
 #endif  // SRC_NSOLID_NSOLID_EBPF_PROFILER_H_
