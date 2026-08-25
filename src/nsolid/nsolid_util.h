@@ -36,6 +36,7 @@ struct AddressRange {
 #include <cstring>
 
 #include "uv.h"
+#include "node_perf_common.h"
 #include "nlohmann/json.hpp"
 
 using string_vector = std::vector<std::string>;
@@ -154,6 +155,14 @@ inline uint64_t ms_since_epoch() {
   using std::chrono::system_clock;
   system_clock::duration dur = system_clock::now().time_since_epoch();
   return duration_cast<milliseconds>(dur).count();
+}
+
+
+inline uint64_t monotonic_to_epoch_ns(uint64_t monotonic_ns) {
+  static const uint64_t epoch_offset_ns = static_cast<uint64_t>(
+      performance::performance_process_start_timestamp * 1000) -
+      performance::performance_process_start;
+  return monotonic_ns + epoch_offset_ns;
 }
 
 

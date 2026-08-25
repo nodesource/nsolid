@@ -47,13 +47,22 @@ function checkReconfigureData(reconfigure, metadata, requestId, agentId, nsolidC
     'contCpuProfile',
     'assetsEnabled',
     'traceSampleRate',
+    'ebpfProfiling',
   ];
+
+  const enumValues = {
+    EBPF_PROFILING_OFF: 0,
+    EBPF_PROFILING_ON: 1,
+    EBPF_PROFILING_UNSUPPORTED: 2,
+  };
 
   // Process reconfigure.body - remove properties starting with underscore
   for (const [key, value] of Object.entries(reconfigure.body)) {
     if (!key.startsWith('_')) {
       const expectedValue = nsolidConfig[key];
-      if (typeof expectedValue === 'number' && typeof value === 'string') {
+      if (key === 'ebpfProfiling' && typeof value === 'string') {
+        normalizedReconfigBody[key] = enumValues[value];
+      } else if (typeof expectedValue === 'number' && typeof value === 'string') {
         normalizedReconfigBody[key] = Number(value);
       } else {
         normalizedReconfigBody[key] = value;
@@ -234,6 +243,60 @@ tests.push({
     });
   },
 });
+
+
+tests.push({
+  name: 'should report eBPF profiling state and honor its environment variable',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = getEnv(port);
+        env.NSOLID_EBPF_PROFILING = '1';
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+
+        const client = new TestClient([], opts);
+        const agentId = await client.id();
+        let nsolidConfig = await client.config();
+        assert.ok([1, 2].includes(nsolidConfig.ebpfProfiling));
+
+        let response = await grpcServer.reconfigure(agentId);
+        checkReconfigureData(
+          response.data.msg, response.data.metadata, response.requestId,
+          agentId, nsolidConfig);
+        assert.ok([
+          'EBPF_PROFILING_ON',
+          'EBPF_PROFILING_UNSUPPORTED',
+        ].includes(response.data.msg.body.ebpfProfiling));
+
+        response = await grpcServer.reconfigure(agentId, {
+          ebpfProfiling: 0,
+        });
+        nsolidConfig = await client.config();
+        const expectedOff = nsolidConfig.ebpfProfiling === 2 ? 2 : 0;
+        assert.strictEqual(nsolidConfig.ebpfProfiling, expectedOff);
+        checkReconfigureData(
+          response.data.msg, response.data.metadata, response.requestId,
+          agentId, nsolidConfig);
+
+        response = await grpcServer.reconfigure(agentId, { ebpfProfiling: 2 });
+        nsolidConfig = await client.config();
+        assert.strictEqual(nsolidConfig.ebpfProfiling, expectedOff);
+        checkReconfigureData(
+          response.data.msg, response.data.metadata, response.requestId,
+          agentId, nsolidConfig);
+
+        await client.shutdown(0);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
 
 const testConfigs = [
   {

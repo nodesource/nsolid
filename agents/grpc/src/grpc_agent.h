@@ -3,6 +3,9 @@
 
 #include <nsolid.h>
 #include <nsolid/async_ts_queue.h>
+#ifdef __linux__
+#include "nsolid/nsolid_ebpf_profiler.h"
+#endif
 #include <nsolid/thread_safe.h>
 #include <memory>
 #include "grpcpp/grpcpp.h"
@@ -254,6 +257,10 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void got_spans(const UniqRecordables& spans);
 
+#ifdef __linux__
+  void got_stack_traces(std::vector<Stack>&& stacks);
+#endif
+
   void handle_command_request(CommandRequestStor&& req);
 
   void parse_saas_token(const std::string& token);
@@ -294,6 +301,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   void send_unblocked_loop_event(BlockedLoopStor&& stor);
 
   void setup_blocked_loop_hooks();
+
+#ifdef __linux__
+  void setup_ebpf_profiler();
+#endif
+  void register_code_event_hook();
 
   int setup_metrics_timer(uint64_t period);
 
@@ -371,6 +383,13 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   ProfileStorMap cont_profile_stor_map_;
   std::shared_ptr<AsyncTSQueue<ProfileCollector::ProfileQStor>>
     cont_profile_queue_;
+
+#ifdef __linux__
+  std::unique_ptr<StackHook> stack_hook_;
+  std::shared_ptr<AsyncTSQueue<Stack>> stack_queue_;
+#endif
+  std::unique_ptr<CodeEventHook,
+                  std::function<void(CodeEventHook*)>> code_event_hook_;
 
   // For the grpc client
   std::unique_ptr<grpcagent::NSolidService::StubInterface> nsolid_service_stub_;

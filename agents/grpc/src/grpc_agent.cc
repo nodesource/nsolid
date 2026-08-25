@@ -1,6 +1,7 @@
 #include "grpc_agent.h"
 
 #include "asserts-cpp/asserts.h"
+#include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "nsolid/nsolid_api.h"
 #include "nsolid/continuous_profiler.h"
 #include "nsolid/nsolid_util.h"
@@ -133,6 +134,9 @@ GrpcMetadata GrpcAgent::BuildRpcMetadata(const std::string& agent_id,
   if (!saas.empty()) {
     metadata.emplace("nsolid-saas", saas);
   }
+  const auto custom_metadata =
+    opentelemetry::v1::exporter::otlp::GetOtlpDefaultHeaders();
+  metadata.insert(custom_metadata.begin(), custom_metadata.end());
 
   return metadata;
 }
@@ -413,6 +417,11 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   it = config.find("assetsEnabled");
   if (it != config.end()) {
     body->set_assetsenabled(*it);
+  }
+  it = config.find("ebpfProfiling");
+  if (it != config.end()) {
+    body->set_ebpfprofiling(
+      static_cast<grpcagent::EbpfProfilingState>(it->get<int>()));
   }
 
   it = config.find("traceSampleRate");
@@ -1235,6 +1244,10 @@ int GrpcAgent::config(const json& config) {
     }
   }
 
+#ifdef __linux__
+  setup_ebpf_profiler();
+#endif
+
   return ret;
 }
 
@@ -1337,6 +1350,11 @@ void GrpcAgent::do_stop() {
   ready_ = false;
   span_collector_.reset();
   profile_collector_.reset();
+#ifdef __linux__
+  // Wait for any running stack callback before destroying its queue.
+  stack_hook_.reset();
+  stack_queue_.reset();
+#endif
   blocked_loop_queue_.reset();
   asset_done_msg_.close();
   command_msg_.close();
@@ -1386,6 +1404,60 @@ void GrpcAgent::got_asset_done_msg() {
   check_exit_on_profile();
 }
 
+
+#ifdef __linux__
+void GrpcAgent::got_stack_traces(std::vector<Stack>&& stacks) {
+  if (stacks.empty()) return;
+
+  ArenaOptions arena_options;
+  arena_options.initial_block_size = 1024;
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
+  auto* event = Arena::Create<grpcagent::ProfilerStacksEvent>(arena.get());
+  auto* batch = event->mutable_body();
+  batch->set_sample_frequency_hz(99);
+  PopulateCommon(event->mutable_common(), "profiler_stacks", nullptr);
+
+  for (const auto& stack : stacks) {
+    auto* sample = batch->add_samples();
+    sample->set_thread_id(stack.tid);
+    sample->set_timestamp(utils::monotonic_to_epoch_ns(stack.timestamp));
+    if (stack.node_thread_id != UINT64_MAX) {
+      sample->set_node_thread_id(stack.node_thread_id);
+    }
+    for (const auto& frame : stack.frames) {
+      auto* frame_msg = sample->add_frames();
+      frame_msg->set_addr(frame.addr);
+      frame_msg->set_kind(static_cast<grpcagent::FrameKind>(frame.kind));
+      if (frame.kind == FrameKind::kNativeMapped) {
+        frame_msg->set_relative_addr(frame.relative_addr);
+        if (!frame.build_id.empty()) frame_msg->set_build_id(frame.build_id);
+      }
+      if (!frame.symbol_name.empty()) {
+        frame_msg->set_symbol_name(frame.symbol_name);
+        frame_msg->set_symbol_type(
+            static_cast<grpcagent::V8CodeEventType>(frame.symbol_event_type));
+        if (!frame.script_name.empty()) {
+          frame_msg->set_script_name(frame.script_name);
+        }
+        if (frame.script_line != 0) {
+          frame_msg->set_script_line(frame.script_line);
+        }
+        if (frame.script_column != 0) {
+          frame_msg->set_script_column(frame.script_column);
+        }
+      }
+    }
+  }
+
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
+  GrpcClient::DelegateAsyncExport<grpcagent::ProfilerStacksEvent>(
+      nsolid_service_stub_.get(), &nsolid_grpc_async::ExportProfilerStacks,
+      std::move(context), std::move(arena), std::move(*event),
+      [](::grpc::Status, std::unique_ptr<Arena>&&, const auto&,
+         grpcagent::EventResponse*) { return true; });
+}
+#endif
 
 void GrpcAgent::got_blocked_loop(BlockedLoopStor&& stor) {
   if (stor.blocked) {
@@ -1793,6 +1865,11 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
       out["assetsEnabled"] = body.assetsenabled();
   }
 
+  if (body.has_ebpfprofiling() && body.ebpfprofiling() <=
+      grpcagent::EBPF_PROFILING_ON) {
+      out["ebpfProfiling"] = body.ebpfprofiling();
+  }
+
   if (body.has_tracesamplerate()) {
       out["traceSampleRate"] = body.tracesamplerate();
   }
@@ -2116,6 +2193,59 @@ void GrpcAgent::setup_blocked_loop_hooks() {
     OnUnblockedLoopHook(loop_unblocked_, weak_from_this());
   }
 }
+
+#ifdef __linux__
+static void code_event_hook_deleter(CodeEventHook* hook) {
+  if (hook != nullptr) hook->Dispose();
+}
+
+void GrpcAgent::register_code_event_hook() {
+  code_event_hook_ =
+    std::unique_ptr<CodeEventHook, std::function<void(CodeEventHook*)>>(
+      AddCodeEventHook([](SharedEnvInst, CodeEventInfo) {}),
+      code_event_hook_deleter);
+}
+
+void GrpcAgent::setup_ebpf_profiler() {
+  auto it = config_.find("ebpfProfiling");
+  const bool enabled = it != config_.end() &&
+                       it->is_number_integer() && *it == 1;
+  if (!enabled) {
+    stack_hook_.reset();
+    code_event_hook_.reset();
+    stack_queue_.reset();
+    return;
+  }
+
+  auto profiler = EnvList::Inst()->GetEBPFProfiler();
+  if (!profiler)
+    return;
+
+  if (stack_queue_ == nullptr) {
+    const AsyncTSQueueOptions opts{256, 60000};
+    stack_queue_ = AsyncTSQueue<Stack>::create(
+        &loop_, opts,
+        [](std::vector<Stack>&& stacks, WeakGrpcAgent agent_wp) {
+          SharedGrpcAgent agent = agent_wp.lock();
+          if (agent != nullptr)
+            agent->got_stack_traces(std::move(stacks));
+        },
+        weak_from_this());
+  }
+
+  if (stack_hook_ == nullptr) {
+    if (code_event_hook_ == nullptr)
+      register_code_event_hook();
+    auto weak_agent = weak_from_this();
+    stack_hook_.reset(profiler->AddStackTraceHook(
+        [weak_agent](Stack&& stack) {
+          auto agent = weak_agent.lock();
+          if (agent && agent->stack_queue_)
+            agent->stack_queue_->enqueue(std::move(stack));
+        }));
+  }
+}
+#endif
 
 int GrpcAgent::setup_metrics_timer(uint64_t period) {
   if (period == 0) {

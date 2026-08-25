@@ -7,6 +7,7 @@ import "exit.proto";
 import "info.proto";
 import "metrics.proto";
 import "packages.proto";
+import "profiler_stacks.proto";
 import "reconfigure.proto";
 import "source_code.proto";
 import "startup_times.proto";
@@ -21,6 +22,7 @@ service NSolidService {
   rpc ExportInfo (InfoEvent) returns (EventResponse) {}
   rpc ExportMetrics (MetricsEvent) returns (EventResponse) {}
   rpc ExportPackages (PackagesEvent) returns (EventResponse) {}
+  rpc ExportProfilerStacks (ProfilerStacksEvent) returns (EventResponse) {}
   rpc ExportBlockedLoop (BlockedLoopEvent) returns (EventResponse) {}
   rpc ExportUnblockedLoop (UnblockedLoopEvent) returns (EventResponse) {}
   rpc ExportReconfigure (ReconfigureEvent) returns (EventResponse) {}

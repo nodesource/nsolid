@@ -4,6 +4,12 @@ import "common.proto";
 
 package grpcagent;
 
+enum EbpfProfilingState {
+  EBPF_PROFILING_OFF = 0;
+  EBPF_PROFILING_ON = 1;
+  EBPF_PROFILING_UNSUPPORTED = 2;
+}
+
 message ReconfigureBody {
   optional uint64 blockedLoopThreshold = 1;
   optional uint64 interval = 2;
@@ -19,6 +25,7 @@ message ReconfigureBody {
   optional bool contCpuProfile = 12;
   optional bool assetsEnabled = 13;
   optional double traceSampleRate = 14;
+  optional EbpfProfilingState ebpfProfiling = 15;
 }
 
 message ReconfigureEvent {

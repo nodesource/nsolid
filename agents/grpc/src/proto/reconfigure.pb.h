@@ -29,6 +29,7 @@
 #include "google/protobuf/message_lite.h"
 #include "google/protobuf/repeated_field.h"  // IWYU pragma: export
 #include "google/protobuf/extension_set.h"  // IWYU pragma: export
+#include "google/protobuf/generated_enum_reflection.h"
 #include "google/protobuf/unknown_field_set.h"
 #include "common.pb.h"
 // @@protoc_insertion_point(includes)
@@ -46,6 +47,8 @@ extern "C" {
 extern const ::google::protobuf::internal::DescriptorTable descriptor_table_reconfigure_2eproto;
 }  // extern "C"
 namespace grpcagent {
+enum EbpfProfilingState : int;
+extern const uint32_t EbpfProfilingState_internal_data_[];
 class ReconfigureBody;
 struct ReconfigureBodyGlobalsTypeInternal;
 #ifndef PROTOBUF_MESSAGE_GLOBALS
@@ -65,10 +68,56 @@ extern const ReconfigureEventGlobalsTypeInternal ReconfigureEvent_globals_;
 }  // namespace grpcagent
 namespace google {
 namespace protobuf {
+template <>
+internal::EnumTraitsT<::grpcagent::EbpfProfilingState_internal_data_>
+    internal::EnumTraitsImpl::value<::grpcagent::EbpfProfilingState>;
 }  // namespace protobuf
 }  // namespace google
 
 namespace grpcagent {
+enum EbpfProfilingState : int {
+  EBPF_PROFILING_OFF = 0,
+  EBPF_PROFILING_ON = 1,
+  EBPF_PROFILING_UNSUPPORTED = 2,
+  EbpfProfilingState_INT_MIN_SENTINEL_DO_NOT_USE_ =
+      ::std::numeric_limits<::int32_t>::min(),
+  EbpfProfilingState_INT_MAX_SENTINEL_DO_NOT_USE_ =
+      ::std::numeric_limits<::int32_t>::max(),
+};
+
+extern const uint32_t EbpfProfilingState_internal_data_[];
+inline constexpr EbpfProfilingState EbpfProfilingState_MIN =
+    static_cast<EbpfProfilingState>(0);
+inline constexpr EbpfProfilingState EbpfProfilingState_MAX =
+    static_cast<EbpfProfilingState>(2);
+[[nodiscard]] inline bool EbpfProfilingState_IsValid(int value) {
+  return 0 <= value && value <= 2;
+}
+inline constexpr int EbpfProfilingState_ARRAYSIZE = 2 + 1;
+[[nodiscard]] const ::google::protobuf::EnumDescriptor* PROTOBUF_NONNULL
+EbpfProfilingState_descriptor();
+[[nodiscard]] inline auto ProtobufInternalGetEnumDescriptor(EbpfProfilingState) {
+  return EbpfProfilingState_descriptor();
+}
+template <typename T>
+[[nodiscard]] const ::std::string& EbpfProfilingState_Name(T value) {
+  static_assert(::std::is_same<T, EbpfProfilingState>::value ||
+                    ::std::is_integral<T>::value,
+                "Incorrect type passed to EbpfProfilingState_Name().");
+  return EbpfProfilingState_Name(static_cast<EbpfProfilingState>(value));
+}
+template <>
+[[nodiscard]] inline const ::std::string& EbpfProfilingState_Name(EbpfProfilingState value) {
+  return ::google::protobuf::internal::NameOfDenseEnum<EbpfProfilingState_descriptor, 0, 2>(
+      static_cast<int>(value));
+}
+[[nodiscard]] inline bool EbpfProfilingState_Parse(
+    ::absl::string_view name, EbpfProfilingState* PROTOBUF_NONNULL value) {
+  return ::google::protobuf::internal::ParseNamedEnum<EbpfProfilingState>(EbpfProfilingState_descriptor(), name,
+                                           value);
+}
+using ::google::protobuf::internal::generated_enum::AbslParseFlag;
+using ::google::protobuf::internal::generated_enum::AbslUnparseFlag;
 
 // ===================================================================
 
@@ -234,9 +283,10 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
     kRedactSnapshotsFieldNumber = 5,
     kTracingEnabledFieldNumber = 10,
     kTracingModulesBlacklistFieldNumber = 11,
-    kTraceSampleRateFieldNumber = 14,
     kContCpuProfileFieldNumber = 12,
     kAssetsEnabledFieldNumber = 13,
+    kEbpfProfilingFieldNumber = 15,
+    kTraceSampleRateFieldNumber = 14,
   };
   // repeated string tags = 9;
   [[nodiscard]] int tags_size() const;
@@ -389,17 +439,6 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
   void _internal_set_tracingmodulesblacklist(::uint32_t value);
 
   public:
-  // optional double traceSampleRate = 14;
-  [[nodiscard]] bool has_tracesamplerate() const;
-  void clear_tracesamplerate() ;
-  [[nodiscard]] double tracesamplerate() const;
-  void set_tracesamplerate(double value);
-
-  private:
-  double _internal_tracesamplerate() const;
-  void _internal_set_tracesamplerate(double value);
-
-  public:
   // optional bool contCpuProfile = 12;
   [[nodiscard]] bool has_contcpuprofile() const;
   void clear_contcpuprofile() ;
@@ -422,11 +461,33 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
   void _internal_set_assetsenabled(bool value);
 
   public:
+  // optional .grpcagent.EbpfProfilingState ebpfProfiling = 15;
+  [[nodiscard]] bool has_ebpfprofiling() const;
+  void clear_ebpfprofiling() ;
+  [[nodiscard]] ::grpcagent::EbpfProfilingState ebpfprofiling() const;
+  void set_ebpfprofiling(::grpcagent::EbpfProfilingState value);
+
+  private:
+  ::grpcagent::EbpfProfilingState _internal_ebpfprofiling() const;
+  void _internal_set_ebpfprofiling(::grpcagent::EbpfProfilingState value);
+
+  public:
+  // optional double traceSampleRate = 14;
+  [[nodiscard]] bool has_tracesamplerate() const;
+  void clear_tracesamplerate() ;
+  [[nodiscard]] double tracesamplerate() const;
+  void set_tracesamplerate(double value);
+
+  private:
+  double _internal_tracesamplerate() const;
+  void _internal_set_tracesamplerate(double value);
+
+  public:
   // @@protoc_insertion_point(class_scope:grpcagent.ReconfigureBody)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<4, 14,
+      ::google::protobuf::internal::TcParseTable<4, 15,
                           0, 74,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -466,9 +527,10 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
     bool redactsnapshots_;
     bool tracingenabled_;
     ::uint32_t tracingmodulesblacklist_;
-    double tracesamplerate_;
     bool contcpuprofile_;
     bool assetsenabled_;
+    int ebpfprofiling_;
+    double tracesamplerate_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1188,13 +1250,13 @@ inline void ReconfigureBody::_internal_set_tracingmodulesblacklist(::uint32_t va
 
 // optional bool contCpuProfile = 12;
 inline bool ReconfigureBody::has_contcpuprofile() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
   return value;
 }
 inline void ReconfigureBody::clear_contcpuprofile() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.contcpuprofile_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00001000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000800U);
 }
 inline bool ReconfigureBody::contcpuprofile() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.contCpuProfile)
@@ -1202,7 +1264,7 @@ inline bool ReconfigureBody::contcpuprofile() const {
 }
 inline void ReconfigureBody::set_contcpuprofile(bool value) {
   _internal_set_contcpuprofile(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.contCpuProfile)
 }
 inline bool ReconfigureBody::_internal_contcpuprofile() const {
@@ -1216,13 +1278,13 @@ inline void ReconfigureBody::_internal_set_contcpuprofile(bool value) {
 
 // optional bool assetsEnabled = 13;
 inline bool ReconfigureBody::has_assetsenabled() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
   return value;
 }
 inline void ReconfigureBody::clear_assetsenabled() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.assetsenabled_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00002000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00001000U);
 }
 inline bool ReconfigureBody::assetsenabled() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.assetsEnabled)
@@ -1230,7 +1292,7 @@ inline bool ReconfigureBody::assetsenabled() const {
 }
 inline void ReconfigureBody::set_assetsenabled(bool value) {
   _internal_set_assetsenabled(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.assetsEnabled)
 }
 inline bool ReconfigureBody::_internal_assetsenabled() const {
@@ -1244,13 +1306,13 @@ inline void ReconfigureBody::_internal_set_assetsenabled(bool value) {
 
 // optional double traceSampleRate = 14;
 inline bool ReconfigureBody::has_tracesamplerate() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
   return value;
 }
 inline void ReconfigureBody::clear_tracesamplerate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.tracesamplerate_ = 0;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000800U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
 }
 inline double ReconfigureBody::tracesamplerate() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.traceSampleRate)
@@ -1258,7 +1320,7 @@ inline double ReconfigureBody::tracesamplerate() const {
 }
 inline void ReconfigureBody::set_tracesamplerate(double value) {
   _internal_set_tracesamplerate(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.traceSampleRate)
 }
 inline double ReconfigureBody::_internal_tracesamplerate() const {
@@ -1268,6 +1330,34 @@ inline double ReconfigureBody::_internal_tracesamplerate() const {
 inline void ReconfigureBody::_internal_set_tracesamplerate(double value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.tracesamplerate_ = value;
+}
+
+// optional .grpcagent.EbpfProfilingState ebpfProfiling = 15;
+inline bool ReconfigureBody::has_ebpfprofiling() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
+  return value;
+}
+inline void ReconfigureBody::clear_ebpfprofiling() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ebpfprofiling_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00002000U);
+}
+inline ::grpcagent::EbpfProfilingState ReconfigureBody::ebpfprofiling() const {
+  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.ebpfProfiling)
+  return _internal_ebpfprofiling();
+}
+inline void ReconfigureBody::set_ebpfprofiling(::grpcagent::EbpfProfilingState value) {
+  _internal_set_ebpfprofiling(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.ebpfProfiling)
+}
+inline ::grpcagent::EbpfProfilingState ReconfigureBody::_internal_ebpfprofiling() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return static_cast<::grpcagent::EbpfProfilingState>(_impl_.ebpfprofiling_);
+}
+inline void ReconfigureBody::_internal_set_ebpfprofiling(::grpcagent::EbpfProfilingState value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ebpfprofiling_ = value;
 }
 
 // -------------------------------------------------------------------
@@ -1472,6 +1562,19 @@ inline void ReconfigureEvent::set_allocated_body(::grpcagent::ReconfigureBody* P
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace grpcagent
 
+
+namespace google {
+namespace protobuf {
+
+template <>
+struct is_proto_enum<::grpcagent::EbpfProfilingState> : std::true_type {};
+template <>
+inline const EnumDescriptor* PROTOBUF_NONNULL GetEnumDescriptor<::grpcagent::EbpfProfilingState>() {
+  return ::grpcagent::EbpfProfilingState_descriptor();
+}
+
+}  // namespace protobuf
+}  // namespace google
 
 // @@protoc_insertion_point(global_scope)
 
