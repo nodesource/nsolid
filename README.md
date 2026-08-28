@@ -71,7 +71,7 @@ This project has a [Code of Conduct](https://github.com/nodesource/nsolid/blob/n
 
 ## Support
 
-Looking for help? You can contact us at [nodesource.com](https://nodesource.com/) or check out the [instructions for getting support](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/SUPPORT.md).
+Looking for help? You can contact us at [nodesource.com](https://nodesource.com/) or check out the [instructions for getting support](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/.github/SUPPORT.md).
 
 ### Download
 
