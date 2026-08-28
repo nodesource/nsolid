@@ -67,7 +67,7 @@ Bring N|Solid Runtime capabilities into supported AI coding agent workflows. Giv
 
 N|Solid Runtime is open source and can be used independently. NodeSource also offers N|Solid plans for teams that need centralized observability, collaboration, deployment, and support capabilities.
 
-This project has a [Code of Conduct](https://gist.github.com/teffcode/e66c2ff99e5fbce2532f3998817ecf5f#file-code_of_conduct-md).
+This project has a [Code of Conduct](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/CODE_OF_CONDUCT.md).
 
 ## Support
 
