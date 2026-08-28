@@ -52,7 +52,7 @@ Bring N|Solid Runtime observability directly into your code editor. Explore runt
 **Install the Extension:**
 
 * [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=nodesource-inc.nsolid)
-* [Cursor, Windsurf & Antigravity](https://marketplace.windsurf.com/extension/nodesource-inc/nsolid/1.0.2)
+* [Cursor, Windsurf & Antigravity](https://marketplace.windsurf.com/extension/nodesource-inc/nsolid)
 
 #### N|Solid Plugin
 
@@ -97,7 +97,7 @@ For information on reporting security vulnerabilities in N|Solid Runtime, see [S
 
 See [CONTRIBUTING.md](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/CONTRIBUTING.md) to learn how to contribute to the project.
 
-Please review the project's [Code of Conduct](https://gist.github.com/teffcode/e66c2ff99e5fbce2532f3998817ecf5f#file-code_of_conduct-md) before contributing.
+Please review the project's [Code of Conduct](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/CODE_OF_CONDUCT.md) before contributing.
 
 ## License
 
