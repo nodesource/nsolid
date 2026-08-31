@@ -52,7 +52,7 @@ Bring N|Solid Runtime observability directly into your code editor. Explore runt
 **Install the Extension:**
 
 * [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=nodesource-inc.nsolid)
-* [Cursor, Windsurf & Antigravity](https://marketplace.windsurf.com/extension/nodesource-inc/nsolid/1.0.2)
+* [Cursor, Windsurf & Antigravity](https://marketplace.windsurf.com/extension/nodesource-inc/nsolid)
 
 #### N|Solid Plugin
 
