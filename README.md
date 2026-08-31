@@ -1,9 +1,9 @@
 # N|Solid Runtime
 
-[![Latest Tag](https://img.shields.io/github/v/tag/nodesource/nsolid?label=N%7CSolid)](https://github.com/nodesource/nsolid/tags)	
-[![GitHub Stars](https://img.shields.io/github/stars/nodesource/nsolid?style=flat)](https://github.com/nodesource/nsolid/stargazers)	
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/LICENSE_NSOLID)
-[![Docs](https://img.shields.io/badge/docs-docs.nodesource.com-blue)](https://docs.nodesource.com/)	
+[![Latest Tag](https://img.shields.io/github/v/tag/nodesource/nsolid?label=N%7CSolid)](https://github.com/nodesource/nsolid/tags)
+[![GitHub Stars](https://img.shields.io/github/stars/nodesource/nsolid?style=flat)](https://github.com/nodesource/nsolid/stargazers)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE_NSOLID)
+[![Docs](https://img.shields.io/badge/docs-docs.nodesource.com-blue)](https://docs.nodesource.com/)
 [![DevTools](https://img.shields.io/badge/DevTools-Extension%20%2B%20Plugin-blue)](https://nodesource.com/products/nsolid/devtools)
 
 Deep runtime-level observability for Node.js applications.
@@ -52,7 +52,7 @@ Bring N|Solid Runtime observability directly into your code editor. Explore runt
 **Install the Extension:**
 
 * [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=nodesource-inc.nsolid)
-* [Cursor, Windsurf & Antigravity](https://marketplace.windsurf.com/extension/nodesource-inc/nsolid)
+* [Cursor, Windsurf & Antigravity](https://marketplace.windsurf.com/extension/nodesource-inc/nsolid/1.0.2)
 
 #### N|Solid Plugin
 
@@ -67,11 +67,11 @@ Bring N|Solid Runtime capabilities into supported AI coding agent workflows. Giv
 
 N|Solid Runtime is open source and can be used independently. NodeSource also offers N|Solid plans for teams that need centralized observability, collaboration, deployment, and support capabilities.
 
-This project has a [Code of Conduct](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/CODE_OF_CONDUCT.md).
+This project has a [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Support
 
-Looking for help? You can contact us at [nodesource.com](https://nodesource.com/) or check out the [instructions for getting support](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/.github/SUPPORT.md).
+Looking for help? You can contact us at [nodesource.com](https://nodesource.com/) or check out the [instructions for getting support](.github/SUPPORT.md).
 
 ### Download
 
@@ -87,21 +87,20 @@ Documentation for the latest Node.js Current release is available at [nodejs.org
 
 ## Building N|Solid Runtime
 
-See [BUILDING.md](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/BUILDING.md) for instructions on how to build N|Solid Runtime from source and a list of supported platforms.
+See [BUILDING.md](BUILDING.md) for instructions on how to build N|Solid Runtime from source and a list of supported platforms.
 
 ## Security
 
-For information on reporting security vulnerabilities in N|Solid Runtime, see [SECURITY.md](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/SECURITY.md).
+For information on reporting security vulnerabilities in N|Solid Runtime, see [SECURITY.md](./SECURITY.md).
 
 ## Contributing to N|Solid Runtime
 
-See [CONTRIBUTING.md](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/CONTRIBUTING.md) to learn how to contribute to the project.
+See [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to contribute to the project.
 
-Please review the project's [Code of Conduct](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/CODE_OF_CONDUCT.md) before contributing.
+Please review the project's [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ## License
 
 N|Solid Runtime is available under the MIT license. N|Solid Runtime also includes external libraries available under a variety of licenses.
 
-See [LICENSE](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/LICENSE) and [LICENSE_NSOLID](https://github.com/nodesource/nsolid/blob/node-v24.x-nsolid-v6.x/LICENSE_NSOLID) for the full license text.
-
+See [LICENSE](LICENSE) and [LICENSE_NSOLID](LICENSE_NSOLID) for the full license text.
