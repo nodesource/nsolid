@@ -61,7 +61,7 @@ Bring N|Solid Runtime capabilities into supported AI coding agent workflows. Giv
 **Get the Plugin:**
 
 * [GitHub](https://github.com/nodesource/nsolid-plugin)
-* [npm](https://www.npmjs.com/package/nsolid-plugin?activeTab=readme)
+* [npm](https://www.npmjs.com/package/nsolid-plugin)
 
 [Explore N|Solid DevTools](https://nodesource.com/products/nsolid/devtools)
 
