@@ -40,7 +40,7 @@ resources, or behaving unexpectedly.
 N|Solid Runtime powers NodeSource's developer and DevOps tools, bringing deep
 runtime-level observability into the workflows teams already use.
 
-Observe Node.js performance and security in real time with zero overhead,
+Observe Node.js performance and security in real time with minimal overhead,
 investigate issues using runtime evidence, and find, diagnose, and resolve
 problems faster.
 
