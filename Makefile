@@ -196,6 +196,7 @@ config.gypi: configure configure.py src/node_version.h
 
 .PHONY: install
 install: all ## Install node into $PREFIX (default=/usr/local).
+	$(PYTHON) tools/vex/generate.py
 	$(PYTHON) tools/install.py $@ --dest-dir '$(DESTDIR)' --prefix '$(PREFIX)'
 
 .PHONY: uninstall

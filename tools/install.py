@@ -262,6 +262,7 @@ def files(options, action):
 
   action(options, [os.path.join(options.v8_dir, 'tools/gdbinit')], 'share/doc/node/')
   action(options, [os.path.join(options.v8_dir, 'tools/lldb_commands.py')], 'share/doc/node/')
+  action(options, ['tools/vex/nsolid.openvex.json'], 'share/doc/nsolid/')
 
   if 'openbsd' in sys.platform:
     action(options, ['doc/nsolid.1'], 'man/man1/')

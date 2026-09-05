@@ -39,3 +39,16 @@ Here is the security disclosure policy for N|Solid
 ## Receiving security updates
 
 Security notifications will be distributed via <https://nodesource.com/blog/>
+
+## Vulnerability Exploitability eXchange (VEX)
+
+N|Solid publishes an OpenVEX document with releases to identify vulnerabilities
+in bundled dependencies that do not affect N|Solid. The document is installed at
+`share/doc/nsolid/nsolid.openvex.json` and contains only reviewed
+`not_affected` statements; it does not replace security advisories or the
+security reporting process above.
+
+Maintainers add reviewed exceptions to `tools/vex/exceptions.json` and
+regenerate the document with `make install` (or `python3 tools/vex/generate.py`)
+when preparing a release. Each exception must include a CVE ID and a valid
+OpenVEX justification.
