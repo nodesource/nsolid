@@ -91,13 +91,6 @@ class NSolidService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> PrepareAsyncExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(PrepareAsyncExportPackagesRaw(context, request, cq));
     }
-    virtual ::grpc::Status ExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpcagent::EventResponse* response) = 0;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> AsyncExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(AsyncExportProfilerStacksRaw(context, request, cq));
-    }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> PrepareAsyncExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(PrepareAsyncExportProfilerStacksRaw(context, request, cq));
-    }
     virtual ::grpc::Status ExportBlockedLoop(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent& request, ::grpcagent::EventResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> AsyncExportBlockedLoop(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(AsyncExportBlockedLoopRaw(context, request, cq));
@@ -147,8 +140,6 @@ class NSolidService final {
       virtual void ExportMetrics(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void ExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void ExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      virtual void ExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
-      virtual void ExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void ExportBlockedLoop(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void ExportBlockedLoop(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void ExportUnblockedLoop(::grpc::ClientContext* context, const ::grpcagent::UnblockedLoopEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
@@ -181,8 +172,6 @@ class NSolidService final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportMetricsRaw(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportPackagesRaw(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportPackagesRaw(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportProfilerStacksRaw(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportProfilerStacksRaw(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportBlockedLoopRaw(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportBlockedLoopRaw(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportUnblockedLoopRaw(::grpc::ClientContext* context, const ::grpcagent::UnblockedLoopEvent& request, ::grpc::CompletionQueue* cq) = 0;
@@ -252,13 +241,6 @@ class NSolidService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> PrepareAsyncExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(PrepareAsyncExportPackagesRaw(context, request, cq));
     }
-    ::grpc::Status ExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpcagent::EventResponse* response) override;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> AsyncExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(AsyncExportProfilerStacksRaw(context, request, cq));
-    }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> PrepareAsyncExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(PrepareAsyncExportProfilerStacksRaw(context, request, cq));
-    }
     ::grpc::Status ExportBlockedLoop(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent& request, ::grpcagent::EventResponse* response) override;
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> AsyncExportBlockedLoop(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(AsyncExportBlockedLoopRaw(context, request, cq));
@@ -308,8 +290,6 @@ class NSolidService final {
       void ExportMetrics(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void ExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
       void ExportPackages(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
-      void ExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
-      void ExportProfilerStacks(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void ExportBlockedLoop(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
       void ExportBlockedLoop(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void ExportUnblockedLoop(::grpc::ClientContext* context, const ::grpcagent::UnblockedLoopEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
@@ -348,8 +328,6 @@ class NSolidService final {
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportMetricsRaw(::grpc::ClientContext* context, const ::grpcagent::MetricsEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportPackagesRaw(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportPackagesRaw(::grpc::ClientContext* context, const ::grpcagent::PackagesEvent& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportProfilerStacksRaw(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportProfilerStacksRaw(::grpc::ClientContext* context, const ::grpcagent::ProfilerStacksEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportBlockedLoopRaw(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportBlockedLoopRaw(::grpc::ClientContext* context, const ::grpcagent::BlockedLoopEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportUnblockedLoopRaw(::grpc::ClientContext* context, const ::grpcagent::UnblockedLoopEvent& request, ::grpc::CompletionQueue* cq) override;
@@ -367,7 +345,6 @@ class NSolidService final {
     const ::grpc::internal::RpcMethod rpcmethod_ExportInfo_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportMetrics_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportPackages_;
-    const ::grpc::internal::RpcMethod rpcmethod_ExportProfilerStacks_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportBlockedLoop_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportUnblockedLoop_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportReconfigure_;
@@ -387,7 +364,6 @@ class NSolidService final {
     virtual ::grpc::Status ExportInfo(::grpc::ServerContext* context, const ::grpcagent::InfoEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportMetrics(::grpc::ServerContext* context, const ::grpcagent::MetricsEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportPackages(::grpc::ServerContext* context, const ::grpcagent::PackagesEvent* request, ::grpcagent::EventResponse* response);
-    virtual ::grpc::Status ExportProfilerStacks(::grpc::ServerContext* context, const ::grpcagent::ProfilerStacksEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportBlockedLoop(::grpc::ServerContext* context, const ::grpcagent::BlockedLoopEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportUnblockedLoop(::grpc::ServerContext* context, const ::grpcagent::UnblockedLoopEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportReconfigure(::grpc::ServerContext* context, const ::grpcagent::ReconfigureEvent* request, ::grpcagent::EventResponse* response);
@@ -535,32 +511,12 @@ class NSolidService final {
     }
   };
   template <class BaseClass>
-  class WithAsyncMethod_ExportProfilerStacks : public BaseClass {
-   private:
-    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
-   public:
-    WithAsyncMethod_ExportProfilerStacks() {
-      ::grpc::Service::MarkMethodAsync(7);
-    }
-    ~WithAsyncMethod_ExportProfilerStacks() override {
-      BaseClassMustBeDerivedFromService(this);
-    }
-    // disable synchronous version of this method
-    ::grpc::Status ExportProfilerStacks(::grpc::ServerContext* /*context*/, const ::grpcagent::ProfilerStacksEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
-      abort();
-      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-    }
-    void RequestExportProfilerStacks(::grpc::ServerContext* context, ::grpcagent::ProfilerStacksEvent* request, ::grpc::ServerAsyncResponseWriter< ::grpcagent::EventResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
-    }
-  };
-  template <class BaseClass>
   class WithAsyncMethod_ExportBlockedLoop : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_ExportBlockedLoop() {
-      ::grpc::Service::MarkMethodAsync(8);
+      ::grpc::Service::MarkMethodAsync(7);
     }
     ~WithAsyncMethod_ExportBlockedLoop() override {
       BaseClassMustBeDerivedFromService(this);
@@ -571,7 +527,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportBlockedLoop(::grpc::ServerContext* context, ::grpcagent::BlockedLoopEvent* request, ::grpc::ServerAsyncResponseWriter< ::grpcagent::EventResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -580,7 +536,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_ExportUnblockedLoop() {
-      ::grpc::Service::MarkMethodAsync(9);
+      ::grpc::Service::MarkMethodAsync(8);
     }
     ~WithAsyncMethod_ExportUnblockedLoop() override {
       BaseClassMustBeDerivedFromService(this);
@@ -591,7 +547,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportUnblockedLoop(::grpc::ServerContext* context, ::grpcagent::UnblockedLoopEvent* request, ::grpc::ServerAsyncResponseWriter< ::grpcagent::EventResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(9, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -600,7 +556,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_ExportReconfigure() {
-      ::grpc::Service::MarkMethodAsync(10);
+      ::grpc::Service::MarkMethodAsync(9);
     }
     ~WithAsyncMethod_ExportReconfigure() override {
       BaseClassMustBeDerivedFromService(this);
@@ -611,7 +567,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportReconfigure(::grpc::ServerContext* context, ::grpcagent::ReconfigureEvent* request, ::grpc::ServerAsyncResponseWriter< ::grpcagent::EventResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(10, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(9, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -620,7 +576,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_ExportSourceCode() {
-      ::grpc::Service::MarkMethodAsync(11);
+      ::grpc::Service::MarkMethodAsync(10);
     }
     ~WithAsyncMethod_ExportSourceCode() override {
       BaseClassMustBeDerivedFromService(this);
@@ -631,7 +587,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportSourceCode(::grpc::ServerContext* context, ::grpcagent::SourceCodeEvent* request, ::grpc::ServerAsyncResponseWriter< ::grpcagent::EventResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(11, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(10, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -640,7 +596,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_ExportStartupTimes() {
-      ::grpc::Service::MarkMethodAsync(12);
+      ::grpc::Service::MarkMethodAsync(11);
     }
     ~WithAsyncMethod_ExportStartupTimes() override {
       BaseClassMustBeDerivedFromService(this);
@@ -651,10 +607,10 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportStartupTimes(::grpc::ServerContext* context, ::grpcagent::StartupTimesEvent* request, ::grpc::ServerAsyncResponseWriter< ::grpcagent::EventResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(12, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(11, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_Command<WithAsyncMethod_ExportAsset<WithAsyncMethod_ExportContinuousProfile<WithAsyncMethod_ExportExit<WithAsyncMethod_ExportInfo<WithAsyncMethod_ExportMetrics<WithAsyncMethod_ExportPackages<WithAsyncMethod_ExportProfilerStacks<WithAsyncMethod_ExportBlockedLoop<WithAsyncMethod_ExportUnblockedLoop<WithAsyncMethod_ExportReconfigure<WithAsyncMethod_ExportSourceCode<WithAsyncMethod_ExportStartupTimes<Service > > > > > > > > > > > > > AsyncService;
+  typedef WithAsyncMethod_Command<WithAsyncMethod_ExportAsset<WithAsyncMethod_ExportContinuousProfile<WithAsyncMethod_ExportExit<WithAsyncMethod_ExportInfo<WithAsyncMethod_ExportMetrics<WithAsyncMethod_ExportPackages<WithAsyncMethod_ExportBlockedLoop<WithAsyncMethod_ExportUnblockedLoop<WithAsyncMethod_ExportReconfigure<WithAsyncMethod_ExportSourceCode<WithAsyncMethod_ExportStartupTimes<Service > > > > > > > > > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_Command : public BaseClass {
    private:
@@ -831,45 +787,18 @@ class NSolidService final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpcagent::PackagesEvent* /*request*/, ::grpcagent::EventResponse* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
-  class WithCallbackMethod_ExportProfilerStacks : public BaseClass {
-   private:
-    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
-   public:
-    WithCallbackMethod_ExportProfilerStacks() {
-      ::grpc::Service::MarkMethodCallback(7,
-          new ::grpc::internal::CallbackUnaryHandler< ::grpcagent::ProfilerStacksEvent, ::grpcagent::EventResponse>(
-            [this](
-                   ::grpc::CallbackServerContext* context, const ::grpcagent::ProfilerStacksEvent* request, ::grpcagent::EventResponse* response) { return this->ExportProfilerStacks(context, request, response); }));}
-    void SetMessageAllocatorFor_ExportProfilerStacks(
-        ::grpc::MessageAllocator< ::grpcagent::ProfilerStacksEvent, ::grpcagent::EventResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(7);
-      static_cast<::grpc::internal::CallbackUnaryHandler< ::grpcagent::ProfilerStacksEvent, ::grpcagent::EventResponse>*>(handler)
-              ->SetMessageAllocator(allocator);
-    }
-    ~WithCallbackMethod_ExportProfilerStacks() override {
-      BaseClassMustBeDerivedFromService(this);
-    }
-    // disable synchronous version of this method
-    ::grpc::Status ExportProfilerStacks(::grpc::ServerContext* /*context*/, const ::grpcagent::ProfilerStacksEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
-      abort();
-      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-    }
-    virtual ::grpc::ServerUnaryReactor* ExportProfilerStacks(
-      ::grpc::CallbackServerContext* /*context*/, const ::grpcagent::ProfilerStacksEvent* /*request*/, ::grpcagent::EventResponse* /*response*/)  { return nullptr; }
-  };
-  template <class BaseClass>
   class WithCallbackMethod_ExportBlockedLoop : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_ExportBlockedLoop() {
-      ::grpc::Service::MarkMethodCallback(8,
+      ::grpc::Service::MarkMethodCallback(7,
           new ::grpc::internal::CallbackUnaryHandler< ::grpcagent::BlockedLoopEvent, ::grpcagent::EventResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpcagent::BlockedLoopEvent* request, ::grpcagent::EventResponse* response) { return this->ExportBlockedLoop(context, request, response); }));}
     void SetMessageAllocatorFor_ExportBlockedLoop(
         ::grpc::MessageAllocator< ::grpcagent::BlockedLoopEvent, ::grpcagent::EventResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(8);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(7);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::grpcagent::BlockedLoopEvent, ::grpcagent::EventResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -890,13 +819,13 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_ExportUnblockedLoop() {
-      ::grpc::Service::MarkMethodCallback(9,
+      ::grpc::Service::MarkMethodCallback(8,
           new ::grpc::internal::CallbackUnaryHandler< ::grpcagent::UnblockedLoopEvent, ::grpcagent::EventResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpcagent::UnblockedLoopEvent* request, ::grpcagent::EventResponse* response) { return this->ExportUnblockedLoop(context, request, response); }));}
     void SetMessageAllocatorFor_ExportUnblockedLoop(
         ::grpc::MessageAllocator< ::grpcagent::UnblockedLoopEvent, ::grpcagent::EventResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(9);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(8);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::grpcagent::UnblockedLoopEvent, ::grpcagent::EventResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -917,13 +846,13 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_ExportReconfigure() {
-      ::grpc::Service::MarkMethodCallback(10,
+      ::grpc::Service::MarkMethodCallback(9,
           new ::grpc::internal::CallbackUnaryHandler< ::grpcagent::ReconfigureEvent, ::grpcagent::EventResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpcagent::ReconfigureEvent* request, ::grpcagent::EventResponse* response) { return this->ExportReconfigure(context, request, response); }));}
     void SetMessageAllocatorFor_ExportReconfigure(
         ::grpc::MessageAllocator< ::grpcagent::ReconfigureEvent, ::grpcagent::EventResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(10);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(9);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::grpcagent::ReconfigureEvent, ::grpcagent::EventResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -944,13 +873,13 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_ExportSourceCode() {
-      ::grpc::Service::MarkMethodCallback(11,
+      ::grpc::Service::MarkMethodCallback(10,
           new ::grpc::internal::CallbackUnaryHandler< ::grpcagent::SourceCodeEvent, ::grpcagent::EventResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpcagent::SourceCodeEvent* request, ::grpcagent::EventResponse* response) { return this->ExportSourceCode(context, request, response); }));}
     void SetMessageAllocatorFor_ExportSourceCode(
         ::grpc::MessageAllocator< ::grpcagent::SourceCodeEvent, ::grpcagent::EventResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(11);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(10);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::grpcagent::SourceCodeEvent, ::grpcagent::EventResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -971,13 +900,13 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_ExportStartupTimes() {
-      ::grpc::Service::MarkMethodCallback(12,
+      ::grpc::Service::MarkMethodCallback(11,
           new ::grpc::internal::CallbackUnaryHandler< ::grpcagent::StartupTimesEvent, ::grpcagent::EventResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response) { return this->ExportStartupTimes(context, request, response); }));}
     void SetMessageAllocatorFor_ExportStartupTimes(
         ::grpc::MessageAllocator< ::grpcagent::StartupTimesEvent, ::grpcagent::EventResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(12);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(11);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::grpcagent::StartupTimesEvent, ::grpcagent::EventResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -992,7 +921,7 @@ class NSolidService final {
     virtual ::grpc::ServerUnaryReactor* ExportStartupTimes(
       ::grpc::CallbackServerContext* /*context*/, const ::grpcagent::StartupTimesEvent* /*request*/, ::grpcagent::EventResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_Command<WithCallbackMethod_ExportAsset<WithCallbackMethod_ExportContinuousProfile<WithCallbackMethod_ExportExit<WithCallbackMethod_ExportInfo<WithCallbackMethod_ExportMetrics<WithCallbackMethod_ExportPackages<WithCallbackMethod_ExportProfilerStacks<WithCallbackMethod_ExportBlockedLoop<WithCallbackMethod_ExportUnblockedLoop<WithCallbackMethod_ExportReconfigure<WithCallbackMethod_ExportSourceCode<WithCallbackMethod_ExportStartupTimes<Service > > > > > > > > > > > > > CallbackService;
+  typedef WithCallbackMethod_Command<WithCallbackMethod_ExportAsset<WithCallbackMethod_ExportContinuousProfile<WithCallbackMethod_ExportExit<WithCallbackMethod_ExportInfo<WithCallbackMethod_ExportMetrics<WithCallbackMethod_ExportPackages<WithCallbackMethod_ExportBlockedLoop<WithCallbackMethod_ExportUnblockedLoop<WithCallbackMethod_ExportReconfigure<WithCallbackMethod_ExportSourceCode<WithCallbackMethod_ExportStartupTimes<Service > > > > > > > > > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_Command : public BaseClass {
@@ -1114,29 +1043,12 @@ class NSolidService final {
     }
   };
   template <class BaseClass>
-  class WithGenericMethod_ExportProfilerStacks : public BaseClass {
-   private:
-    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
-   public:
-    WithGenericMethod_ExportProfilerStacks() {
-      ::grpc::Service::MarkMethodGeneric(7);
-    }
-    ~WithGenericMethod_ExportProfilerStacks() override {
-      BaseClassMustBeDerivedFromService(this);
-    }
-    // disable synchronous version of this method
-    ::grpc::Status ExportProfilerStacks(::grpc::ServerContext* /*context*/, const ::grpcagent::ProfilerStacksEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
-      abort();
-      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-    }
-  };
-  template <class BaseClass>
   class WithGenericMethod_ExportBlockedLoop : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_ExportBlockedLoop() {
-      ::grpc::Service::MarkMethodGeneric(8);
+      ::grpc::Service::MarkMethodGeneric(7);
     }
     ~WithGenericMethod_ExportBlockedLoop() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1153,7 +1065,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_ExportUnblockedLoop() {
-      ::grpc::Service::MarkMethodGeneric(9);
+      ::grpc::Service::MarkMethodGeneric(8);
     }
     ~WithGenericMethod_ExportUnblockedLoop() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1170,7 +1082,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_ExportReconfigure() {
-      ::grpc::Service::MarkMethodGeneric(10);
+      ::grpc::Service::MarkMethodGeneric(9);
     }
     ~WithGenericMethod_ExportReconfigure() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1187,7 +1099,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_ExportSourceCode() {
-      ::grpc::Service::MarkMethodGeneric(11);
+      ::grpc::Service::MarkMethodGeneric(10);
     }
     ~WithGenericMethod_ExportSourceCode() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1204,7 +1116,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_ExportStartupTimes() {
-      ::grpc::Service::MarkMethodGeneric(12);
+      ::grpc::Service::MarkMethodGeneric(11);
     }
     ~WithGenericMethod_ExportStartupTimes() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1356,32 +1268,12 @@ class NSolidService final {
     }
   };
   template <class BaseClass>
-  class WithRawMethod_ExportProfilerStacks : public BaseClass {
-   private:
-    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
-   public:
-    WithRawMethod_ExportProfilerStacks() {
-      ::grpc::Service::MarkMethodRaw(7);
-    }
-    ~WithRawMethod_ExportProfilerStacks() override {
-      BaseClassMustBeDerivedFromService(this);
-    }
-    // disable synchronous version of this method
-    ::grpc::Status ExportProfilerStacks(::grpc::ServerContext* /*context*/, const ::grpcagent::ProfilerStacksEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
-      abort();
-      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-    }
-    void RequestExportProfilerStacks(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
-    }
-  };
-  template <class BaseClass>
   class WithRawMethod_ExportBlockedLoop : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_ExportBlockedLoop() {
-      ::grpc::Service::MarkMethodRaw(8);
+      ::grpc::Service::MarkMethodRaw(7);
     }
     ~WithRawMethod_ExportBlockedLoop() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1392,7 +1284,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportBlockedLoop(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1401,7 +1293,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_ExportUnblockedLoop() {
-      ::grpc::Service::MarkMethodRaw(9);
+      ::grpc::Service::MarkMethodRaw(8);
     }
     ~WithRawMethod_ExportUnblockedLoop() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1412,7 +1304,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportUnblockedLoop(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(9, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1421,7 +1313,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_ExportReconfigure() {
-      ::grpc::Service::MarkMethodRaw(10);
+      ::grpc::Service::MarkMethodRaw(9);
     }
     ~WithRawMethod_ExportReconfigure() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1432,7 +1324,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportReconfigure(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(10, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(9, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1441,7 +1333,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_ExportSourceCode() {
-      ::grpc::Service::MarkMethodRaw(11);
+      ::grpc::Service::MarkMethodRaw(10);
     }
     ~WithRawMethod_ExportSourceCode() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1452,7 +1344,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportSourceCode(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(11, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(10, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1461,7 +1353,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_ExportStartupTimes() {
-      ::grpc::Service::MarkMethodRaw(12);
+      ::grpc::Service::MarkMethodRaw(11);
     }
     ~WithRawMethod_ExportStartupTimes() override {
       BaseClassMustBeDerivedFromService(this);
@@ -1472,7 +1364,7 @@ class NSolidService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestExportStartupTimes(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(12, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(11, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1631,34 +1523,12 @@ class NSolidService final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
-  class WithRawCallbackMethod_ExportProfilerStacks : public BaseClass {
-   private:
-    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
-   public:
-    WithRawCallbackMethod_ExportProfilerStacks() {
-      ::grpc::Service::MarkMethodRawCallback(7,
-          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
-            [this](
-                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ExportProfilerStacks(context, request, response); }));
-    }
-    ~WithRawCallbackMethod_ExportProfilerStacks() override {
-      BaseClassMustBeDerivedFromService(this);
-    }
-    // disable synchronous version of this method
-    ::grpc::Status ExportProfilerStacks(::grpc::ServerContext* /*context*/, const ::grpcagent::ProfilerStacksEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
-      abort();
-      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-    }
-    virtual ::grpc::ServerUnaryReactor* ExportProfilerStacks(
-      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
-  };
-  template <class BaseClass>
   class WithRawCallbackMethod_ExportBlockedLoop : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_ExportBlockedLoop() {
-      ::grpc::Service::MarkMethodRawCallback(8,
+      ::grpc::Service::MarkMethodRawCallback(7,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ExportBlockedLoop(context, request, response); }));
@@ -1680,7 +1550,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_ExportUnblockedLoop() {
-      ::grpc::Service::MarkMethodRawCallback(9,
+      ::grpc::Service::MarkMethodRawCallback(8,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ExportUnblockedLoop(context, request, response); }));
@@ -1702,7 +1572,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_ExportReconfigure() {
-      ::grpc::Service::MarkMethodRawCallback(10,
+      ::grpc::Service::MarkMethodRawCallback(9,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ExportReconfigure(context, request, response); }));
@@ -1724,7 +1594,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_ExportSourceCode() {
-      ::grpc::Service::MarkMethodRawCallback(11,
+      ::grpc::Service::MarkMethodRawCallback(10,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ExportSourceCode(context, request, response); }));
@@ -1746,7 +1616,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_ExportStartupTimes() {
-      ::grpc::Service::MarkMethodRawCallback(12,
+      ::grpc::Service::MarkMethodRawCallback(11,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ExportStartupTimes(context, request, response); }));
@@ -1871,39 +1741,12 @@ class NSolidService final {
     virtual ::grpc::Status StreamedExportPackages(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::grpcagent::PackagesEvent,::grpcagent::EventResponse>* server_unary_streamer) = 0;
   };
   template <class BaseClass>
-  class WithStreamedUnaryMethod_ExportProfilerStacks : public BaseClass {
-   private:
-    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
-   public:
-    WithStreamedUnaryMethod_ExportProfilerStacks() {
-      ::grpc::Service::MarkMethodStreamed(7,
-        new ::grpc::internal::StreamedUnaryHandler<
-          ::grpcagent::ProfilerStacksEvent, ::grpcagent::EventResponse>(
-            [this](::grpc::ServerContext* context,
-                   ::grpc::ServerUnaryStreamer<
-                     ::grpcagent::ProfilerStacksEvent, ::grpcagent::EventResponse>* streamer) {
-                       return this->StreamedExportProfilerStacks(context,
-                         streamer);
-                  }));
-    }
-    ~WithStreamedUnaryMethod_ExportProfilerStacks() override {
-      BaseClassMustBeDerivedFromService(this);
-    }
-    // disable regular version of this method
-    ::grpc::Status ExportProfilerStacks(::grpc::ServerContext* /*context*/, const ::grpcagent::ProfilerStacksEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
-      abort();
-      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-    }
-    // replace default version of method with streamed unary
-    virtual ::grpc::Status StreamedExportProfilerStacks(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::grpcagent::ProfilerStacksEvent,::grpcagent::EventResponse>* server_unary_streamer) = 0;
-  };
-  template <class BaseClass>
   class WithStreamedUnaryMethod_ExportBlockedLoop : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_ExportBlockedLoop() {
-      ::grpc::Service::MarkMethodStreamed(8,
+      ::grpc::Service::MarkMethodStreamed(7,
         new ::grpc::internal::StreamedUnaryHandler<
           ::grpcagent::BlockedLoopEvent, ::grpcagent::EventResponse>(
             [this](::grpc::ServerContext* context,
@@ -1930,7 +1773,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_ExportUnblockedLoop() {
-      ::grpc::Service::MarkMethodStreamed(9,
+      ::grpc::Service::MarkMethodStreamed(8,
         new ::grpc::internal::StreamedUnaryHandler<
           ::grpcagent::UnblockedLoopEvent, ::grpcagent::EventResponse>(
             [this](::grpc::ServerContext* context,
@@ -1957,7 +1800,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_ExportReconfigure() {
-      ::grpc::Service::MarkMethodStreamed(10,
+      ::grpc::Service::MarkMethodStreamed(9,
         new ::grpc::internal::StreamedUnaryHandler<
           ::grpcagent::ReconfigureEvent, ::grpcagent::EventResponse>(
             [this](::grpc::ServerContext* context,
@@ -1984,7 +1827,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_ExportSourceCode() {
-      ::grpc::Service::MarkMethodStreamed(11,
+      ::grpc::Service::MarkMethodStreamed(10,
         new ::grpc::internal::StreamedUnaryHandler<
           ::grpcagent::SourceCodeEvent, ::grpcagent::EventResponse>(
             [this](::grpc::ServerContext* context,
@@ -2011,7 +1854,7 @@ class NSolidService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_ExportStartupTimes() {
-      ::grpc::Service::MarkMethodStreamed(12,
+      ::grpc::Service::MarkMethodStreamed(11,
         new ::grpc::internal::StreamedUnaryHandler<
           ::grpcagent::StartupTimesEvent, ::grpcagent::EventResponse>(
             [this](::grpc::ServerContext* context,
@@ -2032,9 +1875,9 @@ class NSolidService final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedExportStartupTimes(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::grpcagent::StartupTimesEvent,::grpcagent::EventResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_ExportExit<WithStreamedUnaryMethod_ExportInfo<WithStreamedUnaryMethod_ExportMetrics<WithStreamedUnaryMethod_ExportPackages<WithStreamedUnaryMethod_ExportProfilerStacks<WithStreamedUnaryMethod_ExportBlockedLoop<WithStreamedUnaryMethod_ExportUnblockedLoop<WithStreamedUnaryMethod_ExportReconfigure<WithStreamedUnaryMethod_ExportSourceCode<WithStreamedUnaryMethod_ExportStartupTimes<Service > > > > > > > > > > StreamedUnaryService;
+  typedef WithStreamedUnaryMethod_ExportExit<WithStreamedUnaryMethod_ExportInfo<WithStreamedUnaryMethod_ExportMetrics<WithStreamedUnaryMethod_ExportPackages<WithStreamedUnaryMethod_ExportBlockedLoop<WithStreamedUnaryMethod_ExportUnblockedLoop<WithStreamedUnaryMethod_ExportReconfigure<WithStreamedUnaryMethod_ExportSourceCode<WithStreamedUnaryMethod_ExportStartupTimes<Service > > > > > > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_ExportExit<WithStreamedUnaryMethod_ExportInfo<WithStreamedUnaryMethod_ExportMetrics<WithStreamedUnaryMethod_ExportPackages<WithStreamedUnaryMethod_ExportProfilerStacks<WithStreamedUnaryMethod_ExportBlockedLoop<WithStreamedUnaryMethod_ExportUnblockedLoop<WithStreamedUnaryMethod_ExportReconfigure<WithStreamedUnaryMethod_ExportSourceCode<WithStreamedUnaryMethod_ExportStartupTimes<Service > > > > > > > > > > StreamedService;
+  typedef WithStreamedUnaryMethod_ExportExit<WithStreamedUnaryMethod_ExportInfo<WithStreamedUnaryMethod_ExportMetrics<WithStreamedUnaryMethod_ExportPackages<WithStreamedUnaryMethod_ExportBlockedLoop<WithStreamedUnaryMethod_ExportUnblockedLoop<WithStreamedUnaryMethod_ExportReconfigure<WithStreamedUnaryMethod_ExportSourceCode<WithStreamedUnaryMethod_ExportStartupTimes<Service > > > > > > > > > StreamedService;
 };
 
 }  // namespace grpcagent

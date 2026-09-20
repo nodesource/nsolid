@@ -258,6 +258,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   void got_spans(const UniqRecordables& spans);
 
 #ifdef __linux__
+  void export_otlp_profiles(const std::vector<const Stack*>& stacks);
   void got_stack_traces(std::vector<Stack>&& stacks);
 #endif
 
@@ -393,6 +394,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   // For the grpc client
   std::unique_ptr<grpcagent::NSolidService::StubInterface> nsolid_service_stub_;
+  std::unique_ptr<opentelemetry::proto::collector::profiles::v1development::
+                    ProfilesService::StubInterface>
+    profiles_service_stub_;
   std::unique_ptr<CommandStream> command_stream_;
   std::string cacert_;
   std::string custom_certs_;

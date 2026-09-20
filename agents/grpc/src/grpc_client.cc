@@ -21,6 +21,7 @@ using ::grpc::experimental::TlsCredentials;
 using ::grpc::experimental::TlsChannelCredentialsOptions;
 using ::grpc::experimental::StaticDataCertificateProvider;
 using grpcagent::NSolidService;
+using opentelemetry::proto::collector::profiles::v1development::ProfilesService;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 
 namespace node {
@@ -103,6 +104,12 @@ std::unique_ptr<NSolidService::StubInterface>
     GrpcClient::MakeNSolidServiceStub(const OtlpGrpcClientOptions& options,
                                       const std::string& tls_keylog_file) {
   return NSolidService::NewStub(MakeChannel(options, tls_keylog_file));
+}
+
+std::unique_ptr<ProfilesService::StubInterface>
+    GrpcClient::MakeProfilesServiceStub(const OtlpGrpcClientOptions& options,
+                                        const std::string& tls_keylog_file) {
+  return ProfilesService::NewStub(MakeChannel(options, tls_keylog_file));
 }
 
 }  // namespace grpc

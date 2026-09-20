@@ -24,6 +24,10 @@
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "../../src/node_version.h"
 
+#include <algorithm>
+#include <limits>
+#include <unordered_map>
+
 using std::chrono::duration_cast;
 using std::chrono::nanoseconds;
 using std::chrono::seconds;
@@ -58,6 +62,9 @@ using opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporterOptions;
 using opentelemetry::v1::exporter::otlp::OtlpMetricUtils;
 using nsolid_grpc_async =
   grpcagent::NSolidService::StubInterface::async_interface;
+namespace otlp_profiles = opentelemetry::proto::profiles::v1development;
+namespace otlp_profiles_service =
+  opentelemetry::proto::collector::profiles::v1development;
 
 namespace node {
 namespace nsolid {
@@ -71,6 +78,7 @@ constexpr size_t span_msg_q_min_size = 1000;
 const char* const kNSOLID_GRPC_INSECURE = "NSOLID_GRPC_INSECURE";
 const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
+const char* const kNSOLID_OTLP_PROFILES_GRPC = "NSOLID_OTLP_PROFILES_GRPC";
 
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
@@ -149,6 +157,7 @@ void GrpcAgent::ResetGrpcClients() {
   USE(auth_timer_.stop());
   command_stream_.reset();
   nsolid_service_stub_.reset();
+  profiles_service_stub_.reset();
   log_exporter_.reset();
   metrics_exporter_.reset();
   trace_exporter_.reset();
@@ -518,6 +527,7 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
     uv_fs_unlink(nullptr, &req, tls_keylog_file_.c_str(), nullptr);
     uv_fs_req_cleanup(&req);
   }
+
 }
 
 GrpcAgent::~GrpcAgent() {
@@ -1117,6 +1127,14 @@ int GrpcAgent::config(const json& config) {
 
       nsolid_service_stub_ =
           GrpcClient::MakeNSolidServiceStub(opts, tls_keylog_file_);
+      OtlpGrpcClientOptions profiles_opts = opts;
+      auto profiles_endpoint =
+        per_process::system_environment->Get(kNSOLID_OTLP_PROFILES_GRPC);
+      if (profiles_endpoint.has_value() && !profiles_endpoint->empty()) {
+        profiles_opts.endpoint = std::move(*profiles_endpoint);
+      }
+      profiles_service_stub_ = GrpcClient::MakeProfilesServiceStub(
+        profiles_opts, tls_keylog_file_);
 
       // CommandStream needs to be created before the OTLP client to avoid
       // a race condition with abseil mutexes.
@@ -1406,56 +1424,188 @@ void GrpcAgent::got_asset_done_msg() {
 
 
 #ifdef __linux__
-void GrpcAgent::got_stack_traces(std::vector<Stack>&& stacks) {
-  if (stacks.empty()) return;
-
+void GrpcAgent::export_otlp_profiles(const std::vector<const Stack*>& stacks) {
   ArenaOptions arena_options;
   arena_options.initial_block_size = 1024;
   arena_options.max_block_size = 65536;
   std::unique_ptr<Arena> arena{new Arena{arena_options}};
-  auto* event = Arena::Create<grpcagent::ProfilerStacksEvent>(arena.get());
-  auto* batch = event->mutable_body();
-  batch->set_sample_frequency_hz(99);
-  PopulateCommon(event->mutable_common(), "profiler_stacks", nullptr);
+  auto* request = Arena::Create<otlp_profiles_service::ExportProfilesServiceRequest>(
+    arena.get());
+  auto* dictionary = request->mutable_dictionary();
+  dictionary->add_mapping_table();
+  dictionary->add_location_table();
+  dictionary->add_function_table();
+  dictionary->add_link_table();
+  dictionary->add_string_table("");
+  dictionary->add_attribute_table();
+  dictionary->add_stack_table();
 
-  for (const auto& stack : stacks) {
-    auto* sample = batch->add_samples();
-    sample->set_thread_id(stack.tid);
-    sample->set_timestamp(utils::monotonic_to_epoch_ns(stack.timestamp));
-    if (stack.node_thread_id != UINT64_MAX) {
-      sample->set_node_thread_id(stack.node_thread_id);
-    }
+  std::unordered_map<std::string, int32_t> strings;
+  strings.emplace("", 0);
+  auto intern = [&strings, dictionary](const std::string& value) {
+    auto [it, inserted] = strings.emplace(value, dictionary->string_table_size());
+    if (inserted) dictionary->add_string_table(value);
+    return it->second;
+  };
+
+  auto* resource_profiles = request->add_resource_profiles();
+  auto app = config_.find("app");
+  if (app != config_.end()) {
+    auto* attribute = resource_profiles->mutable_resource()->add_attributes();
+    attribute->set_key("service.name");
+    attribute->mutable_value()->set_string_value(app->get<std::string>());
+  }
+  {
+    auto* attribute = resource_profiles->mutable_resource()->add_attributes();
+    attribute->set_key("service.instance.id");
+    attribute->mutable_value()->set_string_value(agent_id_);
+  }
+  if (stacks.front()->node_thread_id != UINT64_MAX) {
+    auto* attribute = resource_profiles->mutable_resource()->add_attributes();
+    attribute->set_key("thread.id");
+    attribute->mutable_value()->set_int_value(stacks.front()->node_thread_id);
+  }
+  auto* profile = resource_profiles->add_scope_profiles()->add_profiles();
+  profile->mutable_sample_type()->set_type_strindex(intern("samples"));
+  profile->mutable_sample_type()->set_unit_strindex(intern("count"));
+  profile->mutable_sample_type()->set_aggregation_temporality(
+    otlp_profiles::AGGREGATION_TEMPORALITY_DELTA);
+  profile->mutable_period_type()->set_type_strindex(intern("cpu"));
+  profile->mutable_period_type()->set_unit_strindex(intern("nanoseconds"));
+  profile->set_period(1000000000 / 99);
+
+  std::unordered_map<std::string, int32_t> mappings;
+  std::unordered_map<std::string, int32_t> functions;
+  std::unordered_map<std::string, int32_t> locations;
+  std::unordered_map<std::string, int32_t> stack_indices;
+  uint64_t first_timestamp = std::numeric_limits<uint64_t>::max();
+  uint64_t last_timestamp = 0;
+
+  const int32_t build_id_key = intern("process.executable.build_id.gnu");
+  for (const auto* stack_ptr : stacks) {
+    const auto& stack = *stack_ptr;
+    std::string stack_key;
+    std::vector<int32_t> location_indices;
     for (const auto& frame : stack.frames) {
-      auto* frame_msg = sample->add_frames();
-      frame_msg->set_addr(frame.addr);
-      frame_msg->set_kind(static_cast<grpcagent::FrameKind>(frame.kind));
-      if (frame.kind == FrameKind::kNativeMapped) {
-        frame_msg->set_relative_addr(frame.relative_addr);
-        if (!frame.build_id.empty()) frame_msg->set_build_id(frame.build_id);
+      int32_t location_index;
+      if (frame.kind == FrameKind::kNativeMapped && !frame.build_id.empty()) {
+        auto [mapping, inserted] = mappings.emplace(
+          frame.build_id, dictionary->mapping_table_size());
+        if (inserted) {
+          auto* value = dictionary->add_mapping_table();
+          value->set_memory_limit(std::numeric_limits<uint64_t>::max());
+          auto* attribute = dictionary->add_attribute_table();
+          attribute->set_key_strindex(build_id_key);
+          attribute->mutable_value()->set_string_value(frame.build_id);
+          value->add_attribute_indices(dictionary->attribute_table_size() - 1);
+        }
+        std::string key = std::string("native:") +
+                          std::to_string(mapping->second) + ":" +
+                          std::to_string(frame.relative_addr);
+        auto [location, location_inserted] = locations.emplace(
+          key, dictionary->location_table_size());
+        if (location_inserted) {
+          auto* value = dictionary->add_location_table();
+          value->set_mapping_index(mapping->second);
+          value->set_address(frame.relative_addr);
+        }
+        location_index = location->second;
+      } else if (!frame.symbol_name.empty()) {
+        std::string function_key = frame.symbol_name + "\x1f" +
+          frame.script_name + "\x1f" + std::to_string(frame.script_line);
+        auto [function, function_inserted] = functions.emplace(
+          function_key, dictionary->function_table_size());
+        if (function_inserted) {
+          auto* value = dictionary->add_function_table();
+          value->set_name_strindex(intern(frame.symbol_name));
+          value->set_system_name_strindex(intern(frame.symbol_name));
+          value->set_filename_strindex(intern(frame.script_name));
+          value->set_start_line(frame.script_line);
+        }
+        std::string key = std::string("js:") + std::to_string(frame.addr) +
+                          ":" + std::to_string(function->second) + ":" +
+                          std::to_string(frame.script_line) + ":" +
+                          std::to_string(frame.script_column);
+        auto [location, location_inserted] = locations.emplace(
+          key, dictionary->location_table_size());
+        if (location_inserted) {
+          auto* value = dictionary->add_location_table();
+          value->set_address(frame.addr);
+          auto* line = value->add_line();
+          line->set_function_index(function->second);
+          line->set_line(frame.script_line);
+          line->set_column(frame.script_column);
+        }
+        location_index = location->second;
+      } else {
+        std::string key = std::string("unknown:") + std::to_string(frame.addr) + ":" +
+                          std::to_string(static_cast<int>(frame.kind));
+        auto [location, location_inserted] = locations.emplace(
+          key, dictionary->location_table_size());
+        if (location_inserted) {
+          dictionary->add_location_table()->set_address(frame.addr);
+        }
+        location_index = location->second;
       }
-      if (!frame.symbol_name.empty()) {
-        frame_msg->set_symbol_name(frame.symbol_name);
-        frame_msg->set_symbol_type(
-            static_cast<grpcagent::V8CodeEventType>(frame.symbol_event_type));
-        if (!frame.script_name.empty()) {
-          frame_msg->set_script_name(frame.script_name);
-        }
-        if (frame.script_line != 0) {
-          frame_msg->set_script_line(frame.script_line);
-        }
-        if (frame.script_column != 0) {
-          frame_msg->set_script_column(frame.script_column);
-        }
+      location_indices.push_back(location_index);
+      stack_key += std::to_string(location_index) + ",";
+    }
+
+    auto [stack_entry, stack_inserted] = stack_indices.emplace(
+      stack_key, dictionary->stack_table_size());
+    if (stack_inserted) {
+      auto* value = dictionary->add_stack_table();
+      for (int32_t location_index : location_indices) {
+        value->add_location_indices(location_index);
       }
     }
+
+    uint64_t timestamp = utils::monotonic_to_epoch_ns(stack.timestamp);
+    auto* sample = profile->add_sample();
+    sample->set_stack_index(stack_entry->second);
+    sample->add_values(1);
+    sample->add_timestamps_unix_nano(timestamp);
+    first_timestamp = std::min(first_timestamp, timestamp);
+    last_timestamp = std::max(last_timestamp, timestamp);
   }
 
+  profile->set_time_unix_nano(first_timestamp);
+  profile->set_duration_nano(last_timestamp - first_timestamp);
   auto context = GrpcClient::MakeClientContext(rpc_metadata());
-  GrpcClient::DelegateAsyncExport<grpcagent::ProfilerStacksEvent>(
-      nsolid_service_stub_.get(), &nsolid_grpc_async::ExportProfilerStacks,
-      std::move(context), std::move(arena), std::move(*event),
-      [](::grpc::Status, std::unique_ptr<Arena>&&, const auto&,
-         grpcagent::EventResponse*) { return true; });
+  using ProfilesService = otlp_profiles_service::ProfilesService;
+  using ProfilesStub = ProfilesService::StubInterface;
+  GrpcClient::DelegateAsyncExportImpl<
+    otlp_profiles_service::ExportProfilesServiceRequest,
+    otlp_profiles_service::ExportProfilesServiceResponse,
+    ProfilesStub>(
+    profiles_service_stub_.get(),
+    static_cast<void(ProfilesStub::async_interface::*)(
+      ::grpc::ClientContext*,
+      const otlp_profiles_service::ExportProfilesServiceRequest*,
+      otlp_profiles_service::ExportProfilesServiceResponse*,
+      std::function<void(::grpc::Status)>)>(
+        &ProfilesStub::async_interface::Export),
+    std::move(context), std::move(arena), std::move(*request),
+    [](::grpc::Status,
+       std::unique_ptr<Arena>&&,
+       const auto&,
+       otlp_profiles_service::ExportProfilesServiceResponse*) { return true; });
+}
+
+void GrpcAgent::got_stack_traces(std::vector<Stack>&& stacks) {
+  if (stacks.empty()) return;
+
+  if (profiles_service_stub_ == nullptr) {
+    return;
+  }
+
+  std::unordered_map<uint64_t, std::vector<const Stack*>> stacks_by_thread;
+  for (const auto& stack : stacks) {
+    stacks_by_thread[stack.node_thread_id].push_back(&stack);
+  }
+  for (const auto& [_, thread_stacks] : stacks_by_thread) {
+    export_otlp_profiles(thread_stacks);
+  }
 }
 #endif
 
