@@ -26,5 +26,11 @@
         }
       ]
     }
+  },
+  {
+    "cve": "CVE-2026-9496",
+    "status": "fixed",
+    "action_statement": "Upstream fix backported; vulnerable regex replaced with linear indexOf()/slice() logic. Upstream fix: https://github.com/npm/pacote/commit/627a7dc1a214d857472a13b48e42559c75288c9e",
+    "product": "pkg:generic/nodesource/nsolid"
   }
 ]

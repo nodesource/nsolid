@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-36f3076d74de551c93120db26631629cb6d7b7ff5b8a682188745d9c418f14cb",
+  "@id": "https://openvex.dev/docs/public/vex-87d27318a5db31c4518158233f83c3df210ab531a0978e064fde42bf31b6b750",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-09-22T08:59:57.315855Z",
+  "timestamp": "2026-09-22T08:59:57.668030Z",
   "statements": [
     {
       "vulnerability": {
@@ -43,6 +43,19 @@
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "Not exploitable through supported npm CLI workflows. The affected DSSE encoding path is exercised, but npm never uses payloadType to select a parser, policy, or authorization decision. It parses the signed JSON payload and independently validates the package subject/name and SHA-512 digest."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-9496",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-9496"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid"
+        }
+      ],
+      "status": "fixed",
+      "action_statement": "Upstream fix backported; vulnerable regex replaced with linear indexOf()/slice() logic. Upstream fix: https://github.com/npm/pacote/commit/627a7dc1a214d857472a13b48e42559c75288c9e"
     }
   ]
 }
