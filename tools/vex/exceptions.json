@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "cve": "CVE-2026-48815",
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "impact_statement": "Not exploitable through supported npm CLI workflows. The vulnerability only matters when a caller relies on the certificateOIDs verification option. Pacote passes only TUF cache configuration and an optional key selector, while libnpmpublish calls sigstore.verify(provenanceBundle) without options. npm therefore never requests the constraint that affected Sigstore versions silently discard.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid@node-v22.23.2-nsolid-v6.3.6",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/sigstore@3.1.0"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-48758",
+    "status": "not_affected",
+    "justification": "inline_mitigations_already_exist",
+    "impact_statement": "Not exploitable through supported npm CLI workflows. The affected DSSE encoding path is exercised, but npm never uses payloadType to select a parser, policy, or authorization decision. It parses the signed JSON payload and independently validates the package subject/name and SHA-512 digest.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid@node-v22.23.2-nsolid-v6.3.6",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/%40sigstore/core@2.0.0"
+        }
+      ]
+    }
+  }
+]

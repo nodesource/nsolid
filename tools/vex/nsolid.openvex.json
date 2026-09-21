@@ -1,9 +1,48 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-c0bbcbac1a3b0269df680cb95790ffa9ba41dfcce04fa38f9a325f6c995b6c60",
+  "@id": "https://openvex.dev/docs/public/vex-36f3076d74de551c93120db26631629cb6d7b7ff5b8a682188745d9c418f14cb",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-08-12T10:39:54.713065Z",
-  "statements": []
+  "timestamp": "2026-09-22T08:59:57.315855Z",
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-48815",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-48815"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid@node-v22.23.2-nsolid-v6.3.6",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/sigstore@3.1.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Not exploitable through supported npm CLI workflows. The vulnerability only matters when a caller relies on the certificateOIDs verification option. Pacote passes only TUF cache configuration and an optional key selector, while libnpmpublish calls sigstore.verify(provenanceBundle) without options. npm therefore never requests the constraint that affected Sigstore versions silently discard."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-48758",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-48758"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid@node-v22.23.2-nsolid-v6.3.6",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/%40sigstore/core@2.0.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Not exploitable through supported npm CLI workflows. The affected DSSE encoding path is exercised, but npm never uses payloadType to select a parser, policy, or authorization decision. It parses the signed JSON payload and independently validates the package subject/name and SHA-512 digest."
+    }
+  ]
 }
