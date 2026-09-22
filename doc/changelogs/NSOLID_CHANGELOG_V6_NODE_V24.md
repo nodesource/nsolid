@@ -2,6 +2,26 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-09-24, Version 24.21.0-nsolid-v6.3.7 'Krypton'
+
+### Commits
+
+* \[[`407659eb02`](https://github.com/nodesource/nsolid/commit/407659eb02)] - Merge tag 'v24.21.0' into node-v24.21.0-nsolid-v6.3.7-release (Santiago Gimeno)
+* \[[`c55e21a25f`](https://github.com/nodesource/nsolid/commit/c55e21a25f)] - **build**: package OpenVEX on Windows (Santiago Gimeno) [#540](https://github.com/nodesource/nsolid/pull/540)
+* \[[`e91ee81ca3`](https://github.com/nodesource/nsolid/commit/e91ee81ca3)] - **build**: avoid regenerating VEX during install (Santiago Gimeno) [#540](https://github.com/nodesource/nsolid/pull/540)
+* \[[`a0bd51dd56`](https://github.com/nodesource/nsolid/commit/a0bd51dd56)] - **deps**: support modern Windows curl configuration (Santiago Gimeno) [#542](https://github.com/nodesource/nsolid/pull/542)
+* \[[`01ae0d9221`](https://github.com/nodesource/nsolid/commit/01ae0d9221)] - **deps**: update libcurl to 8.22.0 (Santiago Gimeno) [#529](https://github.com/nodesource/nsolid/pull/529)
+* \[[`cdd4039a2a`](https://github.com/nodesource/nsolid/commit/cdd4039a2a)] - **doc**: update README with runtime observability overview (Estefany Aguilar)
+* \[[`1938e6da6d`](https://github.com/nodesource/nsolid/commit/1938e6da6d)] - **doc**: reword zero overhead as minimal overhead (teffcode)
+* \[[`ff655d0725`](https://github.com/nodesource/nsolid/commit/ff655d0725)] - **doc**: wrap README lines to satisfy markdown lint (teffcode)
+* \[[`e9f06cb6ff`](https://github.com/nodesource/nsolid/commit/e9f06cb6ff)] - **doc**: drop unused query from the npm plugin link (teffcode-ai)
+* \[[`28d37261b8`](https://github.com/nodesource/nsolid/commit/28d37261b8)] - **doc**: use unversioned Windsurf marketplace link (teffcode-ai)
+* \[[`931b397b14`](https://github.com/nodesource/nsolid/commit/931b397b14)] - **doc**: update README with runtime observability overview (teffcode-ai)
+* \[[`ac284120ad`](https://github.com/nodesource/nsolid/commit/ac284120ad)] - **lib**: fix linting errors (Santiago Gimeno)
+* \[[`92fa8c8483`](https://github.com/nodesource/nsolid/commit/92fa8c8483)] - **src**: improve TSList iteration and erase operations (Santiago Gimeno) [#517](https://github.com/nodesource/nsolid/pull/517)
+* \[[`6e44843cb0`](https://github.com/nodesource/nsolid/commit/6e44843cb0)] - **tools**: add N|Solid OpenVEX exceptions (Santiago Gimeno) [#515](https://github.com/nodesource/nsolid/pull/515)
+* \[[`6fca57e028`](https://github.com/nodesource/nsolid/commit/6fca57e028)] - **tools,test**: support versioned OpenVEX statements (Santiago Gimeno) [#528](https://github.com/nodesource/nsolid/pull/528)
+
 ## 2026-08-10, Version 24.19.0-nsolid-v6.3.6 'Krypton'
 
 ### Commits
