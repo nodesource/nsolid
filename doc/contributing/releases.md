@@ -528,6 +528,12 @@ The `CHANGELOG.md`, `doc/changelogs/CHANGELOG_Vx.md`, `src/node_version.h`, and
 `REPLACEME` changes should be the final commit that will be tagged for the
 release. When committing these to git, use the following message format:
 
+For N|Solid releases, update the product version in
+`tools/vex/exceptions.json`, regenerate
+`tools/vex/nsolid.openvex.json`, and include both VEX files in this
+same release commit. Use the exact version of the artifact being
+released; do not guess a future version.
+
 ```text
 YYYY-MM-DD, Version x.y.z (Release Type)
 

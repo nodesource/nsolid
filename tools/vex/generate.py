@@ -16,19 +16,55 @@ JUSTIFICATIONS = {
     'inline_mitigations_already_exist',
 }
 
+STATUSES = {'not_affected', 'fixed'}
+
+def validate_product(product):
+  if isinstance(product, str):
+    if not PRODUCT_PATTERN.fullmatch(product):
+      raise ValueError(f'Invalid OpenVEX product: {product!r}')
+  elif isinstance(product, dict):
+    pid = product.get('@id')
+    if not isinstance(pid, str) or not PRODUCT_PATTERN.fullmatch(pid):
+      raise ValueError(f'Invalid OpenVEX product @id: {pid!r}')
+    subs = product.get('subcomponents', [])
+    if not isinstance(subs, list):
+      raise ValueError(f'Invalid OpenVEX product subcomponents: {subs!r}')
+    for s in subs:
+      validate_product(s)
+  else:
+    raise ValueError(f'Invalid OpenVEX product: {product!r}')
+
+def make_product(product):
+  if product is None:
+    return {'@id': 'pkg:generic/nodesource/nsolid'}
+  if isinstance(product, str):
+    return {'@id': product}
+  return product
+
 def validate_exception(exception):
   cve = exception.get('cve')
+  status = exception.get('status', 'not_affected')
   justification = exception.get('justification')
   product = exception.get('product')
   impact_statement = exception.get('impact_statement')
+  action_statement = exception.get('action_statement')
   if not isinstance(cve, str) or not CVE_PATTERN.fullmatch(cve):
     raise ValueError(f'Invalid CVE ID: {cve!r}')
-  if not isinstance(justification, str) or justification not in JUSTIFICATIONS:
-    raise ValueError(f'Invalid OpenVEX justification: {justification!r}')
-  if product is not None and (not isinstance(product, str) or not PRODUCT_PATTERN.fullmatch(product)):
-    raise ValueError(f'Invalid OpenVEX product: {product!r}')
-  if impact_statement is not None and not isinstance(impact_statement, str):
-    raise ValueError(f'Invalid impact statement: {impact_statement!r}')
+  if status not in STATUSES:
+    raise ValueError(f'Invalid OpenVEX status: {status!r}')
+  if status == 'not_affected':
+    if not isinstance(justification, str) or justification not in JUSTIFICATIONS:
+      raise ValueError(f'Invalid OpenVEX justification: {justification!r}')
+    if impact_statement is not None and not isinstance(impact_statement, str):
+      raise ValueError(f'Invalid impact statement: {impact_statement!r}')
+  elif status == 'fixed':
+    if justification is not None:
+      raise ValueError('Fixed statements must not include justification')
+    if action_statement is not None and not isinstance(action_statement, str):
+      raise ValueError(f'Invalid action statement: {action_statement!r}')
+  if product is not None:
+    validate_product(product)
+
 
 def generate_document(exceptions, timestamp=None):
   for exception in exceptions:
@@ -40,17 +76,20 @@ def generate_document(exceptions, timestamp=None):
             'name': exception['cve'],
             '@id': f"https://www.cve.org/CVERecord?id={exception['cve']}",
         },
-        'products': [{
-            '@id': exception.get('product', 'pkg:generic/nodesource/nsolid'),
-        }],
-        'status': 'not_affected',
-        'justification': exception['justification'],
+        'products': [make_product(exception.get('product'))],
+        'status': exception.get('status', 'not_affected'),
     }
-    if 'impact_statement' in exception:
-      statement['impact_statement'] = exception['impact_statement']
+    if statement['status'] == 'not_affected':
+      statement['justification'] = exception['justification']
+      if 'impact_statement' in exception:
+        statement['impact_statement'] = exception['impact_statement']
+    elif statement['status'] == 'fixed':
+      if 'action_statement' in exception:
+        statement['action_statement'] = exception['action_statement']
 
     statements.append(statement)
-  timestamp = timestamp or datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+  if timestamp is None:
+    timestamp = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
   document = {'version': 1, '@context': 'https://openvex.dev/ns/v0.2.0', 'author': 'N|Solid Security', 'role': 'Project', 'timestamp': timestamp, 'statements': statements}
   digest = hashlib.sha256(json.dumps(document, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
   document['@id'] = f'https://openvex.dev/docs/public/vex-{digest}'
