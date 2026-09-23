@@ -446,6 +446,8 @@ copy /Y ..\README.md %TARGET_NAME%\ > nul
 if errorlevel 1 echo Cannot copy README.md && goto package_error
 copy /Y ..\CHANGELOG.md %TARGET_NAME%\ > nul
 if errorlevel 1 echo Cannot copy CHANGELOG.md && goto package_error
+copy /Y ..\tools\vex\nsolid.openvex.json %TARGET_NAME%\ > nul
+if errorlevel 1 echo Cannot copy nsolid.openvex.json && goto package_error
 
 if not defined nonpm (
   robocopy ..\deps\npm %TARGET_NAME%\node_modules\npm /e /xd test > nul

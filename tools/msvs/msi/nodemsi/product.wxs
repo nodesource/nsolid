@@ -66,6 +66,7 @@
              Description="!(loc.NodeRuntime_Description)"
              AllowAbsent="no">
       <ComponentRef Id="NodeExecutable"/>
+      <ComponentRef Id="NsolidOpenVex"/>
       <ComponentRef Id="NodeRegistryEntries"/>
       <ComponentRef Id="NodeVarsScript"/>
       <ComponentRef Id="NodeStartMenu"/>
@@ -210,6 +211,11 @@
     </DirectoryRef>
 
     <DirectoryRef Id="INSTALLDIR">
+      <Component Id="NsolidOpenVex">
+        <File Id="nsolid.openvex.json" KeyPath="yes"
+              Source="$(var.RepoDir)\tools\vex\nsolid.openvex.json"/>
+      </Component>
+
       <Component Id="CorepackCmdScript">
         <File Id="corepack.cmd" KeyPath="yes" Source="$(var.CorepackSourceDir)\shims\nodewin\corepack.cmd"/>
       </Component>
