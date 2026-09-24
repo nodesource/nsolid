@@ -615,6 +615,12 @@
       }, {
         'use_openssl_def%': 0,
       }],
+      [ 'OS=="linux"', {
+        'nsolid_sources': [
+          'src/nsolid/nsolid_elf_utils.cc',
+          'src/nsolid/nsolid_elf_utils.h',
+        ]
+      }],
     ],
   },
 
