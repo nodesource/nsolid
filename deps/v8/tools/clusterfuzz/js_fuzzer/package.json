@@ -30,5 +30,8 @@
   },
   "pkg": {
     "assets": "resources/**/*"
+  },
+  "overrides": {
+    "brace-expansion": "1.1.18"
   }
 }
