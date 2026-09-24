@@ -721,6 +721,7 @@ class EnvList {
   std::atomic<uint64_t> min_blocked_threshold_ = { UINT64_MAX };
   // TODO(trevnorris): Temporary until Console supports streaming metrics
   nsuv::ns_timer gen_ptiles_timer_;
+  std::atomic<uint64_t> gen_ptiles_interval_ = { 5000 };
   // exit data
   std::atomic<bool> exiting_ = { false };
   std::atomic<int> exit_code_;
