@@ -69,6 +69,12 @@ done
 echo "Copying existing gyp files"
 cp "$DEPS_DIR/curl/curl.gyp" "$WORKSPACE/curl"
 
+for file in lib/config-nsolid-win32.h lib/curl_config.h; do
+  if [ -e "$DEPS_DIR/curl/$file" ]; then
+    mv "$DEPS_DIR/curl/$file" "$WORKSPACE/curl/$file"
+  fi
+done
+
 echo "Replacing existing libcurl"
 rm -rf "$DEPS_DIR/curl"
 mv "$WORKSPACE/curl" "$DEPS_DIR/"

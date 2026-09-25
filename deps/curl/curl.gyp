@@ -253,7 +253,8 @@
       'conditions': [
         ['OS == "win"', {
           'defines': [
-            "__STDC_VERSION__=199901L"
+            "__STDC_VERSION__=199901L",
+            'HAVE_CONFIG_H=1',
           ]
         }],
         ['OS == "linux"', {
