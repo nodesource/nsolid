@@ -52,6 +52,11 @@
 #if HAVE_OPENSSL
 #include "ncrypto.h"
 #include "node_crypto.h"
+#if OPENSSL_VERSION_MAJOR >= 3 && !defined(CONF_MFLAGS_IGNORE_MISSING_FILE)
+// OpenSSL hides this deprecated macro under OPENSSL_NO_DEPRECATED, but the
+// non-deprecated OPENSSL_INIT settings API still accepts the flag value.
+#define CONF_MFLAGS_IGNORE_MISSING_FILE 0x10
+#endif
 #endif
 
 #if defined(NODE_HAVE_I18N_SUPPORT)
@@ -783,6 +788,9 @@ static ExitCode ProcessGlobalArgsInternal(std::vector<std::string>* args,
     v8_args.emplace_back("--js-source-phase-imports");
   }
 
+  // WebAssembly JS Promise Integration
+  v8_args.emplace_back("--experimental-wasm-jspi");
+
 #ifdef __POSIX__
   // Block SIGPROF signals when sleeping in epoll_wait/kevent/etc.  Avoids the
   // performance penalty of frequent EINTR wakeups when the profiler is running.
@@ -869,15 +877,6 @@ static ExitCode InitializeNodeWithArgsInternal(
   // default value.
   V8::SetFlagsFromString("--rehash-snapshot");
 
-#if HAVE_OPENSSL
-  // TODO(joyeecheung): make this a per-env option and move the normalization
-  // into HandleEnvOptions.
-  std::string use_system_ca;
-  if (credentials::SafeGetenv("NODE_USE_SYSTEM_CA", &use_system_ca) &&
-      use_system_ca == "1") {
-    per_process::cli_options->use_system_ca = true;
-  }
-#endif  // HAVE_OPENSSL
   HandleEnvOptions(per_process::cli_options->per_isolate->per_env);
 
   std::string node_options;
@@ -1189,6 +1188,7 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
   if (!(flags & ProcessInitializationFlags::kNoInitOpenSSL)) {
 #if HAVE_OPENSSL
 #ifndef OPENSSL_IS_BORINGSSL
+#if OPENSSL_VERSION_MAJOR >= 3
     auto GetOpenSSLErrorString = []() -> std::string {
       std::string ret;
       ERR_print_errors_cb(
@@ -1204,7 +1204,6 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
 
     // In the case of FIPS builds we should make sure
     // the random source is properly initialized first.
-#if OPENSSL_VERSION_MAJOR >= 3
     // Call OPENSSL_init_crypto to initialize OPENSSL_INIT_LOAD_CONFIG to
     // avoid the default behavior where errors raised during the parsing of the
     // OpenSSL configuration file are not propagated and cannot be detected.
@@ -1265,12 +1264,10 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
       OPENSSL_init();
     }
 #endif
-    if (!crypto::ProcessFipsOptions()) {
+    if (auto fips_error = crypto::ProcessFipsOptions()) {
       result->exit_code_ = ExitCode::kGenericUserError;
       result->early_return_ = true;
-      result->errors_.emplace_back(
-          "OpenSSL error when trying to enable FIPS:\n" +
-          GetOpenSSLErrorString());
+      result->errors_.emplace_back(std::move(*fips_error));
       return result;
     }
 

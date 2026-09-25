@@ -939,11 +939,11 @@ as `deps/icu` (You'll have: `deps/icu/source/...`)
 ### Configure OpenSSL appname
 
 N|Solid can use an OpenSSL configuration file by specifying the environment
-variable `OPENSSL_CONF`, or using the command line option `--openssl-conf`, and
-if none of those are specified will default to reading the default OpenSSL
-configuration file `openssl.cnf`. N|Solid will only read a section that is by
-default named `nodejs_conf`, but this name can be overridden using the following
-configure option:
+variable `OPENSSL_CONF`, or using the command line option `--openssl-config`,
+which takes precedence. If neither is specified, N|Solid defaults to reading the
+default OpenSSL configuration file `openssl.cnf`. N|Solid will only read a
+section that is by default named `nodejs_conf`, but this name can be overridden
+using the following configure option:
 
 ```bash
 ./configure --openssl-conf-name=<some_conf_name>
@@ -955,7 +955,9 @@ N|Solid supports FIPS when statically or dynamically linked with OpenSSL 3 via
 [OpenSSL's provider model](https://www.openssl.org/docs/man3.0/man7/crypto.html#OPENSSL-PROVIDERS).
 It is not necessary to rebuild N|Solid to enable support for FIPS.
 
-See [FIPS mode](./doc/api/crypto.md#fips-mode) for more information on how to
+When using OpenSSL 1.1.1, N|Solid must be built against a FIPS-capable OpenSSL.
+
+See [FIPS mode](doc/api/crypto.md#fips-mode) for more information on how to
 enable FIPS support in N|Solid.
 
 ## Building N|Solid with external core modules

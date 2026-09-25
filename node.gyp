@@ -188,6 +188,7 @@
       'src/node_zlib.cc',
       'src/path.cc',
       'src/permission/child_process_permission.cc',
+      'src/permission/openssl_store_permission.cc',
       'src/permission/fs_permission.cc',
       'src/permission/inspector_permission.cc',
       'src/permission/permission.cc',
@@ -324,6 +325,7 @@
       'src/node_worker.h',
       'src/path.h',
       'src/permission/child_process_permission.h',
+      'src/permission/openssl_store_permission.h',
       'src/permission/fs_permission.h',
       'src/permission/inspector_permission.h',
       'src/permission/permission.h',
@@ -361,7 +363,6 @@
       'src/quic/bindingdata.cc',
       'src/quic/cid.cc',
       'src/quic/data.cc',
-      'src/quic/logstream.cc',
       'src/quic/packet.cc',
       'src/quic/preferredaddress.cc',
       'src/quic/sessionticket.cc',
@@ -370,6 +371,7 @@
       'src/quic/endpoint.cc',
       'src/quic/http3.cc',
       'src/quic/session.cc',
+      'src/quic/session_manager.cc',
       'src/quic/streams.cc',
       'src/quic/tlscontext.cc',
       'src/quic/transportparams.cc',
@@ -379,7 +381,6 @@
       'src/quic/cid.h',
       'src/quic/data.h',
       'src/quic/defs.h',
-      'src/quic/logstream.h',
       'src/quic/packet.h',
       'src/quic/preferredaddress.h',
       'src/quic/sessionticket.h',
@@ -389,6 +390,7 @@
       'src/quic/endpoint.h',
       'src/quic/http3.h',
       'src/quic/session.h',
+      'src/quic/session_manager.h',
       'src/quic/streams.h',
       'src/quic/tlscontext.h',
       'src/quic/guard.h',
@@ -580,6 +582,7 @@
       'test/cctest/test_quic_cid.cc',
       'test/cctest/test_quic_error.cc',
       'test/cctest/test_quic_preferredaddress.cc',
+      'test/cctest/test_quic_tokenbucket.cc',
       'test/cctest/test_quic_tokens.cc',
     ],
     'node_cctest_inspector_sources': [
@@ -1087,7 +1090,7 @@
             ],
           },
           'conditions': [
-            ['openssl_is_fips!=""', {
+            ['openssl_is_fips=="true"', {
               'variables': { 'mkssldef_flags': ['-DOPENSSL_FIPS'] },
             }],
           ],
@@ -1295,6 +1298,11 @@
         [ 'node_shared=="true" and OS=="win"', {
           'sources': [
             'src/res/node.rc',
+          ],
+          'libraries': [
+            'Dbghelp.lib',
+            'winmm.lib',
+            'Ws2_32.lib',
           ],
         }],
       ],
@@ -1649,6 +1657,61 @@
     }, # embedtest
 
     {
+      'target_name': 'shared_embedtest',
+      'type': 'executable',
+
+      'dependencies': [
+        '<(node_lib_target_name)',
+      ],
+
+      # Don't depend on node.gypi - it otherwise links to
+      # the static libraries and resolve symbols at build time.
+      'include_dirs': [
+        'deps/v8/include',
+      ],
+
+      'sources': [
+        'test/embedding/shared_embedtest.cc',
+      ],
+      'conditions': [
+        [ 'node_shared=="true"', {
+          'defines': [
+            'USING_V8_SHARED',
+            'USING_V8_PLATFORM_SHARED',
+          ],
+          'defines!': [
+            'BUILDING_V8_PLATFORM_SHARED=1',
+            'BUILDING_V8_SHARED=1',
+          ],
+        }, {
+          # Only test shared embedding when Node is built as shared library.
+          'type': 'none',
+        }],
+        # Only test platforms known to work.
+        ['OS not in "mac win linux"', {
+          'type': 'none',
+        }],
+        ['OS=="win"', {
+          'libraries': [
+            'Dbghelp.lib',
+            'winmm.lib',
+            'Ws2_32.lib',
+          ],
+        }],
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [ '-Wl,-rpath,@loader_path', ],
+          }
+        }],
+        ['OS=="linux"', {
+          'ldflags': [
+            '-Wl,-rpath,\\$$ORIGIN'
+          ],
+        }],
+      ],
+    }, # shared_embedtest
+
+    {
       'target_name': 'overlapped-checker',
       'type': 'executable',
 
@@ -1747,6 +1810,10 @@
 
       'defines': [ 'NODE_WANT_INTERNALS=1' ],
 
+      # node_mksnapshot statically links node_base; it must not use the
+      # dllimport path meant for executables that load the libnode DLL.
+      'defines!': [ 'BUILDING_NODE_EXTENSION' ],
+
       'sources': [
         'src/node_snapshot_stub.cc',
         'tools/snapshot/node_mksnapshot.cc',
@@ -1824,12 +1891,26 @@
          'sources': [
            'tools/gen_node_def.cc'
          ],
+         'conditions': [
+           # When cross-compiling, build this tool for the host so it can
+           # run during the build. The MSVS generator expects it to be
+           # named gen_node_def_host.exe in that case.
+           ['want_separate_host_toolset', {
+             'toolsets': ['host'],
+           }],
+         ],
        },
        {
          'target_name': 'generate_node_def',
          'dependencies': [
-           'gen_node_def',
            '<(node_lib_target_name)',
+         ],
+         'conditions': [
+           ['want_separate_host_toolset', {
+             'dependencies': ['gen_node_def#host'],
+           }, {
+             'dependencies': ['gen_node_def'],
+           }],
          ],
          'type': 'none',
          'actions': [

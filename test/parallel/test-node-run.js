@@ -9,7 +9,7 @@ const assert = require('node:assert');
 const fixtures = require('../common/fixtures');
 const envSuffix = common.isWindows ? '-windows' : '';
 
-describe('node --run [command]', () => {
+describe('node --run [command]', { concurrency: !process.env.TEST_PARALLEL }, () => {
   it('returns error on non-existent file', async () => {
     const child = await common.spawnPromisified(
       process.execPath,
@@ -32,6 +32,28 @@ describe('node --run [command]', () => {
     );
     assert.match(child.stdout, /Error: no test specified/);
     assert.strictEqual(child.code, 1);
+  });
+
+  it('recognizes cmd.exe case-insensitively', {
+    skip: !common.isWindows,
+  }, async () => {
+    const env = { ...process.env };
+    const comspecKey = Object.keys(env)
+      .find((key) => key.toLowerCase() === 'comspec');
+    assert.notStrictEqual(comspecKey, undefined);
+    const comspec = env[comspecKey];
+    assert.match(comspec, /cmd\.exe$/i);
+    delete env[comspecKey];
+    env.ComSpec = comspec.replace(/cmd\.exe$/i, 'CMD.EXE');
+
+    const child = await common.spawnPromisified(
+      process.execPath,
+      [ '--run', 'pwd-windows'],
+      { cwd: fixtures.path('run-script'), env },
+    );
+    assert.strictEqual(child.stdout.trim(), fixtures.path('run-script'));
+    assert.strictEqual(child.stderr, '');
+    assert.strictEqual(child.code, 0);
   });
 
   it('adds node_modules/.bin to path', async () => {
@@ -221,5 +243,20 @@ describe('node --run [command]', () => {
     assert.match(child.stderr, /Can't find "scripts" field in/);
     assert.strictEqual(child.stdout, '');
     assert.strictEqual(child.code, 1);
+  });
+
+  it('escapes shell characters', async () => {
+    const child = await common.spawnPromisified(
+      process.execPath,
+      [ '--run', `positional-args${envSuffix}`, '--', '%PAYLOAD%', '$PAYLOAD'],
+      { cwd: fixtures.path('run-script'), env: { ...process.env, PAYLOAD: 'env value' } },
+    );
+    assert.strictEqual(
+      child.stdout,
+      common.isWindows ?
+        `Raw '"^%PAYLOAD^%" "$PAYLOAD"'\r\nArguments: '%PAYLOAD% $PAYLOAD'\r\nThe total number of arguments is: 2\r\n` :
+        "Arguments: '%PAYLOAD% $PAYLOAD'\nThe total number of arguments is: 2\n");
+    assert.strictEqual(child.stderr, '');
+    assert.strictEqual(child.code, 0);
   });
 });

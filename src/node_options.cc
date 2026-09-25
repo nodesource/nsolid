@@ -199,6 +199,13 @@ void EnvironmentOptions::CheckOptions(std::vector<std::string>* errors,
                       "used, not both");
   }
 
+#if HAVE_OPENSSL
+  if (use_system_ca && per_process::cli_options->use_openssl_ca) {
+    errors->push_back("either --use-openssl-ca or --use-system-ca can be "
+                      "used, not both");
+  }
+#endif  // HAVE_OPENSSL
+
   if (heap_snapshot_near_heap_limit < 0) {
     errors->push_back("--heapsnapshot-near-heap-limit must not be negative");
   }
@@ -508,7 +515,7 @@ EnvironmentOptionsParser::EnvironmentOptionsParser() {
   AddOption("--experimental-print-required-tla",
             "Print pending top-level await. If --require-module "
             "is true, evaluate asynchronous graphs loaded by `require()` but "
-            "do not run the microtasks, in order to to find and print "
+            "do not run the microtasks, in order to find and print "
             "top-level await in the graph",
             &EnvironmentOptions::print_required_tla,
             kAllowedInEnvvar);
@@ -583,6 +590,10 @@ EnvironmentOptionsParser::EnvironmentOptionsParser() {
             &EnvironmentOptions::experimental_sqlite,
             kAllowedInEnvvar,
             HAVE_SQLITE);
+  AddOption("--experimental-stream-iter",
+            "experimental iterable streams API (node:stream/iter)",
+            &EnvironmentOptions::experimental_stream_iter,
+            kAllowedInEnvvar);
   AddOption("--experimental-quic",
 #ifndef OPENSSL_NO_QUIC
             "experimental QUIC support",
@@ -628,6 +639,11 @@ EnvironmentOptionsParser::EnvironmentOptionsParser() {
             &EnvironmentOptions::permission,
             kAllowedInEnvvar,
             false);
+  AddOption("--permission-audit",
+            "enable audit only for the permission system",
+            &EnvironmentOptions::permission_audit,
+            kAllowedInEnvvar,
+            false);
   AddOption("--allow-fs-read",
             "allow permissions to read the filesystem",
             &EnvironmentOptions::allow_fs_read,
@@ -665,6 +681,12 @@ EnvironmentOptionsParser::EnvironmentOptionsParser() {
   AddOption("--allow-worker",
             "allow worker threads when any permissions are set",
             &EnvironmentOptions::allow_worker_threads,
+            kAllowedInEnvvar,
+            false,
+            OptionNamespaces::kPermissionNamespace);
+  AddOption("--allow-openssl-store",
+            "allow use of OpenSSL STORE loaders when any permissions are set",
+            &EnvironmentOptions::allow_openssl_store,
             kAllowedInEnvvar,
             false,
             OptionNamespaces::kPermissionNamespace);
@@ -860,6 +882,10 @@ EnvironmentOptionsParser::EnvironmentOptionsParser() {
             &EnvironmentOptions::experimental_config_file_path,
             kDisallowedInEnvvar);
   AddAlias("--experimental-default-config-file", "--experimental-config-file");
+  AddOption("--experimental-package-map",
+            "use the specified file for package map resolution",
+            &EnvironmentOptions::experimental_package_map_path,
+            kAllowedInEnvvar);
   AddOption("--test",
             "launch test runner on startup",
             &EnvironmentOptions::test_runner,
@@ -1051,6 +1077,13 @@ EnvironmentOptionsParser::EnvironmentOptionsParser() {
       "Print accesses to the environment variables and the native stack trace",
       &EnvironmentOptions::trace_env_native_stack,
       kAllowedInEnvvar);
+
+#if HAVE_OPENSSL
+  AddOption("--use-system-ca",
+            "use system's CA store",
+            &EnvironmentOptions::use_system_ca,
+            kAllowedInEnvvar);
+#endif  // HAVE_OPENSSL
 
   AddOption(
       "--trace-require-module",
@@ -1395,10 +1428,6 @@ PerProcessOptionsParser::PerProcessOptionsParser(
 #endif
             ,
             &PerProcessOptions::use_openssl_ca,
-            kAllowedInEnvvar);
-  AddOption("--use-system-ca",
-            "use system's CA store",
-            &PerProcessOptions::use_system_ca,
             kAllowedInEnvvar);
   AddOption("--use-bundled-ca",
             "use bundled CA store"
@@ -2161,6 +2190,10 @@ void HandleEnvOptions(std::shared_ptr<EnvironmentOptions> env_options,
       opt_getter("NODE_PRESERVE_SYMLINKS_MAIN") == "1";
 
   env_options->use_env_proxy = opt_getter("NODE_USE_ENV_PROXY") == "1";
+
+#if HAVE_OPENSSL
+  env_options->use_system_ca = opt_getter("NODE_USE_SYSTEM_CA") == "1";
+#endif  // HAVE_OPENSSL
 
   if (env_options->redirect_warnings.empty())
     env_options->redirect_warnings = opt_getter("NODE_REDIRECT_WARNINGS");

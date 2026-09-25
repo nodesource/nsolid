@@ -5,6 +5,7 @@
 #include "node_errors.h"
 #include "node_external_reference.h"
 #include "node_url_pattern.h"
+#include "permission/permission.h"
 #include "util.h"
 
 #include <string>
@@ -452,6 +453,8 @@ void DLOpen(const FunctionCallbackInfo<Value>& args) {
     return THROW_ERR_DLOPEN_DISABLED(
       env, "Cannot load native addon because loading addons is disabled.");
   }
+  THROW_IF_INSUFFICIENT_PERMISSIONS(
+      env, permission::PermissionScope::kAddon, "");
 
   auto context = env->context();
 
@@ -671,6 +674,9 @@ void GetLinkedBinding(const FunctionCallbackInfo<Value>& args) {
 
   node::Utf8Value module_name_v(env->isolate(), module_name);
   const char* name = *module_name_v;
+  THROW_IF_INSUFFICIENT_PERMISSIONS(
+      env, permission::PermissionScope::kAddon, module_name_v.ToStringView());
+
   node_module* mod = nullptr;
 
   // Iterate from here to the nearest non-Worker Environment to see if there's

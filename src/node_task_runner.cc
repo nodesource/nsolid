@@ -60,7 +60,11 @@ ProcessRunner::ProcessRunner(std::shared_ptr<InitializationResultImpl> result,
   }
 
 #ifdef _WIN32
-  if (file_.ends_with("cmd.exe")) {
+  static constexpr std::string_view cmd_exe = "cmd.exe";
+  if (file_.size() >= cmd_exe.size() &&
+      StringEqualNoCaseN(file_.data() + file_.size() - cmd_exe.size(),
+                         cmd_exe.data(),
+                         cmd_exe.size())) {
     // If the file is cmd.exe, use the following command line arguments:
     // "/c" Carries out the command and exit.
     // "/d" Disables execution of AutoRun commands.
@@ -150,7 +154,7 @@ std::string EscapeShell(const std::string_view input) {
   }
 
   static constexpr std::string_view forbidden_characters =
-      "[\t\n\r \"#$&'()*;<>?\\\\`|~]";
+      "[\t\n\r \"#$&'()*;<>%?\\\\`|~]";
 
   // Check if input contains any forbidden characters
   // If it doesn't, return the input as is.
@@ -170,6 +174,7 @@ std::string EscapeShell(const std::string_view input) {
   static const std::regex tripleSingleQuote("\\\\\"\"\"");
   escaped = std::regex_replace(escaped, leadingQuotePairs, "");
   escaped = std::regex_replace(escaped, tripleSingleQuote, "\\\"");
+  escaped = std::regex_replace(escaped, std::regex("%"), "^%");
 #else
   // Replace single quotes("'") with `'"'"'` and wrap the result
   // in single quotes.

@@ -1995,8 +1995,63 @@ If the loop terminates with a `break`, `return`, or a `throw`, the stream will
 be destroyed. In other terms, iterating over a stream will consume the stream
 fully. The stream will be read in chunks of size equal to the `highWaterMark`
 option. In the code example above, data will be in a single chunk if the file
-has less then 64 KiB of data because no `highWaterMark` option is provided to
+has less than 64 KiB of data because no `highWaterMark` option is provided to
 [`fs.createReadStream()`][].
+
+##### `readable[Symbol.for('Stream.toAsyncStreamable')]()`
+
+<!-- YAML
+added: v24.20.0
+-->
+
+> Stability: 1 - Experimental
+
+* Returns: {AsyncIterable} An `AsyncIterable<Uint8Array[]>` that yields
+  batched chunks from the stream.
+
+When the `--experimental-stream-iter` flag is enabled, `Readable` streams
+implement the [`Stream.toAsyncStreamable`][] protocol, enabling efficient
+consumption by the [`stream/iter`][] API.
+
+This provides a batched async iterator that drains the stream's internal
+buffer into `Uint8Array[]` batches, amortizing the per-chunk Promise overhead
+of the standard `Symbol.asyncIterator` path. For byte-mode streams, chunks
+are yielded directly as `Buffer` instances (which are `Uint8Array` subclasses).
+For object-mode or encoded streams, each chunk is normalized to `Uint8Array`
+before batching.
+
+The returned iterator is tagged as a validated source, so [`from()`][stream-iter-from]
+passes it through without additional normalization.
+
+```mjs
+import { Readable } from 'node:stream';
+import { text, from } from 'node:stream/iter';
+
+const readable = new Readable({
+  read() { this.push('hello'); this.push(null); },
+});
+
+// Readable is automatically consumed via toAsyncStreamable
+console.log(await text(from(readable))); // 'hello'
+```
+
+```cjs
+const { Readable } = require('node:stream');
+const { text, from } = require('node:stream/iter');
+
+async function run() {
+  const readable = new Readable({
+    read() { this.push('hello'); this.push(null); },
+  });
+
+  console.log(await text(from(readable))); // 'hello'
+}
+
+run().catch(console.error);
+```
+
+Without the `--experimental-stream-iter` flag, calling this method throws
+[`ERR_STREAM_ITER_MISSING_FLAG`][].
 
 ##### `readable[Symbol.asyncDispose]()`
 
@@ -3055,6 +3110,19 @@ console.log(res); // prints 'HELLOWORLD'
 For convenience, the [`readable.compose(stream)`][] method is available on
 {Readable} and {Duplex} streams as a wrapper for this function.
 
+### `stream.isDestroyed(stream)`
+
+<!-- YAML
+added:
+  - v19.9.0
+  - v18.17.0
+-->
+
+* `stream` {Readable|Writable|Duplex}
+* Returns: {boolean|null} - Only returns `null` if `stream` is not a valid `Readable`, `Writable` or `Duplex`.
+
+Returns whether the stream has been destroyed.
+
 ### `stream.isErrored(stream)`
 
 <!-- YAML
@@ -3467,7 +3535,7 @@ changes:
 * `stream` {Stream|ReadableStream|WritableStream} A stream to attach a signal
   to.
 
-Attaches an AbortSignal to a readable or writeable stream. This lets code
+Attaches an AbortSignal to a readable or writable stream. This lets code
 control stream destruction using an `AbortController`.
 
 Calling `abort` on the `AbortController` corresponding to the passed
@@ -3547,13 +3615,18 @@ reader.read().then(({ value, done }) => {
 added:
   - v19.9.0
   - v18.17.0
+changes:
+  - version: v22.0.0
+    pr-url: https://github.com/nodejs/node/pull/52037
+    description: bump default highWaterMark.
 -->
 
 * `objectMode` {boolean}
 * Returns: {integer}
 
-Returns the default highWaterMark used by streams.
-Defaults to `65536` (64 KiB), or `16` for `objectMode`.
+Returns the default highWaterMark used by streams. Defaults to `16` for
+`objectMode`. For byte streams, it defaults to `65536` (64 KiB) on non-Windows
+platforms and `16384` (16 KiB) on Windows.
 
 ### `stream.setDefaultHighWaterMark(objectMode, value)`
 
@@ -3683,7 +3756,7 @@ changes:
 * `options` {Object}
   * `highWaterMark` {number} Buffer level when
     [`stream.write()`][stream-write] starts returning `false`. **Default:**
-    `65536` (64 KiB), or `16` for `objectMode` streams.
+    See [`stream.getDefaultHighWaterMark()`][].
   * `decodeStrings` {boolean} Whether to encode `string`s passed to
     [`stream.write()`][stream-write] to `Buffer`s (with the encoding
     specified in the [`stream.write()`][stream-write] call) before passing
@@ -3716,7 +3789,7 @@ changes:
 
 <!-- eslint-disable no-useless-constructor -->
 
-```js
+```cjs
 const { Writable } = require('node:stream');
 
 class MyWritable extends Writable {
@@ -3728,18 +3801,18 @@ class MyWritable extends Writable {
 }
 ```
 
-Or, when using pre-ES6 style constructors:
+<!-- eslint-disable no-useless-constructor -->
 
-```js
-const { Writable } = require('node:stream');
-const util = require('node:util');
+```mjs
+import { Writable } from 'node:stream';
 
-function MyWritable(options) {
-  if (!(this instanceof MyWritable))
-    return new MyWritable(options);
-  Writable.call(this, options);
+class MyWritable extends Writable {
+  constructor(options) {
+    // Calls the stream.Writable() constructor.
+    super(options);
+    // ...
+  }
 }
-util.inherits(MyWritable, Writable);
 ```
 
 Or, using the simplified constructor approach:
@@ -3759,7 +3832,7 @@ const myWritable = new Writable({
 
 Calling `abort` on the `AbortController` corresponding to the passed
 `AbortSignal` will behave the same way as calling `.destroy(new AbortError())`
-on the writeable stream.
+on the writable stream.
 
 ```js
 const { Writable } = require('node:stream');
@@ -4057,7 +4130,7 @@ changes:
 * `options` {Object}
   * `highWaterMark` {number} The maximum [number of bytes][hwm-gotcha] to store
     in the internal buffer before ceasing to read from the underlying resource.
-    **Default:** `65536` (64 KiB), or `16` for `objectMode` streams.
+    **Default:** See [`stream.getDefaultHighWaterMark()`][].
   * `encoding` {string} If specified, then buffers will be decoded to
     strings using the specified encoding. **Default:** `null`.
   * `objectMode` {boolean} Whether this stream should behave
@@ -4087,20 +4160,6 @@ class MyReadable extends Readable {
     // ...
   }
 }
-```
-
-Or, when using pre-ES6 style constructors:
-
-```js
-const { Readable } = require('node:stream');
-const util = require('node:util');
-
-function MyReadable(options) {
-  if (!(this instanceof MyReadable))
-    return new MyReadable(options);
-  Readable.call(this, options);
-}
-util.inherits(MyReadable, Readable);
 ```
 
 Or, using the simplified constructor approach:
@@ -4421,7 +4480,7 @@ changes:
 
 <!-- eslint-disable no-useless-constructor -->
 
-```js
+```cjs
 const { Duplex } = require('node:stream');
 
 class MyDuplex extends Duplex {
@@ -4432,18 +4491,17 @@ class MyDuplex extends Duplex {
 }
 ```
 
-Or, when using pre-ES6 style constructors:
+<!-- eslint-disable no-useless-constructor -->
 
-```js
-const { Duplex } = require('node:stream');
-const util = require('node:util');
+```mjs
+import { Duplex } from 'node:stream';
 
-function MyDuplex(options) {
-  if (!(this instanceof MyDuplex))
-    return new MyDuplex(options);
-  Duplex.call(this, options);
+class MyDuplex extends Duplex {
+  constructor(options) {
+    super(options);
+    // ...
+  }
 }
-util.inherits(MyDuplex, Duplex);
 ```
 
 Or, using the simplified constructor approach:
@@ -4618,7 +4676,7 @@ output on the `Readable` side is not consumed.
 
 <!-- eslint-disable no-useless-constructor -->
 
-```js
+```cjs
 const { Transform } = require('node:stream');
 
 class MyTransform extends Transform {
@@ -4629,18 +4687,17 @@ class MyTransform extends Transform {
 }
 ```
 
-Or, when using pre-ES6 style constructors:
+<!-- eslint-disable no-useless-constructor -->
 
-```js
-const { Transform } = require('node:stream');
-const util = require('node:util');
+```mjs
+import { Transform } from 'node:stream';
 
-function MyTransform(options) {
-  if (!(this instanceof MyTransform))
-    return new MyTransform(options);
-  Transform.call(this, options);
+class MyTransform extends Transform {
+  constructor(options) {
+    super(options);
+    // ...
+  }
 }
-util.inherits(MyTransform, Transform);
 ```
 
 Or, using the simplified constructor approach:
@@ -4974,8 +5031,10 @@ contain multi-byte characters.
 [`'finish'`]: #event-finish
 [`'readable'`]: #event-readable
 [`Duplex`]: #class-streamduplex
+[`ERR_STREAM_ITER_MISSING_FLAG`]: errors.md#err_stream_iter_missing_flag
 [`EventEmitter`]: events.md#class-eventemitter
 [`Readable`]: #class-streamreadable
+[`Stream.toAsyncStreamable`]: stream_iter.md#streamtoasyncstreamable
 [`Symbol.hasInstance`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/hasInstance
 [`Transform`]: #class-streamtransform
 [`Writable`]: #class-streamwritable
@@ -4996,11 +5055,13 @@ contain multi-byte characters.
 [`stream.cork()`]: #writablecork
 [`stream.duplexPair()`]: #streamduplexpairoptions
 [`stream.finished()`]: #streamfinishedstream-options-callback
+[`stream.getDefaultHighWaterMark()`]: #streamgetdefaulthighwatermarkobjectmode
 [`stream.pipe()`]: #readablepipedestination-options
 [`stream.pipeline()`]: #streampipelinesource-transforms-destination-callback
 [`stream.uncork()`]: #writableuncork
 [`stream.unpipe()`]: #readableunpipedestination
 [`stream.wrap()`]: #readablewrapstream
+[`stream/iter`]: stream_iter.md
 [`writable._final()`]: #writable_finalcallback
 [`writable._write()`]: #writable_writechunk-encoding-callback
 [`writable._writev()`]: #writable_writevchunks-callback
@@ -5029,6 +5090,7 @@ contain multi-byte characters.
 [stream-end]: #writableendchunk-encoding-callback
 [stream-finished]: #streamfinishedstream-options-callback
 [stream-finished-promise]: #streamfinishedstream-options
+[stream-iter-from]: stream_iter.md#frominput
 [stream-pause]: #readablepause
 [stream-pipeline]: #streampipelinesource-transforms-destination-callback
 [stream-pipeline-promise]: #streampipelinesource-transforms-destination-options
