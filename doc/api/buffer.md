@@ -536,6 +536,8 @@ added:
   - v20.16.0
 -->
 
+* Returns: {Promise}
+
 The `blob.bytes()` method returns the byte of the `Blob` object as a `Promise<Uint8Array>`.
 
 ```js
@@ -566,6 +568,7 @@ added:
 * `start` {number} The starting index.
 * `end` {number} The ending index.
 * `type` {string} The content-type for the new `Blob`
+* Returns: {Blob}
 
 Creates and returns a new `Blob` containing a subset of this `Blob` objects
 data. The original `Blob` is not altered.
@@ -2085,19 +2088,24 @@ console.log(buf.fill('zz', 'hex'));
 // Throws an exception.
 ```
 
-### `buf.includes(value[, byteOffset][, encoding])`
+### `buf.includes(value[, start[, end]][, encoding])`
 
 <!-- YAML
 added: v5.3.0
 changes:
+  - version: v24.20.0
+    pr-url: https://github.com/nodejs/node/pull/62390
+    description: Added the `end` parameter.
   - version: v24.13.1
     pr-url: https://github.com/nodejs/node/pull/56578
     description: supports Uint8Array as `this` value.
 -->
 
 * `value` {string|Buffer|Uint8Array|integer} What to search for.
-* `byteOffset` {integer} Where to begin searching in `buf`. If negative, then
+* `start` {integer} Where to begin searching in `buf`. If negative, then
   offset is calculated from the end of `buf`. **Default:** `0`.
+* `end` {integer} Where to stop searching in `buf` (exclusive). **Default:**
+  `buf.length`.
 * `encoding` {string} If `value` is a string, this is its encoding.
   **Default:** `'utf8'`.
 * Returns: {boolean} `true` if `value` was found in `buf`, `false` otherwise.
@@ -2146,11 +2154,14 @@ console.log(buf.includes('this', 4));
 // Prints: false
 ```
 
-### `buf.indexOf(value[, byteOffset][, encoding])`
+### `buf.indexOf(value[, start[, end]][, encoding])`
 
 <!-- YAML
 added: v1.5.0
 changes:
+  - version: v24.20.0
+    pr-url: https://github.com/nodejs/node/pull/62390
+    description: Added the `end` parameter.
   - version: v8.0.0
     pr-url: https://github.com/nodejs/node/pull/10236
     description: The `value` can now be a `Uint8Array`.
@@ -2163,8 +2174,10 @@ changes:
 -->
 
 * `value` {string|Buffer|Uint8Array|integer} What to search for.
-* `byteOffset` {integer} Where to begin searching in `buf`. If negative, then
+* `start` {integer} Where to begin searching in `buf`. If negative, then
   offset is calculated from the end of `buf`. **Default:** `0`.
+* `end` {integer} Where to stop searching in `buf` (exclusive). **Default:**
+  `buf.length`.
 * `encoding` {string} If `value` is a string, this is the encoding used to
   determine the binary representation of the string that will be searched for in
   `buf`. **Default:** `'utf8'`.
@@ -2324,20 +2337,25 @@ for (const key of buf.keys()) {
 //   5
 ```
 
-### `buf.lastIndexOf(value[, byteOffset][, encoding])`
+### `buf.lastIndexOf(value[, start[, end]][, encoding])`
 
 <!-- YAML
 added: v6.0.0
 changes:
+  - version: v24.20.0
+    pr-url: https://github.com/nodejs/node/pull/62390
+    description: Added the `end` parameter.
   - version: v8.0.0
     pr-url: https://github.com/nodejs/node/pull/10236
     description: The `value` can now be a `Uint8Array`.
 -->
 
 * `value` {string|Buffer|Uint8Array|integer} What to search for.
-* `byteOffset` {integer} Where to begin searching in `buf`. If negative, then
+* `start` {integer} Where to begin searching in `buf`. If negative, then
   offset is calculated from the end of `buf`. **Default:**
   `buf.length - 1`.
+* `end` {integer} Where to stop searching in `buf` (exclusive). **Default:**
+  `buf.length`.
 * `encoding` {string} If `value` is a string, this is the encoding used to
   determine the binary representation of the string that will be searched for in
   `buf`. **Default:** `'utf8'`.
@@ -5233,6 +5251,7 @@ added:
 > Stability: 3 - Legacy. Use `Buffer.from(data, 'base64')` instead.
 
 * `data` {any} The Base64-encoded input string.
+* Returns: {string}
 
 Decodes a string of Base64-encoded data into bytes, and encodes those bytes
 into a string using Latin-1 (ISO-8859-1).
@@ -5263,6 +5282,7 @@ added:
 > Stability: 3 - Legacy. Use `buf.toString('base64')` instead.
 
 * `data` {any} An ASCII (Latin1) string.
+* Returns: {string}
 
 Decodes a string into bytes using Latin-1 (ISO-8859), and encodes those bytes
 into a string using Base64.
@@ -5288,6 +5308,11 @@ npx codemod@latest @nodejs/buffer-atob-btoa
 added:
   - v19.6.0
   - v18.15.0
+changes:
+  - version: v24.21.0
+    pr-url: https://github.com/nodejs/node/pull/64504
+    description: Detached `ArrayBuffer`s and views backed by them are treated
+                 as empty.
 -->
 
 * `input` {Buffer | ArrayBuffer | TypedArray} The input to validate.
@@ -5296,7 +5321,7 @@ added:
 This function returns `true` if `input` contains only valid ASCII-encoded data,
 including the case in which `input` is empty.
 
-Throws if the `input` is a detached array buffer.
+A detached `ArrayBuffer`, or a `TypedArray` backed by one, is treated as empty.
 
 ### `buffer.isUtf8(input)`
 
@@ -5304,6 +5329,11 @@ Throws if the `input` is a detached array buffer.
 added:
   - v19.4.0
   - v18.14.0
+changes:
+  - version: v24.21.0
+    pr-url: https://github.com/nodejs/node/pull/64504
+    description: Detached `ArrayBuffer`s and views backed by them are treated
+                 as empty.
 -->
 
 * `input` {Buffer | ArrayBuffer | TypedArray} The input to validate.
@@ -5312,7 +5342,7 @@ added:
 This function returns `true` if `input` contains only valid UTF-8-encoded data,
 including the case in which `input` is empty.
 
-Throws if the `input` is a detached array buffer.
+A detached `ArrayBuffer`, or a `TypedArray` backed by one, is treated as empty.
 
 ### `buffer.INSPECT_MAX_BYTES`
 
@@ -5623,7 +5653,7 @@ introducing security vulnerabilities into an application.
 [`buf.compare()`]: #bufcomparetarget-targetstart-targetend-sourcestart-sourceend
 [`buf.entries()`]: #bufentries
 [`buf.fill()`]: #buffillvalue-offset-end-encoding
-[`buf.indexOf()`]: #bufindexofvalue-byteoffset-encoding
+[`buf.indexOf()`]: #bufindexofvalue-start-end-encoding
 [`buf.keys()`]: #bufkeys
 [`buf.length`]: #buflength
 [`buf.slice()`]: #bufslicestart-end

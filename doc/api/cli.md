@@ -293,6 +293,25 @@ Error: connect ERR_ACCESS_DENIED Access to this API has been restricted. Use --a
 }
 ```
 
+### `--allow-openssl-store`
+
+<!-- YAML
+added: v24.21.0
+-->
+
+> Stability: 1.1 - Active development
+
+When using the [Permission Model][], the process will not be able to use
+OpenSSL STORE loaders by default, for example to load a private key from a
+{URL} passed to [`crypto.createPrivateKey()`][]. Attempts to do so will throw
+an `ERR_ACCESS_DENIED` unless the user explicitly passes the
+`--allow-openssl-store` flag. This permission can be dropped at runtime via
+[`permission.drop()`][].
+
+This flag grants broad authority to configured OpenSSL STORE loaders. A loader
+may access files, devices, tokens, or the network. Access performed by a loader
+is not constrained by the `fs.read` or `fs.write` permission scopes.
+
 ### `--allow-wasi`
 
 <!-- YAML
@@ -642,9 +661,11 @@ Disable the ability of starting a debugging session by sending a
 added:
   - v21.3.0
   - v20.11.0
+changes:
+  - version: v24.20.0
+    pr-url: https://github.com/nodejs/node/pull/64742
+    description: The `--disable-warning` flag is now stable.
 -->
-
-> Stability: 1.1 - Active development
 
 Disable specific process warnings by `code` or `type`.
 
@@ -769,8 +790,9 @@ priority than `--dns-result-order`.
 added: v6.0.0
 -->
 
-Enable FIPS-compliant crypto at startup. (Requires Node.js to be built
-against FIPS-compatible OpenSSL.)
+Enable [FIPS mode][] at startup. With OpenSSL 3, a configured provider named
+`fips` must be available and initialize successfully. With OpenSSL 1.1.1,
+Node.js must be built against a FIPS-capable OpenSSL.
 
 ### `--enable-network-family-autoselection`
 
@@ -1148,17 +1170,41 @@ added:
 
 Enable experimental support for the network inspection with Chrome DevTools.
 
+### `--experimental-package-map=<path>`
+
+<!-- YAML
+added: v24.20.0
+-->
+
+> Stability: 1 - Experimental
+
+Enable experimental package map resolution. The `path` argument specifies the
+location of a JSON configuration file that defines package resolution mappings.
+
+```bash
+node --experimental-package-map=./package-map.json app.js
+```
+
+When enabled, bare specifier resolution consults the package map for resolution.
+This allows explicit control over which packages can import which dependencies.
+
+See [Package maps][] for details on the configuration file format and
+resolution algorithm.
+
 ### `--experimental-print-required-tla`
 
 <!-- YAML
 added:
   - v22.0.0
   - v20.17.0
+changes:
+  - version: v24.20.0
+    pr-url: https://github.com/nodejs/node/pull/64154
+    description: Print the top-level awaits without evaluating the modules.
 -->
 
-If the ES module being `require()`'d contains top-level `await`, this flag
-allows Node.js to evaluate the module, try to locate the
-top-level awaits, and print their location to help users find them.
+If the ES module graph cannot be `require()`'d because it contains any top-level `await`,
+this flag allows Node.js to locate and print their locations.
 
 ### `--experimental-quic`
 
@@ -1202,6 +1248,16 @@ added:
 > Stability: 1.1 - Active Development
 
 Enable experimental support for storage inspection
+
+### `--experimental-stream-iter`
+
+<!-- YAML
+added: v24.20.0
+-->
+
+> Stability: 1 - Experimental
+
+Enable the experimental [`node:stream/iter`][] module.
 
 ### `--experimental-test-coverage`
 
@@ -1322,25 +1378,6 @@ added:
 
 Enable experimental support for the worker inspection with Chrome DevTools.
 
-### `--expose-gc`
-
-<!-- YAML
-added:
-  - v22.3.0
-  - v20.18.0
--->
-
-> Stability: 1 - Experimental. This flag is inherited from V8 and is subject to
-> change upstream.
-
-This flag will expose the gc extension from V8.
-
-```js
-if (globalThis.gc) {
-  globalThis.gc();
-}
-```
-
 ### `--force-context-aware`
 
 <!-- YAML
@@ -1355,8 +1392,8 @@ Disable loading native addons that are not [context-aware][].
 added: v6.0.0
 -->
 
-Force FIPS-compliant crypto on startup. (Cannot be disabled from script code.)
-(Same requirements as `--enable-fips`.)
+Enable [FIPS mode][] at startup and prevent it from being disabled from script
+code. The same OpenSSL requirements as [`--enable-fips`][] apply.
 
 ### `--force-node-api-uncaught-exceptions-policy`
 
@@ -1794,14 +1831,6 @@ node --max-old-space-size-percentage=50 index.js
 node --max-old-space-size-percentage=75 index.js
 ```
 
-### `--napi-modules`
-
-<!-- YAML
-added: v7.10.0
--->
-
-This option is a no-op. It is kept for compatibility.
-
 ### `--network-family-autoselection-attempt-timeout`
 
 <!-- YAML
@@ -2039,9 +2068,11 @@ usually only useful for developers debugging Node.js itself.
 added: v6.9.0
 -->
 
-Load an OpenSSL configuration file on startup. Among other uses, this can be
-used to enable FIPS-compliant crypto if Node.js is built
-against FIPS-enabled OpenSSL.
+Load an OpenSSL configuration file on startup. The file can activate an
+OpenSSL 3 FIPS provider or configure a FIPS-capable OpenSSL 1.1.1 build. See
+[FIPS mode][].
+
+This option takes precedence over the `OPENSSL_CONF` environment variable.
 
 ### `--openssl-legacy-provider`
 
@@ -2102,12 +2133,39 @@ changes:
 Enable the Permission Model for current process. When enabled, the
 following permissions are restricted:
 
+> See also [`--permission-audit`](#--permission-audit) for an audit-only mode
+> that logs violations without denying access.
+
 * File System - manageable through
   [`--allow-fs-read`][], [`--allow-fs-write`][] flags
 * Child Process - manageable through [`--allow-child-process`][] flag
 * Worker Threads - manageable through [`--allow-worker`][] flag
 * WASI - manageable through [`--allow-wasi`][] flag
 * Addons - manageable through [`--allow-addons`][] flag
+* OpenSSL STORE loaders - manageable through [`--allow-openssl-store`][] flag
+
+### `--permission-audit`
+
+<!-- YAML
+added: v24.20.0
+-->
+
+Enable audit mode for the permission model. When enabled, permission checks
+are performed but access is **not** denied — no `ERR_ACCESS_DENIED` error is
+thrown. Instead, each permission violation is published through the
+`node:diagnostics_channel` module, and execution continues normally.
+
+This flag does not require [`--permission`](#--permission) to be specified. The
+`--allow-*` flags are not needed in audit mode, since no
+access is denied.
+
+Audit mode is useful for discovering what permissions your application
+requires before deploying with [`--permission`](#--permission). See the
+[Permission Model][] documentation for the list of diagnostics channel names
+and the message format.
+
+If both [`--permission`](#--permission) and `--permission-audit` are specified,
+`--permission` takes precedence and the Permission Model runs in enforce mode.
 
 ### `--preserve-symlinks`
 
@@ -2465,6 +2523,9 @@ The following environment variables are set when running a script with `--run`:
   `--run` is used to run `test`, the value of this variable will be `test`.
 * `NODE_RUN_PACKAGE_JSON_PATH`: The path to the `package.json` that is being
   processed.
+
+Environment variables loaded from a file with [`--env-file`][] are not applied
+to the command executed by `--run`.
 
 ### `--secure-heap-min=n`
 
@@ -3165,8 +3226,13 @@ added: v24.5.0
 > Stability: 1.1 - Active Development
 
 When enabled, Node.js parses the `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`
-environment variables during startup, and tunnels requests over the
+environment variables during startup, and routes requests through the
 specified proxy.
+
+Use this only with proxies that are trusted and authorized for the deployment.
+Proxy support is intended for reaching external networks through authorized
+proxy servers, for example when a firewall requires one. It is not for hiding
+traffic or evading network policy. See [Built-in Proxy Support][].
 
 This is equivalent to setting the [`NODE_USE_ENV_PROXY=1`][] environment variable.
 When both are set, `--use-env-proxy` takes precedence.
@@ -3551,6 +3617,7 @@ one is included in the list below.
 * `--allow-fs-read`
 * `--allow-fs-write`
 * `--allow-inspector`
+* `--allow-openssl-store`
 * `--allow-wasi`
 * `--allow-worker`
 * `--conditions`, `-C`
@@ -3577,11 +3644,13 @@ one is included in the list below.
 * `--experimental-json-modules`
 * `--experimental-loader`
 * `--experimental-modules`
+* `--experimental-package-map`
 * `--experimental-print-required-tla`
 * `--experimental-quic`
 * `--experimental-require-module`
 * `--experimental-shadow-realm`
 * `--experimental-specifier-resolution`
+* `--experimental-stream-iter`
 * `--experimental-test-isolation`
 * `--experimental-top-level-await`
 * `--experimental-transform-types`
@@ -3611,7 +3680,6 @@ one is included in the list below.
 * `--localstorage-file`
 * `--max-http-header-size`
 * `--max-old-space-size-percentage`
-* `--napi-modules`
 * `--network-family-autoselection-attempt-timeout`
 * `--no-addons`
 * `--no-async-context-frame`
@@ -3632,6 +3700,7 @@ one is included in the list below.
 * `--openssl-legacy-provider`
 * `--openssl-shared-config`
 * `--pending-deprecation`
+* `--permission-audit`
 * `--permission`
 * `--preserve-symlinks-main`
 * `--preserve-symlinks`
@@ -3848,8 +3917,13 @@ added: v24.0.0
 > Stability: 1.1 - Active Development
 
 When enabled, Node.js parses the `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`
-environment variables during startup, and tunnels requests over the
+environment variables during startup, and routes requests through the
 specified proxy.
+
+Use this only with proxies that are trusted and authorized for the deployment.
+Proxy support is intended for reaching external networks through authorized
+proxy servers, for example when a firewall requires one. It is not for hiding
+traffic or evading network policy. See [Built-in Proxy Support][].
 
 This can also be enabled using the [`--use-env-proxy`][] command-line flag.
 When both are set, `--use-env-proxy` takes precedence.
@@ -3953,12 +4027,18 @@ environment variable is arbitrary.
 added: v6.11.0
 -->
 
-Load an OpenSSL configuration file on startup. Among other uses, this can be
-used to enable FIPS-compliant crypto if Node.js is built with
-`./configure --openssl-fips`.
+Load an OpenSSL configuration file on startup. The file can be used as part of
+a [FIPS mode][] configuration.
+
+If the variable is set to an empty value, Node.js starts without loading any
+OpenSSL configuration file. This is a way past a default configuration file
+that exists but cannot be read, for example when `/etc/ssl` is not accessible
+to the user Node.js runs as, which is otherwise fatal at startup. No
+configuration is applied in that case, including any [FIPS mode][] setup the
+file would have performed.
 
 If the [`--openssl-config`][] command-line option is used, the environment
-variable is ignored.
+variable is ignored, and an empty value has no effect.
 
 ### `SSL_CERT_DIR=dir`
 
@@ -4041,7 +4121,7 @@ that run in libuv's threadpool will experience degraded performance. In order to
 mitigate this issue, one potential solution is to increase the size of libuv's
 threadpool by setting the `'UV_THREADPOOL_SIZE'` environment variable to a value
 greater than `4` (its current default value). However, setting this from inside
-the process using `process.env.UV_THREADPOOL_SIZE=size` is not guranteed to work
+the process using `process.env.UV_THREADPOOL_SIZE=size` is not guaranteed to work
 as the threadpool would have been created as part of the runtime initialisation
 much before user code is run. For more information, see the [libuv threadpool documentation][].
 
@@ -4154,6 +4234,7 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 <!-- v8-options end -->
 
 [#42511]: https://github.com/nodejs/node/issues/42511
+[Built-in Proxy Support]: http.md#built-in-proxy-support
 [Chrome DevTools Protocol]: https://chromedevtools.github.io/devtools-protocol/
 [Chromium's policy for locally trusted certificates]: https://chromium.googlesource.com/chromium/src/+/main/net/data/ssl/chrome_root_store/faq.md#does-the-chrome-certificate-verifier-consider-local-trust-decisions
 [CommonJS module]: modules.md
@@ -4161,12 +4242,14 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [ECMAScript module]: esm.md#modules-ecmascript-modules
 [EventSource Web API]: https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events
 [ExperimentalWarning: `vm.measureMemory` is an experimental feature]: vm.md#vmmeasurememoryoptions
+[FIPS mode]: crypto.md#fips-mode
 [File System Permissions]: permissions.md#file-system-permissions
 [Loading ECMAScript modules using `require()`]: modules.md#loading-ecmascript-modules-using-require
 [Module resolution and loading]: packages.md#module-resolution-and-loading
 [Navigator API]: globals.md#navigator
 [Node.js issue tracker]: https://github.com/nodejs/node/issues
 [OSSL_PROVIDER-legacy]: https://www.openssl.org/docs/man3.0/man7/OSSL_PROVIDER-legacy.html
+[Package maps]: packages.md#package-maps
 [Permission Model]: permissions.md#permission-model
 [REPL]: repl.md
 [ScriptCoverage]: https://chromedevtools.github.io/devtools-protocol/tot/Profiler#type-ScriptCoverage
@@ -4181,12 +4264,14 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`--allow-child-process`]: #--allow-child-process
 [`--allow-fs-read`]: #--allow-fs-read
 [`--allow-fs-write`]: #--allow-fs-write
+[`--allow-openssl-store`]: #--allow-openssl-store
 [`--allow-wasi`]: #--allow-wasi
 [`--allow-worker`]: #--allow-worker
 [`--build-snapshot`]: #--build-snapshot
 [`--cpu-prof-dir`]: #--cpu-prof-dir
 [`--diagnostic-dir`]: #--diagnostic-dirdirectory
 [`--disable-sigusr1`]: #--disable-sigusr1
+[`--enable-fips`]: #--enable-fips
 [`--env-file-if-exists`]: #--env-file-if-existsfile
 [`--env-file`]: #--env-filefile
 [`--experimental-sea-config`]: single-executable-applications.md#generating-single-executable-preparation-blobs
@@ -4213,6 +4298,7 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`SlowBuffer`]: buffer.md#class-slowbuffer
 [`Web Storage`]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API
 [`YoungGenerationSizeFromSemiSpaceSize`]: https://chromium.googlesource.com/v8/v8.git/+/refs/tags/10.3.129/src/heap/heap.cc#328
+[`crypto.createPrivateKey()`]: crypto.md#cryptocreateprivatekeykey
 [`dns.lookup()`]: dns.md#dnslookuphostname-options-callback
 [`dns.setDefaultResultOrder()`]: dns.md#dnssetdefaultresultorderorder
 [`dnsPromises.lookup()`]: dns.md#dnspromiseslookuphostname-options
@@ -4220,6 +4306,8 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [`import` specifier]: esm.md#import-specifiers
 [`net.getDefaultAutoSelectFamilyAttemptTimeout()`]: net.md#netgetdefaultautoselectfamilyattempttimeout
 [`node:sqlite`]: sqlite.md
+[`node:stream/iter`]: stream_iter.md
+[`permission.drop()`]: permissions.md#permissiondropscope-reference
 [`process.setUncaughtExceptionCaptureCallback()`]: process.md#processsetuncaughtexceptioncapturecallbackfn
 [`tls.DEFAULT_MAX_VERSION`]: tls.md#tlsdefault_max_version
 [`tls.DEFAULT_MIN_VERSION`]: tls.md#tlsdefault_min_version
@@ -4233,7 +4321,7 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [conditional exports]: packages.md#conditional-exports
 [context-aware]: addons.md#context-aware-addons
 [debugger]: debugger.md
-[debugging security implications]: https://nodejs.org/en/docs/guides/debugging-getting-started/#security-implications
+[debugging security implications]: https://nodejs.org/learn/getting-started/debugging#security-implications
 [deprecation warnings]: deprecations.md#list-of-deprecated-apis
 [emit_warning]: process.md#processemitwarningwarning-options
 [environment_variables]: #environment-variables_1
@@ -4248,7 +4336,7 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [running tests from the command line]: test.md#running-tests-from-the-command-line
 [scavenge garbage collector]: https://v8.dev/blog/orinoco-parallel-scavenger
 [security warning]: #warning-binding-inspector-to-a-public-ipport-combination-is-insecure
-[semi-space]: https://www.memorymanagement.org/glossary/s.html#semi.space
+[semi-space]: https://v8.dev/blog/trash-talk#minor-gc
 [single executable application]: single-executable-applications.md
 [snapshot testing]: test.md#snapshot-testing
 [syntax detection]: packages.md#syntax-detection

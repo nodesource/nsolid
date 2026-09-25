@@ -78,6 +78,8 @@ using v8::Undefined;
 using v8::Value;
 using worker::Worker;
 
+constexpr size_t kManagedBufferCacheSize = 64 * 1024;
+
 int const ContextEmbedderTag::kNodeContextTag = 0x6e6f64;
 void* const ContextEmbedderTag::kNodeContextTagPtr = const_cast<void*>(
     static_cast<const void*>(&ContextEmbedderTag::kNodeContextTag));
@@ -354,6 +356,12 @@ IsolateDataSerializeInfo IsolateData::Serialize(SnapshotCreator* creator) {
 #undef VS
 #undef VP
 
+#define V(Name, label, _, __)                                                  \
+  info.primitive_values.push_back(                                             \
+      creator->AddData(Name##_permission_string##_.Get(isolate)));
+  PERMISSIONS(V)
+#undef V
+
   info.primitive_values.reserve(info.primitive_values.size() +
                                 AsyncWrap::PROVIDERS_LENGTH);
   for (size_t i = 0; i < AsyncWrap::PROVIDERS_LENGTH; i++) {
@@ -412,6 +420,20 @@ void IsolateData::DeserializeProperties(const IsolateDataSerializeInfo* info) {
 #undef VY
 #undef VS
 #undef VP
+
+#define V(Name, label, _, __)                                                  \
+  do {                                                                         \
+    MaybeLocal<String> maybe_field =                                           \
+        isolate_->GetDataFromSnapshotOnce<String>(                             \
+            info->primitive_values[i++]);                                      \
+    Local<String> field;                                                       \
+    if (!maybe_field.ToLocal(&field)) {                                        \
+      fprintf(stderr, "Failed to deserialize " #Name "_permission_string\n");  \
+    }                                                                          \
+    Name##_permission_string##_.Set(isolate_, field);                          \
+  } while (0);
+  PERMISSIONS(V)
+#undef V
 
   for (size_t j = 0; j < AsyncWrap::PROVIDERS_LENGTH; j++) {
     MaybeLocal<String> maybe_field =
@@ -512,6 +534,17 @@ void IsolateData::CreateProperties() {
                              sizeof(StringValue) - 1)                          \
           .ToLocalChecked());
   PER_ISOLATE_STRING_PROPERTIES(V)
+#undef V
+
+#define V(Name, label, _, __)                                                  \
+  Name##_permission_string##_.Set(                                             \
+      isolate_,                                                                \
+      String::NewFromOneByte(isolate_,                                         \
+                             reinterpret_cast<const uint8_t*>(#Name),          \
+                             NewStringType::kInternalized,                     \
+                             sizeof(#Name) - 1)                                \
+          .ToLocalChecked());
+  PERMISSIONS(V)
 #undef V
 
   // Create all the provider strings that will be passed to JS. Place them in
@@ -624,6 +657,11 @@ void IsolateData::MemoryInfo(MemoryTracker* tracker) const {
   PER_ISOLATE_STRING_PROPERTIES(V)
 #undef V
 
+#define V(Name, label, _, __)                                                  \
+  tracker->TrackField(#Name "_permission_string", Name##_permission_string());
+  PERMISSIONS(V)
+#undef V
+
   tracker->TrackField("async_wrap_providers", async_wrap_providers_);
 
   if (node_allocator_ != nullptr) {
@@ -732,10 +770,16 @@ void Environment::add_refs(int64_t diff) {
 }
 
 uv_buf_t Environment::allocate_managed_buffer(const size_t suggested_size) {
-  std::unique_ptr<BackingStore> bs = ArrayBuffer::NewBackingStore(
-      isolate(),
-      suggested_size,
-      BackingStoreInitializationMode::kUninitialized);
+  std::unique_ptr<BackingStore> bs;
+  if (suggested_size == kManagedBufferCacheSize &&
+      managed_buffer_cache_ != nullptr) {
+    bs = std::move(managed_buffer_cache_);
+  } else {
+    bs = ArrayBuffer::NewBackingStore(
+        isolate(),
+        suggested_size,
+        BackingStoreInitializationMode::kUninitialized);
+  }
   uv_buf_t buf = uv_buf_init(static_cast<char*>(bs->Data()), bs->ByteLength());
   released_allocated_buffers_.emplace(buf.base, std::move(bs));
   return buf;
@@ -751,6 +795,11 @@ std::unique_ptr<BackingStore> Environment::release_managed_buffer(
     released_allocated_buffers_.erase(it);
   }
   return bs;
+}
+
+void Environment::recycle_managed_buffer(std::unique_ptr<BackingStore> bs) {
+  if (bs != nullptr && bs->ByteLength() == kManagedBufferCacheSize)
+    managed_buffer_cache_ = std::move(bs);
 }
 
 std::string Environment::GetExecPath(const std::vector<std::string>& argv) {
@@ -902,8 +951,11 @@ Environment::Environment(IsolateData* isolate_data,
                                       tracing::CastTracedValue(traced_value));
   }
 
-  if (options_->permission) {
+  if (options_->permission || options_->permission_audit) {
     permission()->EnablePermissions();
+    if (options_->permission_audit) {
+      permission()->EnableWarningOnly();
+    }
     // The process shouldn't be able to neither
     // spawn/worker nor use addons or enable inspector
     // unless explicitly allowed by the user
@@ -918,6 +970,10 @@ Environment::Environment(IsolateData* isolate_data,
     if (!options_->allow_child_process) {
       permission()->Apply(
           this, {"*"}, permission::PermissionScope::kChildProcess);
+    }
+    if (!options_->allow_openssl_store) {
+      permission()->Apply(
+          this, {"*"}, permission::PermissionScope::kOpenSSLStore);
     }
     if (!options_->allow_worker_threads) {
       permission()->Apply(
@@ -1480,7 +1536,9 @@ void Environment::RequestInterruptFromV8() {
       return;
     }
     env->interrupt_data_.store(nullptr);
+    env->is_processing_v8_interrupt_ = true;
     env->RunAndClearInterrupts();
+    env->is_processing_v8_interrupt_ = false;
   }, interrupt_data);
 }
 
