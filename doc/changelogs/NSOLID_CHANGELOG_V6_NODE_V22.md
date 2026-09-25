@@ -2,6 +2,28 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-09-24, Version 22.23.3-nsolid-v6.3.7 'Jod'
+
+### Commits
+
+* \[[`39838a8681`](https://github.com/nodesource/nsolid/commit/39838a8681)] - Merge tag 'v22.23.3' into node-v22.23.3-nsolid-v6.3.7-release (Santiago Gimeno)
+* \[[`d90a1903ef`](https://github.com/nodesource/nsolid/commit/d90a1903ef)] - **build**: package OpenVEX on Windows (Santiago Gimeno) [#540](https://github.com/nodesource/nsolid/pull/540)
+* \[[`329df29046`](https://github.com/nodesource/nsolid/commit/329df29046)] - **build**: avoid regenerating VEX during install (Santiago Gimeno) [#540](https://github.com/nodesource/nsolid/pull/540)
+* \[[`6033a557d8`](https://github.com/nodesource/nsolid/commit/6033a557d8)] - **deps**: support modern Windows curl configuration (Santiago Gimeno) [#542](https://github.com/nodesource/nsolid/pull/542)
+* \[[`e9ae091cc4`](https://github.com/nodesource/nsolid/commit/e9ae091cc4)] - **deps**: update libcurl to 8.22.0 (Santiago Gimeno) [#529](https://github.com/nodesource/nsolid/pull/529)
+* \[[`e4964f24b6`](https://github.com/nodesource/nsolid/commit/e4964f24b6)] - **deps**: update npm to postcss-selector-parser\@7.1.6 (Santiago Gimeno) [#530](https://github.com/nodesource/nsolid/pull/530)
+* \[[`0d333465c0`](https://github.com/nodesource/nsolid/commit/0d333465c0)] - **deps**: fix CVE-2026-9496 in npm pacote (Santiago Gimeno) [#527](https://github.com/nodesource/nsolid/pull/527)
+* \[[`65691395fb`](https://github.com/nodesource/nsolid/commit/65691395fb)] - **doc**: reword zero overhead as minimal overhead (teffcode)
+* \[[`a419ae4825`](https://github.com/nodesource/nsolid/commit/a419ae4825)] - **doc**: wrap README lines to satisfy markdown lint (teffcode)
+* \[[`faa594c180`](https://github.com/nodesource/nsolid/commit/faa594c180)] - **doc**: drop unused query from the npm plugin link (teffcode-ai)
+* \[[`0706bbe685`](https://github.com/nodesource/nsolid/commit/0706bbe685)] - **doc**: use unversioned Windsurf marketplace link (teffcode-ai)
+* \[[`36e16d7988`](https://github.com/nodesource/nsolid/commit/36e16d7988)] - **doc**: update README with runtime observability overview (teffcode-ai)
+* \[[`ec95907839`](https://github.com/nodesource/nsolid/commit/ec95907839)] - **lib**: fix linting errors (Santiago Gimeno)
+* \[[`8cb59f6c37`](https://github.com/nodesource/nsolid/commit/8cb59f6c37)] - **src**: improve TSList iteration and erase operations (Santiago Gimeno) [#517](https://github.com/nodesource/nsolid/pull/517)
+* \[[`4eaef1d1f4`](https://github.com/nodesource/nsolid/commit/4eaef1d1f4)] - **tools**: add N|Solid OpenVEX exceptions (Santiago Gimeno) [#515](https://github.com/nodesource/nsolid/pull/515)
+* \[[`ef8341ac5a`](https://github.com/nodesource/nsolid/commit/ef8341ac5a)] - **tools,test**: support versioned OpenVEX statements (Santiago Gimeno) [#528](https://github.com/nodesource/nsolid/pull/528)
+* \[[`0fbf76a42c`](https://github.com/nodesource/nsolid/commit/0fbf76a42c)] - **vex**: add CVE-2026-48758 CVE-2026-48815 exceptions (Santiago Gimeno) [#526](https://github.com/nodesource/nsolid/pull/526)
+
 ## 2026-08-10, Version 22.23.2-nsolid-v6.3.6 'Jod'
 
 ### Commits
