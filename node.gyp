@@ -473,6 +473,7 @@
       'agents/grpc/src/command_stream.h',
       'agents/grpc/src/grpc_agent.cc',
       'agents/grpc/src/grpc_agent.h',
+      'agents/grpc/src/ebpf_profile_bucket.h',
       'agents/grpc/src/grpc_client.cc',
       'agents/grpc/src/grpc_client.h',
       'agents/grpc/src/grpc_errors.h',

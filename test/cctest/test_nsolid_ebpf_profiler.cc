@@ -1,5 +1,6 @@
 #include "nsolid/nsolid_api.h"
 #include "nsolid/nsolid_ebpf_profiler.h"
+#include "grpc/src/ebpf_profile_bucket.h"
 
 #include <fcntl.h>
 #include <algorithm>
@@ -12,12 +13,15 @@
 using node::nsolid::AddressRange;
 using node::nsolid::ClassifyFrame;
 using node::nsolid::CodeEventInfo;
+using node::nsolid::grpc::EBPFProfileBucketStartNs;
 using node::nsolid::Frame;
 using node::nsolid::FrameKind;
 using node::nsolid::Mappings;
+using node::nsolid::grpc::ParseEBPFProfileBucketSizeNs;
 using node::nsolid::PopulateNativeFrameInfo;
 using node::nsolid::Stack;
 using node::nsolid::V8CodeSymbolTable;
+using node::nsolid::grpc::kDefaultEBPFProfileBucketSizeNs;
 
 namespace {
 
@@ -409,6 +413,32 @@ TEST_F(NodeZeroIsolateTestFixture, EBPFProfilerDescriptorsCloseOnExec) {
   }
   EXPECT_TRUE(envlist->ConfigureEBPFProfiling(false));
   EXPECT_EQ(PerfEventFds().size(), baseline.size());
+}
+
+TEST(EBPFProfileBucketTest, UsesDefaultBucketSize) {
+  EXPECT_EQ(ParseEBPFProfileBucketSizeNs(""),
+            kDefaultEBPFProfileBucketSizeNs);
+}
+
+TEST(EBPFProfileBucketTest, ParsesConfiguredBucketSize) {
+  EXPECT_EQ(ParseEBPFProfileBucketSizeNs("2500"), 2500ULL * 1000000);
+}
+
+TEST(EBPFProfileBucketTest, InvalidBucketSizeUsesDefault) {
+  EXPECT_EQ(ParseEBPFProfileBucketSizeNs("0"),
+            kDefaultEBPFProfileBucketSizeNs);
+  EXPECT_EQ(ParseEBPFProfileBucketSizeNs("not-a-number"),
+            kDefaultEBPFProfileBucketSizeNs);
+}
+
+TEST(EBPFProfileBucketTest, ExactBoundaryBelongsToNextBucket) {
+  constexpr uint64_t bucket_size = 10 * 1000000000ULL;
+  EXPECT_EQ(EBPFProfileBucketStartNs(bucket_size - 1, bucket_size), 0);
+  EXPECT_EQ(EBPFProfileBucketStartNs(bucket_size, bucket_size), bucket_size);
+  EXPECT_EQ(EBPFProfileBucketStartNs(3 * bucket_size + 1, bucket_size),
+            3 * bucket_size);
+  EXPECT_EQ(EBPFProfileBucketStartNs(6 * 60 * 1000000000ULL, bucket_size),
+            6 * 60 * 1000000000ULL);
 }
 
 TEST(EBPFProfilerTest, ClassifyFramePrefersJitRangeOverNativeMappings) {

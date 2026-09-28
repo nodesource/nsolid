@@ -1,6 +1,7 @@
 #include "grpc_agent.h"
 
 #include "asserts-cpp/asserts.h"
+#include "ebpf_profile_bucket.h"
 #include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "nsolid/nsolid_api.h"
 #include "nsolid/continuous_profiler.h"
@@ -79,9 +80,18 @@ const char* const kNSOLID_GRPC_INSECURE = "NSOLID_GRPC_INSECURE";
 const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
 const char* const kNSOLID_OTLP_PROFILES_GRPC = "NSOLID_OTLP_PROFILES_GRPC";
+const char* const kNSOLID_EBPF_PROFILE_BUCKET_SIZE_MS =
+  "NSOLID_EBPF_PROFILE_BUCKET_SIZE_MS";
 
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
+uint64_t GetEBPFProfileBucketSizeNs() {
+  auto value = per_process::system_environment->Get(
+      kNSOLID_EBPF_PROFILE_BUCKET_SIZE_MS);
+  if (!value.has_value())
+    return kDefaultEBPFProfileBucketSizeNs;
+  return ParseEBPFProfileBucketSizeNs(*value);
+}
 
 const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4GB
 
@@ -488,6 +498,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         unauthorized_(false),
                         assets_enabled_(true),
                         cont_cpu_profile_enabled_(false),
+                        ebpf_profile_bucket_size_ns_(
+                          GetEBPFProfileBucketSizeNs()),
                         profile_on_exit_(false) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
@@ -1465,22 +1477,30 @@ void GrpcAgent::export_otlp_profiles(const std::vector<const Stack*>& stacks) {
     attribute->set_key("thread.id");
     attribute->mutable_value()->set_int_value(stacks.front()->node_thread_id);
   }
-  auto* profile = resource_profiles->add_scope_profiles()->add_profiles();
-  profile->mutable_sample_type()->set_type_strindex(intern("samples"));
-  profile->mutable_sample_type()->set_unit_strindex(intern("count"));
-  profile->mutable_sample_type()->set_aggregation_temporality(
-    otlp_profiles::AGGREGATION_TEMPORALITY_DELTA);
-  profile->mutable_period_type()->set_type_strindex(intern("cpu"));
-  profile->mutable_period_type()->set_unit_strindex(intern("nanoseconds"));
-  profile->set_period(1000000000 / 99);
+  auto* scope_profiles = resource_profiles->add_scope_profiles();
+  std::unordered_map<uint64_t, int32_t> profile_indices;
+  auto get_profile = [&](uint64_t bucket_start_ns) {
+    auto [profile_index, inserted] = profile_indices.emplace(
+      bucket_start_ns, scope_profiles->profiles_size());
+    if (inserted) {
+      auto* profile = scope_profiles->add_profiles();
+      profile->mutable_sample_type()->set_type_strindex(intern("samples"));
+      profile->mutable_sample_type()->set_unit_strindex(intern("count"));
+      profile->mutable_sample_type()->set_aggregation_temporality(
+        otlp_profiles::AGGREGATION_TEMPORALITY_DELTA);
+      profile->mutable_period_type()->set_type_strindex(intern("cpu"));
+      profile->mutable_period_type()->set_unit_strindex(intern("nanoseconds"));
+      profile->set_period(1000000000 / 99);
+      profile->set_time_unix_nano(bucket_start_ns);
+      profile->set_duration_nano(ebpf_profile_bucket_size_ns_);
+    }
+    return scope_profiles->mutable_profiles(profile_index->second);
+  };
 
   std::unordered_map<std::string, int32_t> mappings;
   std::unordered_map<std::string, int32_t> functions;
   std::unordered_map<std::string, int32_t> locations;
   std::unordered_map<std::string, int32_t> stack_indices;
-  uint64_t first_timestamp = std::numeric_limits<uint64_t>::max();
-  uint64_t last_timestamp = 0;
-
   const int32_t build_id_key = intern("process.executable.build_id.gnu");
   for (const auto* stack_ptr : stacks) {
     const auto& stack = *stack_ptr;
@@ -1561,16 +1581,15 @@ void GrpcAgent::export_otlp_profiles(const std::vector<const Stack*>& stacks) {
     }
 
     uint64_t timestamp = utils::monotonic_to_epoch_ns(stack.timestamp);
+    const uint64_t bucket_start = EBPFProfileBucketStartNs(
+      timestamp, ebpf_profile_bucket_size_ns_);
+    auto* profile = get_profile(bucket_start);
     auto* sample = profile->add_sample();
     sample->set_stack_index(stack_entry->second);
     sample->add_values(1);
     sample->add_timestamps_unix_nano(timestamp);
-    first_timestamp = std::min(first_timestamp, timestamp);
-    last_timestamp = std::max(last_timestamp, timestamp);
   }
 
-  profile->set_time_unix_nano(first_timestamp);
-  profile->set_duration_nano(last_timestamp - first_timestamp);
   auto context = GrpcClient::MakeClientContext(rpc_metadata());
   using ProfilesService = otlp_profiles_service::ProfilesService;
   using ProfilesStub = ProfilesService::StubInterface;
