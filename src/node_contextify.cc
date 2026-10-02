@@ -1279,8 +1279,8 @@ bool ContextifyScript::EvalMachine(Local<Context> context,
   if (break_on_first_line) {
     if (!env->permission()->is_granted(env,
                                        permission::PermissionScope::kInspector,
-                                       "PauseOnNextJavascriptStatement"))
-        [[unlikely]] {
+                                       "PauseOnNextJavascriptStatement") &&
+        !env->options()->nsolid_permission_audit) [[unlikely]] {
       node::permission::Permission::ThrowAccessDenied(
           env,
           permission::PermissionScope::kInspector,

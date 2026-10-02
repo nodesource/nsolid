@@ -514,6 +514,12 @@ class ZmqAgent {
 
   static void loop_unblocked(SharedEnvInst, std::string, ZmqAgent*);
 
+  static void permission_audit_cb(SharedEnvInst,
+                                  PermissionAuditInfo,
+                                  ZmqAgent*);
+
+  static void permission_audit_msg_cb(nsuv::ns_async*, ZmqAgent*);
+
   static void custom_command_msg_cb(nsuv::ns_async*, ZmqAgent*);
 
   static void custom_command_cb(std::string req_id,
@@ -736,6 +742,12 @@ class ZmqAgent {
   // Blocked Loop
   nsuv::ns_async blocked_loop_msg_;
   TSQueue<std::tuple<bool, std::string, uint64_t>> blocked_loop_msg_q_;
+
+  // Permission Audit. The hook is registered once the command handle is
+  // configured so the events reported before that are kept by EnvList.
+  nsuv::ns_async permission_audit_msg_;
+  TSQueue<std::pair<uint64_t, PermissionAuditInfo>> permission_audit_msg_q_;
+  bool permission_audit_hook_init_ = false;
 
   // Custom commands
   nsuv::ns_async custom_command_msg_;

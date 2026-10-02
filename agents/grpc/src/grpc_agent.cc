@@ -949,6 +949,18 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
                                         GetThreadId(envinst) });
 }
 
+/*static*/void GrpcAgent::permission_audit_cb_(SharedEnvInst envinst,
+                                               PermissionAuditInfo info,
+                                               WeakGrpcAgent agent_wp) {
+  SharedGrpcAgent agent = agent_wp.lock();
+  if (agent == nullptr || agent->permission_audit_queue_ == nullptr) {
+    return;
+  }
+
+  agent->permission_audit_queue_->enqueue({ GetThreadId(envinst),
+                                            std::move(info) });
+}
+
 /*static*/void GrpcAgent::loop_unblocked_(SharedEnvInst envinst,
                                           std::string body,
                                           WeakGrpcAgent agent_wp) {
@@ -1112,6 +1124,14 @@ int GrpcAgent::config(const json& config) {
       // CommandStream needs to be created before the OTLP client to avoid
       // a race condition with abseil mutexes.
       reset_command_stream();
+
+      // Register it only now that the events can be exported. The events
+      // reported before this are kept and delivered by EnvList.
+      if (!permission_audit_hook_init_) {
+        ASSERT_EQ(0, OnPermissionAuditHook(permission_audit_cb_,
+                                           weak_from_this()));
+        permission_audit_hook_init_ = true;
+      }
 
       // Enable TLS keylog for the OTLP client
       opts.credentials = GrpcClient::MakeCredentials(opts, tls_keylog_file_);
@@ -1281,6 +1301,18 @@ void GrpcAgent::do_start() {
     },
     weak_from_this());
 
+  permission_audit_queue_ = AsyncTSQueue<PermissionAuditStor>::create(
+    &loop_,
+    +[](PermissionAuditStor&& stor, WeakGrpcAgent agent_wp) {
+      SharedGrpcAgent agent = agent_wp.lock();
+      if (agent == nullptr) {
+        return;
+      }
+
+      agent->got_permission_audit(std::move(stor));
+    },
+    weak_from_this());
+
   profile_collector_ = std::make_shared<ProfileCollector>(
     &loop_,
     +[](ProfileCollector::ProfileQStor&& stor, WeakGrpcAgent agent_wp) {
@@ -1338,6 +1370,7 @@ void GrpcAgent::do_stop() {
   span_collector_.reset();
   profile_collector_.reset();
   blocked_loop_queue_.reset();
+  permission_audit_queue_.reset();
   asset_done_msg_.close();
   command_msg_.close();
   command_stream_done_msg_.close();
@@ -1392,6 +1425,18 @@ void GrpcAgent::got_blocked_loop(BlockedLoopStor&& stor) {
     send_blocked_loop_event(std::move(stor));
   } else {
     send_unblocked_loop_event(std::move(stor));
+  }
+}
+
+void GrpcAgent::got_permission_audit(PermissionAuditStor&& stor) {
+  if (!nsolid_service_stub_) {
+    return;
+  }
+
+  if (stor.info.limit_reached) {
+    send_permission_audit_limit_event(std::move(stor));
+  } else {
+    send_permission_audit_event(std::move(stor));
   }
 }
 
@@ -1843,6 +1888,63 @@ void GrpcAgent::send_blocked_loop_event(BlockedLoopStor&& stor) {
         std::unique_ptr<Arena> &&,
         const grpcagent::BlockedLoopEvent& event,
         grpcagent::EventResponse*) {
+      return true;
+    });
+}
+
+void GrpcAgent::send_permission_audit_event(PermissionAuditStor&& stor) {
+  ArenaOptions arena_options;
+  arena_options.initial_block_size = 1024;
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
+
+  grpcagent::PermissionAuditEvent* event =
+    Arena::Create<grpcagent::PermissionAuditEvent>(arena.get());
+  PopulateCommon(event->mutable_common(), "permission_audit", nullptr);
+  grpcagent::PermissionAuditBody* body = event->mutable_body();
+  body->set_thread_id(stor.thread_id);
+  body->set_permission(std::move(stor.info.permission));
+  body->set_resource(std::move(stor.info.resource));
+  body->set_timestamp(stor.info.timestamp);
+
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
+
+  GrpcClient::DelegateAsyncExport<grpcagent::PermissionAuditEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportPermissionAudit,
+    std::move(context), std::move(arena), std::move(*event),
+    [](::grpc::Status,
+       std::unique_ptr<Arena> &&,
+       const grpcagent::PermissionAuditEvent&,
+       grpcagent::EventResponse*) {
+      return true;
+    });
+}
+
+void GrpcAgent::send_permission_audit_limit_event(PermissionAuditStor&& stor) {
+  ArenaOptions arena_options;
+  arena_options.initial_block_size = 1024;
+  arena_options.max_block_size = 65536;
+  std::unique_ptr<Arena> arena{new Arena{arena_options}};
+
+  grpcagent::PermissionAuditLimitEvent* event =
+    Arena::Create<grpcagent::PermissionAuditLimitEvent>(arena.get());
+  PopulateCommon(event->mutable_common(), "permission_audit_limit", nullptr);
+  grpcagent::PermissionAuditLimitBody* body = event->mutable_body();
+  body->set_thread_id(stor.thread_id);
+  body->set_limit(stor.info.limit);
+  body->set_timestamp(stor.info.timestamp);
+
+  auto context = GrpcClient::MakeClientContext(rpc_metadata());
+
+  GrpcClient::DelegateAsyncExport<grpcagent::PermissionAuditLimitEvent>(
+    nsolid_service_stub_.get(),
+    &nsolid_grpc_async::ExportPermissionAuditLimit,
+    std::move(context), std::move(arena), std::move(*event),
+    [](::grpc::Status,
+       std::unique_ptr<Arena> &&,
+       const grpcagent::PermissionAuditLimitEvent&,
+       grpcagent::EventResponse*) {
       return true;
     });
 }

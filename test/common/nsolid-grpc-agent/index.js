@@ -152,6 +152,12 @@ class GRPCServer extends EventEmitter {
         case 'loop_unblocked':
           this.emit('loop_unblocked', message.data);
           break;
+        case 'permission_audit':
+          this.emit('permission_audit', message.data);
+          break;
+        case 'permission_audit_limit':
+          this.emit('permission_audit_limit', message.data);
+          break;
         case 'metrics':
           this.emit('metrics', message.data);
           break;

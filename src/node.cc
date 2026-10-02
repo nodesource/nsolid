@@ -1005,6 +1005,21 @@ static ExitCode InitializeNodeWithArgsInternal(
     if (exit_code != ExitCode::kNoFailure) return exit_code;
   }
 
+  // NSOLID_PERMISSION_AUDIT enables a non-blocking audit mode of the
+  // permission model. Explicit --permission or --permission-audit flags take
+  // precedence over it.
+  {
+    auto env_opts = per_process::cli_options->per_isolate->per_env;
+    std::string nsolid_permission_audit;
+    if (!env_opts->permission && !env_opts->permission_audit &&
+        credentials::SafeGetenv("NSOLID_PERMISSION_AUDIT",
+                                &nsolid_permission_audit) &&
+        (nsolid_permission_audit == "1" ||
+         nsolid_permission_audit == "true")) {
+      env_opts->nsolid_permission_audit = true;
+    }
+  }
+
   // Set the process.title immediately after processing argv if --title is set.
   if (!per_process::cli_options->title.empty())
     uv_set_process_title(per_process::cli_options->title.c_str());
