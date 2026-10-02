@@ -1,4 +1,9 @@
-import { mustCall, mustSucceed } from '../common/index.mjs';
+// Flags: --expose-internals
+import {
+  mustCall,
+  mustCallAtLeast,
+  mustSucceed,
+} from '../common/index.mjs';
 import assert from 'node:assert';
 import { spawn } from 'node:child_process';
 import fixtures from '../common/fixtures.js';
@@ -9,8 +14,12 @@ tmpdir.refresh();
 
 const script = fixtures.path('nsolid-permission-audit.js');
 const file = tmpdir.resolve('audited.txt');
-const { writeFileSync } = await import('node:fs');
+const { mkdirSync, writeFileSync } = await import('node:fs');
 writeFileSync(file, 'nsolid');
+// Workers implicitly get read access to the cwd, so run the child somewhere
+// that doesn't contain the audited files.
+const cwd = tmpdir.resolve('cwd');
+mkdirSync(cwd);
 
 function getEnv(port, extra = {}) {
   return {
@@ -40,7 +49,7 @@ async function runBasic(execArgv, extraEnv) {
           (resource === undefined || e.resource === resource);
       }).length;
 
-      grpcServer.on('permission_audit', ({ msg, metadata }) => {
+      grpcServer.on('permission_audit', mustCallAtLeast(({ msg, metadata }) => {
         checkCommon(msg, 'permission_audit', metadata);
         events.push(msg.body);
         if (count('1', 'FileSystemRead', file) === 0)
@@ -54,11 +63,11 @@ async function runBasic(execArgv, extraEnv) {
         assert.ok(count('0', 'WorkerThreads') >= 1);
         grpcServer.removeAllListeners('permission_audit');
         child.kill();
-      });
+      }));
 
       child = spawn(process.execPath,
                     [...execArgv, script, 'basic', file, tmpdir.path],
-                    { stdio: 'inherit', env: getEnv(port, extraEnv) });
+                    { stdio: 'inherit', env: getEnv(port, extraEnv), cwd });
       child.on('exit', mustCall(() => {
         grpcServer.close();
         resolve();
@@ -72,23 +81,32 @@ async function runLimit(execArgv, extraEnv) {
   return new Promise((resolve) => {
     const grpcServer = new GRPCServer();
     grpcServer.start(mustSucceed((port) => {
+      // The events are exported concurrently, so they can arrive in any order.
       let mainThreadEvents = 0;
+      let limitReceived = false;
+      function maybeDone() {
+        assert.ok(mainThreadEvents <= 1000);
+        if (limitReceived && mainThreadEvents === 1000)
+          child.kill();
+      }
+
       grpcServer.on('permission_audit', ({ msg }) => {
         if (msg.body.threadId === '0')
           mainThreadEvents++;
+        maybeDone();
       });
 
       grpcServer.on('permission_audit_limit', mustCall(({ msg, metadata }) => {
         checkCommon(msg, 'permission_audit_limit', metadata);
         assert.strictEqual(msg.body.threadId, '0');
         assert.strictEqual(msg.body.limit, 1000);
-        assert.strictEqual(mainThreadEvents, 1000);
-        child.kill();
+        limitReceived = true;
+        maybeDone();
       }));
 
       const child = spawn(process.execPath,
                           [...execArgv, script, 'limit', file, tmpdir.path],
-                          { stdio: 'inherit', env: getEnv(port, extraEnv) });
+                          { stdio: 'inherit', env: getEnv(port, extraEnv), cwd });
       child.on('exit', mustCall(() => {
         grpcServer.close();
         resolve();
@@ -111,7 +129,7 @@ async function runNoAudit() {
 
       spawn(process.execPath,
             [script, 'basic', file, tmpdir.path, 'exit'],
-            { stdio: 'inherit', env: getEnv(port) });
+            { stdio: 'inherit', env: getEnv(port), cwd });
     }));
   });
 }

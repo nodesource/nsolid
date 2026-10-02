@@ -743,8 +743,8 @@ class ZmqAgent {
   nsuv::ns_async blocked_loop_msg_;
   TSQueue<std::tuple<bool, std::string, uint64_t>> blocked_loop_msg_q_;
 
-  // Permission Audit. The hook is registered once the command handle is
-  // configured so the events reported before that are kept by EnvList.
+  // Permission Audit. The hook is registered once the agent is Ready so the
+  // events reported before that are kept by EnvList.
   nsuv::ns_async permission_audit_msg_;
   TSQueue<std::pair<uint64_t, PermissionAuditInfo>> permission_audit_msg_q_;
   bool permission_audit_hook_init_ = false;

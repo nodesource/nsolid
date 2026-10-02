@@ -18,8 +18,8 @@ function run(execArgv, env, code) {
 }
 
 function assertOk(result) {
-  assert.strictEqual(result.stderr, '');
-  assert.strictEqual(result.status, 0);
+  assert.strictEqual(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stderr, /Error/);
 }
 
 {

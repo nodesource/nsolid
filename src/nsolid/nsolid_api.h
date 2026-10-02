@@ -436,9 +436,9 @@ class EnvList {
   using env_deletion_sig = env_creation_sig;
   using on_config_sig = void(*)(std::string, void*);
   using on_log_write_sig = void(*)(SharedEnvInst, LogWriteInfo, void*);
-  using on_permission_audit_sig = void(*)(SharedEnvInst,
-                                          PermissionAuditInfo,
-                                          void*);
+  using on_permission_audit_sig = void (*)(SharedEnvInst,
+                                           PermissionAuditInfo,
+                                           void*);
   using on_config_void_cb_sig = void(*)(void(*)(), std::string, void*);
   using on_blocked_loop_sig = void(*)(SharedEnvInst,
                                       std::string,
@@ -518,10 +518,9 @@ class EnvList {
       internal::on_log_write_hook_proxy_sig proxy,
       internal::deleter_sig deleter);
 
-  void OnPermissionAuditHook(
-      void* data,
-      internal::on_permission_audit_hook_proxy_sig proxy,
-      internal::deleter_sig deleter);
+  void OnPermissionAuditHook(void* data,
+                             internal::on_permission_audit_hook_proxy_sig proxy,
+                             internal::deleter_sig deleter);
 
   void EnvironmentCreationHook(
       void* data,
@@ -716,8 +715,7 @@ class EnvList {
   TSQueue<std::pair<SharedEnvInst, LogWriteInfo>> on_log_write_q_;
   // List for OnPermissionAuditHook callbacks.
   TSList<OnPermissionAuditHookStor> on_permission_audit_hook_list_;
-  TSQueue<std::pair<SharedEnvInst, PermissionAuditInfo>>
-      on_permission_audit_q_;
+  TSQueue<std::pair<SharedEnvInst, PermissionAuditInfo>> on_permission_audit_q_;
   // Audit events received before any OnPermissionAuditHook was registered
   // (e.g. while the main module is loading). Only accessed from the EnvList
   // thread.

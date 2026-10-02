@@ -1014,8 +1014,7 @@ static ExitCode InitializeNodeWithArgsInternal(
     if (!env_opts->permission && !env_opts->permission_audit &&
         credentials::SafeGetenv("NSOLID_PERMISSION_AUDIT",
                                 &nsolid_permission_audit) &&
-        (nsolid_permission_audit == "1" ||
-         nsolid_permission_audit == "true")) {
+        (nsolid_permission_audit == "1" || nsolid_permission_audit == "true")) {
       env_opts->nsolid_permission_audit = true;
     }
   }

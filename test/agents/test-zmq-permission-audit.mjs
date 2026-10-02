@@ -1,7 +1,7 @@
-import { mustCall } from '../common/index.mjs';
+import { mustCall, mustCallAtLeast } from '../common/index.mjs';
 import assert from 'node:assert';
 import { spawn } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import fixtures from '../common/fixtures.js';
 import tmpdir from '../common/tmpdir.js';
 import ZmqAgentBus from '../common/nsolid-zmq-agent/zmqagentbus.js';
@@ -11,6 +11,10 @@ tmpdir.refresh();
 const script = fixtures.path('nsolid-permission-audit.js');
 const file = tmpdir.resolve('audited.txt');
 writeFileSync(file, 'nsolid');
+// Workers implicitly get read access to the cwd, so run the child somewhere
+// that doesn't contain the audited files.
+const cwd = tmpdir.resolve('cwd');
+mkdirSync(cwd);
 
 const config = {
   commandBindAddr: 'tcp://*:9001',
@@ -30,6 +34,7 @@ await new Promise((resolve, reject) => {
 function spawnChild(execArgv, extraEnv, args) {
   return spawn(process.execPath, [...execArgv, script, ...args], {
     stdio: 'inherit',
+    cwd,
     env: {
       ...process.env,
       NSOLID_COMMAND: 9001,
@@ -56,7 +61,7 @@ function runBasic(execArgv, extraEnv) {
 
     const child = spawnChild(execArgv, extraEnv,
                              ['basic', file, tmpdir.path]);
-    bus.on('agent-permission_audit', (agentId, data) => {
+    bus.on('agent-permission_audit', mustCallAtLeast((agentId, data) => {
       checkMessage(data, 'permission_audit');
       events.push(data.body);
       if (count(1, 'FileSystemRead', file) === 0)
@@ -70,7 +75,7 @@ function runBasic(execArgv, extraEnv) {
       assert.ok(count(0, 'WorkerThreads') >= 1);
       bus.removeAllListeners('agent-permission_audit');
       child.kill();
-    });
+    }));
     child.on('exit', mustCall(resolve));
   });
 }

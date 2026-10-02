@@ -81,35 +81,40 @@ const char descriptor_table_protodef_nsolid_5fservice_2eproto[] ABSL_ATTRIBUTE_S
     "\n\024nsolid_service.proto\022\tgrpcagent\032\013asset"
     ".proto\032\022blocked_loop.proto\032\rcommand.prot"
     "o\032\nexit.proto\032\ninfo.proto\032\rmetrics.proto"
-    "\032\016packages.proto\032\021reconfigure.proto\032\021sou"
-    "rce_code.proto\032\023startup_times.proto\"&\n\rE"
-    "ventResponse\022\025\n\rerror_message\030\001 \001(\t2\371\006\n\r"
-    "NSolidService\022F\n\007Command\022\032.grpcagent.Com"
-    "mandResponse\032\031.grpcagent.CommandRequest\""
-    "\000(\0010\001\022=\n\013ExportAsset\022\020.grpcagent.Asset\032\030"
-    ".grpcagent.EventResponse\"\000(\001\022I\n\027ExportCo"
-    "ntinuousProfile\022\020.grpcagent.Asset\032\030.grpc"
-    "agent.EventResponse\"\000(\001\022>\n\nExportExit\022\024."
-    "grpcagent.ExitEvent\032\030.grpcagent.EventRes"
-    "ponse\"\000\022>\n\nExportInfo\022\024.grpcagent.InfoEv"
-    "ent\032\030.grpcagent.EventResponse\"\000\022D\n\rExpor"
-    "tMetrics\022\027.grpcagent.MetricsEvent\032\030.grpc"
-    "agent.EventResponse\"\000\022F\n\016ExportPackages\022"
-    "\030.grpcagent.PackagesEvent\032\030.grpcagent.Ev"
-    "entResponse\"\000\022L\n\021ExportBlockedLoop\022\033.grp"
-    "cagent.BlockedLoopEvent\032\030.grpcagent.Even"
-    "tResponse\"\000\022P\n\023ExportUnblockedLoop\022\035.grp"
-    "cagent.UnblockedLoopEvent\032\030.grpcagent.Ev"
-    "entResponse\"\000\022L\n\021ExportReconfigure\022\033.grp"
-    "cagent.ReconfigureEvent\032\030.grpcagent.Even"
-    "tResponse\"\000\022J\n\020ExportSourceCode\022\032.grpcag"
-    "ent.SourceCodeEvent\032\030.grpcagent.EventRes"
-    "ponse\"\000\022N\n\022ExportStartupTimes\022\034.grpcagen"
-    "t.StartupTimesEvent\032\030.grpcagent.EventRes"
-    "ponse\"\000b\006proto3"
+    "\032\016packages.proto\032\026permission_audit.proto"
+    "\032\021reconfigure.proto\032\021source_code.proto\032\023"
+    "startup_times.proto\"&\n\rEventResponse\022\025\n\r"
+    "error_message\030\001 \001(\t2\257\010\n\rNSolidService\022F\n"
+    "\007Command\022\032.grpcagent.CommandResponse\032\031.g"
+    "rpcagent.CommandRequest\"\000(\0010\001\022=\n\013ExportA"
+    "sset\022\020.grpcagent.Asset\032\030.grpcagent.Event"
+    "Response\"\000(\001\022I\n\027ExportContinuousProfile\022"
+    "\020.grpcagent.Asset\032\030.grpcagent.EventRespo"
+    "nse\"\000(\001\022>\n\nExportExit\022\024.grpcagent.ExitEv"
+    "ent\032\030.grpcagent.EventResponse\"\000\022>\n\nExpor"
+    "tInfo\022\024.grpcagent.InfoEvent\032\030.grpcagent."
+    "EventResponse\"\000\022D\n\rExportMetrics\022\027.grpca"
+    "gent.MetricsEvent\032\030.grpcagent.EventRespo"
+    "nse\"\000\022F\n\016ExportPackages\022\030.grpcagent.Pack"
+    "agesEvent\032\030.grpcagent.EventResponse\"\000\022L\n"
+    "\021ExportBlockedLoop\022\033.grpcagent.BlockedLo"
+    "opEvent\032\030.grpcagent.EventResponse\"\000\022P\n\023E"
+    "xportUnblockedLoop\022\035.grpcagent.Unblocked"
+    "LoopEvent\032\030.grpcagent.EventResponse\"\000\022L\n"
+    "\021ExportReconfigure\022\033.grpcagent.Reconfigu"
+    "reEvent\032\030.grpcagent.EventResponse\"\000\022J\n\020E"
+    "xportSourceCode\022\032.grpcagent.SourceCodeEv"
+    "ent\032\030.grpcagent.EventResponse\"\000\022N\n\022Expor"
+    "tStartupTimes\022\034.grpcagent.StartupTimesEv"
+    "ent\032\030.grpcagent.EventResponse\"\000\022T\n\025Expor"
+    "tPermissionAudit\022\037.grpcagent.PermissionA"
+    "uditEvent\032\030.grpcagent.EventResponse\"\000\022^\n"
+    "\032ExportPermissionAuditLimit\022$.grpcagent."
+    "PermissionAuditLimitEvent\032\030.grpcagent.Ev"
+    "entResponse\"\000b\006proto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
-    descriptor_table_nsolid_5fservice_2eproto_deps[10] = {
+    descriptor_table_nsolid_5fservice_2eproto_deps[11] = {
         &::descriptor_table_asset_2eproto,
         &::descriptor_table_blocked_5floop_2eproto,
         &::descriptor_table_command_2eproto,
@@ -117,6 +122,7 @@ static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
         &::descriptor_table_info_2eproto,
         &::descriptor_table_metrics_2eproto,
         &::descriptor_table_packages_2eproto,
+        &::descriptor_table_permission_5faudit_2eproto,
         &::descriptor_table_reconfigure_2eproto,
         &::descriptor_table_source_5fcode_2eproto,
         &::descriptor_table_startup_5ftimes_2eproto,
@@ -125,12 +131,12 @@ static ::absl::once_flag descriptor_table_nsolid_5fservice_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_nsolid_5fservice_2eproto = {
     false,
     false,
-    1135,
+    1341,
     descriptor_table_protodef_nsolid_5fservice_2eproto,
     "nsolid_service.proto",
     &descriptor_table_nsolid_5fservice_2eproto_once,
     descriptor_table_nsolid_5fservice_2eproto_deps,
-    10,
+    11,
     1,
     schemas,
     file_default_instances,

@@ -35,6 +35,8 @@ static const char* NSolidService_method_names[] = {
   "/grpcagent.NSolidService/ExportReconfigure",
   "/grpcagent.NSolidService/ExportSourceCode",
   "/grpcagent.NSolidService/ExportStartupTimes",
+  "/grpcagent.NSolidService/ExportPermissionAudit",
+  "/grpcagent.NSolidService/ExportPermissionAuditLimit",
 };
 
 std::unique_ptr< NSolidService::Stub> NSolidService::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -56,6 +58,8 @@ NSolidService::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& chan
   , rpcmethod_ExportReconfigure_(NSolidService_method_names[9], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportSourceCode_(NSolidService_method_names[10], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ExportStartupTimes_(NSolidService_method_names[11], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportPermissionAudit_(NSolidService_method_names[12], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_ExportPermissionAuditLimit_(NSolidService_method_names[13], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::ClientReaderWriter< ::grpcagent::CommandResponse, ::grpcagent::CommandRequest>* NSolidService::Stub::CommandRaw(::grpc::ClientContext* context) {
@@ -313,6 +317,52 @@ void NSolidService::Stub::async::ExportStartupTimes(::grpc::ClientContext* conte
   return result;
 }
 
+::grpc::Status NSolidService::Stub::ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpcagent::EventResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::grpcagent::PermissionAuditEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_ExportPermissionAudit_, context, request, response);
+}
+
+void NSolidService::Stub::async::ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::grpcagent::PermissionAuditEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportPermissionAudit_, context, request, response, std::move(f));
+}
+
+void NSolidService::Stub::async::ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportPermissionAudit_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::PrepareAsyncExportPermissionAuditRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::grpcagent::EventResponse, ::grpcagent::PermissionAuditEvent, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_ExportPermissionAudit_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::AsyncExportPermissionAuditRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncExportPermissionAuditRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status NSolidService::Stub::ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpcagent::EventResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::grpcagent::PermissionAuditLimitEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_ExportPermissionAuditLimit_, context, request, response);
+}
+
+void NSolidService::Stub::async::ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::grpcagent::PermissionAuditLimitEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportPermissionAuditLimit_, context, request, response, std::move(f));
+}
+
+void NSolidService::Stub::async::ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_ExportPermissionAuditLimit_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::PrepareAsyncExportPermissionAuditLimitRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::grpcagent::EventResponse, ::grpcagent::PermissionAuditLimitEvent, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_ExportPermissionAuditLimit_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* NSolidService::Stub::AsyncExportPermissionAuditLimitRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncExportPermissionAuditLimitRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
 NSolidService::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NSolidService_method_names[0],
@@ -434,6 +484,26 @@ NSolidService::Service::Service() {
              ::grpcagent::EventResponse* resp) {
                return service->ExportStartupTimes(ctx, req, resp);
              }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      NSolidService_method_names[12],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::PermissionAuditEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](NSolidService::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::grpcagent::PermissionAuditEvent* req,
+             ::grpcagent::EventResponse* resp) {
+               return service->ExportPermissionAudit(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      NSolidService_method_names[13],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< NSolidService::Service, ::grpcagent::PermissionAuditLimitEvent, ::grpcagent::EventResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](NSolidService::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::grpcagent::PermissionAuditLimitEvent* req,
+             ::grpcagent::EventResponse* resp) {
+               return service->ExportPermissionAuditLimit(ctx, req, resp);
+             }, this)));
 }
 
 NSolidService::Service::~Service() {
@@ -516,6 +586,20 @@ NSolidService::Service::~Service() {
 }
 
 ::grpc::Status NSolidService::Service::ExportStartupTimes(::grpc::ServerContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status NSolidService::Service::ExportPermissionAudit(::grpc::ServerContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status NSolidService::Service::ExportPermissionAuditLimit(::grpc::ServerContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response) {
   (void) context;
   (void) request;
   (void) response;

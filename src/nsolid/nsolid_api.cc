@@ -938,18 +938,16 @@ void EnvList::OnLogWriteHook(
     { proxy, nsolid::internal::user_data(data, deleter) });
 }
 
-
 void EnvList::OnPermissionAuditHook(
-      void* data,
-      internal::on_permission_audit_hook_proxy_sig proxy,
-      internal::deleter_sig deleter) {
+    void* data,
+    internal::on_permission_audit_hook_proxy_sig proxy,
+    internal::deleter_sig deleter) {
   on_permission_audit_hook_list_.push_back(
-    { proxy, nsolid::internal::user_data(data, deleter) });
+      {proxy, nsolid::internal::user_data(data, deleter)});
   // Deliver the events that were reported before this hook was registered.
   // The handle may already be closed if the process is exiting.
   USE(permission_audit_msg_.send());
 }
-
 
 void EnvList::EnvironmentCreationHook(
       void* data,
@@ -1461,17 +1459,15 @@ void EnvList::WriteLogLine(SharedEnvInst envinst, LogWriteInfo info) {
   }
 }
 
-
 void EnvList::PushPermissionAudit(SharedEnvInst envinst,
                                   PermissionAuditInfo info) {
-  size_t s = on_permission_audit_q_.enqueue({ envinst, std::move(info) });
+  size_t s = on_permission_audit_q_.enqueue({envinst, std::move(info)});
   // Same as WriteLogLine(), false positives are okay. The handle may already
   // be closed if the process is exiting.
   if (s == 1) {
     USE(permission_audit_msg_.send());
   }
 }
-
 
 void EnvList::UpdateTracingFlags(uint32_t flags) {
   decltype(env_map_) env_map;
@@ -1756,7 +1752,6 @@ void EnvList::log_written_cb_(ns_async*, EnvList* envlist) {
   }
 }
 
-
 void EnvList::permission_audit_cb_(ns_async*, EnvList* envlist) {
   // Upper bound of events kept while no hook is registered. JS already limits
   // the number of events reported per thread.
@@ -1780,7 +1775,6 @@ void EnvList::permission_audit_cb_(ns_async*, EnvList* envlist) {
   }
   pending.clear();
 }
-
 
 // It's important to know when the the thread needs to shutdown b/c any
 // registered users will need to receive their last set of metrics and a
@@ -2404,41 +2398,35 @@ static void WriteLog(const FunctionCallbackInfo<Value>& args) {
                                   0});
 }
 
-
 static void PushPermissionAudit(const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsString());
   DCHECK(args[1]->IsString());
   node::Utf8Value permission(args.GetIsolate(), args[0]);
   node::Utf8Value resource(args.GetIsolate(), args[1]);
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-  EnvList::Inst()->PushPermissionAudit(GetLocalEnvInst(args.GetIsolate()),
-                                       { permission.ToString(),
-                                         resource.ToString(),
-                                         nanoseconds,
-                                         false,
-                                         0 });
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  EnvList::Inst()->PushPermissionAudit(
+      GetLocalEnvInst(args.GetIsolate()),
+      {permission.ToString(), resource.ToString(), nanoseconds, false, 0});
 }
-
 
 static void PushPermissionAuditLimit(const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsUint32());
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-  EnvList::Inst()->PushPermissionAudit(GetLocalEnvInst(args.GetIsolate()),
-                                       { "",
-                                         "",
-                                         nanoseconds,
-                                         true,
-                                         args[0].As<v8::Uint32>()->Value() });
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  EnvList::Inst()->PushPermissionAudit(
+      GetLocalEnvInst(args.GetIsolate()),
+      {"", "", nanoseconds, true, args[0].As<v8::Uint32>()->Value()});
 }
-
 
 static void IsPermissionAuditFromEnv(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   args.GetReturnValue().Set(env->options()->nsolid_permission_audit);
 }
-
 
 void BindingData::SlowPushClientBucket(
     const FunctionCallbackInfo<Value>& args) {

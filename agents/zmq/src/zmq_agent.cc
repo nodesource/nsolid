@@ -727,9 +727,8 @@ void ZmqAgent::do_start() {
 
   ASSERT_EQ(0, blocked_loop_msg_.init(&loop_, blocked_loop_msg_cb, this));
 
-  ASSERT_EQ(0, permission_audit_msg_.init(&loop_,
-                                          permission_audit_msg_cb,
-                                          this));
+  ASSERT_EQ(0,
+            permission_audit_msg_.init(&loop_, permission_audit_msg_cb, this));
 
   ASSERT_EQ(0, custom_command_msg_.init(&loop_, custom_command_msg_cb, this));
 
@@ -1300,13 +1299,6 @@ int ZmqAgent::config(const json& config) {
     }
   }
 
-  // Register it only now that the events can be sent. The events reported
-  // before this are kept and delivered by EnvList.
-  if (command_handle_ != nullptr && !permission_audit_hook_init_) {
-    ASSERT_EQ(0, OnPermissionAuditHook(permission_audit_cb, this));
-    permission_audit_hook_init_ = true;
-  }
-
   // Don't config other endpoints if command handle is not to be configured
   if (command_handle_ != nullptr) {
     if (ZmqHandle::needs_reset(diff, ZmqDataHandle::restart_fields)) {
@@ -1847,8 +1839,8 @@ void ZmqAgent::permission_audit_cb(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->permission_audit_msg_q_.enqueue({ GetThreadId(envinst),
-                                               std::move(info) }) == 1) {
+  if (agent->permission_audit_msg_q_.enqueue(
+          {GetThreadId(envinst), std::move(info)}) == 1) {
     ASSERT_EQ(0, agent->permission_audit_msg_.send());
   }
 }
@@ -1858,8 +1850,8 @@ void ZmqAgent::permission_audit_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
   while (agent->permission_audit_msg_q_.dequeue(audit)) {
     const PermissionAuditInfo& info = audit.second;
     json body = {
-      { "threadId", audit.first },
-      { "timestamp", info.timestamp },
+        {"threadId", audit.first},
+        {"timestamp", info.timestamp},
     };
     const char* cmd;
     if (info.limit_reached) {
@@ -2513,6 +2505,12 @@ void ZmqAgent::update_state() {
       // send cached metrics
       if (!cached_metrics_.empty()) {
         send_metrics(cached_metrics_);
+      }
+      // Register it only now that the events can be sent. The events reported
+      // before this are kept and delivered by EnvList.
+      if (!permission_audit_hook_init_) {
+        ASSERT_EQ(0, OnPermissionAuditHook(permission_audit_cb, this));
+        permission_audit_hook_init_ = true;
       }
     }
   }
