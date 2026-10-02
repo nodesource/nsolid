@@ -1,0 +1,7 @@
+{
+  "name": "nsolid-interval-fixture",
+  "version": "1.0.0",
+  "nsolid": {
+    "interval": 3000
+  }
+}
