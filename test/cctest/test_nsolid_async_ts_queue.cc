@@ -4,6 +4,7 @@
 #include "node_test_fixture.h"
 
 #include <vector>
+#include <cstdio>
 #include <utility>
 #include <memory>
 // NOLINTNEXTLINE(build/c++11)
@@ -19,6 +20,82 @@ using std::chrono_literals::operator""ms;
 
 using node::nsolid::AsyncTSQueue;
 using node::nsolid::TSQueue;
+
+TEST(AsyncTSQueueBatchTest, ReservesWithoutMovingExistingItems) {
+  struct Item {
+    Item() = default;
+    Item(size_t value, size_t* moves) : value(value), moves(moves) {}
+    Item(Item&& other) noexcept : value(other.value), moves(other.moves) {
+      ++*moves;
+    }
+    Item& operator=(Item&&) = default;
+    size_t value = 0;
+    size_t* moves = nullptr;
+  };
+
+  for (size_t count : {1U, 256U}) {
+    uv_loop_t loop;
+    ASSERT_EQ(uv_loop_init(&loop), 0);
+    size_t moves = 0;
+    size_t calls = 0;
+    auto queue = AsyncTSQueue<Item>::create(&loop, [&](std::vector<Item>&& batch) {
+      ++calls;
+      EXPECT_EQ(batch.size(), count);
+      // Each item moves into the vector once; growth would move it again.
+      EXPECT_EQ(moves, count);
+      for (size_t i = 0; i < batch.size(); ++i)
+        EXPECT_EQ(batch[i].value, i);
+    });
+    for (size_t i = 0; i < count; ++i)
+      queue->enqueue(Item(i, &moves));
+    moves = 0;
+    uv_run(&loop, UV_RUN_NOWAIT);
+    EXPECT_EQ(calls, 1U);
+    queue.reset();
+    uv_run(&loop, UV_RUN_DEFAULT);
+    EXPECT_EQ(uv_loop_close(&loop), 0);
+  }
+}
+
+TEST(AsyncTSQueueBatchTest, DISABLED_ReservationBenchmark) {
+  constexpr size_t iterations = 200;
+  std::printf("batch_size,iterations,ns_per_batch,extra_growths_per_batch\n");
+  for (size_t count : {1U, 64U, 256U, 4096U}) {
+    SCOPED_TRACE(count);
+    uint64_t elapsed = 0;
+    size_t growths = 0;
+    for (size_t iteration = 0; iteration < iterations; ++iteration) {
+      // Vector payloads model movable stack storage without BPF sampling.
+      TSQueue<std::vector<uint64_t>> queue;
+      for (size_t i = 0; i < count; ++i)
+        queue.enqueue(std::vector<uint64_t>(32, i));
+      std::vector<uint64_t> item;
+      std::vector<std::vector<uint64_t>> batch;
+      size_t remaining = 0;
+      const uint64_t start = uv_hrtime();
+      if (queue.dequeue(item, remaining)) {
+        batch.reserve(remaining + 1);
+        batch.push_back(std::move(item));
+        while (queue.dequeue(item)) {
+          growths += batch.size() == batch.capacity();
+          batch.push_back(std::move(item));
+        }
+      }
+      elapsed += uv_hrtime() - start;
+      ASSERT_EQ(batch.size(), count);
+      for (size_t i = 0; i < count; ++i) {
+        ASSERT_EQ(batch[i].size(), 32U);
+        ASSERT_EQ(batch[i].front(), i);
+        ASSERT_EQ(batch[i].back(), i);
+      }
+      ASSERT_TRUE(queue.empty());
+    }
+    ASSERT_EQ(growths, 0U);
+    std::printf("%zu,%zu,%.2f,%.2f\n", count, iterations,
+                static_cast<double>(elapsed) / iterations,
+                static_cast<double>(growths) / iterations);
+  }
+}
 
 // Test fixture for AsyncTSQueue tests
 class AsyncTSQueueTest : public ::testing::Test {

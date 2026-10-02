@@ -121,3 +121,24 @@ mapping refresh. Both modes use the same binary and mapping vector, so no
 separate baseline build is needed. Repeat runs and compare medians per row;
 small JIT/unknown differences can reflect measurement noise.
 
+## Queue batch reservation
+
+```sh
+out/Release/cctest --gtest_also_run_disabled_tests \
+  --gtest_filter=AsyncTSQueueBatchTest.DISABLED_ReservationBenchmark
+```
+
+This benchmark measures count-based reservation while draining batches of
+1, 64, 256, or 4,096 items, each holding a vector of 32 addresses. Each row
+averages 200 drains and reports time per batch and additional vector capacity
+growths, which must remain zero for these stable batches.
+
+Queue setup, payload allocation, order/content assertions, and final batch
+destruction are outside timing. Timing includes dequeue locks, reservation,
+and moves into batch storage. Async notification and timer overhead are
+excluded. The old two-slot reference path was removed after comparison;
+measured before/after results are retained in `EBPF_PROFILING_REVIEW.md`.
+
+The regression test `AsyncTSQueueBatchTest.ReservesWithoutMovingExistingItems`
+exercises the actual async batch callback and checks that draining a stable
+queue performs no extra element moves from vector growth.

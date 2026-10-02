@@ -193,8 +193,8 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
       // Batch callback: process all items at once
       process_callback_ = [this, bound_cb = bound_cb]() mutable {
         T item;
-        size_t size = queue_.dequeue(item);
-        if (size > 0) {
+        size_t size;
+        if (queue_.dequeue(item, size)) {
           std::vector<T> batch;
           batch.reserve(size + 1);
           batch.push_back(std::move(item));
