@@ -126,6 +126,9 @@ class GRPCServer extends EventEmitter {
     }
     if (this.#opts.tls) {
       args.push('--tls');
+      if (this.#opts.clientCa) {
+        args.push('--client-ca', this.#opts.clientCa);
+      }
     }
 
     const opts = {
