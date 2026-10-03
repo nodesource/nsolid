@@ -634,6 +634,12 @@ void on_log_write_hook_(void* data,
   EnvList::Inst()->OnLogWriteHook(data, proxy, deleter);
 }
 
+void on_permission_audit_hook_(void* data,
+                               on_permission_audit_hook_proxy_sig proxy,
+                               deleter_sig deleter) {
+  EnvList::Inst()->OnPermissionAuditHook(data, proxy, deleter);
+}
+
 void thread_added_hook_(void* data,
                         thread_added_hook_proxy_sig proxy,
                         deleter_sig deleter) {

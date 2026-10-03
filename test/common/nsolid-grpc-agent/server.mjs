@@ -201,6 +201,16 @@ async function startServer(cb) {
       callback(null, {});
       process.send({ type: 'source_code', data: { msg: call.request, metadata: call.metadata } });
     },
+    ExportPermissionAudit: (call, callback) => {
+      callback(null, {});
+      process.send({ type: 'permission_audit',
+                     data: { msg: call.request, metadata: call.metadata } });
+    },
+    ExportPermissionAuditLimit: (call, callback) => {
+      callback(null, {});
+      process.send({ type: 'permission_audit_limit',
+                     data: { msg: call.request, metadata: call.metadata } });
+    },
     ExportStartupTimes: (call, callback) => {
       // Extract data from the request object
       console.dir(call.request, { depth: null });

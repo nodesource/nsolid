@@ -70,6 +70,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
     uint64_t thread_id;
   };
 
+  struct PermissionAuditStor {
+    uint64_t thread_id;
+    PermissionAuditInfo info;
+  };
+
   static SharedGrpcAgent Inst();
 
   virtual void on_asset_stream_done(const ::grpc::Status&, AssetStor&& stor);
@@ -186,6 +191,10 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   static void metrics_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
 
+  static void permission_audit_cb_(SharedEnvInst,
+                                   PermissionAuditInfo,
+                                   WeakGrpcAgent);
+
   static void metrics_timer_cb_(nsuv::ns_timer*, WeakGrpcAgent);
 
   static void profile_msg_cb_(nsuv::ns_async*, WeakGrpcAgent);
@@ -246,6 +255,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void got_logs();
 
+  void got_permission_audit(PermissionAuditStor&& stor);
+
   void got_proc_metrics();
 
   void got_profile(const ProfileCollector::ProfileQStor& stor);
@@ -285,6 +296,10 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void send_packages_event(const char* req_id = nullptr);
 
+  void send_permission_audit_event(PermissionAuditStor&& stor);
+
+  void send_permission_audit_limit_event(PermissionAuditStor&& stor);
+
   void send_reconfigure_event(const char* req_id);
 
   void send_source_code_event(const grpcagent::CommandRequest& req);
@@ -318,6 +333,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   // Blocked Loop
   std::shared_ptr<AsyncTSQueue<BlockedLoopStor>> blocked_loop_queue_;
+
+  // Permission Audit. The hook is registered once the NSolidService stub is
+  // available so the events reported before that are kept by EnvList.
+  std::shared_ptr<AsyncTSQueue<PermissionAuditStor>> permission_audit_queue_;
+  bool permission_audit_hook_init_ = false;
 
   // For the Tracing API
   uint32_t trace_flags_;
