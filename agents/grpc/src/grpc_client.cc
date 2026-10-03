@@ -32,9 +32,26 @@ namespace grpc {
   */
 std::shared_ptr<::grpc::ChannelCredentials>
     GrpcClient::MakeCredentials(const OtlpGrpcClientOptions& options,
-                                const std::string& tls_keylog_file) {
+                                const std::string& tls_keylog_file,
+                                const ClientIdentityProvider& client_identity) {
   if (!options.use_ssl_credentials) {
     return InsecureChannelCredentials();
+  }
+
+  if (client_identity != nullptr) {
+    // Mutual TLS. The identity provider re-reads the key and certificate
+    // files, so a renewed certificate is used for the next connections.
+    TlsChannelCredentialsOptions tls_opts;
+    if (!options.ssl_credentials_cacert_as_string.empty()) {
+      tls_opts.set_root_certificate_provider(
+          std::make_shared<StaticDataCertificateProvider>(
+              options.ssl_credentials_cacert_as_string));
+    }
+    tls_opts.set_identity_certificate_provider(client_identity);
+    if (!tls_keylog_file.empty()) {
+      tls_opts.set_tls_session_key_log_file_path(tls_keylog_file);
+    }
+    return TlsCredentials(tls_opts);
   }
 
   if (!tls_keylog_file.empty()) {
@@ -60,7 +77,8 @@ std::shared_ptr<::grpc::ChannelCredentials>
   */
 std::shared_ptr<Channel>
     GrpcClient::MakeChannel(const OtlpGrpcClientOptions& options,
-                            const std::string& tls_keylog_file) {
+                            const std::string& tls_keylog_file,
+                            const ClientIdentityProvider& client_identity) {
   std::shared_ptr<Channel> channel;
   ChannelArguments grpc_arguments;
   // Configure the keepalive of the Client Channel. The keepalive time period is
@@ -73,9 +91,10 @@ std::shared_ptr<Channel>
   grpc_arguments.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
   grpc_arguments.SetInt(GRPC_ARG_HTTP2_MAX_PINGS_WITHOUT_DATA, 0);
 
-  return CreateCustomChannel(options.endpoint,
-                             MakeCredentials(options, tls_keylog_file),
-                             grpc_arguments);
+  return CreateCustomChannel(
+      options.endpoint,
+      MakeCredentials(options, tls_keylog_file, client_identity),
+      grpc_arguments);
 }
 
 /**
@@ -100,9 +119,12 @@ void GrpcClient::AddMetadata(ClientContext* context,
   * Create N|Solid service stub to communicate with the N|Solid Console.
   */
 std::unique_ptr<NSolidService::StubInterface>
-    GrpcClient::MakeNSolidServiceStub(const OtlpGrpcClientOptions& options,
-                                      const std::string& tls_keylog_file) {
-  return NSolidService::NewStub(MakeChannel(options, tls_keylog_file));
+    GrpcClient::MakeNSolidServiceStub(
+        const OtlpGrpcClientOptions& options,
+        const std::string& tls_keylog_file,
+        const ClientIdentityProvider& client_identity) {
+  return NSolidService::NewStub(
+      MakeChannel(options, tls_keylog_file, client_identity));
 }
 
 }  // namespace grpc
