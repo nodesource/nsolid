@@ -23,6 +23,10 @@
 #include <algorithm>
 #include <cmath>
 
+#ifdef __POSIX__
+#include <unistd.h>  // getpid, _exit
+#endif
+
 #if defined(__linux__)
 #include <sys/utsname.h>
 #endif
@@ -1312,6 +1316,13 @@ void EnvList::UpdateConfig(const std::string& config_s) {
 void EnvList::SetupExitHandlers() {
   // Handle uncaught throws in C++
   std::set_terminate(exit_handler_);
+  // Aborts (process.abort(), fatal errors, running out of memory, failed
+  // checks) end the process without running the exit hooks: report them, then
+  // let the handler from before print its backtraces and abort.
+  if (prev_abort_handler_ == nullptr) {
+    prev_abort_handler_ = node::GetAbortHandler();
+    node::SetAbortHandler(abort_handler_);
+  }
 #ifdef __POSIX__
   // Setup Signal Handlers
   setup_signal_handler(SIGINT);
@@ -1400,8 +1411,50 @@ void EnvList::ClearSavedExitError() {
 }
 
 
+void EnvList::SetFatalExit(const char* location, const char* message) {
+#ifdef __POSIX__
+  // An abort ends the process by SIGABRT: like other signals, it's the code.
+  exit_signal_ = SIGABRT;
+  exit_code_ = SIGABRT;
+#else
+  exit_code_ = static_cast<int>(ExitCode::kAbort);
+#endif
+  // What Node prints for fatal errors and for running out of memory.
+  std::string what;
+  if (message != nullptr) {
+    what = "FATAL ERROR: ";
+    if (location != nullptr) {
+      what += location;
+      what += " ";
+    }
+    what += message;
+  } else {
+    what = "Aborted";
+    if (location != nullptr) {
+      what += " at ";
+      what += location;
+    }
+  }
+  // Empty when out of memory, or when this thread runs no JS.
+  std::string stack =
+    node::GetCurrentStackTraceString(v8::Isolate::TryGetCurrent());
+  ns_mutex::scoped_lock lock(exit_lock_);
+  // An uncaught error the process is already dying of says more.
+  if (exit_error_) {
+    return;
+  }
+  exit_error_ =
+    std::make_unique<std::tuple<std::string, std::string>>(what, stack);
+}
+
+
 int EnvList::GetExitCode() const {
   return exit_code_;
+}
+
+
+int EnvList::GetExitSignal() const {
+  return exit_signal_;
 }
 
 
@@ -1603,7 +1656,36 @@ void EnvList::DoExit(bool on_signal) {
 void EnvList::exit_handler_() {
   EnvList* envlist = EnvList::Inst();
   CHECK_NOT_NULL(envlist);
+  // std::terminate() aborts once this returns.
+  envlist->SetFatalExit(nullptr, "terminate called: an uncaught C++ exception");
   envlist->DoExit(false);
+}
+
+
+// How long an abort waits for the exit hooks (the agents reporting the exit)
+// before the process ends regardless.
+constexpr uint64_t kAbortReportTimeoutMs = 10000;
+
+
+static void abort_watchdog_(void*) {
+  uv_sleep(kAbortReportTimeoutMs);
+  fprintf(stderr, "N|Solid: the exit hooks took too long, aborting\n");
+  fflush(stderr);
+  ABORT_NO_BACKTRACE();
+}
+
+
+void EnvList::abort_handler_(const char* location, const char* message) {
+  EnvList* envlist = EnvList::Inst();
+  envlist->SetFatalExit(location, message);
+  // The process must end even if a hook can't finish (a lock the aborting
+  // thread holds, say): a watchdog ends it after a while. It is never joined.
+  uv_thread_t watchdog;
+  USE(uv_thread_create(&watchdog, abort_watchdog_, nullptr));
+  // As for a signal, profiles aren't stopped: V8 may be out of memory, or this
+  // may not be the main thread.
+  envlist->DoExit(true);
+  envlist->prev_abort_handler_(location, message);
 }
 
 
@@ -1611,6 +1693,7 @@ void EnvList::exit_handler_() {
 void EnvList::signal_handler_(int signum, siginfo_t* info, void* ucontext) {
   EnvList* envlist = EnvList::Inst();
   envlist->SetExitCode(signum);
+  envlist->exit_signal_ = signum;
 
   // SignalExit will re-raise the signal so remove the handler,
   // otherwise this will call ourself again
@@ -1631,6 +1714,14 @@ void EnvList::signal_handler_(int signum, siginfo_t* info, void* ucontext) {
 
   // Invoke node's fatal exit handler
   node::SignalExit(signum, info, ucontext);
+
+  // The signal raised again ends the process once this handler returns, unless
+  // the process is init (PID 1, as in a container without one), which ignores
+  // it: it would run on with its agents stopped and its exit reported. End it
+  // with the status a shell gives a death by that signal.
+  if (getpid() == 1) {
+    _exit(128 + signum);
+  }
 }
 
 

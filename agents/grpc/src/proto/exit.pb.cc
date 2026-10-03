@@ -65,6 +65,9 @@ inline constexpr ExitBody::Impl_::Impl_(
         profile_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
+        signal_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
         error_{nullptr},
         code_{0} {}
 
@@ -131,13 +134,15 @@ const ::uint32_t
         1,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::grpcagent::ExitBody, _impl_._has_bits_),
-        6, // hasbit index offset
+        7, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::grpcagent::ExitBody, _impl_.code_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ExitBody, _impl_.error_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ExitBody, _impl_.profile_),
+        PROTOBUF_FIELD_OFFSET(::grpcagent::ExitBody, _impl_.signal_),
+        3,
         2,
-        1,
         0,
+        1,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::grpcagent::ExitEvent, _impl_._has_bits_),
         5, // hasbit index offset
@@ -151,7 +156,7 @@ static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::grpcagent::Error)},
         {7, sizeof(::grpcagent::ExitBody)},
-        {16, sizeof(::grpcagent::ExitEvent)},
+        {18, sizeof(::grpcagent::ExitEvent)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::grpcagent::_Error_default_instance_._instance,
@@ -161,12 +166,12 @@ static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
 const char descriptor_table_protodef_exit_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n\nexit.proto\022\tgrpcagent\032\014common.proto\"\'\n"
-    "\005Error\022\017\n\007message\030\001 \001(\t\022\r\n\005stack\030\002 \001(\t\"J"
+    "\005Error\022\017\n\007message\030\001 \001(\t\022\r\n\005stack\030\002 \001(\t\"Z"
     "\n\010ExitBody\022\014\n\004code\030\001 \001(\005\022\037\n\005error\030\002 \001(\0132"
-    "\020.grpcagent.Error\022\017\n\007profile\030\003 \001(\t\"Y\n\tEx"
-    "itEvent\022)\n\006common\030\001 \001(\0132\031.grpcagent.Comm"
-    "onResponse\022!\n\004body\030\002 \001(\0132\023.grpcagent.Exi"
-    "tBodyb\006proto3"
+    "\020.grpcagent.Error\022\017\n\007profile\030\003 \001(\t\022\016\n\006si"
+    "gnal\030\004 \001(\t\"Y\n\tExitEvent\022)\n\006common\030\001 \001(\0132"
+    "\031.grpcagent.CommonResponse\022!\n\004body\030\002 \001(\013"
+    "2\023.grpcagent.ExitBodyb\006proto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_exit_2eproto_deps[1] = {
@@ -176,7 +181,7 @@ static ::absl::once_flag descriptor_table_exit_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_exit_2eproto = {
     false,
     false,
-    253,
+    269,
     descriptor_table_protodef_exit_2eproto,
     "exit.proto",
     &descriptor_table_exit_2eproto_once,
@@ -534,7 +539,8 @@ PROTOBUF_NDEBUG_INLINE ExitBody::Impl_::Impl_(
     [[maybe_unused]] const ::grpcagent::ExitBody& from_msg)
       : _has_bits_{from._has_bits_},
         _cached_size_{0},
-        profile_(arena, from.profile_) {}
+        profile_(arena, from.profile_),
+        signal_(arena, from.signal_) {}
 
 ExitBody::ExitBody(
     ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
@@ -550,7 +556,7 @@ ExitBody::ExitBody(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
   ::uint32_t cached_has_bits = _impl_._has_bits_[0];
-  _impl_.error_ = (CheckHasBit(cached_has_bits, 0x00000002U))
+  _impl_.error_ = (CheckHasBit(cached_has_bits, 0x00000004U))
                 ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.error_)
                 : nullptr;
   _impl_.code_ = from._impl_.code_;
@@ -561,7 +567,8 @@ PROTOBUF_NDEBUG_INLINE ExitBody::Impl_::Impl_(
     [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
     [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
       : _cached_size_{0},
-        profile_(arena) {}
+        profile_(arena),
+        signal_(arena) {}
 
 inline void ExitBody::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -584,6 +591,7 @@ inline void ExitBody::SharedDtor(MessageLite& self) {
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
   this_._impl_.profile_.Destroy();
+  this_._impl_.signal_.Destroy();
   delete this_._impl_.error_;
   this_._impl_.~Impl_();
 }
@@ -630,16 +638,16 @@ ExitBody::GetClassData() const {
   return ExitBody_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 3, 1, 34, 2>
+const ::_pbi::TcParseTable<2, 4, 1, 40, 2>
 ExitBody::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(ExitBody, _impl_._has_bits_),
     0, // no _extensions_
-    3, 24,  // max_field_number, fast_idx_mask
+    4, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967288,  // skipmap
+    4294967280,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    3,  // num_field_entries
+    4,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     ExitBody_class_data_.base(),
@@ -649,14 +657,17 @@ ExitBody::_table_ = {
     ::_pbi::TcParser::GetTable<::grpcagent::ExitBody>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    {::_pbi::TcParser::MiniParse, {}},
+    // string signal = 4;
+    {::_pbi::TcParser::FastUS1,
+     {34, 1, 0,
+      PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.signal_)}},
     // int32 code = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ExitBody, _impl_.code_), 2>(),
-     {8, 2, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ExitBody, _impl_.code_), 3>(),
+     {8, 3, 0,
       PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.code_)}},
     // .grpcagent.Error error = 2;
     {::_pbi::TcParser::FastMtS1,
-     {18, 1, 0,
+     {18, 2, 0,
       PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.error_)}},
     // string profile = 3;
     {::_pbi::TcParser::FastUS1,
@@ -666,19 +677,22 @@ ExitBody::_table_ = {
     65535, 65535
   }}, {{
     // int32 code = 1;
-    {PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.code_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    {PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.code_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     // .grpcagent.Error error = 2;
-    {PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.error_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    {PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.error_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // string profile = 3;
     {PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.profile_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // string signal = 4;
+    {PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.signal_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::grpcagent::Error>()},
   }},
   {{
-    "\22\0\0\7\0\0\0\0"
+    "\22\0\0\7\6\0\0\0"
     "grpcagent.ExitBody"
     "profile"
+    "signal"
   }},
 };
 PROTOBUF_NOINLINE void ExitBody::Clear() {
@@ -689,11 +703,14 @@ PROTOBUF_NOINLINE void ExitBody::Clear() {
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       _impl_.profile_.ClearNonDefaultToEmpty();
     }
     if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      _impl_.signal_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       ABSL_DCHECK(_impl_.error_ != nullptr);
       _impl_.error_->Clear();
     }
@@ -723,7 +740,7 @@ PROTOBUF_NOINLINE void ExitBody::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // int32 code = 1;
-  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
     if (this_._internal_code() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<1>(
@@ -732,7 +749,7 @@ PROTOBUF_NOINLINE void ExitBody::Clear() {
   }
 
   // .grpcagent.Error error = 2;
-  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         2, *this_._impl_.error_, this_._impl_.error_->GetCachedSize(), target,
         stream);
@@ -745,6 +762,16 @@ PROTOBUF_NOINLINE void ExitBody::Clear() {
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
           _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "grpcagent.ExitBody.profile");
       target = stream->WriteStringMaybeAliased(3, _s, target);
+    }
+  }
+
+  // string signal = 4;
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    if (!this_._internal_signal().empty()) {
+      const ::std::string& _s = this_._internal_signal();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "grpcagent.ExitBody.signal");
+      target = stream->WriteStringMaybeAliased(4, _s, target);
     }
   }
 
@@ -773,7 +800,7 @@ PROTOBUF_NOINLINE void ExitBody::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000000fU)) {
     // string profile = 3;
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!this_._internal_profile().empty()) {
@@ -781,13 +808,20 @@ PROTOBUF_NOINLINE void ExitBody::Clear() {
                                         this_._internal_profile());
       }
     }
-    // .grpcagent.Error error = 2;
+    // string signal = 4;
     if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (!this_._internal_signal().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_signal());
+      }
+    }
+    // .grpcagent.Error error = 2;
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       total_size += 1 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.error_);
     }
     // int32 code = 1;
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
       if (this_._internal_code() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_code());
@@ -813,7 +847,7 @@ void ExitBody::MergeImpl(::google::protobuf::MessageLite& to_msg,
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000000fU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!from._internal_profile().empty()) {
         _this->_internal_set_profile(from._internal_profile());
@@ -824,6 +858,15 @@ void ExitBody::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (!from._internal_signal().empty()) {
+        _this->_internal_set_signal(from._internal_signal());
+      } else {
+        if (_this->_impl_.signal_.IsDefault()) {
+          _this->_internal_set_signal("");
+        }
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       ABSL_DCHECK(from._impl_.error_ != nullptr);
       if (_this->_impl_.error_ == nullptr) {
         _this->_impl_.error_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.error_);
@@ -831,7 +874,7 @@ void ExitBody::MergeImpl(::google::protobuf::MessageLite& to_msg,
         _this->_impl_.error_->MergeFrom(*from._impl_.error_);
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
       if (from._internal_code() != 0) {
         _this->_impl_.code_ = from._impl_.code_;
       }
@@ -857,6 +900,7 @@ void ExitBody::InternalSwap(ExitBody* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) 
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.profile_, &other->_impl_.profile_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.signal_, &other->_impl_.signal_, arena);
   ::google::protobuf::internal::memswap<
       PROTOBUF_FIELD_OFFSET(ExitBody, _impl_.code_)
       + sizeof(ExitBody::_impl_.code_)

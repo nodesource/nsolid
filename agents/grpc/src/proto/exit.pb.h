@@ -445,6 +445,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExitBody final : public ::google::p
   // accessors -------------------------------------------------------
   enum : int {
     kProfileFieldNumber = 3,
+    kSignalFieldNumber = 4,
     kErrorFieldNumber = 2,
     kCodeFieldNumber = 1,
   };
@@ -461,6 +462,21 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExitBody final : public ::google::p
   const ::std::string& _internal_profile() const;
   PROTOBUF_ALWAYS_INLINE void _internal_set_profile(const ::std::string& value);
   ::std::string* PROTOBUF_NONNULL _internal_mutable_profile();
+
+  public:
+  // string signal = 4;
+  void clear_signal() ;
+  [[nodiscard]] const ::std::string& signal() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_signal(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_signal();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_signal();
+  void set_allocated_signal(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_signal() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_signal(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_signal();
 
   public:
   // .grpcagent.Error error = 2;
@@ -493,8 +509,8 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExitBody final : public ::google::p
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<2, 3,
-                                   1, 34,
+  static const ::google::protobuf::internal::TcParseTable<2, 4,
+                                   1, 40,
                                    2>
       _table_;
 
@@ -518,6 +534,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExitBody final : public ::google::p
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::internal::ArenaStringPtr profile_;
+    ::google::protobuf::internal::ArenaStringPtr signal_;
     ::grpcagent::Error* PROTOBUF_NULLABLE error_;
     ::int32_t code_;
     PROTOBUF_TSAN_DECLARE_MEMBER
@@ -903,7 +920,7 @@ inline void ExitBody::clear_code() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.code_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000004U);
+                  0x00000008U);
 }
 inline ::int32_t ExitBody::code() const {
   // @@protoc_insertion_point(field_get:grpcagent.ExitBody.code)
@@ -911,7 +928,7 @@ inline ::int32_t ExitBody::code() const {
 }
 inline void ExitBody::set_code(::int32_t value) {
   _internal_set_code(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
   // @@protoc_insertion_point(field_set:grpcagent.ExitBody.code)
 }
 inline ::int32_t ExitBody::_internal_code() const {
@@ -925,7 +942,7 @@ inline void ExitBody::_internal_set_code(::int32_t value) {
 
 // .grpcagent.Error error = 2;
 inline bool ExitBody::has_error() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000004U);
   PROTOBUF_ASSUME(!value || _impl_.error_ != nullptr);
   return value;
 }
@@ -933,7 +950,7 @@ inline void ExitBody::clear_error() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (_impl_.error_ != nullptr) _impl_.error_->Clear();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000002U);
+                  0x00000004U);
 }
 inline const ::grpcagent::Error& ExitBody::_internal_error() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
@@ -952,16 +969,16 @@ inline void ExitBody::unsafe_arena_set_allocated_error(
   }
   _impl_.error_ = reinterpret_cast<::grpcagent::Error*>(value);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:grpcagent.ExitBody.error)
 }
 inline ::grpcagent::Error* PROTOBUF_NULLABLE ExitBody::release_error() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
 
-  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
   ::grpcagent::Error* released = _impl_.error_;
   _impl_.error_ = nullptr;
   if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
@@ -981,7 +998,7 @@ inline ::grpcagent::Error* PROTOBUF_NULLABLE ExitBody::unsafe_arena_release_erro
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:grpcagent.ExitBody.error)
 
-  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
   ::grpcagent::Error* temp = _impl_.error_;
   _impl_.error_ = nullptr;
   return temp;
@@ -996,7 +1013,7 @@ inline ::grpcagent::Error* PROTOBUF_NONNULL ExitBody::_internal_mutable_error() 
 }
 inline ::grpcagent::Error* PROTOBUF_NONNULL ExitBody::mutable_error()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
   ::grpcagent::Error* _msg = _internal_mutable_error();
   // @@protoc_insertion_point(field_mutable:grpcagent.ExitBody.error)
   return _msg;
@@ -1013,9 +1030,9 @@ inline void ExitBody::set_allocated_error(::grpcagent::Error* PROTOBUF_NULLABLE 
     if (message_arena != submessage_arena) {
       value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
     }
-    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
   }
 
   _impl_.error_ = reinterpret_cast<::grpcagent::Error*>(value);
@@ -1085,6 +1102,71 @@ inline void ExitBody::set_allocated_profile(::std::string* PROTOBUF_NULLABLE val
     _impl_.profile_.Set("", GetArena());
   }
   // @@protoc_insertion_point(field_set_allocated:grpcagent.ExitBody.profile)
+}
+
+// string signal = 4;
+inline void ExitBody::clear_signal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.signal_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline const ::std::string& ExitBody::signal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:grpcagent.ExitBody.signal)
+  return _internal_signal();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void ExitBody::set_signal(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  _impl_.signal_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:grpcagent.ExitBody.signal)
+}
+inline ::std::string* PROTOBUF_NONNULL ExitBody::mutable_signal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::std::string* _s = _internal_mutable_signal();
+  // @@protoc_insertion_point(field_mutable:grpcagent.ExitBody.signal)
+  return _s;
+}
+inline const ::std::string& ExitBody::_internal_signal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.signal_.Get();
+}
+inline void ExitBody::_internal_set_signal(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.signal_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL ExitBody::_internal_mutable_signal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.signal_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE ExitBody::release_signal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:grpcagent.ExitBody.signal)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  auto* released = _impl_.signal_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.signal_.Set("", GetArena());
+  }
+  return released;
+}
+inline void ExitBody::set_allocated_signal(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  _impl_.signal_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.signal_.IsDefault()) {
+    _impl_.signal_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:grpcagent.ExitBody.signal)
 }
 
 // -------------------------------------------------------------------

@@ -300,6 +300,18 @@ void PrintCurrentStackTrace(Isolate* isolate, StackTracePrefix prefix) {
   }
 }
 
+std::string GetCurrentStackTraceString(Isolate* isolate) {
+  if (isolate == nullptr) return "";
+  // An abort may come with no HandleScope open.
+  HandleScope scope(isolate);
+  Local<StackTrace> stack;
+  if (!GetCurrentStackTrace(isolate).ToLocal(&stack) ||
+      stack->GetFrameCount() == 0) {
+    return "";
+  }
+  return FormatStackTrace(isolate, stack);
+}
+
 std::string FormatCaughtException(Isolate* isolate,
                                   Local<Context> context,
                                   Local<Value> err,

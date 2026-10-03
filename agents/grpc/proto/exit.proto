@@ -10,9 +10,14 @@ message Error {
 }
 
 message ExitBody {
+  // The exit code; when a signal ended the process, the signal's number.
   int32 code = 1;
   Error error = 2;
   string profile = 3;
+  // The signal that ended the process: SIGTERM, SIGINT or SIGHUP, or SIGABRT
+  // for an abort (process.abort(), a fatal error, running out of memory).
+  // Empty when the process exited on its own.
+  string signal = 4;
 }
 
 message ExitEvent {
