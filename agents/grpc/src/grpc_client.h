@@ -9,6 +9,7 @@
 #include "google/protobuf/util/json_util.h"
 #include "grpc_utils.h"
 #include "grpcpp/grpcpp.h"
+#include "grpcpp/security/tls_certificate_provider.h"
 #include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/version.h"
 
@@ -23,6 +24,9 @@ OPENTELEMETRY_END_NAMESPACE
 using google::protobuf::Arena;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
 using GrpcMetadata = opentelemetry::v1::exporter::otlp::OtlpHeaders;
+// The agent's client certificate and key, for mutual TLS. nullptr: none.
+using ClientIdentityProvider =
+    std::shared_ptr<::grpc::experimental::CertificateProviderInterface>;
 
 namespace node {
 namespace nsolid {
@@ -63,14 +67,17 @@ class GrpcClient {
    */
   static std::shared_ptr<::grpc::Channel>
     MakeChannel(const OtlpGrpcClientOptions& options,
-                const std::string& tls_keylog_file = "");
+                const std::string& tls_keylog_file = "",
+                const ClientIdentityProvider& client_identity = nullptr);
 
   /**
-   * Create gRPC channel credentials.
+   * Create gRPC channel credentials. With a client identity, the channel
+   * presents the agent's client certificate (mutual TLS).
    */
   static std::shared_ptr<::grpc::ChannelCredentials>
     MakeCredentials(const OtlpGrpcClientOptions& options,
-                    const std::string& tls_keylog_file);
+                    const std::string& tls_keylog_file,
+                    const ClientIdentityProvider& client_identity = nullptr);
 
   /**
    * Create gRPC client context to call RPC.
@@ -85,8 +92,10 @@ class GrpcClient {
    * Create N|Solid service stub to communicate with the N|Solid Console.
    */
   static std::unique_ptr<grpcagent::NSolidService::StubInterface>
-    MakeNSolidServiceStub(const OtlpGrpcClientOptions& options,
-                          const std::string& tls_keylog_file);
+    MakeNSolidServiceStub(
+        const OtlpGrpcClientOptions& options,
+        const std::string& tls_keylog_file,
+        const ClientIdentityProvider& client_identity = nullptr);
 
   /**
    * Generic DelegateAsyncExport for any event type.

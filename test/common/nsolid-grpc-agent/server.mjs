@@ -11,6 +11,11 @@ const options = {
     type: 'boolean',
     default: false,
   },
+  // With --tls: require a client certificate issued by this CA (a file in
+  // test/fixtures/keys).
+  'client-ca': {
+    type: 'string',
+  },
 };
 
 const args = parseArgs({ options });
@@ -86,7 +91,9 @@ async function startServer(cb) {
         commandCallMap.delete(agentId);
       });
 
-      process.send({ type: 'command', data: { agentId, metadata: call.metadata } });
+      // The common name of the verified client certificate, if any.
+      const peer = call.getAuthContext().sslPeerCertificate?.subject?.CN ?? null;
+      process.send({ type: 'command', data: { agentId, metadata: call.metadata, peer } });
     },
     ExportAsset: async (call) => {
       const asset = {
@@ -223,10 +230,15 @@ async function startServer(cb) {
       fixtures.readKey(path.join('selfsigned-no-keycertsign', 'key.pem'));
     const cert =
       fixtures.readKey(path.join('selfsigned-no-keycertsign', 'cert.pem'));
-    credentials = grpc.ServerCredentials.createSsl(null, [{
-      cert_chain: cert,
-      private_key: key,
-    }], false); // False means no client-side authentication
+    const clientCa = args.values['client-ca'];
+    credentials = grpc.ServerCredentials.createSsl(
+      clientCa ? fixtures.readKey(clientCa) : null,
+      [{
+        cert_chain: cert,
+        private_key: key,
+      }],
+      // True: every client must present a certificate issued by clientCa.
+      Boolean(clientCa));
   } else {
     credentials = grpc.ServerCredentials.createInsecure();
   }
