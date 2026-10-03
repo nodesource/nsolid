@@ -95,6 +95,9 @@ void PrintCurrentStackTrace(v8::Isolate* isolate,
 void PrintStackTrace(v8::Isolate* isolate,
                      v8::Local<v8::StackTrace> stack,
                      StackTracePrefix prefix = StackTracePrefix::kAt);
+// The current JS stack, "    at ..." lines; empty when there is none or it
+// can't be read safely (out of memory, no context entered).
+std::string GetCurrentStackTraceString(v8::Isolate* isolate);
 void PrintCaughtException(v8::Isolate* isolate,
                           v8::Local<v8::Context> context,
                           const v8::TryCatch& try_catch);

@@ -34,13 +34,21 @@ function checkExitData(data, metadata, agentId, expectedData) {
   validateObject(data.body, 'body');
   // also the body fields
   assert.strictEqual(data.body.code, expectedData.code);
+  assert.strictEqual(data.body.signal, expectedData.signal ?? '');
   assert.strictEqual(data.body.profile, expectedData.profile);
   if (expectedData.error === null) {
     assert.strictEqual(data.body.error, null);
   } else {
     assert.ok(data.body.error);
-    assert.strictEqual(data.body.error.message, expectedData.error.message);
+    if (expectedData.error.message instanceof RegExp) {
+      assert.match(data.body.error.message, expectedData.error.message);
+    } else {
+      assert.strictEqual(data.body.error.message, expectedData.error.message);
+    }
     validateString(data.body.error.stack, 'error.stack');
+    if (expectedData.error.stack instanceof RegExp) {
+      assert.match(data.body.error.stack, expectedData.error.stack);
+    }
   }
 
   checkRpcMetadata(metadata, agentId);
@@ -123,6 +131,9 @@ class GRPCServer extends EventEmitter {
     const args = [];
     if (this.#opts.tls) {
       args.push('--tls');
+    }
+    if (this.#opts.hangExit) {
+      args.push('--hang-exit');
     }
 
     const opts = {
@@ -376,6 +387,28 @@ class TestClient {
     this.#child = fork(path.join(__dirname, 'client.js') + '', args, opts);
     this.#child.on('exit', (code, signal) => {
       console.log(`child process exited with code ${code} and signal ${signal}`);
+    });
+  }
+
+  async abort() {
+    return this.#sendAndExit({ type: 'abort' });
+  }
+
+  async oom() {
+    return this.#sendAndExit({ type: 'oom' });
+  }
+
+  #sendAndExit(msg) {
+    return new Promise((resolve) => {
+      if (this.#child) {
+        this.#child.send(msg);
+        this.#child.once('exit', common.mustCall((code, signal) => {
+          this.#child = null;
+          resolve({ code, signal });
+        }));
+      } else {
+        resolve();
+      }
     });
   }
 
