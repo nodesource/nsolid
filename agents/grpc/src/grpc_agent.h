@@ -258,6 +258,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void parse_saas_token(const std::string& token);
 
+  void setup_client_identity();
+
   static GrpcMetadata BuildRpcMetadata(const std::string& agent_id,
                                        const std::string& saas);
 
@@ -378,6 +380,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   std::string cacert_;
   std::string custom_certs_;
   std::string tls_keylog_file_;
+  // The client certificate (NSOLID_GRPC_CLIENT_CERT and NSOLID_GRPC_CLIENT_KEY)
+  // for mutual TLS, shared by the N|Solid service and the OTLP exporters.
+  ClientIdentityProvider client_identity_;
 
   // For the gRPC server
   nsuv::ns_async command_msg_;
