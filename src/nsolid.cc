@@ -114,6 +114,11 @@ int GetExitCode() {
 }
 
 
+int GetExitSignal() {
+  return EnvList::Inst()->GetExitSignal();
+}
+
+
 std::string GetProcessInfo() {
   return EnvList::Inst()->GetInfo();
 }
