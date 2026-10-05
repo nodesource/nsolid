@@ -7,6 +7,7 @@
 const common = require('../common');
 const assert = require('assert');
 const { Writable } = require('stream');
+const { setImmediate } = require('timers/promises');
 const {
   from,
   fromWritable,
@@ -356,7 +357,7 @@ async function testEndReturnsByteCount() {
 
 async function testFail() {
   const writable = new Writable({ write(chunk, enc, cb) { cb(); } });
-  writable.on('error', () => {});  // Prevent unhandled error
+  writable.on('error', common.mustCall());
   const writer = fromWritable(writable);
 
   writer.fail(new Error('test fail'));
@@ -496,6 +497,7 @@ async function testPipeToWithTransform() {
 
 async function testDispose() {
   const writable = new Writable({ write(chunk, enc, cb) { cb(); } });
+  writable.on('error', common.mustCall());
   const writer = fromWritable(writable);
 
   writer[Symbol.dispose]();
@@ -504,6 +506,7 @@ async function testDispose() {
 
 async function testAsyncDispose() {
   const writable = new Writable({ write(chunk, enc, cb) { cb(); } });
+  writable.on('error', common.mustCall());
   const writer = fromWritable(writable);
 
   await writer[Symbol.asyncDispose]();
@@ -511,25 +514,18 @@ async function testAsyncDispose() {
 }
 
 // =============================================================================
-// write() validates chunk type
+// write() rejects values that cannot be converted to USVString
 // =============================================================================
 
-async function testWriteInvalidChunkType() {
+function testWriteInvalidChunkType() {
   const writable = new Writable({ write(chunk, enc, cb) { cb(); } });
   const writer = fromWritable(writable);
 
-  await assert.rejects(
-    writer.write(42),
+  assert.throws(
+    () => writer.write(Symbol('invalid')),
     { code: 'ERR_INVALID_ARG_TYPE' },
   );
-  await assert.rejects(
-    writer.write(null),
-    { code: 'ERR_INVALID_ARG_TYPE' },
-  );
-  await assert.rejects(
-    writer.write({}),
-    { code: 'ERR_INVALID_ARG_TYPE' },
-  );
+  writable.destroy();
 }
 
 // =============================================================================
@@ -559,7 +555,7 @@ function testWritevInvalidChunkUncorks() {
   const writer = fromWritable(writable);
 
   assert.throws(
-    () => writer.writev([new Uint8Array([1]), 42]),
+    () => writer.writev([new Uint8Array([1]), Symbol('invalid')]),
     { code: 'ERR_INVALID_ARG_TYPE' },
   );
   assert.strictEqual(writable.writableCorked, 0);
@@ -588,7 +584,7 @@ async function testFailRejectsPendingWaiters() {
       // Never call cb -- stuck
     },
   });
-  writable.on('error', () => {});  // Prevent unhandled error
+  writable.on('error', common.mustCall());
 
   const writer = fromWritable(writable, { backpressure: 'unbounded' });
 
@@ -599,6 +595,58 @@ async function testFailRejectsPendingWaiters() {
   writer.fail(new Error('fail reason'));
 
   await assert.rejects(writePromise, { message: 'fail reason' });
+}
+
+async function testFailPreservesReason() {
+  let classicError;
+  const writable = new Writable({
+    highWaterMark: 1,
+    write() {},
+  });
+  writable.on('error', common.mustCall((error) => { classicError = error; }));
+  const writer = fromWritable(writable, { backpressure: 'unbounded' });
+  const pending = writer.write('blocked data');
+  const draining = ondrain(writer);
+
+  writer.fail(null);
+
+  await assert.rejects(pending, (reason) => reason === null);
+  await assert.rejects(draining, (reason) => reason === null);
+  await assert.rejects(writer.write('more'), (reason) => reason === null);
+  await assert.rejects(writer.end(), (reason) => reason === null);
+  await setImmediate();
+  assert.strictEqual(classicError.code, 'ERR_FALSY_VALUE_REJECTION');
+  assert.strictEqual(classicError.reason, null);
+}
+
+async function testEndThrowPreservesReason() {
+  const reason = undefined;
+  const writable = new Writable({
+    write(chunk, encoding, callback) { callback(); },
+  });
+  writable.on('error', common.mustCall());
+  writable.end = () => { throw reason; };
+  const writer = fromWritable(writable);
+
+  await assert.rejects(writer.end(), (error) => error === reason);
+  await assert.rejects(writer.write('more'), (error) => error === reason);
+}
+
+async function testFailWhileClosingPreservesReason() {
+  let finish;
+  const writable = new Writable({
+    write(chunk, encoding, callback) { callback(); },
+    final(callback) { finish = callback; },
+  });
+  writable.on('error', common.mustCall());
+  const writer = fromWritable(writable);
+  const ending = writer.end();
+
+  writer.fail(false);
+
+  await assert.rejects(ending, (reason) => reason === false);
+  await assert.rejects(writer.write('more'), (reason) => reason === false);
+  finish();
 }
 
 // =============================================================================
@@ -612,6 +660,7 @@ async function testDisposeRejectsPendingWaiters() {
       // Never call cb -- stuck
     },
   });
+  writable.on('error', common.mustCall());
 
   const writer = fromWritable(writable, { backpressure: 'unbounded' });
 
@@ -620,7 +669,7 @@ async function testDisposeRejectsPendingWaiters() {
 
   writer[Symbol.dispose]();
 
-  await assert.rejects(writePromise, { name: 'AbortError' });
+  await assert.rejects(writePromise, (reason) => reason === undefined);
 }
 
 // =============================================================================
@@ -679,5 +728,8 @@ Promise.all([
   testAsyncDispose(),
   testWriteInvalidChunkType(),
   testFailRejectsPendingWaiters(),
+  testFailPreservesReason(),
+  testFailWhileClosingPreservesReason(),
+  testEndThrowPreservesReason(),
   testDisposeRejectsPendingWaiters(),
 ]).then(common.mustCall());

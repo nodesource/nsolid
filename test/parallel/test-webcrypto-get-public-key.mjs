@@ -9,8 +9,10 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const { kSupportedAlgorithms } = require('internal/crypto/util');
+const { hasFIPS } = require('../common/crypto');
 const { SubtleCrypto } = globalThis;
 const { subtle } = globalThis.crypto;
+const rejectsXCurves = hasFIPS(3, 5);
 
 const RSA_KEY_GEN = {
   modulusLength: 2048,
@@ -54,6 +56,14 @@ for (const name of ['ML-KEM-512', 'ML-KEM-768', 'ML-KEM-1024']) {
   keyGeneration[name] = vector(name, ['decapsulateBits'], ['encapsulateBits']);
 }
 
+for (const name of [
+  'MLKEM768-P256',
+  'MLKEM768-X25519',
+  'MLKEM1024-P384',
+]) {
+  keyGeneration[name] = vector(name, ['decapsulateBits'], ['encapsulateBits']);
+}
+
 const unsupportedGetPublicKeyAlgorithms = new Set([
   'AES-CBC',
   'AES-CTR',
@@ -79,6 +89,15 @@ for (const name of Object.keys(kSupportedAlgorithms.exportKey)) {
   }
 
   assert.strictEqual(SubtleCrypto.supports('getPublicKey', name), true);
+
+  if (rejectsXCurves &&
+      (name === 'X25519' || name === 'X448')) {
+    await assert.rejects(
+      subtle.generateKey(test.algorithm, false, test.privateUsages),
+      (err) => err.name === 'OperationError' &&
+               err.cause?.code === 'ERR_OSSL_EVP_UNSUPPORTED');
+    continue;
+  }
 
   const { privateKey } = await subtle.generateKey(
     test.algorithm, false, test.privateUsages);

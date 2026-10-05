@@ -12,11 +12,10 @@ const path = require('path');
 const vfs = require('node:vfs');
 
 (async () => {
-  const mountPoint = path.resolve('/tmp/vfs-promises-' + process.pid);
   const myVfs = vfs.create();
   myVfs.mkdirSync('/src', { recursive: true });
   myVfs.writeFileSync('/src/hello.txt', 'hello world');
-  myVfs.mount(mountPoint);
+  const mountPoint = myVfs.mount();
   const p = (s) => path.join(mountPoint, s);
 
   // Path-based reads
@@ -32,6 +31,11 @@ const vfs = require('node:vfs');
   // statfs
   const sfs = await fsp.statfs(p('src/hello.txt'));
   assert.strictEqual(typeof sfs.bsize, 'number');
+  await assert.rejects(fsp.statfs(p('missing')), {
+    code: 'ENOENT',
+    syscall: 'statfs',
+    path: p('missing'),
+  });
 
   // Path-based writes
   await fsp.writeFile(p('src/pw.txt'), 'pdata');
@@ -87,6 +91,9 @@ const vfs = require('node:vfs');
 
   // FileHandle via fsp.open
   const handle = await fsp.open(p('src/hello.txt'), 'r');
+  assert.strictEqual(handle.constructor.name, 'FileHandle');
+  assert.strictEqual(typeof handle.fd, 'number');
+  assert.strictEqual(typeof handle.createReadStream, 'function');
   assert.strictEqual(await handle.readFile('utf8'), 'hello');
   await handle.close();
 

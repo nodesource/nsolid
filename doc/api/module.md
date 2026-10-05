@@ -2,19 +2,30 @@
 
 <!--introduced_in=v12.20.0-->
 
+> Stability: 2 - Stable
+
+<!-- source_link=lib/module.js -->
+
+The `node:module` module provides utilities for interacting with the Node.js
+module system.
+
+It can be accessed using:
+
+```mjs
+import module from 'node:module';
+```
+
+## Class: `Module`
+
 <!-- YAML
-added: v0.3.7
+added: v0.3.5
 -->
 
-## The `Module` object
+`module` objects in [CommonJS][] modules are instances of this class.
 
-* Type: {Object}
+See the CommonJS documentation for [the `module` object][].
 
-Provides general utility methods when interacting with instances of
-`Module`, the [`module`][] variable often seen in [CommonJS][] modules. Accessed
-via `import 'node:module'` or `require('node:module')`.
-
-### `module.builtinModules`
+## `module.builtinModules`
 
 <!-- YAML
 added:
@@ -29,25 +40,18 @@ changes:
 
 * Type: {string\[]}
 
-A list of the names of all modules provided by Node.js. Can be used to verify
-if a module is maintained by a third party or not.
-
-`module` in this context isn't the same object that's provided
-by the [module wrapper][]. To access it, require the `Module` module:
+A list of the names of all modules provided by Node.js.
 
 ```mjs
-// module.mjs
-// In an ECMAScript module
-import { builtinModules as builtin } from 'node:module';
+import { builtinModules } from 'node:module';
+console.log(builtinModules.filter((name) => name.startsWith('path')));
+// Prints: [ 'path', 'path/posix', 'path/win32' ]
 ```
 
-```cjs
-// module.cjs
-// In a CommonJS module
-const builtin = require('node:module').builtinModules;
-```
+To test whether a module name corresponds to a builtin module, use
+[`module.isBuiltin()`][].
 
-### `module.createRequire(filename)`
+## `module.createRequire(filename)`
 
 <!-- YAML
 added: v12.2.0
@@ -66,7 +70,7 @@ const require = createRequire(import.meta.url);
 const siblingModule = require('./sibling-module');
 ```
 
-### `module.findPackageJSON(specifier[, base])`
+## `module.findPackageJSON(specifier[, base])`
 
 <!-- YAML
 added:
@@ -154,7 +158,7 @@ findPackageJSON('@foo/qux', __filename);
 // '/path/to/project/packages/qux/package.json'
 ```
 
-### `module.isBuiltin(moduleName)`
+## `module.isBuiltin(moduleName)`
 
 <!-- YAML
 added:
@@ -172,7 +176,7 @@ isBuiltin('fs'); // true
 isBuiltin('wss'); // false
 ```
 
-### `module.register(specifier[, parentURL][, options])`
+## `module.register(specifier[, parentURL][, options])`
 
 <!-- YAML
 added:
@@ -220,7 +224,7 @@ resolution and loading behavior. See [Customization hooks][].
 
 This feature requires `--allow-worker` if used with the [Permission Model][].
 
-### `module.registerHooks(options)`
+## `module.registerHooks(options)`
 
 <!-- YAML
 added:
@@ -249,7 +253,7 @@ Register [hooks][] that customize Node.js module resolution and loading behavior
 See [Customization hooks][]. The returned object can be used to
 [deregister the hooks][deregistration of synchronous customization hooks].
 
-### `module.stripTypeScriptTypes(code[, options])`
+## `module.stripTypeScriptTypes(code[, options])`
 
 <!-- YAML
 added:
@@ -314,7 +318,7 @@ console.log(strippedCode);
 // Prints: const a         = 1\n\n//# sourceURL=source.ts;
 ```
 
-### `module.syncBuiltinESMExports()`
+## `module.syncBuiltinESMExports()`
 
 <!-- YAML
 added: v12.12.0
@@ -405,6 +409,14 @@ to the cache directory remains the same. This would be done on a best-effort bas
 Node.js cannot compute the location of a module relative to the cache directory, the module
 will not be cached.
 
+A portable cache is also not split by user: on platforms with uids the
+cache subdirectory of a non-portable cache is suffixed with the uid of the
+user who created it, so it is only found by that user, while a portable
+cache uses the same subdirectory for every user. This lets a cache generated
+once (for example at build time, then shipped read-only with an application)
+be read by whoever runs the code; a user who cannot write to the directory
+still reads it, and a failed write only means the module is compiled again.
+
 There are two ways to enable the portable mode:
 
 1. Using the portable option in [`module.enableCompileCache()`][]:
@@ -418,6 +430,15 @@ There are two ways to enable the portable mode:
    ```
 
 2. Setting the environment variable: [`NODE_COMPILE_CACHE_PORTABLE=1`][]
+
+### Read-only compile cache
+
+A cache that was generated ahead of time, for example at build time to be
+shipped inside an application package, can be enabled with `readOnly: true`
+(or [`NODE_COMPILE_CACHE_READONLY=1`][]). Node.js then loads whatever entries
+the directory holds and never writes to it: modules without a usable entry are
+compiled as usual but not persisted, [`module.flushCompileCache()`][] is a
+no-op, and the directory is not created if it is missing.
 
 ### Limitations of the compile cache
 
@@ -490,6 +511,9 @@ The following constants are returned as the `status` field in the object returne
 <!-- YAML
 added: v22.8.0
 changes:
+  - version: v26.8.0
+    pr-url: https://github.com/nodejs/node/pull/65302
+    description: Add the `readOnly` option.
   - version: v25.4.0
     pr-url: https://github.com/nodejs/node/pull/60971
     description: This feature is no longer experimental.
@@ -514,6 +538,11 @@ changes:
     the cache can be reused even if the project directory is moved. This is a best-effort
     feature. If not specified, it will depend on whether the environment variable
     [`NODE_COMPILE_CACHE_PORTABLE=1`][] is set.
+  * `readOnly` {boolean} Optional. If `true`, existing cache entries in `directory` are
+    used but nothing is ever written to it, and the directory is not created when it does
+    not exist (enabling then fails). Meant for caches generated ahead of time and shipped
+    with an application. If not specified, it will depend on whether the environment
+    variable [`NODE_COMPILE_CACHE_READONLY=1`][] is set.
 * Returns: {Object}
   * `status` {integer} One of the [`module.constants.compileCacheStatus`][]
   * `message` {string|undefined} If Node.js cannot enable the compile cache, this contains
@@ -2039,6 +2068,7 @@ returned object contains the following keys:
 [`--require`]: cli.md#-r---require-module
 [`NODE_COMPILE_CACHE=dir`]: cli.md#node_compile_cachedir
 [`NODE_COMPILE_CACHE_PORTABLE=1`]: cli.md#node_compile_cache_portable1
+[`NODE_COMPILE_CACHE_READONLY=1`]: cli.md#node_compile_cache_readonly1
 [`NODE_DISABLE_COMPILE_CACHE=1`]: cli.md#node_disable_compile_cache1
 [`NODE_V8_COVERAGE=dir`]: cli.md#node_v8_coveragedir
 [`SourceMap`]: #class-modulesourcemap
@@ -2047,9 +2077,9 @@ returned object contains the following keys:
 [`module.enableCompileCache()`]: #moduleenablecompilecacheoptions
 [`module.flushCompileCache()`]: #moduleflushcompilecache
 [`module.getCompileCacheDir()`]: #modulegetcompilecachedir
+[`module.isBuiltin()`]: #moduleisbuiltinmodulename
 [`module.registerHooks()`]: #moduleregisterhooksoptions
 [`module.setSourceMapsSupport()`]: #modulesetsourcemapssupportenabled-options
-[`module`]: #the-module-object
 [`os.tmpdir()`]: os.md#ostmpdir
 [`register`]: #moduleregisterspecifier-parenturl-options
 [`util.TextDecoder`]: util.md#class-utiltextdecoder
@@ -2062,11 +2092,11 @@ returned object contains the following keys:
 [hooks]: #customization-hooks
 [load hook]: #synchronous-loadurl-context-nextload
 [module compile cache]: #module-compile-cache
-[module wrapper]: modules.md#the-module-wrapper
 [realm]: https://tc39.es/ecma262/#realm
 [resolve hook]: #synchronous-resolvespecifier-context-nextresolve
 [source map include directives]: https://tc39.es/ecma426/#sec-linking-generated-code
 [synchronous hook functions]: #hook-functions-accepted-by-moduleregisterhooks
+[the `module` object]: modules.md#the-module-object
 [the documentation of `Worker`]: worker_threads.md#new-workerfilename-options
 [transferable objects]: worker_threads.md#portpostmessagevalue-transferlist
 [type-stripping]: typescript.md#type-stripping

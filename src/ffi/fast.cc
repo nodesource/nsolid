@@ -36,34 +36,32 @@ bool FastScalarTypeFromName(std::string_view type, FastFFIType* out) {
   // JavaScript wrappers handle strings and object-to-pointer conversions.
   if (type == "void") {
     *out = FastFFIType::kVoid;
-  } else if (type == "bool") {
-    *out = FastFFIType::kUint8;
-  } else if (IsTypeName(type, {"i8", "int8"})) {
-    *out = FastFFIType::kInt8;
-  } else if (IsTypeName(type, {"u8", "uint8"})) {
-    *out = FastFFIType::kUint8;
   } else if (type == "char") {
     *out = CHAR_MIN < 0 ? FastFFIType::kInt8 : FastFFIType::kUint8;
-  } else if (IsTypeName(type, {"i16", "int16"})) {
+  } else if (IsTypeName(type, {"int8", "i8"})) {
+    *out = FastFFIType::kInt8;
+  } else if (IsTypeName(type, {"uint8", "u8", "bool"})) {
+    *out = FastFFIType::kUint8;
+  } else if (IsTypeName(type, {"int16", "i16"})) {
     *out = FastFFIType::kInt16;
-  } else if (IsTypeName(type, {"u16", "uint16"})) {
+  } else if (IsTypeName(type, {"uint16", "u16"})) {
     *out = FastFFIType::kUint16;
-  } else if (IsTypeName(type, {"i32", "int32"})) {
+  } else if (IsTypeName(type, {"int32", "i32"})) {
     *out = FastFFIType::kInt32;
-  } else if (IsTypeName(type, {"u32", "uint32"})) {
+  } else if (IsTypeName(type, {"uint32", "u32"})) {
     *out = FastFFIType::kUint32;
-  } else if (IsTypeName(type, {"i64", "int64"})) {
+  } else if (IsTypeName(type, {"int64", "i64"})) {
     *out = FastFFIType::kInt64;
-  } else if (IsTypeName(type, {"u64", "uint64"})) {
+  } else if (IsTypeName(type, {"uint64", "u64"})) {
     *out = FastFFIType::kUint64;
-  } else if (IsTypeName(type, {"f32", "float", "float32"})) {
+  } else if (IsTypeName(type, {"float32", "f32", "float"})) {
     *out = FastFFIType::kFloat32;
-  } else if (IsTypeName(type, {"f64", "double", "float64"})) {
+  } else if (IsTypeName(type, {"float64", "f64", "double"})) {
     *out = FastFFIType::kFloat64;
   } else if (IsTypeName(type, {"buffer", "arraybuffer"})) {
     *out = FastFFIType::kPointer;
   } else if (IsTypeName(type,
-                        {"pointer", "ptr", "string", "str", "function"})) {
+                        {"pointer", "string", "function", "ptr", "str"})) {
     *out = FastFFIType::kPointer;
   } else {
     return false;
@@ -162,11 +160,12 @@ bool SignatureNeedsFastIntegerValidation(const FFIFunction& fn) {
   // V8 widens narrow integers to 32 bits and truncates BigInts to 64 bits for
   // Fast API calls. These types need a JS range check before the trampoline.
   for (const std::string& name : fn.arg_type_names) {
-    if (name == "bool" || name == "char" || name == "i8" || name == "int8" ||
-        name == "u8" || name == "uint8" || name == "i16" || name == "int16" ||
-        name == "u16" || name == "uint16" || name == "i32" || name == "int32" ||
-        name == "u32" || name == "uint32" || name == "i64" || name == "int64" ||
-        name == "u64" || name == "uint64") {
+    if (name == "char" || name == "int8" || name == "uint8" ||
+        name == "int16" || name == "uint16" || name == "int32" ||
+        name == "uint32" || name == "int64" || name == "uint64" ||
+        name == "i8" || name == "u8" || name == "bool" || name == "i16" ||
+        name == "u16" || name == "i32" || name == "u32" || name == "i64" ||
+        name == "u64") {
       return true;
     }
   }
@@ -176,7 +175,7 @@ bool SignatureNeedsFastIntegerValidation(const FFIFunction& fn) {
 bool IsPointerTypeName(const std::string& name) {
   // `pointer`, `ptr`, and `function` all use the same uintptr ABI slot; only
   // the public type spelling differs.
-  return name == "pointer" || name == "ptr" || name == "function";
+  return name == "pointer" || name == "function" || name == "ptr";
 }
 
 bool IsBufferTypeName(const std::string& name) {
@@ -192,13 +191,31 @@ bool SignatureNeedsFastBufferInvoke(const FFIFunction& fn) {
           IsBufferTypeName(fn.arg_type_names[0]));
 }
 
+namespace {
+
+std::shared_ptr<FFIFunction> CloneForFastMetadata(
+    const std::shared_ptr<FFIFunction>& fn) {
+  // Fast metadata only needs the native target and signature. In particular,
+  // its temporary clone must not borrow the original function's cif or plan.
+  auto clone = std::make_shared<FFIFunction>();
+  clone->closed = fn->closed;
+  clone->ptr = fn->ptr;
+  clone->args = fn->args;
+  clone->return_type = fn->return_type;
+  clone->arg_type_names = fn->arg_type_names;
+  clone->return_type_name = fn->return_type_name;
+  return clone;
+}
+
+}  // namespace
+
 std::shared_ptr<FFIFunction> CloneWithRawPointerArgNames(
     const std::shared_ptr<FFIFunction>& fn) {
   // The primary Fast API entrypoint receives pointer-compatible values as
   // BigInts after the JS wrapper has converted strings, nullish values, and
   // memory-backed objects. A secondary entrypoint handles the monomorphic
   // memory-backed case without extracting the pointer in JS.
-  auto clone = std::make_shared<FFIFunction>(*fn);
+  auto clone = CloneForFastMetadata(fn);
   for (std::string& name : clone->arg_type_names) {
     if (IsBufferTypeName(name)) {
       name = "pointer";
@@ -209,10 +226,10 @@ std::shared_ptr<FFIFunction> CloneWithRawPointerArgNames(
 
 std::shared_ptr<FFIFunction> CloneWithFastBufferArgNames(
     const std::shared_ptr<FFIFunction>& fn) {
-  // Reuse the same native target and libffi metadata, but describe the JS
+  // Reuse the same native target and signature metadata, but describe the JS
   // argument as `buffer` so CreateFastFFIMetadata() emits a trampoline that
   // receives a V8 value and calls node_ffi_fast_buffer_data().
-  auto clone = std::make_shared<FFIFunction>(*fn);
+  auto clone = CloneForFastMetadata(fn);
   for (std::string& name : clone->arg_type_names) {
     if (IsPointerTypeName(name)) {
       name = "buffer";
@@ -228,18 +245,43 @@ extern "C" uintptr_t node_ffi_fast_buffer_data(v8::Local<v8::Value> value,
   // returns zero after throwing, preventing the native target from seeing an
   // invalid pointer value.
   constexpr uintptr_t kInvalidBuffer = std::numeric_limits<uintptr_t>::max();
-
-  // Accept only memory-backed JS values in the native helper. Other pointer
-  // conversions, including strings, stay in the JS wrapper so their temporary
-  // lifetime is explicit.
-  if (value->IsArrayBufferView()) {
-    return PointerFromValue(value);
-  }
-  if (value->IsArrayBuffer() || value->IsSharedArrayBuffer()) {
-    return PointerFromValue(value);
-  }
-
   v8::Isolate* isolate = options != nullptr ? options->isolate : nullptr;
+
+  // Accept only the memory-backed JS values supported by ToFFIArgument in the
+  // native helper. Other pointer conversions, including strings and direct
+  // SharedArrayBuffers, stay in the JS wrapper so validation and temporary
+  // lifetimes match the generic path.
+  if (value->IsArrayBufferView()) {
+    v8::Local<v8::ArrayBufferView> view = value.As<v8::ArrayBufferView>();
+    if (view->Buffer()->WasDetached()) {
+      if (isolate != nullptr) {
+        // No HandleScope is active during a Fast API call, so open one before
+        // creating the error object.
+        v8::HandleScope scope(isolate);
+        THROW_ERR_INVALID_ARG_VALUE(
+            isolate,
+            "Argument %u is an ArrayBufferView backed by a detached "
+            "ArrayBuffer",
+            index);
+      }
+      return kInvalidBuffer;
+    }
+    return PointerFromValue(value);
+  }
+  if (value->IsArrayBuffer()) {
+    if (value.As<v8::ArrayBuffer>()->WasDetached()) {
+      if (isolate != nullptr) {
+        // No HandleScope is active during a Fast API call, so open one before
+        // creating the error object.
+        v8::HandleScope scope(isolate);
+        THROW_ERR_INVALID_ARG_VALUE(
+            isolate, "Argument %u is a detached ArrayBuffer", index);
+      }
+      return kInvalidBuffer;
+    }
+    return PointerFromValue(value);
+  }
+
   if (isolate != nullptr) {
     // No HandleScope is active during a Fast API call, so open one before
     // creating the error object.

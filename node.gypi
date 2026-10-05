@@ -88,11 +88,20 @@
     [ 'OS=="aix" or OS=="os400"', {
       'cflags': [ '-mcpu=power9' ],
     }],
+    [ 'OS=="linux" and target_arch=="ppc64"', {
+      'cflags': [ '-mcpu=power9' ],
+    }],
+    [ 'OS=="linux" and target_arch=="s390x"', {
+      'cflags': [ '-march=z14' ],
+    }],
     [ 'node_enable_d8=="true"', {
       'dependencies': [ 'tools/v8_gypfiles/d8.gyp:d8' ],
     }],
     [ 'node_enable_v8windbg=="true"', {
       'dependencies': [ 'tools/v8_gypfiles/v8windbg.gyp:build_v8windbg' ],
+    }],
+    [ 'node_enable_v8debughelper=="true"', {
+      'dependencies': [ 'tools/v8_gypfiles/v8_debug_helper.gyp:build_v8_debug_helper' ],
     }],
     [ 'node_use_bundled_v8=="true"', {
       'dependencies': [
@@ -239,7 +248,7 @@
     }],
 
     [ 'node_shared_simdutf=="false" and node_use_bundled_v8!="false"', {
-        'dependencies': [ 'tools/v8_gypfiles/v8.gyp:simdutf' ],
+        'dependencies': [ 'tools/v8_gypfiles/simdutf.gyp:simdutf' ],
     }],
 
     [ 'node_shared_brotli=="false"', {

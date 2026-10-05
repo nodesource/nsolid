@@ -4,9 +4,9 @@ const common = require('../common');
 if (!common.hasCrypto)
   common.skip('missing crypto');
 
-const { hasOpenSSL3 } = require('../common/crypto');
+const { hasOpenSSL } = require('../common/crypto');
 
-if (!hasOpenSSL3)
+if (!hasOpenSSL(3))
   common.skip('this test requires OpenSSL 3.x');
 
 const assert = require('node:assert/strict');
@@ -32,7 +32,7 @@ if (isMainThread) {
   const derivations = [
     ['HKDF', () => crypto.hkdfSync('sha256', Buffer.alloc(32), Buffer.alloc(8),
                                    Buffer.alloc(0), 32)],
-    ['PBKDF2', () => crypto.pbkdf2Sync('secret', Buffer.alloc(16), 1000, 32,
+    ['PBKDF2', () => crypto.pbkdf2Sync('passphrase', Buffer.alloc(16), 1000, 32,
                                        'sha256')],
   ];
   for (const { 0: name, 1: derive } of derivations) {
@@ -58,4 +58,22 @@ if (isMainThread) {
                        { encoding: 'utf8' });
   assert(common.nodeProcessAborted(cp.status, cp.signal),
          `process did not abort, code:${cp.status} signal:${cp.signal}`);
+}
+
+// AIX keeps OpenSSL as V8's entropy source, so a DRBG that cannot be
+// fetched still aborts at startup there.
+if (!common.isAIX) {
+  // A configuration whose random section names a DRBG that cannot be
+  // fetched starts normally; the first crypto call fails, without a hang.
+  const fixtures = require('../common/fixtures');
+  const { spawnSync } = require('node:child_process');
+  const randomConf = fixtures.path('openssl3-conf', 'random_unavailable.cnf');
+  const cp = spawnSync(process.execPath,
+                       [ `--openssl-config=${randomConf}`, '-e',
+                         'require("node:crypto").randomBytes(8)' ],
+                       { encoding: 'utf8' });
+  assert(!common.nodeProcessAborted(cp.status, cp.signal),
+         `process aborted, code:${cp.status} signal:${cp.signal}`);
+  assert.strictEqual(cp.status, 1);
+  assert.match(cp.stderr, /unable to fetch drbg/);
 }

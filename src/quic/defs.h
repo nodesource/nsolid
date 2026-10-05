@@ -290,25 +290,9 @@ enum class Side : uint8_t {
   SERVER,
 };
 
-enum class EndpointLabel : uint8_t {
-  LOCAL,
-  REMOTE,
-};
-
 enum class Direction : uint8_t {
   BIDIRECTIONAL,
   UNIDIRECTIONAL,
-};
-
-enum class HeadersKind : uint8_t {
-  HINTS,
-  INITIAL,
-  TRAILING,
-};
-
-enum class HeadersFlags : uint8_t {
-  NONE,
-  TERMINAL,
 };
 
 enum class StreamPriority : uint8_t {
@@ -323,6 +307,12 @@ enum class StreamPriorityFlags : uint8_t {
 };
 
 enum class HeadersSupportState : uint8_t {
+  UNKNOWN,
+  SUPPORTED,
+  UNSUPPORTED,
+};
+
+enum class StreamCallbacksSupportState : uint8_t {
   UNKNOWN,
   SUPPORTED,
   UNSUPPORTED,

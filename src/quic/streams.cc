@@ -26,12 +26,10 @@ using v8::BackingStore;
 using v8::BackingStoreInitializationMode;
 using v8::BigInt;
 using v8::FunctionCallbackInfo;
-using v8::Global;
 using v8::HandleScope;
 using v8::Integer;
 using v8::Just;
 using v8::Local;
-using v8::LocalVector;
 using v8::Maybe;
 using v8::Nothing;
 using v8::Object;
@@ -57,14 +55,10 @@ namespace quic {
   V(HAS_READER, has_reader, uint8_t)                                           \
   /* Set when the stream has a block event handler */                          \
   V(WANTS_BLOCK, wants_block, uint8_t)                                         \
-  /* Set when the stream has a headers event handler */                        \
-  V(WANTS_HEADERS, wants_headers, uint8_t)                                     \
   /* Set when the stream has a reset event handler */                          \
   V(WANTS_RESET, wants_reset, uint8_t)                                         \
   /* Set when the stream has a stop sending event handler */                   \
   V(WANTS_STOP_SENDING, wants_stop_sending, uint8_t)                           \
-  /* Set when the stream has a trailers event handler */                       \
-  V(WANTS_TRAILERS, wants_trailers, uint8_t)                                   \
   /* True when 0-RTT early data was received */                                \
   V(RECEIVED_EARLY_DATA, received_early_data, uint8_t)                         \
   V(WRITE_DESIRED_SIZE, write_desired_size, uint32_t)                          \
@@ -98,7 +92,6 @@ namespace quic {
 #define STREAM_JS_METHODS(V)                                                   \
   V(AttachSource, attachSource, false)                                         \
   V(Destroy, destroy, false)                                                   \
-  V(SendHeaders, sendHeaders, false)                                           \
   V(StopSending, stopSending, false)                                           \
   V(ResetStream, resetStream, false)                                           \
   V(SetPriority, setPriority, false)                                           \
@@ -226,17 +219,6 @@ void PendingStream::reject(QuicError error) {
   waiting_ = false;
   stream_->Destroy(error);
 }
-
-struct Stream::PendingHeaders {
-  HeadersKind kind;
-  Global<Array> headers;
-  HeadersFlags flags;
-  PendingHeaders(HeadersKind kind_, Global<Array> headers_, HeadersFlags flags_)
-      : kind(kind_), headers(std::move(headers_)), flags(flags_) {}
-  DISALLOW_COPY_AND_MOVE(PendingHeaders)
-};
-
-// ============================================================================
 
 struct Stream::State {
 #define V(_, name, type) type name;
@@ -443,37 +425,6 @@ struct Stream::Impl {
     } else {
       stream->Destroy();
     }
-  }
-
-  // Sends a block of headers to the peer. If the stream is not yet open,
-  // the headers will be queued and sent immediately when the stream is
-  // opened. Returns false if the application does not support headers.
-  JS_METHOD(SendHeaders) {
-    Stream* stream;
-    ASSIGN_OR_RETURN_UNWRAP(&stream, args.This());
-    CHECK(args[0]->IsUint32());  // Kind
-    CHECK(args[1]->IsArray());   // Headers
-    CHECK(args[2]->IsUint32());  // Flags
-
-    HeadersKind kind = FromV8Value<HeadersKind>(args[0]);
-    Local<Array> headers = args[1].As<Array>();
-    HeadersFlags flags = FromV8Value<HeadersFlags>(args[2]);
-
-    // If the stream is pending, the headers will be queued until the
-    // stream is opened, at which time the queued header block will be
-    // immediately sent when the stream is opened. If we already know
-    // that the application does not support headers, return false
-    // immediately so the JS side can throw an appropriate error.
-    if (stream->is_pending()) {
-      if (!stream->session().application().SupportsHeaders()) {
-        return args.GetReturnValue().Set(false);
-      }
-      stream->EnqueuePendingHeaders(kind, headers, flags);
-      return args.GetReturnValue().Set(true);
-    }
-
-    args.GetReturnValue().Set(stream->session().application().SendHeaders(
-        *stream, kind, headers, flags));
   }
 
   // Tells the peer to stop sending data for this stream. This has the effect
@@ -1058,24 +1009,8 @@ void Stream::InitPerContext(Realm* realm, Local<Object> target) {
 
   NODE_DEFINE_CONSTANT(target, IDX_STATS_STREAM_COUNT);
 
-  constexpr int QUIC_STREAM_HEADERS_KIND_HINTS =
-      static_cast<uint8_t>(HeadersKind::HINTS);
-  constexpr int QUIC_STREAM_HEADERS_KIND_INITIAL =
-      static_cast<uint8_t>(HeadersKind::INITIAL);
-  constexpr int QUIC_STREAM_HEADERS_KIND_TRAILING =
-      static_cast<uint8_t>(HeadersKind::TRAILING);
-
-  constexpr int QUIC_STREAM_HEADERS_FLAGS_NONE =
-      static_cast<uint8_t>(HeadersFlags::NONE);
-  constexpr int QUIC_STREAM_HEADERS_FLAGS_TERMINAL =
-      static_cast<uint8_t>(HeadersFlags::TERMINAL);
-
-  NODE_DEFINE_CONSTANT(target, QUIC_STREAM_HEADERS_KIND_HINTS);
-  NODE_DEFINE_CONSTANT(target, QUIC_STREAM_HEADERS_KIND_INITIAL);
-  NODE_DEFINE_CONSTANT(target, QUIC_STREAM_HEADERS_KIND_TRAILING);
-
-  NODE_DEFINE_CONSTANT(target, QUIC_STREAM_HEADERS_FLAGS_NONE);
-  NODE_DEFINE_CONSTANT(target, QUIC_STREAM_HEADERS_FLAGS_TERMINAL);
+  constexpr auto IDX_STATE_STREAM_SIZE = sizeof(Stream::State);
+  NODE_DEFINE_CONSTANT(target, IDX_STATE_STREAM_SIZE);
 }
 
 Stream* Stream::From(void* stream_user_data) {
@@ -1211,11 +1146,9 @@ Stream::Stream(BaseObjectWeakPtr<Session> session,
   STAT_SET(Stats, max_offset, params->initial_max_data);
 }
 
-Stream::~Stream() {
-  // Make sure that Destroy() was called before Stream is actually destructed.
-  DCHECK_NE(stats()->destroyed_at, 0);
+Stream::~Stream() = default;
 
-  // Release arena slots back to the freelist.
+void Stream::ReleaseArenaSlots() {
   auto& binding = BindingData::Get(env());
   if (stats_slot_) {
     GetStreamStatsArena(binding).ReleaseSlot(stats_slot_);
@@ -1245,25 +1178,6 @@ void Stream::NotifyStreamOpened(stream_id id) {
         *this, priority_.priority, priority_.flags);
     priority_.pending = false;
   }
-  if (!pending_headers_queue_.empty()) {
-    if (!session().application().SupportsHeaders()) {
-      // Headers were enqueued while the application was not yet known
-      // (headers_supported == 0), and the negotiated application does
-      // not support headers. This is a fatal mismatch.
-      Destroy(QuicError::ForApplication(
-          session().application().GetInternalErrorCode()));
-      return;
-    }
-    decltype(pending_headers_queue_) queue;
-    pending_headers_queue_.swap(queue);
-    for (auto& headers : queue) {
-      session().application().SendHeaders(
-          *this,
-          headers->kind,
-          headers->headers.Get(env()->isolate()),
-          headers->flags);
-    }
-  }
   // If the stream is not a local unidirectional stream and is_readable is
   // false, then we should shutdown the streams readable side now.
   if (!is_local_unidirectional() && !is_readable()) {
@@ -1279,6 +1193,18 @@ void Stream::NotifyStreamOpened(stream_id id) {
   // since the stream likely hasn't had any opporunity to get blocked
   // yet, but just for completeness, let's make sure.
   if (outbound_) session().ResumeStream(id);
+
+  // This may make application data sendable, so keep it as the final action:
+  // sending can eventually call into JavaScript and destroy the stream.
+  BaseObjectPtr<Stream> self(this);
+  auto& application = session().application();
+  if (!application.StreamOpened(*this) && !is_destroyed()) {
+    error_code internal_error = application.GetInternalErrorCode();
+    Destroy(QuicError::ForApplication(internal_error));
+  }
+
+  // We inform, the js side that the pending stream is now available
+  if (!is_destroyed()) EmitStreamAvailable();
 }
 
 void Stream::NotifyReadableEnded(error_code code) {
@@ -1293,19 +1219,12 @@ void Stream::NotifyWritableEnded(error_code code) {
   ngtcp2_conn_shutdown_stream_write(session(), 0, id(), code);
 }
 
-void Stream::EnqueuePendingHeaders(HeadersKind kind,
-                                   Local<Array> headers,
-                                   HeadersFlags flags) {
-  Debug(this, "Enqueuing headers for pending stream");
-  pending_headers_queue_.push_back(std::make_unique<PendingHeaders>(
-      kind, Global<Array>(env()->isolate(), headers), flags));
-}
-
 bool Stream::is_pending() const {
   return state()->pending;
 }
 
 bool Stream::is_destroyed() const {
+  if (!stats_slot_) return true;
   return stats()->destroyed_at != 0;
 }
 
@@ -1337,6 +1256,10 @@ uint64_t Stream::last_activity_timestamp() const {
   return ts != 0 ? ts : stats()->created_at;
 }
 
+void Stream::RecordReceivedActivity() {
+  STAT_RECORD_TIMESTAMP(Stats, received_at);
+}
+
 bool Stream::is_local_unidirectional() const {
   return direction() == Direction::UNIDIRECTIONAL &&
          ngtcp2_conn_is_local_stream(*session_, id());
@@ -1349,10 +1272,6 @@ bool Stream::is_remote_unidirectional() const {
 
 bool Stream::is_eos() const {
   return state()->fin_sent;
-}
-
-bool Stream::wants_trailers() const {
-  return state()->wants_trailers;
 }
 
 void Stream::set_early() {
@@ -1403,13 +1322,6 @@ BaseObjectPtr<Blob::Reader> Stream::get_reader() {
   auto reader = Blob::Reader::Create(env(), Blob::Create(env(), inbound_));
   reader_ = reader;
   return reader;
-}
-
-void Stream::set_final_size(uint64_t final_size) {
-  DCHECK_IMPLIES(state()->fin_received == 1,
-                 final_size <= STAT_GET(Stats, final_size));
-  state()->fin_received = 1;
-  STAT_SET(Stats, final_size, final_size);
 }
 
 void Stream::set_outbound(std::shared_ptr<DataQueue> source) {
@@ -1499,12 +1411,37 @@ void Stream::EndWriting() {
   if (!is_pending()) session_->ResumeStream(id());
 }
 
+void Stream::ReturnFlowControlCredit(uint64_t amount, CreditScope scope) {
+  if (amount == 0) return;
+  // The stream can outlive a destroyed session (the JS side may still hold a
+  // reader over the inbound queue), leaving no window to extend.
+  if (!session_ || session_->is_destroyed()) return;
+  // Extending a window queues MAX_STREAM_DATA / MAX_DATA. The scope flushes
+  // them; inside an ngtcp2 callback the flush is a no-op and they go out with
+  // the next scheduled send instead.
+  Session::SendPendingDataScope send_scope(&session());
+  if (scope == CreditScope::STREAM_AND_CONNECTION) {
+    // Receiving data requires an id, so this should always hold.
+    DCHECK(!is_pending());
+    session().Consume(id(), amount);
+  } else {
+    session().ExtendOffset(amount);
+  }
+}
+
+void Stream::CreditConsumedBytes(uint64_t amount) {
+  // Clamped because Destroy() returns the outstanding credit in bulk and the
+  // flush that triggers can re-enter JS, which may then report some of those
+  // same bytes as read. Never give the peer more credit than we took.
+  amount = std::min(uncredited_bytes_, amount);
+  uncredited_bytes_ -= amount;
+  ReturnFlowControlCredit(amount, CreditScope::STREAM_AND_CONNECTION);
+}
+
 void Stream::EntryRead(size_t amount) {
   // Called when the JS consumer reads data from the inbound DataQueue.
   // Extend the flow control window so the sender can transmit more.
-  if (session().is_destroyed()) return;
-  Session::SendPendingDataScope send_scope(&session());
-  session().Consume(id(), amount);
+  CreditConsumedBytes(amount);
 }
 
 void Stream::BeforePull() {
@@ -1517,16 +1454,26 @@ void Stream::BeforePull() {
 
 void Stream::FlushAccumulation() {
   if (!recv_accumulator_ || recv_accumulator_->available() == 0) return;
+  size_t flushed = recv_accumulator_->available();
   auto entry = recv_accumulator_->Flush(env());
-  if (entry) {
-    inbound_->append(std::move(entry));
+  // Flush() always drains the accumulator, so the stat is reset either way.
+  STAT_SET(Stats, bytes_accumulated, 0);
+  if (entry && inbound_->append(std::move(entry)).value_or(false)) {
     // Notify the reader that data is now available in the DataQueue.
     // This is the only place we notify — not on every ReceiveData call —
     // so the reader only wakes up when there is a well-sized entry to
     // consume.
     if (reader_) reader_->NotifyPull();
+    return;
   }
-  STAT_SET(Stats, bytes_accumulated, 0);
+  // Should be unreachable: append() only fails once the queue has been capped,
+  // CapReadable() flushes before capping, and ReceiveData() accumulates
+  // nothing once read_ended is set. Reaching here means received stream data
+  // is being dropped on the floor, so say so and at least do not also leak
+  // the flow control credit for it.
+  DCHECK(false);
+  Debug(this, "Inbound queue rejected %zu accumulated bytes", flushed);
+  CreditConsumedBytes(flushed);
 }
 
 int Stream::DoPull(bob::Next<ngtcp2_vec> next,
@@ -1551,28 +1498,6 @@ int Stream::DoPull(bob::Next<ngtcp2_vec> next,
   }
 
   return outbound_->Pull(std::move(next), options, data, count, max_count_hint);
-}
-
-void Stream::BeginHeaders(HeadersKind kind) {
-  headers_length_ = 0;
-  headers_.clear();
-  set_headers_kind(kind);
-}
-
-void Stream::set_headers_kind(HeadersKind kind) {
-  headers_kind_ = kind;
-}
-
-bool Stream::AddHeader(std::unique_ptr<Header> header) {
-  size_t len = header->length();
-  if (!session_->application().CanAddHeader(
-          headers_.size(), headers_length_, len)) {
-    return false;
-  }
-
-  headers_length_ += len;
-  headers_.push_back(std::move(header));
-  return true;
 }
 
 void Stream::Acknowledge(size_t datalen) {
@@ -1607,21 +1532,33 @@ void Stream::EndWritable() {
   state()->write_ended = 1;
 }
 
-void Stream::EndReadable(std::optional<uint64_t> maybe_final_size) {
+void Stream::FinishReadable() {
   if (!is_readable()) return;
+  state()->fin_received = 1;
+  CapReadable(std::nullopt);
+}
+
+void Stream::TruncateReadable(std::optional<uint64_t> maybe_final_size) {
+  if (!is_readable()) return;
+  CapReadable(maybe_final_size);
+}
+
+void Stream::CapReadable(std::optional<uint64_t> maybe_final_size) {
+  DCHECK(is_readable());
   state()->read_ended = 1;
   // Flush any accumulated data before capping so the reader can see it.
   FlushAccumulation();
-  set_final_size(maybe_final_size.value_or(STAT_GET(Stats, bytes_received)));
-  inbound_->cap(STAT_GET(Stats, final_size));
-  // Notify the JS reader so it can see EOS. Pass fin=true so the
-  // wakeup promise resolves with a value the iterator can check to
-  // avoid waiting for another wakeup that will never come.
-  if (reader_) reader_->NotifyPull(true);
+  const uint64_t final_size =
+      maybe_final_size.value_or(STAT_GET(Stats, bytes_received));
+  STAT_SET(Stats, final_size, final_size);
+  inbound_->cap(final_size);
+  // Notify the JS reader so it can see EOS. The subsequent pull observes
+  // the now-capped DataQueue and returns EOS.
+  if (reader_) reader_->NotifyPull();
 }
 
 void Stream::Destroy(QuicError error) {
-  if (stats()->destroyed_at != 0) return;
+  if (is_destroyed()) return;
 
   // Record the destroyed at timestamp before notifying the JavaScript side
   // that the stream is being destroyed.
@@ -1642,15 +1579,27 @@ void Stream::Destroy(QuicError error) {
   // End the writable before marking as destroyed.
   EndWritable();
 
-  // Also end the readable side if it isn't already.
-  EndReadable();
+  // Also end the readable side if it isn't already. If not already ended,
+  // this will eventually surface as an error, since the data is truncated.
+  TruncateReadable();
 
   // We are going to release our reference to the outbound_ queue here.
   outbound_.reset();
+  application_state_.reset();
 
-  // EndReadable() above already flushed accumulated data. Just release
+  // TruncateReadable() above already flushed accumulated data. Just release
   // the ring buffer memory.
   recv_accumulator_.reset();
+
+  // Data that was received but never consumed still holds connection-level
+  // flow control credit, and EntryRead() will never fire for it once the
+  // listener is detached below. Leaking it would permanently shrink the
+  // session's shared receive window and, over enough streams, deadlock the
+  // connection. Zero the counter first: returning credit flushes packets,
+  // which can re-enter JS and report some of these bytes as read.
+  const uint64_t outstanding = uncredited_bytes_;
+  uncredited_bytes_ = 0;
+  ReturnFlowControlCredit(outstanding, CreditScope::CONNECTION_ONLY);
 
   // We reset the inbound here also. However, it's important to note that
   // the JavaScript side could still have a reader on the inbound DataQueue,
@@ -1666,6 +1615,9 @@ void Stream::Destroy(QuicError error) {
   // handle.
   EmitClose(error);
 
+  stream_id id_to_remove = id();
+  ReleaseArenaSlots();
+
   auto session = session_;
   session_.reset();
   // EmitClose above triggers MakeCallback which can destroy the session
@@ -1673,7 +1625,7 @@ void Stream::Destroy(QuicError error) {
   // Session BaseObject can be kept alive by a BaseObjectPtr elsewhere,
   // e.g. OnTimeout's ref) even though impl_ has been reset. We must
   // check is_destroyed() to avoid dereferencing the null impl_.
-  if (session && !session->is_destroyed()) session->RemoveStream(id());
+  if (session && !session->is_destroyed()) session->RemoveStream(id_to_remove);
 
   // Critically, make sure that the RemoveStream call is the last thing
   // trying to use this stream object. Once that call is made, the stream
@@ -1690,7 +1642,14 @@ void Stream::ReceiveData(const uint8_t* data,
   // end the readable side if this is the last bit of data we've received.
   Debug(this, "Receiving %zu bytes of data", len);
   if (state()->read_ended == 1 || len == 0) {
-    if (flags.fin) EndReadable();
+    if (flags.fin) FinishReadable();
+    // Nothing will ever consume these bytes, so return the connection-level
+    // credit ngtcp2 charged for them. The stream window is deliberately left
+    // alone: there is no point inviting more data onto a stream we have
+    // stopped reading. Reachable when, for example, HTTP/3 replays DATA
+    // payload it had buffered for QPACK head-of-line blocking after the
+    // readable side was shut down.
+    ReturnFlowControlCredit(len, CreditScope::CONNECTION_ONLY);
     return;
   }
 
@@ -1698,6 +1657,9 @@ void Stream::ReceiveData(const uint8_t* data,
   STAT_INCREMENT_N(Stats, bytes_received, len);
   STAT_SET(Stats, max_offset_received, STAT_GET(Stats, bytes_received));
   STAT_RECORD_TIMESTAMP(Stats, received_at);
+
+  // These bytes now hold inbound flow control credit. See uncredited_bytes_.
+  uncredited_bytes_ += len;
 
   // Lazy-allocate the receive accumulation buffer on first data-carrying
   // call. Streams that never receive data (write-only, immediately reset)
@@ -1763,7 +1725,7 @@ void Stream::ReceiveData(const uint8_t* data,
 
   if (flags.fin) {
     FlushAccumulation();
-    EndReadable();
+    FinishReadable();
   } else if (reader_ && was_empty) {
     // Notify the reader once when the accumulator transitions from empty
     // to non-empty. This wakes the reader exactly once per accumulation
@@ -1794,7 +1756,7 @@ void Stream::ReceiveStreamReset(uint64_t final_size, QuicError error) {
         final_size,
         error);
   state()->reset_code = error.code();
-  EndReadable(final_size);
+  TruncateReadable(final_size);
   EmitReset(error);
 }
 
@@ -1817,7 +1779,7 @@ void Stream::DoStreamReset(error_code code) {
 }
 
 void Stream::SendStopSending(error_code code) {
-  EndReadable();
+  TruncateReadable();
 
   if (!is_pending()) {
     // If the stream is a local unidirectional there's nothing to do here.
@@ -1829,6 +1791,14 @@ void Stream::SendStopSending(error_code code) {
 }
 
 // ============================================================================
+
+void Stream::EmitStreamAvailable() {
+  if (!env()->can_call_into_js()) {
+    return;
+  }
+  CallbackScope<Stream> cb_scope(this);
+  MakeCallback(BindingData::Get(env()).stream_available_callback(), 0, nullptr);
+}
 
 void Stream::EmitBlocked() {
   // state()->wants_block will be set from the javascript side if the
@@ -1903,42 +1873,6 @@ void Stream::EmitClose(const QuicError& error) {
   MakeCallback(BindingData::Get(env()).stream_close_callback(), 1, &err);
 }
 
-void Stream::EmitHeaders() {
-  STAT_RECORD_TIMESTAMP(Stats, received_at);
-  // state()->wants_headers will be set from the javascript side if the
-  // stream object has a handler for the headers event.
-  if (!env()->can_call_into_js() || !state()->wants_headers) {
-    headers_.clear();
-    return;
-  }
-  CallbackScope<Stream> cb_scope(this);
-
-  auto& binding = BindingData::Get(env());
-  size_t count = headers_.size() * 2;
-  LocalVector<Value> values(env()->isolate(), count);
-
-  for (size_t i = 0; i < headers_.size(); i++) {
-    Local<Value> name;
-    Local<Value> value;
-    if (!headers_[i]->GetName(&binding).ToLocal(&name) ||
-        !headers_[i]->GetValue(&binding).ToLocal(&value)) [[unlikely]] {
-      headers_.clear();
-      return;
-    }
-    values[i * 2] = name;
-    values[i * 2 + 1] = value;
-  }
-
-  headers_.clear();
-
-  Local<Value> argv[] = {
-      Array::New(env()->isolate(), values.data(), count),
-      Integer::NewFromUnsigned(env()->isolate(),
-                               static_cast<uint32_t>(headers_kind_))};
-
-  MakeCallback(binding.stream_headers_callback(), arraysize(argv), argv);
-}
-
 void Stream::EmitReset(const QuicError& error) {
   // state()->wants_reset will be set from the javascript side if the
   // stream object has a handler for the reset event.
@@ -1961,16 +1895,6 @@ void Stream::EmitStopSending(const QuicError& error) {
   if (!error.ToV8Value(env()).ToLocal(&err)) return;
 
   MakeCallback(BindingData::Get(env()).stream_stop_sending_callback(), 1, &err);
-}
-
-void Stream::EmitWantTrailers() {
-  // state()->wants_trailers will be set from the javascript side if the
-  // stream object has a handler for the trailers event.
-  if (!env()->can_call_into_js() || !state()->wants_trailers) {
-    return;
-  }
-  CallbackScope<Stream> cb_scope(this);
-  MakeCallback(BindingData::Get(env()).stream_trailers_callback(), 0, nullptr);
 }
 
 // ============================================================================

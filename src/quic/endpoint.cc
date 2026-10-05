@@ -249,6 +249,17 @@ Maybe<Endpoint::Options> Endpoint::Options::From(Environment* env,
     return Nothing<Options>();
   }
 
+  // SocketAddressLRU::Upsert requires a positive capacity. With max_size_ ==
+  // 0, the newly inserted entry is immediately evicted, and the final
+  // map_[address] creates a default list iterator that is then
+  // dereferenced, causing UB (observed as a SIGSEGV in Endpoint::Receive on
+  // the first accepted connection).
+  if (options.address_lru_size == 0) {
+    THROW_ERR_INVALID_ARG_VALUE(
+        env, "The addressLRUSize option must be greater than 0");
+    return Nothing<Options>();
+  }
+
   Local<Value> address;
   if (!params->Get(env->context(), env->address_string()).ToLocal(&address)) {
     return Nothing<Options>();
@@ -1999,10 +2010,10 @@ void Endpoint::EmitNewSession(const BaseObjectPtr<Session>& session) {
   // exists but it is in a destroyed state. Care should be taken accessing
   // session after this point.
 
-  // Deliver any stream events that were held until the stream was setup,
-  // e.g. 0-RTT streams from the first flight.
+  // Deliver any qlog written while processing the packets that carried the
+  // ClientHello, which is the only output that can predate this callback.
   if (!session->is_destroyed()) {
-    session->ReplayDeferredEmits();
+    session->FlushPendingQlog();
   }
 }
 

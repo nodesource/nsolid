@@ -36,6 +36,7 @@ const bits = ['arm64', 'loong64', 'mips', 'mipsel', 'ppc64', 'riscv64', 's390x',
   .includes(process.arch) ? 64 : 32;
 const hasIntl = !!process.config.variables.v8_enable_i18n_support;
 const hasTemporal = !!process.config.variables.v8_enable_temporal_support;
+const hasV8Sandbox = !!process.config.variables.v8_enable_sandbox;
 
 // small-icu doesn't support non-English locales
 const hasFullICU = (() => {
@@ -83,6 +84,7 @@ const hasSQLite = Boolean(process.versions.sqlite);
 const hasFFI = Boolean(process.config.variables.node_use_ffi);
 const hasPerfetto = Boolean(process.config.variables.v8_use_perfetto);
 
+const hasDtls = hasCrypto && !!process.features.dtls;
 const hasQuic = hasCrypto && !!process.features.quic;
 
 const hasLocalStorage = (() => {
@@ -864,8 +866,9 @@ function invalidArgTypeHelper(input) {
     return ` Received function ${input.name}`;
   }
   if (typeof input === 'object') {
-    if (input.constructor?.name) {
-      return ` Received an instance of ${input.constructor.name}`;
+    const name = input.constructor?.name;
+    if (typeof name === 'string' && name !== '') {
+      return ` Received an instance of ${name}`;
     }
     return ` Received ${inspect(input, { depth: -1 })}`;
   }
@@ -1027,8 +1030,10 @@ const common = {
   getTTYfd,
   hasIntl,
   hasTemporal,
+  hasV8Sandbox,
   hasFullICU,
   hasCrypto,
+  hasDtls,
   hasQuic,
   hasInspector,
   hasSQLite,

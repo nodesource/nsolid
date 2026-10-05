@@ -82,8 +82,8 @@ using the [`--allow-child-process`][] and [`--allow-worker`][] respectively.
 To allow network access, use [`--allow-net`][] and for allowing native addons
 when using permission model, use the [`--allow-addons`][]
 flag. For WASI, use the [`--allow-wasi`][] flag. For FFI, use the
-[`--allow-ffi`][] flag. The [`node:ffi`](ffi.md) module also requires the
-`--experimental-ffi` flag and is only available in builds with FFI support.
+[`--allow-ffi`][] flag. The [`node:ffi`](ffi.md) module is only available in
+builds with FFI support.
 
 To allow use of OpenSSL STORE loaders, for example to load a private key
 from a {URL} passed to [`crypto.createPrivateKey()`][], use the
@@ -138,7 +138,7 @@ const config = fs.readFileSync('/etc/myapp/config.json', 'utf8');
 // Drop read access to /etc/myapp after initialization
 process.permission.drop('fs.read', '/etc/myapp');
 
-// This will now throw ERR_ACCESS_DENIED
+// This will now return false
 process.permission.has('fs.read', '/etc/myapp/config.json'); // false
 
 // Drop child process permission entirely
@@ -219,7 +219,7 @@ $ node --permission index.js
 * `index.js` will be included in the allowed file system read list
 
 ```console
-$ node -r /path/to/custom-require.js --permission index.js.
+$ node -r /path/to/custom-require.js --permission index.js
 ```
 
 * `/path/to/custom-require.js` will be included in the allowed file system read
@@ -257,6 +257,14 @@ does not exist, the wildcard will not be added, and access will be limited to
 `/home/test/files`. If you want to allow access to a folder that does not exist
 yet, make sure to explicitly include the wildcard:
 `/my-path/folder-do-not-exist/*`.
+
+Some `node:fs` operations act on an already-open file descriptor rather than a
+path, so they cannot be tied to a `--allow-fs-read` or `--allow-fs-write` grant.
+When the permission model is enabled these operations are disabled and throw
+`ERR_ACCESS_DENIED`, regardless of how the descriptor was obtained. This applies
+both to the top-level `node:fs` functions and to the equivalent
+`FileHandle` methods, and currently includes `fsync`/`fdatasync`,
+`fchmod`, and `fchown` (and their synchronous variants).
 
 #### Configuration file support
 
@@ -346,6 +354,14 @@ There are constraints you need to know before using this system:
   to read files before environment initialization. As a result, such flags are
   not subject to the rules of the Permission Model. The same applies for V8
   flags that can be set via runtime through `v8.setFlagsFromString`.
+* Files that Node.js itself creates, writes, or reads at a location selected
+  by an operator flag may not be consistently checked against the Permission
+  Model, in particular when the flag accepts a template or pattern that
+  expands to several paths. For example, trace files rotated by
+  `--trace-event-file-pattern` (`${rotation}`) can be written even when the
+  expanded path is not covered by `--allow-fs-write`. Because the location is
+  chosen by the operator, gaps like this are treated as regular bugs rather
+  than vulnerabilities. Please report them through the regular issue tracker.
 * OpenSSL engines cannot be requested at runtime when the Permission
   Model is enabled, affecting the built-in crypto, https, and tls modules.
 * Run-Time Loadable Extensions cannot be loaded when the Permission Model is

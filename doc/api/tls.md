@@ -468,34 +468,63 @@ to set the security level to 0 while using the default OpenSSL cipher list, you 
 
 ```mjs
 import { createServer, connect } from 'node:tls';
-const port = 443;
+import { readFileSync } from 'node:fs';
+const port = 8000;
 
-createServer({ ciphers: 'DEFAULT@SECLEVEL=0', minVersion: 'TLSv1' }, function(socket) {
+createServer({
+  key: readFileSync('server-key.pem'),
+  cert: readFileSync('server-cert.pem'),
+  ciphers: 'DEFAULT@SECLEVEL=0',
+  minVersion: 'TLSv1',
+}, function(socket) {
   console.log('Client connected with protocol:', socket.getProtocol());
   socket.end();
   this.close();
 })
 .listen(port, () => {
-  connect(port, { ciphers: 'DEFAULT@SECLEVEL=0', maxVersion: 'TLSv1' });
+  connect(port, {
+    ciphers: 'DEFAULT@SECLEVEL=0',
+    minVersion: 'TLSv1',
+    maxVersion: 'TLSv1',
+    ca: [ readFileSync('server-cert.pem') ],
+  });
 });
 ```
 
 ```cjs
 const { createServer, connect } = require('node:tls');
-const port = 443;
+const { readFileSync } = require('node:fs');
+const port = 8000;
 
-createServer({ ciphers: 'DEFAULT@SECLEVEL=0', minVersion: 'TLSv1' }, function(socket) {
+createServer({
+  key: readFileSync('server-key.pem'),
+  cert: readFileSync('server-cert.pem'),
+  ciphers: 'DEFAULT@SECLEVEL=0',
+  minVersion: 'TLSv1',
+}, function(socket) {
   console.log('Client connected with protocol:', socket.getProtocol());
   socket.end();
   this.close();
 })
 .listen(port, () => {
-  connect(port, { ciphers: 'DEFAULT@SECLEVEL=0', maxVersion: 'TLSv1' });
+  connect(port, {
+    ciphers: 'DEFAULT@SECLEVEL=0',
+    minVersion: 'TLSv1',
+    maxVersion: 'TLSv1',
+    ca: [ readFileSync('server-cert.pem') ],
+  });
 });
 ```
 
 This approach sets the security level to 0, allowing the use of legacy features while still
 leveraging the default OpenSSL ciphers.
+
+To generate the certificate and key for this example, run:
+
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes -sha256 -subj '/CN=localhost' \
+  -keyout server-key.pem -out server-cert.pem
+```
 
 ### Using [`--tls-cipher-list`][]
 
@@ -1065,6 +1094,11 @@ property is set only when `tlsSocket.authorized === false`.
 
 <!-- YAML
 added: v0.11.4
+changes:
+  - version: v26.8.0
+    pr-url: https://github.com/nodejs/node/pull/64677
+    description: On TLS 1.3, a resumed session where the client presented no
+                 certificate is no longer reported as authorized.
 -->
 
 * Type: {boolean}
@@ -1074,15 +1108,10 @@ specified when creating the `tls.TLSSocket` instance, otherwise `false`.
 
 The peer certificate is only verified during a full TLS handshake. When a
 connection is established by resuming a previous session (see
-[Session Resumption][]), verification is not repeated. If the client
-presented a certificate in the original handshake, `authorized` and
+[Session Resumption][]), verification is not repeated: `authorized` and
 `authorizationError` carry the result stored with the session, including
-any verification error. On TLS 1.3, a client that sent no certificate at
-all can resume a session and report `authorized` as `true`, while
-[`tls.TLSSocket.getPeerCertificate()`][] returns an empty object. Servers
-that authorize clients manually with `rejectUnauthorized: false` should
-therefore also check [`tls.TLSSocket.isSessionReused()`][] and that a peer
-certificate is present.
+any verification error and the case where the client presented no
+certificate at all.
 
 ### `tlsSocket.disableRenegotiation()`
 
@@ -2585,7 +2614,6 @@ added: v0.11.3
 [`tls.TLSSocket.getProtocol()`]: #tlssocketgetprotocol
 [`tls.TLSSocket.getSession()`]: #tlssocketgetsession
 [`tls.TLSSocket.getTLSTicket()`]: #tlssocketgettlsticket
-[`tls.TLSSocket.isSessionReused()`]: #tlssocketissessionreused
 [`tls.TLSSocket.servername`]: #tlssocketservername
 [`tls.TLSSocket`]: #class-tlstlssocket
 [`tls.connect()`]: #tlsconnectoptions-callback

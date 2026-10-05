@@ -11,10 +11,12 @@ on:
       - v[0-9]+.x
     paths:
       - '**.nix'
+      - tools/nix/**
       - .github/workflows/nix-changes.yml
   pull_request:
     paths:
       - '**.nix'
+      - tools/nix/**
       - .github/workflows/nix-changes.yml
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -43,56 +45,33 @@ jobs:
     name: '${{ matrix.system }}: dependencies diff'
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 2
           persist-credentials: false
-          sparse-checkout: '*.nix'
+          sparse-checkout: |
+            shell.nix
+            tools/nix/
           sparse-checkout-cone-mode: false
 
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342  # v31.11.0
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24  # v31.11.1
         with:
           extra_nix_config: sandbox = true
 
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71  # v17
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866  # v17
         with:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           name: nodejs
 
       - name: Compute requisites after change
-        shell: bash  # See https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#exit-codes-and-error-action-preference, we want the pipefail option.
-        run: |
-          nix-store --query --references "$(
-            nix-instantiate -I "nixpkgs=./tools/nix/pkgs.nix" shell.nix \
-              --arg devTools "
-                (import ./tools/nix/devTools.nix {})
-                ++ builtins.attrValues (
-                  { inherit (import <nixpkgs> {}) nixfmt-tree sccache; }
-                  // import ./tools/nix/openssl-matrix.nix {}
-                  // import ./tools/nix/pkcs11.nix {}
-                )")" \
-          | xargs nix-store --realise \
-          | xargs nix-store --query --requisites \
-          | sort -k1.45 \
-          > requisites-${{ matrix.system }}-after.list
+        run: ./tools/nix/list-requisites.sh > requisites-${{ matrix.system }}-after.list
 
       - name: Compute requisites before change
-        shell: bash  # See https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#exit-codes-and-error-action-preference, we want the pipefail option.
-        # TODO(panva): add `// import ./tools/nix/pkcs11.nix {}` once landed
         run: |
           git reset HEAD^ --hard
-          nix-store --query --references "$(
-            nix-instantiate -I "nixpkgs=./tools/nix/pkgs.nix" shell.nix \
-              --arg devTools "
-                (import ./tools/nix/devTools.nix {})
-                ++ builtins.attrValues (
-                  { inherit (import <nixpkgs> {}) nixfmt-tree sccache; }
-                  // import ./tools/nix/openssl-matrix.nix {}
-                )")" \
-          | xargs nix-store --realise \
-          | xargs nix-store --query --requisites \
-          | sort -k1.45 \
-          > requisites-${{ matrix.system }}-before.list
+          # TODO(aduh95): remove this once list-requisites.sh has reached `main`
+          [ -f tools/nix/list-requisites.sh ] || git checkout FETCH_HEAD -- tools/nix/list-requisites.sh
+          ./tools/nix/list-requisites.sh > requisites-${{ matrix.system }}-before.list
 
       - name: Output diff
         run: |
@@ -124,17 +103,18 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: '*.nix'
           sparse-checkout-cone-mode: false
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342  # v31.11.0
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24  # v31.11.1
       - name: Lint Nix files
         run: |
-          nix-shell -I nixpkgs=./tools/nix/pkgs.nix -p 'nixfmt-tree' --run '
-            treefmt --quiet --ci
-          ' && EXIT_CODE="$?" || EXIT_CODE="$?"
+          NIX_LINTER=$(nix-instantiate --eval --raw -E '(import ./shell.nix {}).NIX_LINTER')
+          # Attempt to get it from cache, and fallback to building `devTools.nix` otherwise.
+          nix-store --realise "${NIX_LINTER%/bin/*}" || nix-build -I nixpkgs=tools/nix/pkgs.nix ./tools/nix/devTools.nix --no-out-link
+          "$NIX_LINTER" --quiet --ci && EXIT_CODE="$?" || EXIT_CODE="$?"
           if [ "$EXIT_CODE" != "0" ]
           then
             git --no-pager diff || true

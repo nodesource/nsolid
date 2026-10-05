@@ -50,6 +50,7 @@ namespace node::crypto {
 constexpr size_t kSizeOf_DH = 144;
 constexpr size_t kSizeOf_EC_KEY = 80;
 constexpr size_t kSizeOf_EVP_CIPHER_CTX = 168;
+constexpr size_t kSizeOf_EVP_MAC_CTX = 16;
 constexpr size_t kSizeOf_EVP_MD_CTX = 48;
 constexpr size_t kSizeOf_EVP_PKEY = 72;
 constexpr size_t kSizeOf_EVP_PKEY_CTX = 80;
@@ -62,7 +63,12 @@ constexpr T NumBitsToBytes(T bits) {
   return (bits / CHAR_BIT) + ((CHAR_BIT - 1 + (bits % CHAR_BIT)) / CHAR_BIT);
 }
 
-bool ProcessFipsOptions();
+// Applies the FIPS related command line options. Returns a description of
+// what went wrong, or std::nullopt when there was nothing to do or the
+// options were applied successfully.
+std::optional<std::string> ProcessFipsOptions();
+bool IsFipsEnabled();
+void InstallFipsIndicatorCallback();
 
 bool InitCryptoOnce(v8::Isolate* isolate);
 void InitCryptoOnce();
@@ -221,6 +227,15 @@ class ByteSource final {
     return ncrypto::BignumPointer(data<unsigned char>(), size());
   }
 
+  inline ByteSource ToCopy() const {
+    if (empty()) return {};
+    CHECK_NOT_NULL(data_);
+    auto data = MallocOpenSSL<char>(size());
+    CHECK_NOT_NULL(data);
+    memcpy(data, data_, size());
+    return ByteSource::Allocated(data, size());
+  }
+
   // Creates a v8::BackingStore that takes over responsibility for
   // any allocated data. The ByteSource will be reset with size = 0
   // after being called.
@@ -281,6 +296,35 @@ enum CryptoJobMode { kCryptoJobAsync, kCryptoJobSync, kCryptoJobWebCrypto };
 
 CryptoJobMode GetCryptoJobMode(v8::Local<v8::Value> args);
 bool IsCryptoJobAsync(CryptoJobMode mode);
+
+struct CShakeOptions final : public MemoryRetainer {
+  enum Flag : uint8_t {
+    kFunctionName = 1 << 0,
+    kCustomization = 1 << 1,
+  };
+
+  std::string function_name;
+  std::string customization;
+  uint8_t flags = 0;
+
+  CShakeOptions() = default;
+  CShakeOptions(CShakeOptions&& other) noexcept;
+  CShakeOptions& operator=(CShakeOptions&& other) noexcept;
+
+  bool empty() const { return flags == 0; }
+  bool has(Flag flag) const { return (flags & flag) != 0; }
+
+  bool Initialize(ncrypto::EVPMDCtxPointer* ctx, const EVP_MD* digest) const;
+
+  void MemoryInfo(MemoryTracker* tracker) const override;
+  SET_MEMORY_INFO_NAME(CShakeOptions)
+  SET_SELF_SIZE(CShakeOptions)
+};
+
+v8::Maybe<void> GetCShakeOptions(
+    const v8::FunctionCallbackInfo<v8::Value>& args,
+    unsigned int offset,
+    CShakeOptions* options);
 
 v8::MaybeLocal<v8::Value> CreateWebCryptoJobError(Environment* env,
                                                   v8::Local<v8::Value> cause);
@@ -477,7 +521,7 @@ class CryptoJob : public AsyncWrap, public ThreadPoolWork {
     {
       node::errors::TryCatchScope try_catch(env);
       if (value->IsObject()) {
-        then_key = FIXED_ONE_BYTE_STRING(env->isolate(), "then");
+        then_key = env->then_string();
         v8::Local<v8::Object> object = value.As<v8::Object>();
         v8::Maybe<bool> has_own_then =
             object->HasOwnProperty(context, then_key);
@@ -729,8 +773,8 @@ class ArrayBufferOrViewContents final {
   }
 
   template <typename M>
+    requires(sizeof(M) == 1)
   void CopyTo(M* dest, size_t len) const {
-    static_assert(sizeof(M) == 1, "sizeof(M) must equal 1");
     len = std::min(len, size());
     if (len > 0 && data() != nullptr) {
       memcpy(dest, data(), len);

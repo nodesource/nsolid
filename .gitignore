@@ -121,6 +121,7 @@ tools/*/*.i.tmp
 /*.xml
 /v8*-tap.json
 /node_trace.*.log
+/node_trace.*.pftrace
 # coverage related
 /gcovr
 /build
@@ -163,7 +164,6 @@ install_manifest.txt
 
 # === Rules for AI assistants ===
 CLAUDE.md
-AGENTS.md
 
 # === Global Rules ===
 # Keep last to avoid being excluded

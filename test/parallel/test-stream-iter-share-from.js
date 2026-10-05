@@ -170,40 +170,50 @@ async function testShareDropOldest() {
 }
 
 async function testShareDropNewest() {
-  // With drop-newest and a stalled consumer, the async path allows the
-  // buffer to grow beyond budget (the "drop" applies to the
-  // backpressure signal, not the buffer contents). Both consumers
-  // ultimately see all items.
+  let pulls = 0;
+  let secondPull;
+  const secondPullStarted = new Promise((resolve) => {
+    secondPull = resolve;
+  });
+
   async function* source() {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 7; i++) {
+      pulls++;
+      if (pulls === 2) secondPull();
       const chunk = new Uint8Array(16384);
       chunk[0] = i;
       yield [chunk];
     }
   }
-  const shared = share(source(), { budget: 32768, backpressure: 'drop-newest' });
-  const fast = shared.pull();
-  const slow = shared.pull();
+  const shared = share(source(), {
+    budget: 16384,
+    backpressure: 'drop-newest',
+  });
+  const fast = shared.pull()[Symbol.asyncIterator]();
+  const slow = shared.pull()[Symbol.asyncIterator]();
 
-  // Fast consumer reads all items
-  const fastIndices = [];
-  for await (const batch of fast) {
-    for (const chunk of batch) {
-      fastIndices.push(chunk[0]);
-    }
-  }
-  assert.strictEqual(fastIndices.length, 2);
+  const first = await fast.next();
+  assert.strictEqual(first.value[0][0], 0);
 
-  // Slow consumer also sees all items (buffer grew past budget)
-  const slowIndices = [];
-  for await (const batch of slow) {
-    for (const chunk of batch) {
-      slowIndices.push(chunk[0]);
-    }
-  }
-  assert.strictEqual(slowIndices.length, 2);
-  assert.strictEqual(slowIndices[0], 0);
-  assert.strictEqual(slowIndices[1], 1);
+  let nextSettled = false;
+  const next = fast.next().then((result) => {
+    nextSettled = true;
+    return result;
+  });
+
+  await secondPullStarted;
+  await new Promise(setImmediate);
+  assert.strictEqual(pulls, 2);
+  assert.strictEqual(nextSettled, false);
+
+  const slowResult = await slow.next();
+  assert.strictEqual(slowResult.value[0][0], 0);
+
+  const nextResult = await next;
+  assert.strictEqual(nextResult.value[0][0], 2);
+  assert.strictEqual(pulls, 3);
+
+  shared.cancel();
 }
 
 // =============================================================================
@@ -211,23 +221,29 @@ async function testShareDropNewest() {
 // =============================================================================
 
 async function testShareStrictBackpressure() {
-  async function* source() {
-    for (let i = 0; i < 10; i++) {
-      yield [new Uint8Array(16384)];
+  for (const transformed of [false, true]) {
+    async function* source() {
+      for (let i = 0; i < 10; i++) {
+        yield [new Uint8Array(16384)];
+      }
     }
-  }
-  const shared = share(source(), { budget: 32768, backpressure: 'strict' });
-  const fast = shared.pull();
-  // Create a second consumer that never reads — this prevents buffer trimming
-  shared.pull();
+    const shared = share(source(), {
+      budget: 32768,
+      backpressure: 'strict',
+    });
+    const consumer = transformed ?
+      shared.pull((chunks) => chunks) : shared.pull();
+    const fast = consumer[Symbol.asyncIterator]();
+    // This consumer prevents the buffer from being trimmed.
+    shared.pull();
 
-  // The fast consumer's pulls will eventually cause the buffer to exceed
-  // the budget (since the slow consumer prevents trimming),
-  // triggering an ERR_OUT_OF_RANGE error.
-  await assert.rejects(async () => {
-    // eslint-disable-next-line no-unused-vars
-    for await (const _ of fast) { /* consume */ }
-  }, { code: 'ERR_OUT_OF_RANGE' });
+    await fast.next();
+    await fast.next();
+    await assert.rejects(fast.next(), { code: 'ERR_OUT_OF_RANGE' });
+    assert.strictEqual(shared.consumerCount, 1);
+    assert.strictEqual((await fast.next()).done, true);
+    shared.cancel();
+  }
 }
 
 Promise.all([

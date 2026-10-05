@@ -307,32 +307,21 @@ MaybeLocal<Value> URLPattern::URLPatternInit::ToJsObject(
   auto tmpl = env->urlpatterninit_template();
   if (tmpl.IsEmpty()) {
     static constexpr std::string_view namesVec[] = {
-        "protocol",
-        "username",
-        "password",
-        "hostname",
-        "port",
-        "pathname",
-        "search",
-        "hash",
         "baseURL",
+        "hash",
+        "hostname",
+        "password",
+        "pathname",
+        "port",
+        "protocol",
+        "search",
+        "username",
     };
     tmpl = DictionaryTemplate::New(isolate, namesVec);
     env->set_urlpatterninit_template(tmpl);
   }
 
-  MaybeLocal<Value> values[] = {
-      Undefined(isolate),  // protocol
-      Undefined(isolate),  // username
-      Undefined(isolate),  // password
-      Undefined(isolate),  // hostname
-      Undefined(isolate),  // port
-      Undefined(isolate),  // pathname
-      Undefined(isolate),  // search
-      Undefined(isolate),  // hash
-      Undefined(isolate),  // baseURL
-  };
-
+  MaybeLocal<Value> values[9];
   int idx = 0;
   Local<Value> temp;
   const auto trySet = [&](const std::optional<std::string>& val) {
@@ -346,28 +335,28 @@ MaybeLocal<Value> URLPattern::URLPatternInit::ToJsObject(
     return true;
   };
 
-  if (!trySet(init.protocol) || !trySet(init.username) ||
-      !trySet(init.password) || !trySet(init.hostname) || !trySet(init.port) ||
-      !trySet(init.pathname) || !trySet(init.search) || !trySet(init.hash) ||
-      !trySet(init.base_url)) {
+  if (!trySet(init.base_url) || !trySet(init.hash) || !trySet(init.hostname) ||
+      !trySet(init.password) || !trySet(init.pathname) || !trySet(init.port) ||
+      !trySet(init.protocol) || !trySet(init.search) ||
+      !trySet(init.username)) {
     return {};
   }
-  return NewDictionaryInstance(env->context(), tmpl, values);
+  return tmpl->NewInstance(context, values);
 }
 
 std::optional<ada::url_pattern_init> URLPattern::URLPatternInit::FromJsObject(
     Environment* env, Local<Object> obj) {
   ada::url_pattern_init init{};
   Local<String> components[] = {
-      env->protocol_string(),
-      env->username_string(),
-      env->password_string(),
-      env->hostname_string(),
-      env->port_string(),
-      env->pathname_string(),
-      env->search_string(),
-      env->hash_string(),
       env->base_url_string(),
+      env->hash_string(),
+      env->hostname_string(),
+      env->password_string(),
+      env->pathname_string(),
+      env->port_string(),
+      env->protocol_string(),
+      env->search_string(),
+      env->username_string(),
   };
   auto isolate = env->isolate();
   const auto set_parameter = [&](std::string_view key, std::string_view value) {
@@ -697,7 +686,13 @@ static void Initialize(Local<Object> target,
   auto ctor_tmpl = NewFunctionTemplate(isolate, URLPattern::New);
   auto instance_template = ctor_tmpl->InstanceTemplate();
   auto prototype_template = ctor_tmpl->PrototypeTemplate();
-  ctor_tmpl->SetClassName(FIXED_ONE_BYTE_STRING(isolate, "URLPattern"));
+  Local<String> url_pattern_string =
+      FIXED_ONE_BYTE_STRING(isolate, "URLPattern");
+  ctor_tmpl->SetClassName(url_pattern_string);
+  prototype_template->Set(
+      v8::Symbol::GetToStringTag(isolate),
+      url_pattern_string,
+      static_cast<PropertyAttribute>(ReadOnly | v8::DontEnum));
 
   // The signature is used to prevent the property accessors from being
   // called on the wrong receiver object (`this`)

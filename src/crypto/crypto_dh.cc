@@ -21,9 +21,8 @@ using ncrypto::DataPointer;
 using ncrypto::DHPointer;
 using ncrypto::EVPKeyCtxPointer;
 using ncrypto::EVPKeyPointer;
+using ncrypto::KeyAlgorithm;
 using v8::ArrayBuffer;
-using v8::BackingStoreInitializationMode;
-using v8::BackingStoreOnFailureMode;
 using v8::ConstructorBehavior;
 using v8::Context;
 using v8::DontDelete;
@@ -60,21 +59,8 @@ MaybeLocal<Value> DataPointerToBuffer(Environment* env, DataPointer&& data) {
   struct Flag {
     bool secure;
   };
-#ifdef V8_ENABLE_SANDBOX
-  auto backing = ArrayBuffer::NewBackingStore(
+  auto backing = AdoptIntoBackingStore(
       env->isolate(),
-      data.size(),
-      BackingStoreInitializationMode::kUninitialized,
-      BackingStoreOnFailureMode::kReturnNull);
-  if (!backing) {
-    THROW_ERR_MEMORY_ALLOCATION_FAILED(env);
-    return MaybeLocal<Value>();
-  }
-  if (data.size() > 0) {
-    memcpy(backing->Data(), data.get(), data.size());
-  }
-#else
-  auto backing = ArrayBuffer::NewBackingStore(
       data.get(),
       data.size(),
       [](void* data, size_t len, void* ptr) {
@@ -83,7 +69,10 @@ MaybeLocal<Value> DataPointerToBuffer(Environment* env, DataPointer&& data) {
       },
       new Flag{data.isSecure()});
   data.release();
-#endif  // V8_ENABLE_SANDBOX
+  if (!backing) {
+    THROW_ERR_MEMORY_ALLOCATION_FAILED(env);
+    return MaybeLocal<Value>();
+  }
 
   auto ab = ArrayBuffer::New(env->isolate(), std::move(backing));
   return Buffer::New(env, ab, 0, ab->ByteLength()).FromMaybe(Local<Value>());
@@ -319,12 +308,10 @@ void ComputeSecret(const FunctionCallbackInfo<Value>& args) {
     case DHPointer::CheckPublicKeyResult::CHECK_FAILED:
       return THROW_ERR_CRYPTO_INVALID_KEYTYPE(env,
                                               "Unspecified validation error");
-#ifndef OPENSSL_IS_BORINGSSL
     case DHPointer::CheckPublicKeyResult::TOO_SMALL:
       return THROW_ERR_CRYPTO_INVALID_KEYLEN(env, "Supplied key is too small");
     case DHPointer::CheckPublicKeyResult::TOO_LARGE:
       return THROW_ERR_CRYPTO_INVALID_KEYLEN(env, "Supplied key is too large");
-#endif
     case DHPointer::CheckPublicKeyResult::INVALID:
       return THROW_ERR_CRYPTO_INVALID_KEYTYPE(env, "Supplied key is invalid");
     case DHPointer::CheckPublicKeyResult::NONE:
@@ -461,17 +448,13 @@ EVPKeyCtxPointer DhKeyGenTraits::Setup(DhKeyPairGenConfig* params) {
 
     key_params = EVPKeyPointer::NewDH(std::move(dh));
   } else if (int* prime_size = std::get_if<int>(&params->params.prime)) {
-    auto param_ctx = EVPKeyCtxPointer::NewFromID(EVP_PKEY_DH);
-#ifndef OPENSSL_IS_BORINGSSL
+    auto param_ctx = EVPKeyCtxPointer::NewFromAlgorithm(KeyAlgorithm::DH);
     if (!param_ctx.initForParamgen() ||
         !param_ctx.setDhParameters(*prime_size, params->params.generator)) {
       return {};
     }
 
     key_params = param_ctx.paramgen();
-#else
-    return {};
-#endif
   } else {
     UNREACHABLE();
   }
@@ -528,7 +511,7 @@ bool DHBitsTraits::DeriveBits(Environment* env,
 bool GetDhKeyDetail(Environment* env,
                     const KeyObjectData& key,
                     Local<Object> target) {
-  CHECK_EQ(key.GetAsymmetricKey().id(), EVP_PKEY_DH);
+  DCHECK(key.GetAsymmetricKey().isA(KeyAlgorithm::DH));
   return true;
 }
 

@@ -1,4 +1,3 @@
-// Flags: --experimental-ffi
 'use strict';
 
 const common = require('../common');
@@ -77,7 +76,9 @@ test('ffi supports unaligned memory access', () => {
   }));
 });
 
-test('ffi toBuffer supports copy and zero-copy views', () => {
+const zeroCopy = { skip: common.hasV8Sandbox && 'zero-copy views are unavailable with the V8 sandbox' };
+
+test('ffi toBuffer supports copy and zero-copy views', zeroCopy, () => {
   withAllocations(common.mustCall((alloc) => {
     const ptr = alloc(8);
     ffi.exportBuffer(Buffer.from([1, 2, 3, 4]), ptr, 4);
@@ -99,7 +100,7 @@ test('ffi toBuffer supports copy and zero-copy views', () => {
   }));
 });
 
-test('ffi toArrayBuffer supports copy and zero-copy views', () => {
+test('ffi toArrayBuffer supports copy and zero-copy views', zeroCopy, () => {
   withAllocations(common.mustCall((alloc) => {
     const ptr = alloc(4);
     ffi.exportBuffer(Buffer.from([10, 20, 30, 40]), ptr, 4);
@@ -121,22 +122,74 @@ test('ffi toArrayBuffer supports copy and zero-copy views', () => {
   }));
 });
 
+test('ffi zero-copy views throw with the V8 sandbox', { skip: !common.hasV8Sandbox }, () => {
+  withAllocations(common.mustCall((alloc) => {
+    const ptr = alloc(4);
+    ffi.exportBuffer(Buffer.from([1, 2, 3, 4]), ptr, 4);
+    assert.deepStrictEqual([...ffi.toBuffer(ptr, 4)], [1, 2, 3, 4]);
+    assert.throws(() => ffi.toBuffer(ptr, 4, false), { code: 'ERR_OPERATION_FAILED' });
+    assert.throws(() => ffi.toArrayBuffer(ptr, 4, false), { code: 'ERR_OPERATION_FAILED' });
+  }));
+});
+
 test('ffi getRawPointer returns raw addresses for byte sources', () => {
   const buffer = Buffer.from([1, 2, 3]);
   const arrayBuffer = new Uint8Array([4, 5, 6, 7]).buffer;
   const view = new Uint8Array(arrayBuffer, 2);
+  const sharedArrayBuffer = new SharedArrayBuffer(4);
+  const sharedView = new Uint8Array(sharedArrayBuffer, 2);
 
   const bufferPointer = ffi.getRawPointer(buffer);
   const arrayBufferPointer = ffi.getRawPointer(arrayBuffer);
   const viewPointer = ffi.getRawPointer(view);
+  const sharedArrayBufferPointer = ffi.getRawPointer(sharedArrayBuffer);
+  const sharedViewPointer = ffi.getRawPointer(sharedView);
 
   assert.strictEqual(typeof bufferPointer, 'bigint');
   assert.strictEqual(typeof arrayBufferPointer, 'bigint');
   assert.strictEqual(typeof viewPointer, 'bigint');
+  assert.strictEqual(typeof sharedArrayBufferPointer, 'bigint');
+  assert.strictEqual(typeof sharedViewPointer, 'bigint');
 
   assert.strictEqual(bufferPointer, symbols.pointer_to_usize(buffer));
   assert.strictEqual(arrayBufferPointer, symbols.pointer_to_usize(arrayBuffer));
   assert.strictEqual(viewPointer, arrayBufferPointer + 2n);
+  assert.strictEqual(sharedViewPointer, sharedArrayBufferPointer + 2n);
+});
+
+test('ffi rejects detached array buffers and views as pointers', () => {
+  const arrayBuffer = new ArrayBuffer(8);
+  const typedArray = new Uint8Array(arrayBuffer);
+  const dataView = new DataView(arrayBuffer);
+
+  arrayBuffer.transfer();
+
+  assert.throws(() => ffi.exportArrayBuffer(arrayBuffer, 0n, 0), {
+    code: 'ERR_INVALID_ARG_VALUE',
+    message: 'ArrayBuffer is detached',
+  });
+
+  for (const [value, rawPointerMessage, argumentMessage] of [
+    [
+      arrayBuffer,
+      'ArrayBuffer is detached',
+      'Argument 0 is a detached ArrayBuffer',
+    ],
+    ...[typedArray, dataView].map((view) => [
+      view,
+      'ArrayBufferView is backed by a detached ArrayBuffer',
+      'Argument 0 is an ArrayBufferView backed by a detached ArrayBuffer',
+    ]),
+  ]) {
+    assert.throws(() => ffi.getRawPointer(value), {
+      code: 'ERR_INVALID_ARG_VALUE',
+      message: rawPointerMessage,
+    });
+    assert.throws(() => symbols.pointer_to_usize(value), {
+      code: 'ERR_INVALID_ARG_VALUE',
+      message: argumentMessage,
+    });
+  }
 });
 
 test('ffi exportString and exportBuffer copy data into native memory', () => {
@@ -231,6 +284,12 @@ test('ffi validates memory access arguments', () => {
     assert.throws(() => ffi.setUint64(ptr, 0, -1n), /Value must be a uint64/);
     assert.throws(() => ffi.setUint64(ptr, 0, 2n ** 64n), /Value must be a uint64/);
     assert.throws(() => ffi.setUint64(ptr, 0, Number.MAX_SAFE_INTEGER + 1), /Value must be a uint64/);
+    assert.throws(() => ffi.setFloat32(ptr, 0, '1.5'), /Value must be a float/);
+    assert.throws(() => ffi.setFloat32(ptr, 0, null), /Value must be a float/);
+    assert.throws(() => ffi.setFloat64(ptr, 0, '1.5'), /Value must be a double/);
+    assert.throws(() => ffi.setFloat64(ptr, 0, true), /Value must be a double/);
+    assert.throws(() => ffi.setFloat64(ptr, 0, {}), /Value must be a double/);
+    assert.throws(() => ffi.setFloat64(ptr, 0, { valueOf: common.mustNotCall() }), /Value must be a double/);
     assert.throws(() => ffi.exportString(1, ptr, 4), { code: 'ERR_INVALID_ARG_TYPE' });
     assert.throws(() => ffi.exportString('ok', ptr, -1), { code: 'ERR_OUT_OF_RANGE' });
     assert.throws(() => ffi.exportString('ok', ptr, 4, 1), { code: 'ERR_INVALID_ARG_TYPE' });
@@ -244,6 +303,23 @@ test('ffi validates memory access arguments', () => {
     assert.throws(() => ffi.exportArrayBufferView('bad', ptr, 4), { code: 'ERR_INVALID_ARG_TYPE' });
     assert.throws(() => ffi.exportArrayBufferView(new Uint8Array([1]), ptr, -1), { code: 'ERR_OUT_OF_RANGE' });
     assert.throws(() => ffi.exportArrayBufferView(new Uint8Array([1, 2]), ptr, 1), { code: 'ERR_OUT_OF_RANGE' });
+    ffi.exportArrayBufferView(new Uint8Array(new SharedArrayBuffer(1)), ptr, 1);
+
+    const detachedArrayBuffer = new ArrayBuffer(1);
+    detachedArrayBuffer.transfer();
+    assert.throws(() => ffi.exportArrayBuffer(detachedArrayBuffer, ptr, 1), {
+      code: 'ERR_INVALID_ARG_VALUE',
+    });
+
+    for (const View of [Uint8Array, DataView]) {
+      const arrayBuffer = new ArrayBuffer(1);
+      const view = new View(arrayBuffer);
+      arrayBuffer.transfer();
+      assert.throws(() => ffi.exportArrayBufferView(view, ptr, 1), {
+        code: 'ERR_INVALID_ARG_VALUE',
+      });
+    }
+
     assert.throws(() => ffi.toBuffer(maxPointer, 8), /pointer and length exceed the platform address range/);
     assert.throws(() => ffi.toArrayBuffer(maxPointer, 8), /pointer and length exceed the platform address range/);
     assert.throws(() => ffi.toBuffer(1n, bufferConstants.MAX_LENGTH + 1), { code: 'ERR_BUFFER_TOO_LARGE' });
@@ -252,5 +328,53 @@ test('ffi validates memory access arguments', () => {
     if (process.arch === 'ia32' || process.arch === 'arm') {
       assert.throws(() => ffi.toBuffer(2n ** 32n, 0), /platform pointer range/);
     }
+  }));
+});
+
+test('ffi memory helpers reject missing required arguments', () => {
+  const widths = ['Int8', 'Uint8', 'Int16', 'Uint16', 'Int32', 'Uint32',
+                  'Int64', 'Uint64', 'Float32', 'Float64'];
+
+  // Calling a helper with no arguments must report the missing pointer the
+  // same way an explicitly passed `undefined` does, instead of returning
+  // `undefined` as if the read or the write had succeeded.
+  for (const width of widths) {
+    for (const name of [`get${width}`, `set${width}`]) {
+      assert.throws(() => ffi[name](), { code: 'ERR_INVALID_ARG_TYPE' });
+      assert.throws(() => ffi[name](undefined), { code: 'ERR_INVALID_ARG_TYPE' });
+    }
+  }
+
+  assert.throws(() => ffi.toBuffer(1n), { code: 'ERR_INVALID_ARG_TYPE' });
+  assert.throws(() => ffi.toBuffer(1n, undefined), { code: 'ERR_INVALID_ARG_TYPE' });
+  assert.throws(() => ffi.toArrayBuffer(1n), { code: 'ERR_INVALID_ARG_TYPE' });
+  assert.throws(() => ffi.toArrayBuffer(1n, undefined), { code: 'ERR_INVALID_ARG_TYPE' });
+});
+
+test('ffi memory helpers distinguish wrong-typed from invalid arguments', () => {
+  withAllocations(common.mustCall((alloc) => {
+    const ptr = alloc(8);
+    const type = { code: 'ERR_INVALID_ARG_TYPE' };
+    const value = { code: 'ERR_INVALID_ARG_VALUE' };
+
+    // A pointer that is not a bigint, or an offset or length that is not a
+    // number, is a type error, like the JavaScript validators report it.
+    assert.throws(() => ffi.getInt8('x'), type);
+    assert.throws(() => ffi.getInt8(ptr, 'x'), type);
+    assert.throws(() => ffi.setInt8('x', 0, 1), type);
+    assert.throws(() => ffi.setInt8(ptr, 'x', 1), type);
+    assert.throws(() => ffi.toBuffer(ptr, 'x'), type);
+    assert.throws(() => ffi.toArrayBuffer(ptr, 'x'), type);
+    assert.throws(() => ffi.exportBuffer(Buffer.from([1]), 'x', 1), type);
+    assert.throws(() => ffi.exportArrayBuffer(new ArrayBuffer(1), 'x', 1), type);
+    assert.throws(() => ffi.exportArrayBufferView(new Uint8Array(1), 'x', 1), type);
+
+    // A bigint or number of the right type that is out of range stays a
+    // value error.
+    assert.throws(() => ffi.getInt8(-1n), value);
+    assert.throws(() => ffi.getInt8(ptr, -1), value);
+    assert.throws(() => ffi.setInt8(ptr, 1.5, 1), value);
+    assert.throws(() => ffi.toBuffer(ptr, 1.5), value);
+    assert.throws(() => ffi.exportBuffer(Buffer.from([1]), -1n, 1), value);
   }));
 });

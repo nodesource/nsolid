@@ -201,12 +201,12 @@ Local<Array> AddrTTLToArray(
     Environment* env,
     const T* addrttls,
     size_t naddrttls) {
-  MaybeStackBuffer<Local<Value>, 8> ttls(naddrttls);
+  MaybeStackBuffer<Value, 8> ttls(env->isolate(), naddrttls);
   for (size_t i = 0; i < naddrttls; i++) {
     ttls[i] = Integer::NewFromUnsigned(env->isolate(), addrttls[i].ttl);
   }
 
-  return Array::New(env->isolate(), ttls.out(), naddrttls);
+  return ttls.ToArray();
 }
 
 int GetAnswerCountForTTLBuffer(const unsigned char* buf, int len) {
@@ -888,7 +888,7 @@ void NodeAresTask::MemoryInfo(MemoryTracker* tracker) const {
 
 /* Allocates and returns a new NodeAresTask */
 NodeAresTask* NodeAresTask::Create(ChannelWrap* channel, ares_socket_t sock) {
-  auto task = new NodeAresTask();
+  auto task = std::make_unique<NodeAresTask>();
 
   task->channel = channel;
   task->sock = sock;
@@ -896,11 +896,10 @@ NodeAresTask* NodeAresTask::Create(ChannelWrap* channel, ares_socket_t sock) {
   if (uv_poll_init_socket(channel->env()->event_loop(),
                           &task->poll_watcher, sock) < 0) {
     /* This should never happen. */
-    delete task;
     return nullptr;
   }
 
-  return task;
+  return task.release();
 }
 
 void ChannelWrap::Setup() {
@@ -2159,13 +2158,13 @@ void SetServers(const FunctionCallbackInfo<Value>& args) {
     if (!elm->Get(env->context(), 1).ToLocal(&ipValue)) return;
     if (!elm->Get(env->context(), 2).ToLocal(&portValue)) return;
 
-    CHECK(familyValue->Int32Value(env->context()).FromJust());
+    CHECK(familyValue->IsInt32());
     CHECK(ipValue->IsString());
-    CHECK(portValue->Int32Value(env->context()).FromJust());
+    CHECK(portValue->IsInt32());
 
-    int fam = familyValue->Int32Value(env->context()).FromJust();
+    int32_t fam = familyValue.As<Int32>()->Value();
     node::Utf8Value ip(env->isolate(), ipValue);
-    int port = portValue->Int32Value(env->context()).FromJust();
+    int32_t port = portValue.As<Int32>()->Value();
 
     ares_addr_port_node* cur = &servers[i];
 

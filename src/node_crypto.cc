@@ -48,9 +48,11 @@ namespace crypto {
   V(Hmac)                                                                      \
   V(Keygen)                                                                    \
   V(Keys)                                                                      \
+  V(Mac)                                                                       \
   V(NativeCryptoKey)                                                           \
   V(NativeKeyObject)                                                           \
   V(PBKDF2Job)                                                                 \
+  V(PKCS12Parser)                                                              \
   V(Random)                                                                    \
   V(RSAAlg)                                                                    \
   V(SecureContext)                                                             \

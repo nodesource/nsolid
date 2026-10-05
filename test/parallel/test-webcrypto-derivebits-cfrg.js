@@ -6,7 +6,9 @@ if (!common.hasCrypto)
   common.skip('missing crypto');
 
 const assert = require('assert');
+const { hasFIPS, isBoringSSL } = require('../common/crypto');
 const { subtle } = globalThis.crypto;
+const rejectsXCurves = hasFIPS(3, 5);
 
 const kTests = [
   {
@@ -20,7 +22,7 @@ const kTests = [
   },
 ];
 
-if (!process.features.openssl_is_boringssl) {
+if (!isBoringSSL) {
   kTests.push(
     {
       name: 'X448',
@@ -76,6 +78,15 @@ async function prepareKeys() {
   await Promise.all(
     Object.keys(keys).map(async (name) => {
       const { size, result, privateKey, publicKey } = keys[name];
+
+      if (rejectsXCurves) {
+        await assert.rejects(
+          subtle.deriveBits({ name, public: publicKey }, privateKey, 8 * size),
+          (err) => err.name === 'OperationError' &&
+                   err.cause?.code ===
+                     'ERR_OSSL_EVP_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE');
+        return;
+      }
 
       {
         // Good parameters

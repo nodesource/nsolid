@@ -19,7 +19,7 @@ const {
 
 const assert = require('assert');
 const fixtures = require('../common/fixtures');
-const { hasOpenSSL3 } = require('../common/crypto');
+const { hasOpenSSL, isBoringSSL } = require('../common/crypto');
 const { readFileSync } = require('fs');
 
 const cert = readFileSync(fixtures.path('keys', 'agent1-cert.pem'));
@@ -28,8 +28,8 @@ const ca = readFileSync(fixtures.path('keys', 'ca1-cert.pem'));
 
 const privateKey = createPrivateKey(key);
 
-if (!process.features.openssl_is_boringssl) {
-  const expectedPubkeys = hasOpenSSL3 ? [
+if (!isBoringSSL) {
+  const expectedPubkeys = hasOpenSSL(3) ? [
     [
       'rsa_pss_cert_2048.pem',
       292,
@@ -88,7 +88,7 @@ emailAddress=ry@tinyclouds.org`;
 
 let infoAccessCheck = `OCSP - URI:http://ocsp.nodejs.org/
 CA Issuers - URI:http://ca.nodejs.org/ca.cert`;
-if (!hasOpenSSL3)
+if (!hasOpenSSL(3))
   infoAccessCheck += '\n';
 
 const der = Buffer.from(
@@ -156,7 +156,7 @@ const der = Buffer.from(
 
   assert.deepStrictEqual(x509.raw, der);
 
-  if (!process.features.openssl_is_boringssl) {
+  if (!isBoringSSL) {
     assert.deepStrictEqual(x509.validFromDate, new Date('2022-09-03T21:40:37Z'));
     assert.deepStrictEqual(x509.validToDate, new Date('2296-06-17T21:40:37Z'));
   }
@@ -175,9 +175,21 @@ const der = Buffer.from(
 
   assert.strictEqual(x509.checkIP('127.0.0.1'), undefined);
   assert.strictEqual(x509.checkIP('::'), undefined);
-  assert.strictEqual(x509.checkHost('agent1'), 'agent1');
+  // OpenSSL 4.1 no longer checks the subject DN by default.
+  // https://github.com/openssl/openssl/pull/31982
+  for (const options of [undefined, { subject: 'default' }]) {
+    assert.strictEqual(x509.checkHost('agent1', options),
+                       hasOpenSSL(4, 1) ? undefined : 'agent1');
+    assert.strictEqual(x509.checkEmail('ry@tinyclouds.org', options),
+                       hasOpenSSL(4, 1) ? undefined : 'ry@tinyclouds.org');
+  }
+  assert.strictEqual(x509.checkHost('agent1', { subject: 'always' }), 'agent1');
+  assert.strictEqual(x509.checkHost('agent1', { subject: 'never' }), undefined);
   assert.strictEqual(x509.checkHost('agent2'), undefined);
-  assert.strictEqual(x509.checkEmail('ry@tinyclouds.org'), 'ry@tinyclouds.org');
+  assert.strictEqual(x509.checkEmail('ry@tinyclouds.org', { subject: 'always' }),
+                     'ry@tinyclouds.org');
+  assert.strictEqual(x509.checkEmail('ry@tinyclouds.org', { subject: 'never' }),
+                     undefined);
   assert.strictEqual(x509.checkEmail('sally@example.com'), undefined);
   assert.throws(() => x509.checkHost('agent\x001'), {
     code: 'ERR_INVALID_ARG_VALUE'
@@ -399,10 +411,10 @@ tAt3hIKFD1bJt6c6WtMH2Su3syosWxmdmGk5ihslB00lvLpfj/wed8i3bkcB1doq
 UcXd/5qu2GhokrKU2cPttU+XAN2Om6a0
 -----END CERTIFICATE-----`;
 
-  if (!process.features.openssl_is_boringssl) {
+  if (!isBoringSSL) {
     const cert = new X509Certificate(certPem);
     assert.throws(() => cert.publicKey, {
-      message: hasOpenSSL3 ? /decode error/ : /wrong tag/,
+      message: hasOpenSSL(3) ? /decode error/ : /wrong tag/,
       name: 'Error'
     });
 
@@ -446,7 +458,7 @@ UidvpWWipVLZgK+oDks+bKTobcoXGW9oXobiIYqslXPy
 -----END CERTIFICATE-----`.trim();
   const c1 = new X509Certificate(certPemUTCTime);
 
-  if (!process.features.openssl_is_boringssl) {
+  if (!isBoringSSL) {
     assert.deepStrictEqual(c1.validFromDate, new Date('1949-12-25T23:59:58Z'));
     assert.deepStrictEqual(c1.validToDate, new Date('1950-01-01T23:59:58Z'));
   }
@@ -483,7 +495,7 @@ CWwQO8JZjJqFtqtuzy2n+gLCvqePgG/gmSqHOPm2ZbLW
 -----END CERTIFICATE-----`.trim();
   const c2 = new X509Certificate(certPemGeneralizedTime);
 
-  if (!process.features.openssl_is_boringssl) {
+  if (!isBoringSSL) {
     assert.deepStrictEqual(c2.validFromDate, new Date('2049-12-26T00:00:01Z'));
     assert.deepStrictEqual(c2.validToDate, new Date('2050-01-02T00:00:01Z'));
   }

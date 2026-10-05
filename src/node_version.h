@@ -23,7 +23,7 @@
 #define SRC_NODE_VERSION_H_
 
 #define NODE_MAJOR_VERSION 26
-#define NODE_MINOR_VERSION 7
+#define NODE_MINOR_VERSION 10
 #define NODE_PATCH_VERSION 0
 
 #define NODE_VERSION_IS_LTS 0
@@ -48,18 +48,24 @@
 #endif
 
 #ifndef NODE_TAG
-# if NODE_VERSION_IS_RELEASE
-#  define NODE_TAG ""
-# else
-#  define NODE_TAG "-pre"
-# endif
+#if NODE_VERSION_IS_RELEASE
+#ifdef NODE_ALPHA_MAJOR_VERSION
+#define NODE_TAG                                                               \
+  "-alpha." NODE_STRINGIFY(NODE_ALPHA_MAJOR_VERSION) "." NODE_STRINGIFY(       \
+      NODE_ALPHA_MINOR_VERSION) "." NODE_STRINGIFY(NODE_ALPHA_PATCH_VERSION)
 #else
+#define NODE_TAG ""
+#endif  // NODE_ALPHA_MAJOR_VERSION
+#else   // NODE_VERSION_IS_RELEASE
+#define NODE_TAG "-pre"
+#endif  // NODE_VERSION_IS_RELEASE
+#else   // NODE_TAG
 // NODE_TAG is passed without quotes when rc.exe is run from msbuild
 # define NODE_EXE_VERSION NODE_STRINGIFY(NODE_MAJOR_VERSION) "." \
                           NODE_STRINGIFY(NODE_MINOR_VERSION) "." \
                           NODE_STRINGIFY(NODE_PATCH_VERSION)     \
                           NODE_STRINGIFY(NODE_TAG)
-#endif
+#endif  // NODE_TAG
 
 # define NODE_VERSION_STRING  NODE_STRINGIFY(NODE_MAJOR_VERSION) "." \
                               NODE_STRINGIFY(NODE_MINOR_VERSION) "." \

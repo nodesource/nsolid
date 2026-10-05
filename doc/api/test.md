@@ -489,8 +489,8 @@ added: v26.2.0
 
 Tags annotate tests and suites with arbitrary string labels. The
 [`--experimental-test-tag-filter`][] CLI flag (or the `testTagFilters`
-option on [`run()`][]) selects tests whose tag set contains every
-provided filter value.
+option on [`run()`][]) selects tests by a boolean expression over those
+labels.
 
 Tags are an alternative to encoding metadata into test names. They are
 useful for cross-cutting axes such as subsystem, speed bucket, flakiness,
@@ -523,37 +523,89 @@ describe('database', { tags: ['db'] }, () => {
 });
 ```
 
-Tag values must be non-empty strings. Tags are matched case-insensitively;
-the canonical form is lowercase. Duplicates within a single `tags` array
-are collapsed on the lowercased form, preserving the first-seen
-declaration order.
+Tag values must be non-empty strings that contain no whitespace, no
+operator characters (`& | ! ( ) *`), and are not the reserved words
+`'and'`, `'or'`, or `'not'` in any casing. Tags are matched
+case-insensitively; the canonical form is lowercase. Duplicates within a
+single `tags` array are collapsed on the lowercased form, preserving the
+first-seen declaration order.
 
 Hooks (`before`, `after`, `beforeEach`, `afterEach`) do not declare their
 own tags. They run as part of their owning suite, which carries the
 suite's tags.
 
-### Filtering by tag
+### Filtering syntax
 
-Each [`--experimental-test-tag-filter`][] value is a literal tag name. A
-test runs only when its tag set contains that name. The flag may be
-specified more than once; tests must match **every** filter to run. The
-same applies to the `testTagFilters` array on [`run()`][]. Filters are
-case-insensitive and AND'd with [`--test-name-pattern`][],
-[`--test-skip-pattern`][], and `.only` filtering.
+The filter expression supports:
 
-Untagged tests are excluded under any non-empty filter, since the filter
-requires the tag to be present.
+* Identifiers—any non-whitespace, non-operator characters. A literal
+  identifier matches a tag of the same value (case-insensitive).
+* `*` wildcards inside an identifier match any sequence of characters.
+  A bare `*` matches any tagged test.
+* Boolean operators with two equivalent forms:
+  * `and` / `&&`
+  * `or` / `||`
+  * `not` / `!`
+* Parentheses for grouping.
 
-### Reading tags from inside a test
+The word forms (`and`, `or`, `not`) require whitespace separation; the
+punctuation forms do not.
+
+#### Operator precedence
+
+The expression is evaluated with the standard precedence
+`not > and > or`. Binary operators are left-associative.
+
+| Expression     | Equivalent grouping |
+| -------------- | ------------------- |
+| `a or b and c` | `a or (b and c)`    |
+| `not a and b`  | `(not a) and b`     |
+
+Use parentheses to override:
+
+| Expression                     | Selects                                    |
+| ------------------------------ | ------------------------------------------ |
+| `(unit or smoke) and not slow` | unit-or-smoke tests that are not also slow |
+| `db && !flaky`                 | db tests that are not flaky                |
+| `*`                            | every tagged test                          |
+
+#### Untagged tests
+
+Untagged tests behave as if they have an empty tag set. As a result:
+
+| Filter expression        | Untagged test | Why                                              |
+| ------------------------ | ------------- | ------------------------------------------------ |
+| `db`                     | excluded      | Positive match against an empty tag set is false |
+| `*`                      | excluded      | The bare wildcard requires at least one tag      |
+| `db or unit`             | excluded      | Both branches are false against an empty tag set |
+| `not flaky`              | included      | Negation against an empty tag set is true        |
+| `not flaky and not slow` | included      | Both negations are true against an empty tag set |
+| `db or not flaky`        | included      | The negated branch is true                       |
+
+For example, `--experimental-test-tag-filter='not flaky'` runs every test
+that is not tagged `flaky`, including all untagged tests.
+
+#### Composing multiple filters
+
+[`--experimental-test-tag-filter`][] may be specified more than once on the
+command line. Multiple expressions compose by AND—a test must satisfy
+every expression to run. The same applies to passing an array to
+`testTagFilters` on [`run()`][]. The tag filter is also AND'd with
+[`--test-name-pattern`][], [`--test-skip-pattern`][], and `.only`
+filtering.
+
+#### Reading tags from inside a test
 
 The [`TestContext`][] object exposes the test's tags as a frozen array
 through [`context.tags`][], so tests can branch on their own metadata.
 
-### Errors
+#### Errors
 
 A tag value that violates the validation rules above throws
 `ERR_INVALID_ARG_VALUE` at the registration site, before any test runs.
-A non-array `tags` value throws `ERR_INVALID_ARG_TYPE`.
+A non-array `tags` value throws `ERR_INVALID_ARG_TYPE`. A malformed
+filter expression on the CLI causes the test runner to exit with a
+non-zero status before running any test files.
 
 ## Extraneous asynchronous activity
 
@@ -826,7 +878,7 @@ test runner functionality:
 
 * `--test` - Prevented to avoid recursive test execution
 * `--experimental-test-coverage` - Managed by the test runner
-* `--experimental-test-tag-filter` - Filter values are validated by the parent
+* `--experimental-test-tag-filter` - Filter expressions are validated by the parent
   process and re-emitted to child processes
 * `--watch` - Watch mode is handled at the parent level
 * `--experimental-default-config-file` - Config file loading is handled by the parent
@@ -1740,10 +1792,11 @@ changes:
     For each test that is executed, any corresponding test hooks, such as
     `beforeEach()`, are also run.
     **Default:** `undefined`.
-  * `testTagFilters` {string|string\[]} A tag name, or an array of tag names,
-    used to filter tests by their declared tags. Tests must contain every
-    listed tag to run. Equivalent to passing [`--experimental-test-tag-filter`][]
-    on the command line. See [Test tags][]. **Default:** `undefined`.
+  * `testTagFilters` {string|string\[]} A boolean expression, or an array of
+    boolean expressions, used to filter tests by their declared tags.
+    Multiple expressions compose by AND. Equivalent to passing
+    [`--experimental-test-tag-filter`][] on the command line. See
+    [Test tags][]. **Default:** `undefined`.
   * `timeout` {number} A number of milliseconds the test execution will
     fail after.
     If unspecified, subtests inherit this value from their parent.
@@ -3514,6 +3567,74 @@ Global events are emitted once per test run:
 
 The root test also emits [`'test:plan'`][] and [`'test:diagnostic'`][] events
 at the end of the run to report run level totals.
+
+### Event lifecycle
+
+The tables above group the events; the diagram below places them on a
+timeline. The declaration ordered events form the main spine, buffered so that
+a reporter sees them in source order, while each execution ordered twin is
+emitted immediately, when the work actually happens. In particular,
+[`'test:start'`][] marks when a test begins _reporting_ its own and its
+subtests' status, not when its body begins executing; that moment is
+[`'test:dequeue'`][].
+
+```text
+                     node:test reporter event lifecycle
+   main spine = DECLARATION order (buffered; matches source order)
+   right side = EXECUTION order (emitted immediately); ◄ marks each twin
+
+  LEAF TEST
+  ─────────
+   ┌──────────────┐                   test:enqueue
+   │ test:start   │ ◄──── twins ────  (queued for execution;
+   └──────────────┘                    type: 'suite' | 'test')
+        │  begins REPORTING           test:dequeue
+        │  (not the start of          (about to run; emitted right
+        │   the test body)             before the test body runs)
+        │
+        │     [ between the twins, on the execution timeline, the test
+        │       body runs: context.log() emits test:log live, and
+        │       test:stdout / test:stderr stream with --test ]
+        │
+        ▼
+   ┌───────────────────────┐
+   │ test:pass │ test:fail │ ◄──── twin ────  test:complete
+   └───────────────────────┘   result         (details.passed says which)
+        │
+        ▼
+   test:diagnostic    the test's own context.diagnostic() messages,
+                      buffered while it runs, flushed after its result
+
+
+  SUITE / PARENT TEST   (each subtest is the whole LEAF flow above)
+  ───────────────────
+   test:start ─► [ full flow of each subtest ... ] ─►
+        test:plan (count = subtests) ─► test:pass │ test:fail ─►
+        test:diagnostic
+
+
+  RUN-LEVEL FINALE   (root, after all top-level tests)
+  ────────────────
+   test:plan         top-level count
+        │
+        ▼
+   test:diagnostic   x N   tests, suites, pass, fail, cancelled,
+        │                  skipped, todo, duration_ms (+ coverage errors)
+        ▼
+   test:coverage     only if coverage is enabled
+        │
+        ▼
+   test:summary  ─►  stream ends
+
+
+  INTERRUPTION   (SIGINT, e.g. Ctrl+C, while tests are still running)
+  ────────────
+   test:interrupted   the innermost tests still running at that moment
+        │             (not emitted if none were running)
+        ▼
+   the run exits immediately — the buffered spine never flushes, so
+   neither the finale above nor those tests' own results are emitted
+```
 
 ### Event: `'test:coverage'`
 

@@ -2,6 +2,8 @@
 
 BUILDTYPE ?= Release
 PYTHON ?= python3
+RUFF ?= tools/pip/site-packages/bin/ruff
+YAMLLINT ?= tools/pip/site-packages/bin/yamllint
 DESTDIR ?=
 SIGN ?=
 PREFIX ?= /usr/local
@@ -95,7 +97,7 @@ BUILD_RELEASE_FLAGS ?= $(BUILD_DOWNLOAD_FLAGS) $(BUILD_INTL_FLAGS)
 
 # Default to quiet/pretty builds.
 # To do verbose builds, run `make V=1` or set the V environment variable.
-V ?= 0
+V ?=
 
 # Use -e to double check in case it's a broken link
 available-node = \
@@ -885,6 +887,11 @@ else ifeq ($(OSTYPE),os400)
 # TODO(@nodejs/web-infra): IBMi is currently hanging during HTML minification
 $(apidocs_html) $(apidocs_json) out/doc/api/all.html out/doc/api/all.json:
 	@echo "Skipping $@ (not currently supported by $(OSTYPE) machines)"
+else ifeq ($(ARCHTYPE),riscv64)
+# Many riscv64 environments (except qemu) fail on the wasm steps here
+# https://github.com/nodejs/build/issues/4099#issuecomment-4038743335
+$(apidocs_html) $(apidocs_json) out/doc/api/all.html out/doc/api/all.json:
+	@echo "Skipping $@ (not currently supported by $(DESTCPU) machines)"
 else
 $(apidocs_html) $(apidocs_json) out/doc/api/all.html out/doc/api/all.json &: $(apidoc_sources) tools/doc/node_modules | out/doc/api
 	@if [ "$(shell $(node_use_openssl_and_icu))" != "true" ]; then \
@@ -1288,7 +1295,7 @@ ifneq ($(SKIP_SHARED_DEPS), 1)
 	cp doc/nsolid.1 $(TARNAME)/doc/nsolid.1
 	cp -r out/doc/api/* $(TARNAME)/doc/api/
 endif
-	sed 's/fileset = fileset.intersection (fileset.gitTracked root)/fileset =/' tools/nix/v8.nix > $(TARNAME)/tools/nix/v8.nix 
+	sed 's/fileset = fileset.intersection (fileset.gitTracked root)/fileset =/' tools/nix/v8.nix > $(TARNAME)/tools/nix/v8.nix
 	$(RM) -r $(TARNAME)/.editorconfig
 	$(RM) -r $(TARNAME)/.git*
 	$(RM) -r $(TARNAME)/.mailmap
@@ -1312,10 +1319,14 @@ ifeq ($(SKIP_SHARED_DEPS), 1)
 	$(RM) -r $(TARNAME)/deps/ngtcp2
 	find $(TARNAME)/deps/openssl -maxdepth 1 -type f ! -name 'nodejs-openssl.cnf' -exec $(RM) {} +
 	find $(TARNAME)/deps/openssl -mindepth 1 -maxdepth 1 -type d -exec $(RM) -r {} +
+	$(RM) -r $(TARNAME)/deps/perfetto
 	$(RM) -r $(TARNAME)/deps/simdjson
 	$(RM) -r $(TARNAME)/deps/sqlite
 	$(RM) -r $(TARNAME)/deps/uv
 	$(RM) -r $(TARNAME)/deps/uvwasi
+	$(RM) -r $(TARNAME)/deps/v8/third_party/abseil-cpp
+	$(RM) -r $(TARNAME)/deps/v8/third_party/highway
+	$(RM) -r $(TARNAME)/deps/v8/third_party/simdutf
 	$(RM) -r $(TARNAME)/deps/zlib
 	$(RM) -r $(TARNAME)/deps/zstd
 else
@@ -1474,7 +1485,7 @@ else
 LINT_MD_NEWER = -newer tools/.mdlintstamp
 endif
 
-LINT_MD_TARGETS = doc src lib benchmark test tools/doc tools/icu $(filter-out CLAUDE.md AGENTS.md,$(wildcard *.md))
+LINT_MD_TARGETS = doc src lib benchmark test tools/doc tools/icu $(filter-out CLAUDE.md,$(wildcard *.md))
 LINT_MD_FILES = $(shell $(FIND) $(LINT_MD_TARGETS) -type f \
 	! -path '*node_modules*' ! -path 'test/fixtures/*' -name '*.md' \
 	$(LINT_MD_NEWER))
@@ -1523,7 +1534,8 @@ LINT_JS_TARGETS = eslint.config.mjs benchmark doc lib test tools \
 		  agents/*/lib
 
 run-lint-js = tools/eslint/node_modules/eslint/bin/eslint.js --cache \
-	--max-warnings=0 --report-unused-disable-directives $(LINT_JS_TARGETS)
+	--max-warnings=0 --report-unused-disable-directives \
+	--concurrency auto $(LINT_JS_TARGETS)
 run-lint-js-fix = $(run-lint-js) --fix
 
 tools/eslint/node_modules/eslint/bin/eslint.js: tools/eslint/package-lock.json
@@ -1550,7 +1562,7 @@ jslint: lint-js
 
 run-lint-js-ci = tools/eslint/node_modules/eslint/bin/eslint.js \
   --max-warnings=0 --report-unused-disable-directives -f tap \
-	-o test-eslint.tap $(LINT_JS_TARGETS)
+  --concurrency auto -o test-eslint.tap $(LINT_JS_TARGETS)
 
 .PHONY: lint-js-ci
 # On the CI the output is emitted in the TAP format.
@@ -1707,15 +1719,15 @@ lint-py-build: ## Build resources needed to lint python files.
 		$(PYTHON) -m pip install --upgrade --system --target tools/pip/site-packages ruff==0.13.1
 
 .PHONY: lint-py lint-py-fix lint-py-fix-unsafe
-ifneq ("","$(wildcard tools/pip/site-packages/ruff)")
+ifneq ("","$(wildcard $(RUFF))")
 # Lint the Python code with ruff.
 lint-py:
 	$(info Running Python linter...)
-	tools/pip/site-packages/bin/ruff check .
+	$(RUFF) check .
 lint-py-fix:
-	tools/pip/site-packages/bin/ruff check . --fix
+	$(RUFF) check . --fix
 lint-py-fix-unsafe:
-	tools/pip/site-packages/bin/ruff check . --fix --unsafe-fixes
+	$(RUFF) check . --fix --unsafe-fixes
 else
 lint-py lint-py-fix lint-py-fix-unsafe:
 	$(warning Python linting with ruff is not available)
@@ -1731,14 +1743,15 @@ lint-yaml-build: ## Build resources needed to lint YAML files.
 		$(PYTHON) -m pip install --upgrade --system -t tools/pip/site-packages yamllint
 
 .PHONY: lint-yaml
+ifneq ("","$(wildcard $(YAMLLINT))")
 lint-yaml: ## Lint the YAML files with yamllint.
-	@if [ -d "tools/pip/site-packages/yamllint" ]; then \
-			$(info Running YAML linter...) \
-			PYTHONPATH=tools/pip $(PYTHON) -m yamllint .; \
-	else \
-		echo 'YAML linting with yamllint is not available'; \
-		echo "Run 'make lint-yaml-build'"; \
-	fi
+	$(info Running YAML linter...)
+	PYTHONPATH=tools/pip $(YAMLLINT) .
+else
+lint-yaml:
+	$(warning YAML linting with yamllint is not available)
+	$(warning Run 'make lint-yaml-build')
+endif
 
 .PHONY: lint
 .PHONY: lint-ci

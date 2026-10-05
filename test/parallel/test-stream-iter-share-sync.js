@@ -87,37 +87,32 @@ function testShareSyncCancelMidIteration() {
 }
 
 function testShareSyncCancelWithReason() {
-  // When cancel(reason) is called, a consumer that hasn't started
-  // iterating is already detached, so it sees done:true (not the error).
-  // But a consumer that is mid-iteration when another consumer cancels
-  // with a reason will see the error on the next pull after cancel.
   const enc = new TextEncoder();
   function* gen() {
     yield [enc.encode('a')];
     yield [enc.encode('b')];
-    yield [enc.encode('c')];
   }
   const shared = shareSync(gen(), { budget: 16384 });
-  const c1 = shared.pull();
-  const c2 = shared.pull();
+  const iterator1 = shared.pull()[Symbol.iterator]();
+  const iterator2 = shared.pull()[Symbol.iterator]();
+  const reason = new Error('sync cancel reason');
 
-  // c1 reads one item, then c2 cancels with a reason
-  const iter1 = c1[Symbol.iterator]();
-  const first = iter1.next();
-  assert.strictEqual(first.done, false);
+  iterator1.next();
+  shared.cancel(reason);
 
-  shared.cancel(new Error('sync cancel reason'));
+  assert.throws(() => iterator1.next(), (error) => error === reason);
+  assert.throws(() => iterator2.next(), (error) => error === reason);
+}
 
-  // c1 was already iterating, it's now detached → done
-  const next = iter1.next();
-  assert.strictEqual(next.done, true);
+function testShareSyncCancelWithFalsyReason() {
+  for (const reason of [0, '', false, null]) {
+    const shared = shareSync(fromSync('data'));
+    const iterator = shared.pull()[Symbol.iterator]();
 
-  // c2 never started, also detached → done (not error)
-  const batches = [];
-  for (const batch of c2) {
-    batches.push(batch);
+    shared.cancel(reason);
+
+    assert.throws(() => iterator.next(), (error) => error === reason);
   }
-  assert.strictEqual(batches.length, 0);
 }
 
 // =============================================================================
@@ -144,6 +139,78 @@ function testShareSyncSourceError() {
   }, { message: 'sync share boom' });
 }
 
+function testShareSyncRejectsUnbounded() {
+  assert.throws(
+    () => shareSync(fromSync('data'), { backpressure: 'unbounded' }),
+    { code: 'ERR_INVALID_ARG_VALUE' },
+  );
+}
+
+function testShareSyncDropNewest() {
+  let pulls = 0;
+  function* source() {
+    for (let i = 0; i < 4; i++) {
+      pulls++;
+      const chunk = new Uint8Array(16384);
+      chunk[0] = i;
+      yield [chunk];
+    }
+  }
+
+  const shared = shareSync(source(), {
+    budget: 16384,
+    backpressure: 'drop-newest',
+  });
+  const fast = shared.pull()[Symbol.iterator]();
+  const slow = shared.pull()[Symbol.iterator]();
+
+  assert.strictEqual(fast.next().value[0][0], 0);
+
+  // The budget is exhausted and the slow consumer cannot advance while this
+  // call is running, so exactly one entry is dropped and no value is
+  // available. The consumer is not detached.
+  assert.strictEqual(fast.next().done, true);
+  assert.strictEqual(pulls, 2);
+
+  // The slow consumer still sees the buffered entry, which releases budget.
+  assert.strictEqual(slow.next().value[0][0], 0);
+
+  // Entry 1 was dropped for every consumer, so both resume at entry 2.
+  assert.strictEqual(slow.next().value[0][0], 2);
+  assert.strictEqual(pulls, 3);
+  assert.strictEqual(fast.next().value[0][0], 2);
+}
+
+// Regression test: a full buffer must not spin pulling-and-discarding from an
+// unbounded source, since discarding never reclaims budget.
+function testShareSyncDropNewestUnboundedSource() {
+  let pulls = 0;
+  function* source() {
+    for (;;) {
+      pulls++;
+      yield [new Uint8Array(16384)];
+    }
+  }
+
+  const shared = shareSync(source(), {
+    budget: 16384,
+    backpressure: 'drop-newest',
+  });
+  const fast = shared.pull()[Symbol.iterator]();
+  shared.pull();
+
+  assert.strictEqual(fast.next().done, false);
+  assert.strictEqual(pulls, 1);
+
+  // Each blocked call drops at most one entry and returns without a value.
+  for (let i = 0; i < 3; i++) {
+    assert.strictEqual(fast.next().done, true);
+    assert.strictEqual(pulls, 2 + i);
+  }
+
+  shared.cancel();
+}
+
 // shareSync() accepts string source directly (normalized via fromSync())
 function testShareSyncStringSource() {
   const shared = shareSync('hello-sync-share');
@@ -157,6 +224,10 @@ Promise.all([
   testShareSyncCancel(),
   testShareSyncCancelMidIteration(),
   testShareSyncCancelWithReason(),
+  testShareSyncCancelWithFalsyReason(),
   testShareSyncSourceError(),
+  testShareSyncRejectsUnbounded(),
+  testShareSyncDropNewest(),
+  testShareSyncDropNewestUnboundedSource(),
   testShareSyncStringSource(),
 ]).then(common.mustCall());

@@ -17,6 +17,7 @@
 #include <util-inl.h>
 #include <uv.h>
 #include <v8.h>
+#include <span>
 #include "application.h"
 #include "bindingdata.h"
 #include "cid.h"
@@ -136,10 +137,12 @@ uint64_t MaxDatagramPayload(uint64_t max_frame_size) {
   V(STREAM_OPEN_ALLOWED, stream_open_allowed, uint8_t)                         \
   V(PRIORITY_SUPPORTED, priority_supported, uint8_t)                           \
   V(HEADERS_SUPPORTED, headers_supported, uint8_t)                             \
+  V(STREAM_CALLBACKS_SUPPORTED, stream_callbacks_supported, uint8_t)           \
   V(WRAPPED, wrapped, uint8_t)                                                 \
   V(APPLICATION_TYPE, application_type, uint8_t)                               \
   V(NO_ERROR_CODE, no_error_code, error_code)                                  \
   V(INTERNAL_ERROR_CODE, internal_error_code, error_code)                      \
+  V(REQUEST_REJECTED_CODE, request_rejected_code, error_code)                  \
   V(MAX_DATAGRAM_SIZE, max_datagram_size, uint16_t)                            \
   V(LAST_DATAGRAM_ID, last_datagram_id, datagram_id)                           \
   V(MAX_PENDING_DATAGRAMS, max_pending_datagrams, uint16_t)
@@ -783,8 +786,8 @@ struct Session::Impl final : public MemoryRetainer {
   SocketAddress remote_address_;
   std::unique_ptr<Application> application_;
   StreamsMap streams_;
-  // Emits deferred until after session setup is completed
-  std::vector<std::function<void()>> deferred_emits_;
+  // qlog chunks produced before the server session was handed to JS.
+  std::vector<std::pair<uint32_t, std::string>> pending_qlog_;
   TimerWrapHandle timer_;
   size_t send_scope_depth_ = 0;
   QuicError last_error_;
@@ -794,11 +797,6 @@ struct Session::Impl final : public MemoryRetainer {
   std::deque<Session::PendingDatagram> pending_datagrams_;
   PendingStream::PendingStreamQueue pending_bidi_stream_queue_;
   PendingStream::PendingStreamQueue pending_uni_stream_queue_;
-
-  // Session ticket app data parsed before ALPN negotiation.
-  // Validated and applied in SetApplication() after ALPN selects
-  // the application type.
-  std::optional<PendingTicketAppData> pending_ticket_data_;
 
   // When true, the handshake is deferred until the first stream or
   // datagram is sent. This is set for client sessions with a session
@@ -879,6 +877,9 @@ struct Session::Impl final : public MemoryRetainer {
     tracker->TrackField("remote_address", remote_address_);
     tracker->TrackField("application", application_);
     tracker->TrackField("timer", timer_);
+    size_t qlog_size = 0;
+    for (const auto& [flags, data] : pending_qlog_) qlog_size += data.size();
+    tracker->TrackFieldWithSize("pending_qlog", qlog_size);
   }
   SET_SELF_SIZE(Impl)
   SET_MEMORY_INFO_NAME(Session::Impl)
@@ -1578,13 +1579,19 @@ struct Session::Impl final : public MemoryRetainer {
                              void* user_data,
                              void* stream_user_data) {
     NGTCP2_CALLBACK_SCOPE(session)
+    // If the peer closes a stream, we return the credit to allow a new one:
+    session->ExtendMaxStreams(stream_id);
+    if (!session->has_application()) return NGTCP2_SUCCESS;
+
+    // Stream here may be null (e.g. if already destroyed locally) so we also
+    // pass stream_id to the calls below as well.
     auto* stream = Stream::From(stream_user_data);
-    if (stream == nullptr) return NGTCP2_SUCCESS;
+
     if (flags & NGTCP2_STREAM_CLOSE_FLAG_APP_ERROR_CODE_SET) {
       session->application().ReceiveStreamClose(
-          stream, QuicError::ForApplication(app_error_code));
+          stream_id, stream, QuicError::ForApplication(app_error_code));
     } else {
-      session->application().ReceiveStreamClose(stream);
+      session->application().ReceiveStreamClose(stream_id, stream);
     }
     return NGTCP2_SUCCESS;
   }
@@ -1652,7 +1659,7 @@ struct Session::Impl final : public MemoryRetainer {
 
   static constexpr ngtcp2_callbacks CLIENT = {
       ngtcp2_crypto_client_initial_cb,
-      nullptr,  // stream_stop_sending
+      nullptr,  // recv_client_initial
       ngtcp2_crypto_recv_crypto_data_cb,
       on_handshake_completed,
       on_receive_version_negotiation,
@@ -1686,7 +1693,7 @@ struct Session::Impl final : public MemoryRetainer {
       on_acknowledge_datagram,
       on_lost_datagram,
       nullptr,  // get_path_challenge_data (deprecated, use v2 below)
-      nullptr,  // stream_stop_sending
+      nullptr,  // stream_stop_sending (deprecated, use v2 below)
       ngtcp2_crypto_version_negotiation_cb,
       on_receive_rx_key,
       on_receive_tx_key,
@@ -1696,20 +1703,18 @@ struct Session::Impl final : public MemoryRetainer {
       on_get_new_cid,
       on_cid_status,
       ngtcp2_crypto_get_path_challenge_data2_cb,
-#ifdef NGTCP2_CALLBACKS_V4
       on_receive_stream_stop_sending,
 #ifdef NGTCP2_CALLBACKS_V5
-      nullptr,
-#endif  // NGTCP2_CALLBACKS_V5
-#endif  // NGTCP2_CALLBACKS_V4
+      nullptr,  // stream_close2
+#endif
   };
 
   static constexpr ngtcp2_callbacks SERVER = {
-      nullptr,  // stream_stop_sending
+      nullptr,  // client_initial
       ngtcp2_crypto_recv_client_initial_cb,
       ngtcp2_crypto_recv_crypto_data_cb,
       on_handshake_completed,
-      nullptr,
+      nullptr,  // recv_version_negotiation
       ngtcp2_crypto_encrypt_cb,
       ngtcp2_crypto_decrypt_cb,
       ngtcp2_crypto_hp_mask_cb,
@@ -1718,7 +1723,7 @@ struct Session::Impl final : public MemoryRetainer {
       on_stream_open,
       on_stream_close,
       nullptr,  // recv_stateless_reset (deprecated, use v2 below)
-      nullptr,
+      nullptr,  // recv_retry
       on_extend_max_streams_bidi,
       on_extend_max_streams_uni,
       on_rand,
@@ -1726,23 +1731,23 @@ struct Session::Impl final : public MemoryRetainer {
       on_remove_connection_id,
       ngtcp2_crypto_update_key_cb,
       on_path_validation,
-      nullptr,
+      nullptr,  // select_preferred_addr
       on_stream_reset,
       on_extend_max_remote_streams_bidi,
       on_extend_max_remote_streams_uni,
       on_extend_max_stream_data,
       nullptr,  // dcid_status (deprecated, use v2 below)
-      nullptr,
-      nullptr,
+      nullptr,  // handshake_confirmed
+      nullptr,  // recv_new_token
       ngtcp2_crypto_delete_crypto_aead_ctx_cb,
       ngtcp2_crypto_delete_crypto_cipher_ctx_cb,
       on_receive_datagram,
       on_acknowledge_datagram,
       on_lost_datagram,
       nullptr,  // get_path_challenge_data (deprecated, use v2 below)
-      nullptr,  // stream_stop_sending
+      nullptr,  // stream_stop_sending (deprecated, use v2 below)
       ngtcp2_crypto_version_negotiation_cb,
-      nullptr,
+      nullptr,  // recv_rx_key
       on_receive_tx_key,
       on_early_data_rejected,
       on_begin_path_validation,
@@ -1750,12 +1755,10 @@ struct Session::Impl final : public MemoryRetainer {
       on_get_new_cid,
       on_cid_status,
       ngtcp2_crypto_get_path_challenge_data2_cb,
-#ifdef NGTCP2_CALLBACKS_V4
       on_receive_stream_stop_sending,
 #ifdef NGTCP2_CALLBACKS_V5
-      nullptr,
-#endif  // NGTCP2_CALLBACKS_V5
-#endif  // NGTCP2_CALLBACKS_V4
+      nullptr,  // stream_close2
+#endif
   };
 };
 
@@ -2018,6 +2021,12 @@ void Session::SendPendingData() {
     }
 
     // The stream_data is the next block of data from the application stream.
+    // It is reused across iterations, so we reset before it's populated:
+    stream_data.count = 0;
+    stream_data.id = -1;
+    stream_data.fin = false;
+    stream_data.stream.reset();
+
     if (application().GetStreamData(&stream_data) < 0) {
       Debug(this, "Application failed to get stream data");
       SetLastError(QuicError::ForNgtcp2Error(NGTCP2_ERR_INTERNAL));
@@ -2263,13 +2272,11 @@ Session::Session(Endpoint* endpoint,
   DCHECK(impl_);
   STAT_RECORD_TIMESTAMP(Stats, created_at);
 
-  // For clients, select the Application immediately — the ALPN is
+  // For clients, select the Application immediately - the ALPN is
   // known upfront from the options. For servers, application_ stays
-  // null until OnSelectAlpn fires during the TLS handshake.
+  // null until the ClientHello names a protocol.
   if (config.side == Side::CLIENT) {
-    auto app =
-        SelectApplicationFromAlpn(DecodeAlpn(config.options.tls_options.alpn));
-    if (app) SetApplication(std::move(app));
+    InstallApplicationForAlpn(DecodeAlpn(config.options.tls_options.alpn));
   }
 
   // For client sessions with a session ticket and early data enabled,
@@ -2630,31 +2637,37 @@ std::unique_ptr<Session::Application> Session::SelectApplicationFromAlpn(
   return CreateDefaultApplication(this, config().options.application_options);
 }
 
+void Session::InstallApplicationForAlpn(std::string_view alpn) {
+  // Acting on the ClientHello twice would install a second Application over
+  // a live one; TLSSession::EarlySelection is what prevents that.
+  CHECK(!has_application());
+  SetApplication(SelectApplicationFromAlpn(alpn));
+}
+
+void Session::SetEarlyRemoteTransportParams(std::span<const uint8_t> params) {
+  DCHECK(!is_destroyed());
+  if (params.empty()) return;
+  USE(ngtcp2_conn_decode_and_set_remote_transport_params(
+      *this, params.data(), params.size()));
+}
+
 void Session::SetApplication(std::unique_ptr<Application> app) {
   DCHECK(!impl_->application_);
-  // If we have pending ticket data from a session ticket that was
-  // parsed before ALPN negotiation, validate it against the selected
-  // application now. If the type doesn't match or the application
-  // rejects the data, the handshake will fail (application_ stays null
-  // and the caller returns an error).
-  if (impl_->pending_ticket_data_.has_value()) {
-    auto data = std::move(*impl_->pending_ticket_data_);
-    impl_->pending_ticket_data_.reset();
-    if (!app->ApplySessionTicketData(data)) {
-      Debug(this, "Session ticket app data rejected by application");
-      return;
-    }
-  }
   impl_->state()->application_type = static_cast<uint8_t>(app->type());
   impl_->state()->headers_supported = static_cast<uint8_t>(
       app->SupportsHeaders() ? HeadersSupportState::SUPPORTED
                              : HeadersSupportState::UNSUPPORTED);
+  impl_->state()->stream_callbacks_supported =
+      static_cast<uint8_t>(app->SupportsStreamCallbacks()
+                               ? StreamCallbacksSupportState::SUPPORTED
+                               : StreamCallbacksSupportState::UNSUPPORTED);
   // Surface the application's "no error" and "internal error" codes via
   // session state so that JS-side code (e.g. the stream writer's fail()
   // path) can resolve the right wire code for the negotiated ALPN
   // without duplicating the per-application table.
   impl_->state()->no_error_code = app->GetNoErrorCode();
   impl_->state()->internal_error_code = app->GetInternalErrorCode();
+  impl_->state()->request_rejected_code = app->GetRequestRejectedCode();
   impl_->application_ = std::move(app);
 }
 
@@ -2694,9 +2707,8 @@ const Session::Options& Session::options() const {
 void Session::EmitQlog(uint32_t flags, std::string_view data) {
   if (!env()->can_call_into_js()) return;
 
-  if (!is_destroyed() && must_defer_emits()) {
-    QueueDeferredEmit(
-        [this, flags, held = std::string(data)]() { EmitQlog(flags, held); });
+  if (!is_destroyed() && is_server() && !impl_->state()->wrapped) {
+    impl_->pending_qlog_.emplace_back(flags, std::string(data));
     return;
   }
 
@@ -2814,23 +2826,48 @@ bool Session::ReadPacket(const uint8_t* data,
 
   Debug(this, "Session receiving %zu-byte packet with result %d", len, err);
 
+  if (err == 0 && !is_destroyed()) [[likely]] {
+    STAT_INCREMENT_N(Stats, bytes_received, len);
+  }
+  return AfterNgtcp2Read(err);
+}
+
+void Session::ResumeHandshake() {
+  DCHECK(!is_destroyed());
+  DCHECK(is_server());
+  // From here on the ClientHello callback is a no-op, so the handshake
+  // runs on into ticket decryption, early data and the rest.
+  tls_session().set_early_selection(TLSSession::EarlySelection::kComplete);
+  Debug(this, "Resuming the TLS handshake");
+  int err;
+  {
+    NgTcp2CallbackScope callback_scope(this);
+    err = ngtcp2_conn_continue_handshake(*this, uv_hrtime());
+  }
+  if (is_destroyed()) return;
+  AfterNgtcp2Read(err);
+}
+
+bool Session::AfterNgtcp2Read(int err) {
   switch (err) {
     case 0: {
-      Debug(this, "Session successfully received %zu-byte packet", len);
       if (!is_destroyed()) [[likely]] {
-        STAT_INCREMENT_N(Stats, bytes_received, len);
         // Process deferred application operations after ALPN selection - not
         // necessarily resolved yet as ClientHello can span multiple packets.
         if (has_application()) application().PostReceive();
-        // Surface a server session to JS once its ClientHello has been
-        // processed (OnSelectAlpn fired: SNI + ALPN are known and reliable).
-        // Held first-flight events - including 0-RTT request streams - replay
-        // at emit. The !wrapped guard makes this fire exactly once, on
-        // whichever packet completes the ClientHello (so a multi-datagram
-        // ClientHello is handled correctly).
-        if (is_server() && hello_processed_ && !impl_->state()->wrapped &&
-            !is_destroyed()) {
+
+        if (is_destroyed()) return true;
+
+        // The ClientHello has been processed: SNI and ALPN are selected and
+        // the Application is installed, but the handshake is stopped short
+        // of ticket decryption, so no early data exists yet. Surface the
+        // session, then let the handshake run on. The guard makes this fire
+        // exactly once, on whichever packet completed the ClientHello, so a
+        // ClientHello split across datagrams is handled correctly.
+        if (is_server() && tls_session().early_selection() ==
+                               TLSSession::EarlySelection::kSelected) {
           endpoint().EmitNewSession(BaseObjectPtr<Session>(this));
+          if (!is_destroyed()) ResumeHandshake();
         }
       }
       return true;
@@ -3295,16 +3332,10 @@ void Session::AddStream(BaseObjectPtr<Stream> stream,
 void Session::RemoveStream(stream_id id) {
   DCHECK(!is_destroyed());
   Debug(this, "Removing stream %" PRIi64 " from session", id);
-  if (!is_in_draining_period() && !is_in_closing_period() &&
-      !ngtcp2_conn_is_local_stream(*this, id)) {
-    if (ngtcp2_is_bidi_stream(id)) {
-      ngtcp2_conn_extend_max_streams_bidi(*this, 1);
-    } else {
-      ngtcp2_conn_extend_max_streams_uni(*this, 1);
-    }
-  }
 
   ngtcp2_conn_set_stream_user_data(*this, id, nullptr);
+
+  if (has_application()) application().StreamRemoved(id);
 
   // Note that removing the stream from the streams map likely releases
   // the last BaseObjectPtr holding onto the Stream instance, at which
@@ -3382,42 +3413,11 @@ void Session::CollectSessionTicketAppData(
 SessionTicket::AppData::Status Session::ExtractSessionTicketAppData(
     const SessionTicket::AppData& app_data, Flag flag) {
   DCHECK(!is_destroyed());
-  // If the application is already selected (client side, or server after
-  // ALPN), delegate directly.
-  if (impl_->application_) {
-    return application().ExtractSessionTicketAppData(app_data, flag);
-  }
-  // The application is not yet selected (server during ClientHello
-  // processing, before ALPN). Parse the ticket data now while the
-  // SSL_SESSION is still valid, and stash the result for validation
-  // after ALPN negotiation in SetApplication().
-  auto data = app_data.Get();
-  if (!data.has_value() || data->len == 0) {
-    // No app data in the ticket. Accept optimistically.
-    return flag == Flag::STATUS_RENEW
-               ? SessionTicket::AppData::Status::TICKET_USE_RENEW
-               : SessionTicket::AppData::Status::TICKET_USE;
-  }
-  auto parsed = Application::ParseTicketData(*data);
-  if (!parsed.has_value()) {
+  // Renew, so the client stops offering a ticket that is never accepted.
+  if (!has_application()) [[unlikely]] {
     return SessionTicket::AppData::Status::TICKET_IGNORE_RENEW;
   }
-  // Pre-validate the ticket data against the current application options.
-  // If the stored settings are more permissive than the current config
-  // (e.g., a feature was enabled when the ticket was issued but is now
-  // disabled), reject the ticket so 0-RTT is not used. This must happen
-  // here (during TLS ticket processing) rather than in SetApplication,
-  // because by SetApplication time the TLS layer has already accepted
-  // the ticket and told the client 0-RTT is ok.
-  if (!Application::ValidateTicketData(*parsed,
-                                       config().options.application_options)) {
-    Debug(this, "Session ticket app data incompatible with current settings");
-    return SessionTicket::AppData::Status::TICKET_IGNORE_RENEW;
-  }
-  impl_->pending_ticket_data_ = std::move(parsed);
-  return flag == Flag::STATUS_RENEW
-             ? SessionTicket::AppData::Status::TICKET_USE_RENEW
-             : SessionTicket::AppData::Status::TICKET_USE;
+  return application().ExtractSessionTicketAppData(app_data, flag);
 }
 
 void Session::MemoryInfo(MemoryTracker* tracker) const {
@@ -3485,14 +3485,15 @@ bool Session::OpenUnidirectionalStream(stream_id* id) {
   return ngtcp2_conn_open_uni_stream(*this, id, nullptr) == 0;
 }
 
-void Session::ExtendMaxStreams(Direction direction, uint64_t max) {
-  switch (direction) {
-    case Direction::BIDIRECTIONAL:
-      ngtcp2_conn_extend_max_streams_bidi(*this, static_cast<size_t>(max));
-      break;
-    case Direction::UNIDIRECTIONAL:
-      ngtcp2_conn_extend_max_streams_uni(*this, static_cast<size_t>(max));
-      break;
+void Session::ExtendMaxStreams(stream_id id) {
+  // MAX_STREAMS only limits what the peer opens, and there is nothing to
+  // grant once the connection is going away.
+  if (is_in_draining_period() || is_in_closing_period()) return;
+  if (ngtcp2_conn_is_local_stream(*this, id)) return;
+  if (ngtcp2_is_bidi_stream(id)) {
+    ngtcp2_conn_extend_max_streams_bidi(*this, 1);
+  } else {
+    ngtcp2_conn_extend_max_streams_uni(*this, 1);
   }
 }
 
@@ -3521,33 +3522,20 @@ void Session::set_wrapped() {
   impl_->state()->wrapped = 1;
 }
 
-bool Session::must_defer_emits() const {
-  // Server sessions are surfaced to JS (via the deferred new-session emit)
-  // only after the ClientHello has been processed and wrapped; anything
-  // emitted before then has no JS wrapper to receive it and must be held
-  // for replay.
-  return is_server() && !impl_->state()->wrapped;
-}
-
 bool Session::tls_info_ready() const {
   // hello_processed_ is set server-side, handshake_completed covers
   // the client. Together they mark the point when SNI/ALPN are final.
   return hello_processed_ || impl_->state()->handshake_completed;
 }
 
-void Session::QueueDeferredEmit(std::function<void()> fn) {
-  impl_->deferred_emits_.emplace_back(std::move(fn));
-}
-
-void Session::ReplayDeferredEmits() {
+void Session::FlushPendingQlog() {
   if (is_destroyed()) return;
   DCHECK(impl_->state()->wrapped);
-  // Runs synchronously immediately after the new-session callback
-  // returns (still within first-flight processing).
-  auto emits = std::move(impl_->deferred_emits_);
-  for (auto& emit : emits) {
+  // Runs synchronously immediately after the new-session callback returns.
+  auto pending = std::move(impl_->pending_qlog_);
+  for (auto& [flags, data] : pending) {
     if (is_destroyed()) return;
-    emit();
+    EmitQlog(flags, data);
   }
 }
 
@@ -4062,7 +4050,6 @@ void Session::set_max_datagram_size(uint16_t size) {
 
 void Session::EmitGoaway(stream_id last_stream_id) {
   if (is_destroyed()) return;
-  if (DeferEmit([this, last_stream_id] { EmitGoaway(last_stream_id); })) return;
   if (!env()->can_call_into_js()) return;
 
   CallbackScope<Session> cb_scope(this);
@@ -4078,13 +4065,6 @@ void Session::EmitGoaway(stream_id last_stream_id) {
 void Session::EmitDatagram(Store&& datagram, DatagramReceivedFlags flag) {
   DCHECK(!is_destroyed());
 
-  if (must_defer_emits()) {
-    QueueDeferredEmit([this, datagram = std::move(datagram), flag]() mutable {
-      EmitDatagram(std::move(datagram), flag);
-    });
-    return;
-  }
-
   if (!env()->can_call_into_js()) return;
 
   CallbackScope<Session> cbv_scope(this);
@@ -4099,8 +4079,6 @@ void Session::EmitDatagram(Store&& datagram, DatagramReceivedFlags flag) {
 
 void Session::EmitDatagramStatus(datagram_id id, quic::DatagramStatus status) {
   DCHECK(!is_destroyed());
-
-  if (DeferEmit([this, id, status] { EmitDatagramStatus(id, status); })) return;
 
   if (!env()->can_call_into_js()) return;
 
@@ -4263,7 +4241,6 @@ void Session::EmitSessionTicket(Store&& ticket) {
 
 void Session::EmitApplication() {
   if (is_destroyed()) return;
-  if (DeferEmit([this] { EmitApplication(); })) return;
   if (!env()->can_call_into_js()) return;
 
   if (!has_application()) {
@@ -4334,8 +4311,6 @@ void Session::EmitNewToken(const uint8_t* token, size_t len) {
 void Session::EmitStream(const BaseObjectWeakPtr<Stream>& stream) {
   DCHECK(!is_destroyed());
 
-  if (DeferEmit([this, stream] { EmitStream(stream); })) return;
-
   if (!stream) return;
 
   if (!env()->can_call_into_js()) return;
@@ -4394,13 +4369,6 @@ void Session::EmitVersionNegotiation(const ngtcp2_pkt_hd& hd,
 void Session::EmitOrigins(std::vector<std::string>&& origins) {
   DCHECK(!is_destroyed());
 
-  if (must_defer_emits()) {
-    QueueDeferredEmit([this, origins = std::move(origins)]() mutable {
-      EmitOrigins(std::move(origins));
-    });
-    return;
-  }
-
   if (!HasListenerFlag(impl_->state()->listener_flags,
                        SessionListenerFlags::ORIGIN))
     return;
@@ -4426,12 +4394,6 @@ void Session::EmitOrigins(std::vector<std::string>&& origins) {
 
 void Session::EmitKeylog(const char* line) {
   DCHECK(!is_destroyed());
-
-  if (must_defer_emits()) {
-    QueueDeferredEmit(
-        [this, str = std::string(line)]() { EmitKeylog(str.c_str()); });
-    return;
-  }
 
   if (!env()->can_call_into_js()) return;
 

@@ -11,7 +11,7 @@ if /i "%arg:~-4%"=="help" goto help
 cd %~dp0
 
 set JS_SUITES=default
-set NATIVE_SUITES=addons js-native-api node-api embedding
+set NATIVE_SUITES=addons ffi js-native-api node-api embedding
 @rem CI_* variables should be kept synchronized with the ones in Makefile
 set "CI_NATIVE_SUITES=%NATIVE_SUITES% benchmark"
 set "CI_JS_SUITES=%JS_SUITES% pummel"
@@ -199,8 +199,6 @@ if defined build_release (
   set projgen=1
   set cctest=1
   set thin_lto=1
-  @REM Parallel LTO link jobs can cause OOM issues, so we limit it to 2 by default for release builds in the release CI.
-  set lto_jobs=2
 )
 
 :: LTO mutual exclusion

@@ -1137,7 +1137,12 @@ void DefineFsConstants(Local<Object> target) {
   NODE_DEFINE_CONSTANT(target, O_EXCL);
 #endif
 
-NODE_DEFINE_CONSTANT(target, UV_FS_O_FILEMAP);
+  // Windows-only open flags honored by libuv. They are 0 on other platforms.
+  NODE_DEFINE_CONSTANT(target, UV_FS_O_FILEMAP);
+  NODE_DEFINE_CONSTANT(target, UV_FS_O_TEMPORARY);
+  NODE_DEFINE_CONSTANT(target, UV_FS_O_SHORT_LIVED);
+  NODE_DEFINE_CONSTANT(target, UV_FS_O_SEQUENTIAL);
+  NODE_DEFINE_CONSTANT(target, UV_FS_O_RANDOM);
 
 #ifdef O_NOCTTY
   NODE_DEFINE_CONSTANT(target, O_NOCTTY);
@@ -1165,10 +1170,22 @@ NODE_DEFINE_CONSTANT(target, UV_FS_O_FILEMAP);
 
 #ifdef O_SYNC
   NODE_DEFINE_CONSTANT(target, O_SYNC);
+#elif UV_FS_O_SYNC != 0
+// Windows lacks the POSIX O_SYNC macro, but libuv maps UV_FS_O_SYNC to
+// FILE_FLAG_WRITE_THROUGH, so expose it under the portable name.
+#define O_SYNC UV_FS_O_SYNC
+  NODE_DEFINE_CONSTANT(target, O_SYNC);
+#undef O_SYNC
 #endif
 
 #ifdef O_DSYNC
   NODE_DEFINE_CONSTANT(target, O_DSYNC);
+#elif UV_FS_O_DSYNC != 0
+// Windows lacks the POSIX O_DSYNC macro, but libuv maps UV_FS_O_DSYNC to
+// FILE_FLAG_WRITE_THROUGH, so expose it under the portable name.
+#define O_DSYNC UV_FS_O_DSYNC
+  NODE_DEFINE_CONSTANT(target, O_DSYNC);
+#undef O_DSYNC
 #endif
 
 
@@ -1178,6 +1195,12 @@ NODE_DEFINE_CONSTANT(target, UV_FS_O_FILEMAP);
 
 #ifdef O_DIRECT
   NODE_DEFINE_CONSTANT(target, O_DIRECT);
+#elif UV_FS_O_DIRECT != 0
+// Windows lacks the POSIX O_DIRECT macro, but libuv maps UV_FS_O_DIRECT to
+// FILE_FLAG_NO_BUFFERING, so expose it under the portable name.
+#define O_DIRECT UV_FS_O_DIRECT
+  NODE_DEFINE_CONSTANT(target, O_DIRECT);
+#undef O_DIRECT
 #endif
 
 #ifdef O_NONBLOCK
@@ -1373,11 +1396,7 @@ void CreatePerContextProperties(Local<Object> target,
             FIXED_ONE_BYTE_STRING(isolate, "dlopen"),
             dlopen_constants)
       .Check();
-  os_constants
-      ->Set(env->context(),
-            FIXED_ONE_BYTE_STRING(isolate, "errno"),
-            err_constants)
-      .Check();
+  os_constants->Set(env->context(), env->errno_string(), err_constants).Check();
   os_constants
       ->Set(env->context(),
             FIXED_ONE_BYTE_STRING(isolate, "signals"),

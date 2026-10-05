@@ -51,6 +51,12 @@ suite('DatabaseSync() constructor', () => {
     });
   });
 
+  test('throws if the URL-like path has an unparsable href', (t) => {
+    t.assert.throws(() => {
+      new DatabaseSync({ href: 'not a url' });
+    }, { code: 'ERR_INVALID_URL' });
+  });
+
   test('throws if options is provided but is not an object', (t) => {
     t.assert.throws(() => {
       new DatabaseSync('foo', null);
@@ -396,6 +402,32 @@ suite('DatabaseSync.prototype.prepare()', () => {
       code: 'ERR_INVALID_ARG_TYPE',
       message: /The "sql" argument must be a string/,
     });
+  });
+
+  test('throws if sql contains no statements', (t) => {
+    using db = new DatabaseSync(nextDb());
+
+    for (const sql of ['', '   ', ';', '-- comment', '/* comment */']) {
+      t.assert.throws(() => {
+        db.prepare(sql);
+      }, {
+        code: 'ERR_INVALID_ARG_VALUE',
+        message: /contains no statements/,
+      });
+    }
+  });
+
+  test('prepares statements that contain comments', (t) => {
+    using db = new DatabaseSync(nextDb());
+    const queries = [
+      '-- lead\nSELECT 1 AS v',
+      'SELECT 1 AS v -- trail',
+      'SELECT /* mid */ 1 AS v',
+    ];
+
+    for (const sql of queries) {
+      t.assert.strictEqual(db.prepare(sql).get().v, 1);
+    }
   });
 });
 

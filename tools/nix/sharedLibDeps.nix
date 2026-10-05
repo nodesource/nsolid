@@ -5,6 +5,7 @@
   withSQLite ? true,
   withSSL ? true,
   withFFI ? true,
+  withPerfetto ? false,
   withTemporal ? false,
 }:
 {
@@ -16,13 +17,14 @@
     merve
     nbytes
     simdjson
-    simdutf
     uvwasi
     zlib
     zstd
     ;
+  abseil = pkgs.abseil-cpp;
   cares = pkgs.c-ares;
   hdr-histogram = pkgs.hdrhistogram_c;
+  highway = pkgs.libhwy;
   http-parser = pkgs.llhttp;
   nghttp2 = pkgs.nghttp2.overrideAttrs {
     version = "1.69.0";
@@ -31,6 +33,10 @@
       hash = "sha256-PxhfWxw+d4heuc8/LE2ksan3OiS/WVe4KRg60Tf4Lcg=";
     };
   };
+  simdutf = pkgs.simdutf.overrideAttrs (old: {
+    # TODO: remove this once the pin we use has picked up https://github.com/NixOS/nixpkgs/pull/557405
+    cmakeFlags = old.cmakeFlags ++ [ (pkgs.lib.cmakeFeature "SIMDUTF_CXX_STANDARD" "20") ];
+  });
 }
 // (pkgs.lib.optionalAttrs withLief {
   inherit (pkgs) lief;
@@ -48,8 +54,15 @@
   ffi = pkgs.libffiReal;
 })
 // (pkgs.lib.optionalAttrs withSSL ({
-  openssl = (import ./openssl-matrix.nix { inherit pkgs; }).openssl_3_5;
+  inherit (import ./openssl-matrix.nix { inherit pkgs; }) openssl;
 }))
+// (pkgs.lib.optionalAttrs withPerfetto {
+  perfetto =
+    (pkgs.callPackage (builtins.fetchurl {
+      url = "https://github.com/NixOS/nixpkgs/raw/c19db427a1fdfc7591c0b0baeb4665dcef2c61da/pkgs/by-name/pe/perfetto/package.nix";
+      sha256 = "0wc4p96kwxpqr8g2a6lmlfjsffrm3dc824m7hiy0q21r2papc0ik";
+    }) { }).sdk;
+})
 // (pkgs.lib.optionalAttrs withTemporal {
   inherit (pkgs) temporal_capi;
 })

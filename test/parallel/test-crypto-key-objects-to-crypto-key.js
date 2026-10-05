@@ -12,7 +12,10 @@ const {
   randomBytes,
   generateKeyPairSync,
 } = require('crypto');
+const { hasFIPS } = require('../common/crypto');
 const { kSupportedAlgorithms } = require('internal/crypto/util');
+const fips = hasFIPS();
+const rejectsXCurves = hasFIPS(3, 5);
 
 const hashes = Object.keys(kSupportedAlgorithms.digest).filter((name) => {
   return name.startsWith('SHA-') || name.startsWith('SHA3-');
@@ -133,7 +136,7 @@ function macInvalid(algorithm, invalidLengthMessage, allowZeroKey = false) {
   const key = createSecretKey(randomBytes(32));
   const usages = ['sign', 'verify'];
 
-  if (allowZeroKey) {
+  if (allowZeroKey && !fips) {
     const zeroKey = createSecretKey(Buffer.alloc(0))
       .toCryptoKey(algorithm, true, usages);
     assert.strictEqual(zeroKey.algorithm.length, 0);
@@ -141,6 +144,16 @@ function macInvalid(algorithm, invalidLengthMessage, allowZeroKey = false) {
     const explicitZeroKey = createSecretKey(Buffer.alloc(0))
       .toCryptoKey({ ...algorithm, length: 0 }, true, usages);
     assert.strictEqual(explicitZeroKey.algorithm.length, 0);
+  } else if (allowZeroKey) {
+    for (const zeroAlgorithm of [algorithm, { ...algorithm, length: 0 }]) {
+      assert.throws(() => {
+        createSecretKey(Buffer.alloc(0))
+          .toCryptoKey(zeroAlgorithm, true, usages);
+      }, {
+        name: 'NotSupportedError',
+        message: 'Invalid key length',
+      });
+    }
   } else {
     assert.throws(() => {
       createSecretKey(Buffer.alloc(0)).toCryptoKey(algorithm, true, usages);
@@ -155,12 +168,15 @@ function macInvalid(algorithm, invalidLengthMessage, allowZeroKey = false) {
     message: 'Usages cannot be empty when importing a secret key.'
   });
 
-  assert.throws(() => {
-    key.toCryptoKey({ ...algorithm, length: 0 }, true, usages);
-  }, {
-    name: 'DataError',
-    message: invalidLengthMessage,
-  });
+  assert.throws(
+    () => key.toCryptoKey({ ...algorithm, length: 0 }, true, usages),
+    allowZeroKey && fips ? {
+      name: 'NotSupportedError',
+      message: 'Invalid key length',
+    } : {
+      name: 'DataError',
+      message: invalidLengthMessage,
+    });
 }
 
 function hmacVectors() {
@@ -232,6 +248,13 @@ function ecVectors(name, usagesByType) {
 }
 
 function cfrgVectors(name, usagesByType) {
+  if (rejectsXCurves && name.startsWith('X')) {
+    assert.throws(() => generateKeyPairSync(name.toLowerCase()), {
+      code: 'ERR_OSSL_EVP_UNSUPPORTED',
+    });
+    return [];
+  }
+
   const keyPair = generateKeyPairSync(name.toLowerCase());
   return asymmetricVectors(keyPair, name, usagesByType);
 }
@@ -317,8 +340,10 @@ const invalid = {
   'HMAC': () => macInvalid(
     { name: 'HMAC', hash: 'SHA-256' },
     'HmacImportParams.length cannot be 0'),
-  'X25519': () => invalidAsymmetricKeyType('X25519', 'Ed25519'),
 };
+
+if (!rejectsXCurves)
+  invalid.X25519 = () => invalidAsymmetricKeyType('X25519', 'Ed25519');
 
 for (const name of ['AES-CBC', 'AES-CTR', 'AES-GCM', 'AES-OCB']) {
   if (name in kSupportedAlgorithms.importKey)
@@ -350,9 +375,11 @@ for (const [name, usages, invalidAlgorithm] of [
 ]) {
   if (name in kSupportedAlgorithms.importKey) {
     tests[name] = cfrgVectors(name, usages);
-    invalid[name] = () => {
-      invalidAsymmetricKeyType(name, invalidAlgorithm);
-    };
+    if (!rejectsXCurves) {
+      invalid[name] = () => {
+        invalidAsymmetricKeyType(name, invalidAlgorithm);
+      };
+    }
   }
 }
 
@@ -370,7 +397,11 @@ for (const name of ['ML-KEM-512', 'ML-KEM-768', 'ML-KEM-1024']) {
   }
 }
 
-const unsupportedToCryptoKeyAlgorithms = new Set();
+const unsupportedToCryptoKeyAlgorithms = new Set([
+  'MLKEM768-P256',
+  'MLKEM768-X25519',
+  'MLKEM1024-P384',
+]);
 
 for (const name of Object.keys(kSupportedAlgorithms.importKey)) {
   const vectors = tests[name];

@@ -12,13 +12,17 @@
 #include <openssl/rsa.h>
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <list>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 #if defined(NCRYPTO_ENGINE_COMPAT) && NCRYPTO_ENGINE_COMPAT &&                 \
     !defined(OPENSSL_NO_ENGINE)
 #include <openssl/engine.h>
@@ -105,51 +109,16 @@
 #define OPENSSL_WITH_EVP_MAC 0
 #endif
 
-#if defined(OPENSSL_IS_BORINGSSL) || OPENSSL_VERSION_PREREQ(3, 2)
-#define OPENSSL_WITH_SIGNATURE_CONTEXT_STRING 1
+#if !defined(OPENSSL_IS_BORINGSSL) && OPENSSL_VERSION_PREREQ(3, 0)
+#define OPENSSL_WITH_AES_SIV 1
 #else
-#define OPENSSL_WITH_SIGNATURE_CONTEXT_STRING 0
+#define OPENSSL_WITH_AES_SIV 0
 #endif
 
 #if !defined(OPENSSL_IS_BORINGSSL) && OPENSSL_VERSION_PREREQ(3, 2)
-#define OPENSSL_WITH_OPENSSL_DHKEM 1
+#define OPENSSL_WITH_AES_GCM_SIV 1
 #else
-#define OPENSSL_WITH_OPENSSL_DHKEM 0
-#endif
-
-#if OPENSSL_WITH_KEM && !defined(OPENSSL_IS_BORINGSSL) &&                      \
-    !OPENSSL_VERSION_PREREQ(3, 5)
-#define OPENSSL_WITH_KEM_OPERATION_PARAM 1
-#else
-#define OPENSSL_WITH_KEM_OPERATION_PARAM 0
-#endif
-
-// Post-quantum cryptography support. Keep these explicit so code can
-// distinguish provider API shape from the available algorithm set.
-#if !defined(OPENSSL_IS_BORINGSSL) && OPENSSL_VERSION_PREREQ(3, 5)
-#define OPENSSL_WITH_OPENSSL_PQC 1
-#else
-#define OPENSSL_WITH_OPENSSL_PQC 0
-#endif
-
-#ifdef OPENSSL_IS_BORINGSSL
-#define OPENSSL_WITH_BORINGSSL_PQC 1
-#else
-#define OPENSSL_WITH_BORINGSSL_PQC 0
-#endif
-
-#define OPENSSL_WITH_PQC                                                       \
-  (OPENSSL_WITH_OPENSSL_PQC || OPENSSL_WITH_BORINGSSL_PQC)
-#define OPENSSL_WITH_PQC_ML_KEM_512 OPENSSL_WITH_OPENSSL_PQC
-#define OPENSSL_WITH_PQC_SLH_DSA OPENSSL_WITH_OPENSSL_PQC
-
-#if OPENSSL_WITH_OPENSSL_PQC
-#define EVP_PKEY_ML_KEM_512 NID_ML_KEM_512
-#define EVP_PKEY_ML_KEM_768 NID_ML_KEM_768
-#define EVP_PKEY_ML_KEM_1024 NID_ML_KEM_1024
-#elif OPENSSL_WITH_BORINGSSL_PQC
-#define EVP_PKEY_ML_KEM_768 NID_ML_KEM_768
-#define EVP_PKEY_ML_KEM_1024 NID_ML_KEM_1024
+#define OPENSSL_WITH_AES_GCM_SIV 0
 #endif
 
 #if OPENSSL_VERSION_PREREQ(3, 0)
@@ -351,6 +320,8 @@ class DataPointer;
 class DHPointer;
 class ECKeyPointer;
 class EVPKeyPointer;
+class KeyAlgorithm;
+class MacCache;
 class EVPMacCtxPointer;
 class EVPMacPointer;
 class EVPMDCtxPointer;
@@ -385,9 +356,12 @@ class Digest final {
   static constexpr size_t MAX_SIZE = EVP_MAX_MD_SIZE;
   Digest() = default;
   Digest(const EVP_MD* md) : md_(md) {}
-  Digest(const Digest&) = default;
-  Digest& operator=(const Digest&) = default;
+  Digest(const Digest& other);
+  Digest& operator=(const Digest& other);
   inline Digest& operator=(const EVP_MD* md) {
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+    fetched_md_.reset();
+#endif
     md_ = md;
     return *this;
   }
@@ -406,9 +380,72 @@ class Digest final {
   static const Digest SHA512;
 
   static const Digest FromName(const char* name);
+  static const Digest Fetch(const char* name);
 
  private:
   const EVP_MD* md_ = nullptr;
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+  explicit Digest(DeleteFnPtr<EVP_MD, EVP_MD_free> md);
+  DeleteFnPtr<EVP_MD, EVP_MD_free> fetched_md_;
+#endif
+};
+
+struct CaseInsensitiveNameHash {
+  using is_transparent = void;
+  size_t operator()(std::string_view name) const noexcept;
+};
+
+struct CaseInsensitiveNameEqual {
+  using is_transparent = void;
+  bool operator()(std::string_view lhs, std::string_view rhs) const noexcept;
+};
+
+class DigestCache final {
+ public:
+  struct Result {
+    const EVP_MD* digest = nullptr;
+    int32_t id = -1;
+  };
+
+  using AliasMap = std::unordered_map<std::string,
+                                      int32_t,
+                                      CaseInsensitiveNameHash,
+                                      CaseInsensitiveNameEqual>;
+
+  DigestCache() = default;
+  NCRYPTO_DISALLOW_COPY_AND_MOVE(DigestCache)
+
+  Result lookup(const char* name, uint64_t generation) const;
+  inline Result lookup(int32_t id, uint64_t generation) const {
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+    if (generation_ != generation || id == -1) return {};
+    const uint32_t unsigned_id = static_cast<uint32_t>(id);
+    if (unsigned_id < first_id_) return {};
+    const size_t index = unsigned_id - first_id_;
+    if (index >= digests_.size()) return {};
+    return {digests_[index].get(), id};
+#else
+    static_cast<void>(id);
+    static_cast<void>(generation);
+    return {};
+#endif
+  }
+  Result insert(const char* name, const EVP_MD* digest, uint64_t generation);
+  void reset(uint64_t generation);
+  const AliasMap& aliases() const;
+
+ private:
+  uint64_t generation_ = 0;
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+  using EVPMDPointer = DeleteFnPtr<EVP_MD, EVP_MD_free>;
+
+  // IDs are not reused across generations because JavaScript caches them
+  // independently in each Realm.
+  uint32_t first_id_ = 0;
+  uint32_t next_id_ = 0;
+  std::vector<EVPMDPointer> digests_;
+  AliasMap aliases_;
+#endif
 };
 
 // Computes a fixed-length digest.
@@ -418,6 +455,32 @@ DataPointer hashDigest(const Buffer<const unsigned char>& data,
 DataPointer xofHashDigest(const Buffer<const unsigned char>& data,
                           const EVP_MD* md,
                           size_t length);
+
+class CipherCache final {
+ public:
+  CipherCache() = default;
+  NCRYPTO_DISALLOW_COPY_AND_MOVE(CipherCache)
+
+  const EVP_CIPHER* lookup(const char* name, uint64_t generation);
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+  const EVP_CIPHER* insert(const char* name,
+                           DeleteFnPtr<EVP_CIPHER, EVP_CIPHER_free>&& cipher,
+                           uint64_t generation);
+#endif
+
+ private:
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+  using EVPCipherPointer = DeleteFnPtr<EVP_CIPHER, EVP_CIPHER_free>;
+
+  uint64_t generation_ = 0;
+  std::vector<EVPCipherPointer> ciphers_;
+  std::unordered_map<std::string,
+                     size_t,
+                     CaseInsensitiveNameHash,
+                     CaseInsensitiveNameEqual>
+      aliases_;
+#endif
+};
 
 class Cipher final {
  public:
@@ -437,9 +500,12 @@ class Cipher final {
 
   Cipher() = default;
   Cipher(const EVP_CIPHER* cipher) : cipher_(cipher) {}
-  Cipher(const Cipher&) = default;
-  Cipher& operator=(const Cipher&) = default;
+  Cipher(const Cipher& other);
+  Cipher& operator=(const Cipher& other);
   inline Cipher& operator=(const EVP_CIPHER* cipher) {
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+    fetched_cipher_.reset();
+#endif
     cipher_ = cipher;
     return *this;
   }
@@ -461,7 +527,10 @@ class Cipher final {
   bool isWrapMode() const;
   bool isCtrMode() const;
   bool isCcmMode() const;
+  bool isCtsMode() const;
   bool isOcbMode() const;
+  bool isSivMode() const;
+  bool isGcmSivMode() const;
   bool isStreamMode() const;
   bool isChaCha20Poly1305() const;
 
@@ -472,8 +541,9 @@ class Cipher final {
                  unsigned char* key,
                  unsigned char* iv) const;
 
-  static const Cipher FromName(const char* name);
-  static const Cipher FromNid(int nid);
+  static const Cipher FromName(const char* name, CipherCache* cache = nullptr);
+  static const Cipher FromNameForKeyEncoding(const char* name);
+  static const Cipher FromNid(int nid, CipherCache* cache = nullptr);
   static const Cipher FromCtx(const CipherCtxPointer& ctx);
 
   using CipherNameCallback = std::function<void(const char* name)>;
@@ -482,32 +552,29 @@ class Cipher final {
   // is able to do so.
   static void ForEach(CipherNameCallback callback);
 
-  // Utilities to get various ciphers by type. If the underlying
-  // implementation does not support the requested cipher, then
-  // the result will be an empty Cipher object whose bool operator
-  // will return false.
-
-  static const Cipher EMPTY;
-  static const Cipher AES_128_CBC;
-  static const Cipher AES_192_CBC;
-  static const Cipher AES_256_CBC;
-  static const Cipher AES_128_CTR;
-  static const Cipher AES_192_CTR;
-  static const Cipher AES_256_CTR;
-  static const Cipher AES_128_GCM;
-  static const Cipher AES_192_GCM;
-  static const Cipher AES_256_GCM;
-  static const Cipher AES_128_KW;
-  static const Cipher AES_192_KW;
-  static const Cipher AES_256_KW;
-  static const Cipher AES_128_OCB;
-  static const Cipher AES_192_OCB;
-  static const Cipher AES_256_OCB;
-  static const Cipher CHACHA20_POLY1305;
+  // Lazily resolves common ciphers. If the underlying implementation does not
+  // support the requested cipher, the returned Cipher will be empty.
+  static const Cipher& AES_128_CBC();
+  static const Cipher& AES_192_CBC();
+  static const Cipher& AES_256_CBC();
+  static const Cipher& AES_128_CTR();
+  static const Cipher& AES_192_CTR();
+  static const Cipher& AES_256_CTR();
+  static const Cipher& AES_128_GCM();
+  static const Cipher& AES_192_GCM();
+  static const Cipher& AES_256_GCM();
+  static const Cipher& AES_128_KW();
+  static const Cipher& AES_192_KW();
+  static const Cipher& AES_256_KW();
+  static const Cipher& AES_128_OCB();
+  static const Cipher& AES_192_OCB();
+  static const Cipher& AES_256_OCB();
+  static const Cipher& CHACHA20_POLY1305();
 
   struct CipherParams {
     int padding;
     Digest digest;
+    Digest mgf1_digest;
     const Buffer<const void> label;
   };
 
@@ -532,6 +599,10 @@ class Cipher final {
 
  private:
   const EVP_CIPHER* cipher_ = nullptr;
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+  explicit Cipher(DeleteFnPtr<EVP_CIPHER, EVP_CIPHER_free> cipher);
+  DeleteFnPtr<EVP_CIPHER, EVP_CIPHER_free> fetched_cipher_;
+#endif
 };
 
 // ============================================================================
@@ -579,8 +650,10 @@ class Dsa final {
 class Rsa final {
  public:
   Rsa();
+  enum class Selection { Public, Private };
+  static Rsa PublicOnly(const EVPKeyPointer& key);
 #if NCRYPTO_USE_OPENSSL3_PROVIDER
-  explicit Rsa(const EVP_PKEY* pkey);
+  explicit Rsa(const EVP_PKEY* pkey, Selection selection = Selection::Private);
 #else
   Rsa(OSSL3_CONST RSA* rsa);
 #endif
@@ -609,6 +682,23 @@ class Rsa final {
     const BIGNUM* dq;
     const BIGNUM* qi;
   };
+  struct OtherPrimeInfo {
+    const BIGNUM* r;
+    const BIGNUM* d;
+    const BIGNUM* t;
+  };
+  struct OtherPrimeInfoPointer {
+    OtherPrimeInfoPointer() = default;
+    OtherPrimeInfoPointer(BignumPointer&& r,
+                          BignumPointer&& d,
+                          BignumPointer&& t);
+
+    DeleteFnPtr<BIGNUM, BN_clear_free> r;
+    DeleteFnPtr<BIGNUM, BN_clear_free> d;
+    DeleteFnPtr<BIGNUM, BN_clear_free> t;
+  };
+  using OtherPrimeInfos = std::vector<OtherPrimeInfo>;
+  using OtherPrimeInfoPointers = std::vector<OtherPrimeInfoPointer>;
   struct PssParams {
     std::string_view digest = "sha1";
     std::optional<std::string_view> mgf1_digest = "sha1";
@@ -617,6 +707,9 @@ class Rsa final {
 
   const PublicKey getPublicKey() const;
   const PrivateKey getPrivateKey() const;
+  const OtherPrimeInfos getOtherPrimeInfos() const;
+  // Check that n is the product of all private-key prime factors.
+  bool checkPrimeProduct() const;
   const std::optional<PssParams> getPssParams() const;
 
   bool setPublicKey(BignumPointer&& n, BignumPointer&& e);
@@ -625,7 +718,8 @@ class Rsa final {
                      BignumPointer&& p,
                      BignumPointer&& dp,
                      BignumPointer&& dq,
-                     BignumPointer&& qi);
+                     BignumPointer&& qi,
+                     OtherPrimeInfoPointers&& other_prime_infos = {});
 
   using CipherParams = Cipher::CipherParams;
 
@@ -650,6 +744,7 @@ class Rsa final {
   DeleteFnPtr<BIGNUM, BN_clear_free> dp_;
   DeleteFnPtr<BIGNUM, BN_clear_free> dq_;
   DeleteFnPtr<BIGNUM, BN_clear_free> qi_;
+  OtherPrimeInfoPointers other_prime_infos_;
   std::optional<PssParams> pss_params_;
 #else
   OSSL3_CONST RSA* rsa_;
@@ -677,6 +772,18 @@ class Ec final {
 #endif
 
   static int GetCurveIdFromName(const char* name);
+  static int GetCurveId(const EVPKeyPointer& key);
+  static std::optional<std::string> GetCurveName(const EVPKeyPointer& key);
+  static bool CheckCurveName(const char* name);
+  static DataPointer TryExportPublic(const EVPKeyPointer& key,
+                                     point_conversion_form_t form);
+  static DataPointer ExportPrivate(const EVPKeyPointer& key);
+  static bool GetKeyComponents(const EVPKeyPointer& key,
+                               BignumPointer* x,
+                               BignumPointer* y,
+                               BignumPointer* priv,
+                               int* degree);
+  static const KeyAlgorithm* GetNamedKeyAlgorithm(const char* name);
 
   using GetCurveCallback = std::function<bool(const char*)>;
   static bool GetCurves(GetCurveCallback callback);
@@ -918,7 +1025,9 @@ class CipherCtxPointer final {
   bool setIvLength(size_t length);
   bool setAeadTag(const Buffer<const char>& tag);
   bool setAeadTagLength(size_t length);
+  bool setCtsMode(const char* mode);
   bool setPadding(bool padding);
+  bool setXtsStandard(const char* standard);
   bool init(const Cipher& cipher,
             bool encrypt,
             const unsigned char* key = nullptr,
@@ -931,7 +1040,11 @@ class CipherCtxPointer final {
   bool isGcmMode() const;
   bool isOcbMode() const;
   bool isCcmMode() const;
+  bool isCtsMode() const;
+  bool isXtsMode() const;
   bool isWrapMode() const;
+  bool isSivMode() const;
+  bool isGcmSivMode() const;
   bool isChaCha20Poly1305() const;
 
   bool update(const Buffer<const unsigned char>& in,
@@ -942,6 +1055,79 @@ class CipherCtxPointer final {
 
  private:
   DeleteFnPtr<EVP_CIPHER_CTX, EVP_CIPHER_CTX_free> ctx_;
+};
+
+// Known key algorithms are identified by provider names, never synthetic NIDs.
+// Descriptors have static lifetime; availability is queried from the backend.
+class KeyAlgorithm final {
+ public:
+  static const KeyAlgorithm RSA;
+  static const KeyAlgorithm RSA_PSS;
+  static const KeyAlgorithm DSA;
+  static const KeyAlgorithm DH;
+  static const KeyAlgorithm EC;
+  static const KeyAlgorithm ED25519;
+  static const KeyAlgorithm ED448;
+  static const KeyAlgorithm X25519;
+  static const KeyAlgorithm X448;
+  static const KeyAlgorithm SM2;
+  static const KeyAlgorithm ML_DSA_44;
+  static const KeyAlgorithm ML_DSA_65;
+  static const KeyAlgorithm ML_DSA_87;
+  static const KeyAlgorithm ML_KEM_512;
+  static const KeyAlgorithm ML_KEM_768;
+  static const KeyAlgorithm ML_KEM_1024;
+  static const KeyAlgorithm SLH_DSA_SHA2_128F;
+  static const KeyAlgorithm SLH_DSA_SHA2_128S;
+  static const KeyAlgorithm SLH_DSA_SHA2_192F;
+  static const KeyAlgorithm SLH_DSA_SHA2_192S;
+  static const KeyAlgorithm SLH_DSA_SHA2_256F;
+  static const KeyAlgorithm SLH_DSA_SHA2_256S;
+  static const KeyAlgorithm SLH_DSA_SHAKE_128F;
+  static const KeyAlgorithm SLH_DSA_SHAKE_128S;
+  static const KeyAlgorithm SLH_DSA_SHAKE_192F;
+  static const KeyAlgorithm SLH_DSA_SHAKE_192S;
+  static const KeyAlgorithm SLH_DSA_SHAKE_256F;
+  static const KeyAlgorithm SLH_DSA_SHAKE_256S;
+
+  // Look up a canonical name case-insensitively, including unavailable
+  // algorithms.
+  static const KeyAlgorithm* FromName(const char* name);
+  using Callback = std::function<void(const KeyAlgorithm&)>;
+  static void ForEachPqc(Callback callback);
+
+  const char* name() const { return name_; }
+  const char* keyTypeName() const {
+    return key_type_name_[0] == '\0' ? nullptr : key_type_name_.data();
+  }
+  bool isRsa() const;
+  bool isAvailable() const;
+  bool isPqc() const;
+  bool isOkp() const;
+  bool isOneShot() const;
+  bool supportsRawPublic() const;
+  bool supportsRawPrivate() const;
+  size_t seedSize() const;
+
+ private:
+  enum class Family { Other, EdDSA, XDH, MLDSA, MLKEM, SLHDSA };
+  static constexpr size_t kMaxKeyTypeNameLength = 32;
+  template <size_t N>
+  constexpr KeyAlgorithm(const char (&name)[N],
+                         Family family,
+                         bool has_key_type = true)
+      : name_(name), family_(family) {
+    static_assert(N <= kMaxKeyTypeNameLength);
+    if (has_key_type) {
+      for (size_t i = 0; i < N; i++) {
+        key_type_name_[i] =
+            name[i] >= 'A' && name[i] <= 'Z' ? name[i] + ('a' - 'A') : name[i];
+      }
+    }
+  }
+  const char* name_;
+  std::array<char, kMaxKeyTypeNameLength> key_type_name_{};
+  Family family_;
 };
 
 class EVPKeyCtxPointer final {
@@ -968,6 +1154,7 @@ class EVPKeyCtxPointer final {
   bool setDhParameters(int prime_size, uint32_t generator);
   bool setDsaParameters(uint32_t bits, std::optional<int> q_bits);
   bool setEcParameters(int curve, int encoding);
+  bool setEcParameters(const char* group_name, int encoding);
 
   bool setRsaOaepMd(const Digest& md);
   bool setRsaMgf1Md(const Digest& md);
@@ -1006,7 +1193,8 @@ class EVPKeyCtxPointer final {
   int initForSign();
 
   static EVPKeyCtxPointer New(const EVPKeyPointer& key);
-  static EVPKeyCtxPointer NewFromID(int id);
+  static EVPKeyCtxPointer NewFromName(const char* name);
+  static EVPKeyCtxPointer NewFromAlgorithm(const KeyAlgorithm& algorithm);
 
  private:
   DeleteFnPtr<EVP_PKEY_CTX, EVP_PKEY_CTX_free> ctx_;
@@ -1015,14 +1203,12 @@ class EVPKeyCtxPointer final {
 class EVPKeyPointer final {
  public:
   static EVPKeyPointer New();
-  static EVPKeyPointer NewRawPublic(int id,
+  static EVPKeyPointer NewRawPublic(const KeyAlgorithm& algorithm,
                                     const Buffer<const unsigned char>& data);
-  static EVPKeyPointer NewRawPrivate(int id,
+  static EVPKeyPointer NewRawPrivate(const KeyAlgorithm& algorithm,
                                      const Buffer<const unsigned char>& data);
-#if OPENSSL_WITH_PQC
-  static EVPKeyPointer NewRawSeed(int id,
+  static EVPKeyPointer NewRawSeed(const KeyAlgorithm& algorithm,
                                   const Buffer<const unsigned char>& data);
-#endif
   static EVPKeyPointer NewDH(DHPointer&& dh);
 #if NCRYPTO_USE_OPENSSL3_PROVIDER
   static EVPKeyPointer NewRSA(const Rsa& rsa);
@@ -1070,7 +1256,7 @@ class EVPKeyPointer final {
   using PublicKeyEncodingConfig = AsymmetricKeyEncodingConfig;
 
   struct PrivateKeyEncodingConfig : public AsymmetricKeyEncodingConfig {
-    const EVP_CIPHER* cipher = nullptr;
+    Cipher cipher;
     std::optional<DataPointer> passphrase = std::nullopt;
     PrivateKeyEncodingConfig() = default;
     PrivateKeyEncodingConfig(bool output_key_object,
@@ -1127,11 +1313,19 @@ class EVPKeyPointer final {
   void reset(EVP_PKEY* pkey = nullptr);
   EVP_PKEY* release();
 
-  static int id(const EVP_PKEY* key);
-  static int base_id(const EVP_PKEY* key);
-
-  int id() const;
-  int base_id() const;
+  static bool isA(const EVP_PKEY* key, const char* name);
+  bool isA(const char* name) const;
+  static bool isA(const EVP_PKEY* key, const KeyAlgorithm& algorithm);
+  bool isA(const KeyAlgorithm& algorithm) const;
+  // Resolve a known algorithm without caching key or provider state.
+  const KeyAlgorithm* getAlgorithm() const;
+  // Stable public key-type name, or nullptr for an unsupported key type.
+  const char* getKeyTypeName() const;
+  bool supportsRawPublic() const;
+  bool supportsRawPrivate() const;
+  bool supportsContextString() const;
+  bool hasSmallOrderEdDsaPoint(
+      const Buffer<const unsigned char>& signature) const;
   int bits() const;
   size_t size() const;
 
@@ -1141,9 +1335,22 @@ class EVPKeyPointer final {
   DataPointer rawPrivateKey() const;
   BIOPointer derPublicKey() const;
 
-#if OPENSSL_WITH_PQC
-  DataPointer rawSeed() const;
-#endif
+  enum class RawExportError { UNSUPPORTED_KEY_TYPE, MISSING_SEED, FAILED };
+  Result<DataPointer, RawExportError> rawSeed() const;
+
+  struct RawJwkData {
+    const KeyAlgorithm* algorithm = nullptr;
+    DataPointer public_key;
+    DataPointer private_key;
+  };
+  // Raw JWK material for OKP and AKP keys. Private bytes use the JWK
+  // representation (a seed for ML-DSA/ML-KEM, a raw private key otherwise).
+  Result<RawJwkData, RawExportError> exportRawJwk(bool include_private) const;
+  static EVPKeyPointer NewRawJwk(
+      const KeyAlgorithm& algorithm,
+      const Buffer<const unsigned char>& public_key,
+      const std::optional<Buffer<const unsigned char>>& private_key =
+          std::nullopt);
 
   Result<BIOPointer, bool> writePrivateKey(
       const PrivateKeyEncodingConfig& config) const;
@@ -1159,9 +1366,10 @@ class EVPKeyPointer final {
   operator Rsa() const;
   operator Dsa() const;
 
+  static bool isRsaVariant(const EVP_PKEY* key);
   bool isRsaVariant() const;
-  bool isOneShotVariant() const;
   bool isSigVariant() const;
+  bool mayBeSM2() const;
   bool validateDsaParameters() const;
 
  private:
@@ -1230,9 +1438,9 @@ class DHPointer final {
     UNABLE_TO_CHECK_GENERATOR = 0x04,
     NOT_SUITABLE_GENERATOR = 0x08,
     Q_NOT_PRIME = 0x10,
-#ifndef OPENSSL_IS_BORINGSSL
-    // Boringssl does not define the DH_CHECK_INVALID_[Q or J]_VALUE
     INVALID_Q = 0x20,
+#ifndef OPENSSL_IS_BORINGSSL
+    // BoringSSL does not define DH_CHECK_INVALID_J_VALUE.
     INVALID_J = 0x40,
     MODULUS_TOO_SMALL = 0x80,
     MODULUS_TOO_LARGE = 0x100,
@@ -1243,14 +1451,9 @@ class DHPointer final {
 
   enum class CheckPublicKeyResult {
     NONE,
-#ifndef OPENSSL_IS_BORINGSSL
-    // Boringssl does not define DH_R_CHECK_PUBKEY_TOO_SMALL or TOO_LARGE
-    TOO_SMALL = DH_R_CHECK_PUBKEY_TOO_SMALL,
-    TOO_LARGE = DH_R_CHECK_PUBKEY_TOO_LARGE,
-    INVALID = DH_R_CHECK_PUBKEY_INVALID,
-#else
-    INVALID = DH_R_INVALID_PUBKEY,
-#endif
+    TOO_SMALL,
+    TOO_LARGE,
+    INVALID,
     CHECK_FAILED = 512,
   };
   // Check to see if the given public key is suitable for this DH instance.
@@ -1344,9 +1547,6 @@ class SSLPointer final {
 
   bool setSession(const SSLSessionPointer& session);
   bool setSniContext(const SSLCtxPointer& ctx) const;
-
-  const char* getClientHelloAlpn() const;
-  const char* getClientHelloServerName() const;
 
   std::optional<const std::string_view> getServerName() const;
   X509View getCertificate() const;
@@ -1631,6 +1831,7 @@ class ECKeyPointer final {
   bool setPublicKeyRaw(const BignumPointer& x, const BignumPointer& y);
   bool generate();
   bool checkKey() const;
+  bool checkPrivateKey() const;
   DataPointer computeSecret(const ECPointPointer& peer) const;
 
   const EC_GROUP* getGroup() const;
@@ -1674,7 +1875,16 @@ class EVPMDCtxPointer final {
   void reset(EVP_MD_CTX* ctx = nullptr);
   EVP_MD_CTX* release();
 
-  bool digestInit(const Digest& digest);
+  bool digestInit(const EVP_MD* digest);
+  inline bool digestInit(const Digest& digest) {
+    return digestInit(digest.get());
+  }
+#if !defined(OPENSSL_IS_BORINGSSL) && OPENSSL_VERSION_PREREQ(4, 0)
+  bool digestInit(const EVP_MD* digest, const OSSL_PARAM* params);
+  inline bool digestInit(const Digest& digest, const OSSL_PARAM* params) {
+    return digestInit(digest.get(), params);
+  }
+#endif
   bool digestUpdate(const Buffer<const void>& in);
   DataPointer digestFinal(size_t length);
   bool digestFinalInto(Buffer<void>* buf);
@@ -1766,6 +1976,61 @@ class EVPMacPointer final {
   DeleteFnPtr<EVP_MAC, EVP_MAC_free> mac_;
 };
 
+enum class MacKind : uint8_t {
+  kOther,
+  kHmac,
+  kCmac,
+  kGmac,
+};
+
+class MacCache final {
+ public:
+  struct Result {
+    // Borrowed from the cache and valid until the cache is reset. Creating an
+    // EVP_MAC_CTX takes an independent reference to the method.
+    EVP_MAC* mac = nullptr;
+    int32_t id = -1;
+    MacKind kind = MacKind::kOther;
+  };
+
+  using AliasMap = std::unordered_map<std::string,
+                                      int32_t,
+                                      CaseInsensitiveNameHash,
+                                      CaseInsensitiveNameEqual>;
+
+  MacCache() = default;
+  NCRYPTO_DISALLOW_COPY_AND_MOVE(MacCache)
+
+  Result lookup(const char* name, uint64_t generation) const;
+  inline Result lookup(int32_t id, uint64_t generation) const {
+    if (generation_ != generation || id == -1) return {};
+    const uint32_t unsigned_id = static_cast<uint32_t>(id);
+    if (unsigned_id < first_id_) return {};
+    const size_t index = unsigned_id - first_id_;
+    if (index >= macs_.size()) return {};
+    return {macs_[index].mac.get(), id, macs_[index].kind};
+  }
+  Result insert(const char* name, EVPMacPointer&& mac, uint64_t generation);
+  void reset(uint64_t generation);
+  const AliasMap& aliases() const;
+  static MacKind GetKind(EVP_MAC* mac);
+
+ private:
+  struct Entry {
+    EVPMacPointer mac;
+    MacKind kind;
+  };
+
+  uint64_t generation_ = 0;
+
+  // IDs are not reused across generations because JavaScript may cache them
+  // independently in each Realm.
+  uint32_t first_id_ = 0;
+  uint32_t next_id_ = 0;
+  std::vector<Entry> macs_;
+  AliasMap aliases_;
+};
+
 class EVPMacCtxPointer final {
  public:
   EVPMacCtxPointer() = default;
@@ -1784,6 +2049,8 @@ class EVPMacCtxPointer final {
 
   bool init(const Buffer<const void>& key, const OSSL_PARAM* params = nullptr);
   bool update(const Buffer<const void>& data);
+  size_t getSize() const;
+  const OSSL_PARAM* getSettableParams() const;
   DataPointer final(size_t length);
 
   static EVPMacCtxPointer New(EVP_MAC* mac);
@@ -1819,6 +2086,14 @@ class HMACCtxPointer final {
   size_t md_size_ = 0;
 };
 #endif  // OPENSSL_WITH_EVP_MAC
+
+#if !OPENSSL_WITH_EVP_MAC
+class MacCache final {
+ public:
+  MacCache() = default;
+  NCRYPTO_DISALLOW_COPY_AND_MOVE(MacCache)
+};
+#endif
 
 #ifndef OPENSSL_NO_ENGINE
 class EnginePointer final {
@@ -1862,7 +2137,13 @@ class EnginePointer final {
 // FIPS
 bool isFipsEnabled();
 
+// Configure seed-preserving PQC private-key encoding when the backend supports
+// it.
+void ConfigurePqcEncoding();
+
 bool setFipsEnabled(bool enabled, CryptoErrorList* errors);
+
+uint64_t getFipsStateGeneration();
 
 bool testFipsEnabled();
 
@@ -1896,8 +2177,29 @@ Buffer<char> ExportChallenge(const char* input, size_t length);
 // ============================================================================
 // KDF
 
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
+class KDF final {
+ public:
+  KDF() = default;
+  KDF(KDF&&) noexcept = default;
+  KDF& operator=(KDF&&) noexcept = default;
+  NCRYPTO_DISALLOW_COPY(KDF)
+
+  inline operator bool() const { return kdf_ != nullptr; }
+
+  static KDF Fetch(const char* algorithm, OSSL_LIB_CTX* libctx = nullptr);
+
+  // Each derivation uses a fresh context. A null output can be used for
+  // parameter validation by KDFs that support it, such as scrypt.
+  bool derive(const Buffer<unsigned char>& out, const OSSL_PARAM* params) const;
+
+ private:
+  explicit KDF(EVP_KDF* kdf);
+  DeleteFnPtr<EVP_KDF, EVP_KDF_free> kdf_;
+};
+#endif
+
 const EVP_MD* getDigestByName(const char* name);
-const EVP_CIPHER* getCipherByName(const char* name);
 
 // Verify that the specified HKDF output length is valid for the given digest.
 // The maximum length for HKDF output for a given digest is 255 times the
@@ -1971,7 +2273,7 @@ class KEM final {
                                  const Buffer<const void>& ciphertext);
 
  private:
-#if OPENSSL_WITH_KEM_OPERATION_PARAM
+#if NCRYPTO_USE_OPENSSL3_PROVIDER
   static bool SetOperationParameter(EVP_PKEY_CTX* ctx,
                                     const EVPKeyPointer& key);
 #endif

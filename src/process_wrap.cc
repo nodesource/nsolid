@@ -112,6 +112,7 @@ class ProcessWrap : public HandleWrap {
                    object,
                    reinterpret_cast<uv_handle_t*>(&process_),
                    AsyncWrap::PROVIDER_PROCESSWRAP) {
+    process_.pid = 0;
     MarkAsUninitialized();
   }
 
@@ -351,11 +352,14 @@ class ProcessWrap : public HandleWrap {
     }
 #ifdef _WIN32
     if (signal != SIGKILL && signal != SIGTERM && signal != SIGINT &&
-        signal != SIGQUIT && signal != 0) {
+        signal != SIGQUIT && signal != 0 && signal != SIGWINCH) {
       signal = SIGKILL;
     }
 #endif
-    int err = uv_process_kill(&wrap->process_, signal);
+    // uv_spawn() only assigns a pid when it succeeds, and kill(0, signal)
+    // signals every process in our own process group.
+    int err = wrap->process_.pid > 0 ? uv_process_kill(&wrap->process_, signal)
+                                     : UV_ESRCH;
     args.GetReturnValue().Set(err);
   }
 

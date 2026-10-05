@@ -29,10 +29,14 @@ on:
       - deps/nghttp2/**
       - deps/ngtcp2/**
       - deps/openssl/*/**
+      - deps/perfetto/**
       - deps/simdjson/**
       - deps/sqlite/**
       - deps/uv/**
       - deps/uvwasi/**
+      - deps/v8/third_party/abseil-cpp/**
+      - deps/v8/third_party/highway/**
+      - deps/v8/third_party/simdutf/**
       - deps/zlib/**
       - deps/zstd/**
       - doc/**
@@ -44,6 +48,7 @@ on:
       - '!tools/nix/**'
       - '!tools/v8/**'
       - '!tools/v8_gypfiles/**'
+      - tools/nix/list-requisites.sh
       - typings/**
       - vcbuild.bat
       - .**
@@ -81,10 +86,14 @@ on:
       - deps/nghttp2/**
       - deps/ngtcp2/**
       - deps/openssl/*/**
+      - deps/perfetto/**
       - deps/simdjson/**
       - deps/sqlite/**
       - deps/uv/**
       - deps/uvwasi/**
+      - deps/v8/third_party/abseil-cpp/**
+      - deps/v8/third_party/highway/**
+      - deps/v8/third_party/simdutf/**
       - deps/zlib/**
       - deps/zstd/**
       - doc/**
@@ -96,6 +105,7 @@ on:
       - '!tools/nix/**'
       - '!tools/v8/**'
       - '!tools/v8_gypfiles/**'
+      - tools/nix/list-requisites.sh
       - typings/**
       - vcbuild.bat
       - .**
@@ -115,7 +125,7 @@ jobs:
     name: ${{ github.event_name == 'workflow_dispatch' && 'Skipped job' || 'Build slim tarball' }}
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
 
@@ -151,7 +161,7 @@ jobs:
           - runner: macos-latest
             system: aarch64-darwin
     name: '${{ matrix.system }}: with shared libraries${{ matrix.perfetto && '' and perfetto'' || '''' }}'
-    uses: ./.github/workflows/build-shared.yml
+    uses: $/.github/workflows/build-shared.yml
     with:
       runner: ${{ matrix.runner }}
       with-sccache: ${{ github.base_ref == 'main' || github.ref_name == 'main' }}
@@ -182,7 +192,7 @@ jobs:
           tar xzf tarballs/*.tar.gz -C "$RUNNER_TEMP"
           echo "TAR_DIR=$RUNNER_TEMP/$(basename tarballs/*.tar.gz .tar.gz)" >> "$GITHUB_ENV"
 
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342  # v31.11.0
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24  # v31.11.1
         with:
           extra_nix_config: sandbox = true
 
@@ -198,7 +208,7 @@ jobs:
           [ "$(curl -ISsw "%{http_code}" -o /dev/null "https://nodejs.cachix.org/$(basename ${V8_STORE_PATH%-v8-*}).narinfo")" != "200" ] ||
             echo "ALREADY_CACHED=true" >> "$GITHUB_OUTPUT"
 
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71  # v17
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866  # v17
         if: ${{ steps.v8-drv.outputs.ALREADY_CACHED != 'true' }}
         with:
           name: nodejs
@@ -242,11 +252,11 @@ jobs:
       matrix:
         openssl: ${{ fromJSON(needs.build-aarch64-linux-v8.outputs.matrix) }}
     name: 'aarch64-linux: with shared ${{ matrix.openssl.name }}'
-    uses: ./.github/workflows/build-shared.yml
+    uses: $/.github/workflows/build-shared.yml
     with:
       runner: ubuntu-24.04-arm
       v8-nar: ${{ needs.build-aarch64-linux-v8.outputs.local-cache && 'libv8-aarch64-linux.nar' }}
-      pkcs11-store-test: ${{ matrix.openssl.attr == 'openssl_3_5' }}
+      pkcs11-store-test: ${{ matrix.openssl.attr == 'openssl' }}
       # Override just the `openssl` attr of the default shared-lib set with
       # the matrix-selected nixpkgs attribute (e.g. `openssl_3_6`). All
       # other shared libs (brotli, cares, libuv, …) keep their defaults.

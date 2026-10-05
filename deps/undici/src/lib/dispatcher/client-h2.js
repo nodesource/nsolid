@@ -10,7 +10,8 @@ const {
   InformationalError,
   InvalidArgumentError,
   HeadersTimeoutError,
-  BodyTimeoutError
+  BodyTimeoutError,
+  ResponseExceededMaxSizeError
 } = require('../core/errors.js')
 const {
   kUrl,
@@ -26,10 +27,7 @@ const {
   kStrictContentLength,
   kOnError,
   kMaxConcurrentStreams,
-  kPingInterval,
   kHTTP2Session,
-  kHTTP2InitialWindowSize,
-  kHTTP2ConnectionWindowSize,
   kHostAuthority,
   kResume,
   kSize,
@@ -41,7 +39,9 @@ const {
   kEnableConnectProtocol,
   kRemoteSettings,
   kHTTP2Stream,
-  kHTTP2SessionState
+  kHTTP2SessionState,
+  kHTTP2Options,
+  kMaxResponseSize
 } = require('../core/symbols.js')
 const { channels } = require('../core/diagnostics.js')
 
@@ -51,6 +51,14 @@ const kRequestStream = Symbol('request stream')
 const kRequestStreamCleanup = Symbol('request stream cleanup')
 const kRequestStreamState = Symbol('request stream state')
 const kReceivedGoAway = Symbol('received goaway')
+const kGoAwayReplayAttempts = Symbol('goaway replay attempts')
+const kRefusedStreamRetry = Symbol('refused stream retry')
+
+// RFC 9113 section 8.7: a client SHOULD NOT automatically retry a request more
+// than once. Without a budget a peer that keeps refusing turns one request into
+// an unbounded connect/refuse/reconnect loop that never settles and starves the
+// event loop.
+const MAX_GOAWAY_REPLAY_ATTEMPTS = 1
 
 let extractBody
 
@@ -179,10 +187,22 @@ function completeRequest (client, request, resetPendingIdx = false) {
   }
 }
 
-function canRetryRequestAfterGoAway (request) {
+function canReplayRequest (request) {
   const { body } = request
 
   return body == null || util.isBuffer(body) || util.isBlobLike(body)
+}
+
+// Count a GOAWAY refusal against the request's replay budget. A peer that
+// refuses every connection must eventually surface an error to the caller
+// rather than being retried forever. Kept separate from canReplayRequest so
+// that the REFUSED_STREAM retry, which has its own single-attempt limit, does
+// not consume this budget just by asking whether the body can be replayed.
+function registerGoAwayRefusal (request) {
+  const attempts = (request[kGoAwayReplayAttempts] ?? 0) + 1
+  request[kGoAwayReplayAttempts] = attempts
+
+  return attempts <= MAX_GOAWAY_REPLAY_ATTEMPTS
 }
 
 function closeStream (stream, code = NGHTTP2_REFUSED_STREAM) {
@@ -197,19 +217,44 @@ function detachRequestStreamForClose (request) {
   const stream = request[kRequestStream]
 
   clearRequestStream(request)
+  severRequestStream(stream)
 
   return stream
+}
+
+// Unbind a stream from its request for good. releaseRequestStream() alone
+// leaves the 'close' listener attached and kRequestStreamState populated, so a
+// stream abandoned here would still run completeRequestStream() later — and
+// splice out the request that has since been requeued onto another session.
+function severRequestStream (stream) {
+  if (stream == null || stream[kRequestStreamState] == null) {
+    return
+  }
+
+  stream[kRequestStreamState] = null
+  stream.off('close', completeRequestStream)
+  // Upgrade streams use their own close cleanup, which would otherwise release
+  // the session a second time after the stream has been severed for GOAWAY.
+  stream.off('close', onUpgradeStreamClose)
+
+  if (stream[kHTTP2Session] != null) {
+    closeStreamSession(stream)
+  }
+
+  if (!stream.destroyed && !stream.closed) {
+    stream.once('error', noop)
+  }
 }
 
 function connectH2 (client, socket) {
   client[kSocket] = socket
 
-  const http2InitialWindowSize = client[kHTTP2InitialWindowSize]
-  const http2ConnectionWindowSize = client[kHTTP2ConnectionWindowSize]
+  const http2InitialWindowSize = client[kHTTP2Options].sessionOptions?.initialWindowSize
+  const http2ConnectionWindowSize = client[kHTTP2Options].connectionWindowSize
 
   const session = http2.connect(client[kUrl], {
     createConnection: () => socket,
-    peerMaxConcurrentStreams: client[kMaxConcurrentStreams],
+    peerMaxConcurrentStreams: client[kHTTP2Options].maxConcurrentStreams,
     settings: {
       // TODO(metcoder95): add support for PUSH
       enablePush: false,
@@ -223,13 +268,16 @@ function connectH2 (client, socket) {
   session[kSocket] = socket
   session[kHTTP2SessionState] = {
     idleTimeout: null,
+    // Armed while the peer advertises MAX_CONCURRENT_STREAMS = 0 and we have
+    // work that cannot start. See setNoStreamsTimeout.
+    noStreamsTimeout: null,
     // Sockets start out ref'd. Session ref/unref proxies to the socket, so a
     // single cached flag lets us skip redundant uv ref/unref calls, provided
     // every ref/unref of the session or its socket goes through
     // refH2Session/unrefH2Session.
     refed: true,
     ping: {
-      interval: client[kPingInterval] === 0 ? null : setInterval(onHttp2SendPing, client[kPingInterval], session).unref()
+      interval: client[kHTTP2Options].pingInterval === 0 ? null : setInterval(onHttp2SendPing, client[kHTTP2Options].pingInterval, session).unref()
     }
   }
   session[kReceivedGoAway] = false
@@ -369,7 +417,74 @@ function resumeH2 (client) {
     } else {
       clearHttp2IdleTimeout(session)
     }
+
+    if (client[kMaxConcurrentStreams] === 0 && client[kRunning] === 0 && client[kPending] > 0) {
+      setNoStreamsTimeout(session)
+    } else {
+      clearNoStreamsTimeout(session)
+    }
   }
+}
+
+function clearNoStreamsTimeout (session) {
+  const state = session[kHTTP2SessionState]
+
+  if (state?.noStreamsTimeout != null) {
+    clearTimeout(state.noStreamsTimeout)
+    state.noStreamsTimeout = null
+  }
+}
+
+// A peer is allowed to advertise SETTINGS_MAX_CONCURRENT_STREAMS = 0 to refuse
+// new streams (RFC 9113 §6.5.2), and is expected to raise it again later. Until
+// it does, busy() reports the client as permanently busy and queued requests
+// cannot open a stream — which means no per-stream timeout covers them, and no
+// reconnect can happen either, so the SETTINGS frame that would lift the limit
+// can never arrive. Give the peer headersTimeout to start honouring requests
+// before failing them; a request that cannot even be sent has missed the same
+// deadline as one whose headers never arrive.
+function setNoStreamsTimeout (session) {
+  const client = session[kClient]
+  const state = session[kHTTP2SessionState]
+  const timeout = client[kHeadersTimeout]
+
+  if (!timeout || state.noStreamsTimeout != null) {
+    return
+  }
+
+  state.noStreamsTimeout = setTimeout(onNoStreamsTimeout, timeout, session).unref()
+}
+
+function onNoStreamsTimeout (session) {
+  const client = session[kClient]
+  const state = session[kHTTP2SessionState]
+
+  state.noStreamsTimeout = null
+
+  if (
+    client[kHTTP2Session] !== session ||
+    client[kMaxConcurrentStreams] !== 0 ||
+    client[kRunning] !== 0 ||
+    client[kPending] === 0
+  ) {
+    return
+  }
+
+  const err = new HeadersTimeoutError(
+    `HTTP/2: server did not accept a new stream within ${client[kHeadersTimeout]}`
+  )
+
+  const requests = client[kQueue].splice(client[kPendingIdx])
+  for (let i = 0; i < requests.length; i++) {
+    if (requests[i] != null) {
+      util.errorRequest(client, requests[i], err)
+    }
+  }
+
+  // Drop the unusable session so the next request gets a fresh connection,
+  // whose SETTINGS may well allow streams again.
+  session[kError] = err
+  resetHttp2Session(session, err)
 }
 
 function clearHttp2IdleTimeout (session) {
@@ -527,7 +642,7 @@ function onHttp2SessionGoAway (errorCode, lastStreamID) {
     if (request != null) {
       streamsToClose.push(detachRequestStreamForClose(request))
 
-      if (canRetryRequestAfterGoAway(request)) {
+      if (canReplayRequest(request) && registerGoAwayRefusal(request)) {
         retriableRequests.push(request)
       } else {
         util.errorRequest(client, request, err)
@@ -552,6 +667,7 @@ function onHttp2SessionGoAway (errorCode, lastStreamID) {
   }
 
   clearHttp2IdleTimeout(this)
+  clearNoStreamsTimeout(this)
 
   if (!this.closed && !this.destroyed) {
     this.close()
@@ -576,6 +692,7 @@ function onHttp2SessionClose () {
   }
 
   clearHttp2IdleTimeout(this)
+  clearNoStreamsTimeout(this)
 
   if (state.ping.interval != null) {
     clearInterval(state.ping.interval)
@@ -687,6 +804,16 @@ function completeRequestStream () {
 
   if (state.pendingEnd && !state.request.aborted && !state.request.completed) {
     state.request.onResponseEnd(state.trailers || {})
+  } else if (!state.request.aborted && !state.request.completed) {
+    // The stream closed without a complete response and without reporting an
+    // error. finalizeRequest() below frees the queue slot either way, so
+    // without this the request would simply vanish and its caller would never
+    // hear back.
+    util.errorRequest(
+      state.client,
+      state.request,
+      new InformationalError('HTTP/2: stream closed before the response was complete')
+    )
   }
 
   finalizeRequest(state)
@@ -897,9 +1024,11 @@ function writeH2 (client, request) {
   const state = {
     abort: null,
     body: request.body,
+    bytesRead: 0,
     client,
     contentLength: null,
     expectsPayload: false,
+    maxResponseSize: client[kMaxResponseSize],
     request,
     headersTimeout,
     bodyTimeout,
@@ -1135,6 +1264,7 @@ function writeH2 (client, request) {
   // become unreachable once the stream closes, so plain `on` avoids the
   // per-listener `once` wrapper allocation.
   stream.on('response', onResponse)
+  stream.on('headers', onInterimResponse)
   stream.on('end', onEnd)
   stream.on('error', onError)
   stream.on('frameError', onFrameError)
@@ -1155,6 +1285,7 @@ function removeRequestStreamListeners (stream) {
   stream.off('error', noop)
   stream.off('continue', writeBodyH2)
   stream.off('response', onResponse)
+  stream.off('headers', onInterimResponse)
   stream.off('end', onEnd)
   stream.off('error', onError)
   stream.off('frameError', onFrameError)
@@ -1197,15 +1328,49 @@ function onData (chunk) {
     return
   }
 
+  const { request, maxResponseSize } = state
+
+  if (request.aborted || request.completed) {
+    return
+  }
+
+  if (maxResponseSize > -1 && state.bytesRead + chunk.length > maxResponseSize) {
+    // Unlike HTTP/1.1, which destroys the socket because it cannot abandon one
+    // response without losing framing, resetting the offending stream leaves
+    // the session usable for its siblings.
+    state.abort(new ResponseExceededMaxSizeError())
+    return
+  }
+
+  state.bytesRead += chunk.length
+
+  if (request.onResponseData(chunk) === false) {
+    stream.pause()
+  }
+}
+
+function onInterimResponse (headers) {
+  const stream = this
+  const state = stream[kRequestStreamState]
+
+  if (state == null) {
+    return
+  }
+
   const { request } = state
 
   if (request.aborted || request.completed) {
     return
   }
 
-  if (request.onResponseData(chunk) === false) {
-    stream.pause()
-  }
+  // node http2 emits 'headers' for interim (1xx) informational responses,
+  // while the final response arrives via 'response'. Forward these to the
+  // handler so that onInfo is invoked, matching the HTTP/1 behaviour and the
+  // documented onInfo contract.
+  const statusCode = headers[HTTP2_HEADER_STATUS]
+  delete headers[HTTP2_HEADER_STATUS]
+
+  request.onResponseStart(Number(statusCode), headers, noop, '')
 }
 
 function onResponse (headers) {
@@ -1286,6 +1451,38 @@ function onEnd () {
   }
 }
 
+function retryRefusedStream (stream, state) {
+  const { client, request } = state
+
+  if (
+    state.responseReceived ||
+    request.aborted ||
+    request.completed ||
+    request[kRefusedStreamRetry] ||
+    !canReplayRequest(request)
+  ) {
+    return false
+  }
+
+  // RFC 9113 section 8.7 permits retrying REFUSED_STREAM, but says clients
+  // SHOULD NOT automatically retry the same request more than once.
+  request[kRefusedStreamRetry] = true
+
+  // Detach the failed attempt before moving the request back to the pending
+  // queue. The peer only reset this stream, so the HTTP/2 session remains
+  // usable for the retry. Severing also drops the 'close' listener, so the
+  // abandoned stream cannot later complete the retried request.
+  detachRequestStreamForClose(request)
+  state.stream = null
+  state.requestFinalized = true
+
+  completeRequest(client, request)
+  client[kQueue].splice(client[kPendingIdx], 0, request)
+  client[kResume]()
+
+  return true
+}
+
 function onError (err) {
   const stream = this
   const state = stream[kRequestStreamState]
@@ -1295,6 +1492,18 @@ function onError (err) {
   }
 
   stream.off('error', onError)
+
+  if (typeof stream.rstCode === 'number' && stream.rstCode !== NGHTTP2_NO_ERROR) {
+    err.http2ErrorCode = stream.rstCode
+  }
+
+  if (
+    stream.rstCode === NGHTTP2_REFUSED_STREAM &&
+    retryRefusedStream(stream, state)
+  ) {
+    return
+  }
+
   state.abort(err)
 }
 
