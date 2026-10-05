@@ -397,6 +397,12 @@
       'src/tracing/trace_event_legacy_inl.h',
       'src/tracing/trace_event_legacy.h',
     ],
+    'node_tracing_perfetto_sources': [
+      'src/tracing/agent_perfetto.cc',
+      'src/tracing/agent_perfetto.h',
+      'src/tracing/trace_event_perfetto.cc',
+      'src/tracing/trace_event_perfetto.h',
+    ],
     'node_dtls_sources': [
       'src/dtls/dtls.cc',
       'src/dtls/dtls_context.cc',

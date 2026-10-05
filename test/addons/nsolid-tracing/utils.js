@@ -22,7 +22,7 @@ function setupNSolid(options, cb) {
     const dns = require('dns');
     dns.lookup('localhost', { all: true }, common.mustSucceed((addresses) => {
       require('nsolid').enableTraces();
-    binding.setupTracing();
+      binding.setupTracing();
       cb(null, { addresses });
     }));
   } else {
