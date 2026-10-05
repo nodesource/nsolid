@@ -868,6 +868,8 @@ EnvList::EnvList(): info_(nlohmann::json()) {
   CHECK_EQ(er, 0);
   er = log_written_msg_.init(&thread_loop_, log_written_cb_, this);
   CHECK_EQ(er, 0);
+  er = permission_audit_msg_.init(&thread_loop_, permission_audit_cb_, this);
+  CHECK_EQ(er, 0);
   er = removed_env_msg_.init(&thread_loop_, removed_env_cb_, this);
   CHECK_EQ(er, 0);
   er = fill_tracing_ids_msg_.init(&thread_loop_, fill_tracing_ids_cb_, this);
@@ -936,6 +938,16 @@ void EnvList::OnLogWriteHook(
     { proxy, nsolid::internal::user_data(data, deleter) });
 }
 
+void EnvList::OnPermissionAuditHook(
+    void* data,
+    internal::on_permission_audit_hook_proxy_sig proxy,
+    internal::deleter_sig deleter) {
+  on_permission_audit_hook_list_.push_back(
+      {proxy, nsolid::internal::user_data(data, deleter)});
+  // Deliver the events that were reported before this hook was registered.
+  // The handle may already be closed if the process is exiting.
+  USE(permission_audit_msg_.send());
+}
 
 void EnvList::EnvironmentCreationHook(
       void* data,
@@ -1447,6 +1459,15 @@ void EnvList::WriteLogLine(SharedEnvInst envinst, LogWriteInfo info) {
   }
 }
 
+void EnvList::PushPermissionAudit(SharedEnvInst envinst,
+                                  PermissionAuditInfo info) {
+  size_t s = on_permission_audit_q_.enqueue({envinst, std::move(info)});
+  // Same as WriteLogLine(), false positives are okay. The handle may already
+  // be closed if the process is exiting.
+  if (s == 1) {
+    USE(permission_audit_msg_.send());
+  }
+}
 
 void EnvList::UpdateTracingFlags(uint32_t flags) {
   decltype(env_map_) env_map;
@@ -1731,6 +1752,29 @@ void EnvList::log_written_cb_(ns_async*, EnvList* envlist) {
   }
 }
 
+void EnvList::permission_audit_cb_(ns_async*, EnvList* envlist) {
+  // Upper bound of events kept while no hook is registered. JS already limits
+  // the number of events reported per thread.
+  static constexpr size_t kMaxPendingPermissionAudit = 10000;
+  auto& pending = envlist->pending_permission_audit_;
+  std::pair<SharedEnvInst, PermissionAuditInfo> audit;
+  while (envlist->on_permission_audit_q_.dequeue(audit)) {
+    if (pending.size() < kMaxPendingPermissionAudit) {
+      pending.push_back(std::move(audit));
+    }
+  }
+
+  if (envlist->on_permission_audit_hook_list_.size() == 0) {
+    return;
+  }
+
+  for (auto& item : pending) {
+    envlist->on_permission_audit_hook_list_.for_each([&item](auto& stor) {
+      stor.cb(item.first, item.second, stor.data.get());
+    });
+  }
+  pending.clear();
+}
 
 // It's important to know when the the thread needs to shutdown b/c any
 // registered users will need to receive their last set of metrics and a
@@ -1742,6 +1786,7 @@ void EnvList::removed_env_cb_(ns_async*, EnvList* envlist) {
   envlist->removed_env_msg_.close();
   envlist->process_callbacks_msg_.close();
   envlist->log_written_msg_.close();
+  envlist->permission_audit_msg_.close();
   envlist->fill_tracing_ids_msg_.close();
   envlist->blocked_loop_timer_.close();
   envlist->gen_ptiles_timer_.close();
@@ -2353,6 +2398,35 @@ static void WriteLog(const FunctionCallbackInfo<Value>& args) {
                                   0});
 }
 
+static void PushPermissionAudit(const FunctionCallbackInfo<Value>& args) {
+  DCHECK(args[0]->IsString());
+  DCHECK(args[1]->IsString());
+  node::Utf8Value permission(args.GetIsolate(), args[0]);
+  node::Utf8Value resource(args.GetIsolate(), args[1]);
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  EnvList::Inst()->PushPermissionAudit(
+      GetLocalEnvInst(args.GetIsolate()),
+      {permission.ToString(), resource.ToString(), nanoseconds, false, 0});
+}
+
+static void PushPermissionAuditLimit(const FunctionCallbackInfo<Value>& args) {
+  DCHECK(args[0]->IsUint32());
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  EnvList::Inst()->PushPermissionAudit(
+      GetLocalEnvInst(args.GetIsolate()),
+      {"", "", nanoseconds, true, args[0].As<v8::Uint32>()->Value()});
+}
+
+static void IsPermissionAuditFromEnv(const FunctionCallbackInfo<Value>& args) {
+  Environment* env = Environment::GetCurrent(args);
+  args.GetReturnValue().Set(env->options()->nsolid_permission_audit);
+}
 
 void BindingData::SlowPushClientBucket(
     const FunctionCallbackInfo<Value>& args) {
@@ -3366,6 +3440,11 @@ void BindingData::Initialize(Local<Object> target,
 
   SetMethod(context, target, "agentId", AgentId);
   SetMethod(context, target, "writeLog", WriteLog);
+  SetMethod(context, target, "pushPermissionAudit", PushPermissionAudit);
+  SetMethod(
+      context, target, "pushPermissionAuditLimit", PushPermissionAuditLimit);
+  SetMethod(
+      context, target, "isPermissionAuditFromEnv", IsPermissionAuditFromEnv);
   SetMethod(context, target, "getEnvMetrics", GetEnvMetrics);
   SetMethod(context, target, "getProcessMetrics", GetProcessMetrics);
   SetMethod(context, target, "getProcessInfo", GetProcessInfo);
@@ -3503,6 +3582,9 @@ void BindingData::RegisterExternalReferences(
 
   registry->Register(AgentId);
   registry->Register(WriteLog);
+  registry->Register(PushPermissionAudit);
+  registry->Register(PushPermissionAuditLimit);
+  registry->Register(IsPermissionAuditFromEnv);
   registry->Register(GetEnvMetrics);
   registry->Register(GetProcessMetrics);
   registry->Register(GetProcessInfo);

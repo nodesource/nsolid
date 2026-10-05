@@ -37,6 +37,7 @@
 #include "info.pb.h"
 #include "metrics.pb.h"
 #include "packages.pb.h"
+#include "permission_audit.pb.h"
 #include "reconfigure.pb.h"
 #include "source_code.pb.h"
 #include "startup_times.pb.h"

@@ -7,6 +7,7 @@ import "exit.proto";
 import "info.proto";
 import "metrics.proto";
 import "packages.proto";
+import "permission_audit.proto";
 import "reconfigure.proto";
 import "source_code.proto";
 import "startup_times.proto";
@@ -26,6 +27,8 @@ service NSolidService {
   rpc ExportReconfigure (ReconfigureEvent) returns (EventResponse) {}
   rpc ExportSourceCode (SourceCodeEvent) returns (EventResponse) {}
   rpc ExportStartupTimes (StartupTimesEvent) returns (EventResponse) {}
+  rpc ExportPermissionAudit (PermissionAuditEvent) returns (EventResponse) {}
+  rpc ExportPermissionAuditLimit (PermissionAuditLimitEvent) returns (EventResponse) {}
 }
 
 message EventResponse {
