@@ -2744,10 +2744,6 @@ static void close_nsolid_loader(void* ptr) {
 
 
 static void run_nsolid_loader(ns_timer* handle, Environment* env) {
-  Isolate* isolate = Isolate::GetCurrent();
-
-  CHECK_EQ(env, Environment::GetCurrent(isolate));
-
   if (env->can_call_into_js()) {
     HandleScope handle_scope(env->isolate());
     Context::Scope context_scope(env->context());
