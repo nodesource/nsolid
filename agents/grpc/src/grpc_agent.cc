@@ -1375,7 +1375,11 @@ void GrpcAgent::got_asset_done_msg() {
         prof_stor.stream = nullptr;
         if (prof_stor.done) {
           profile_state.pending_profiles_map.erase(it);
-          profile_state.nr_profiles--;
+          // Heap snapshots aren't counted (see do_start_prof_init): taking one
+          // off would wrap the counter, and exit would wait on it forever.
+          if (stor.type != kHeapSnapshot) {
+            profile_state.nr_profiles--;
+          }
         }
       } else {
         delete stor.stream;
