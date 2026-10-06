@@ -388,7 +388,7 @@ class PerProcessOptions : public Options {
   std::string snapshot_blob;
   std::string experimental_sea_config;
   std::string run;
-  bool print_nsolid_version = false;
+  DEFINE_BOOL_FIELD(print_nsolid_version) = false;
 
   std::string build_sea;
 #ifdef NODE_HAVE_I18N_SUPPORT

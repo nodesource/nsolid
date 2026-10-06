@@ -1666,7 +1666,7 @@ PerProcessOptionsParser::PerProcessOptionsParser(
   AddOption("--version", "print Node.js version", BOOL_FIELD(print_version));
   AddAlias("-v", "--version");
   AddOption(
-      "-vv", "print NSolid version", &PerProcessOptions::print_nsolid_version);
+      "-vv", "print NSolid version", BOOL_FIELD(print_nsolid_version));
   AddOption("--v8-options",
             "print V8 command line options",
             BOOL_FIELD(print_v8_help));
