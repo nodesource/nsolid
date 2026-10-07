@@ -39,6 +39,8 @@
 #include <vector>
 
 #include "src/core/lib/debug/trace.h"
+#include "src/core/lib/event_engine/extensions/receive_coalescing_extension.h"
+#include "src/core/lib/event_engine/query_extensions.h"
 #include "src/core/lib/experiments/experiments.h"
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/iomgr/endpoint.h"
@@ -90,6 +92,13 @@ class FrameProtector : public RefCounted<FrameProtector> {
                           ->memory_quota()
                           ->CreateMemoryOwner()),
         self_reservation_(memory_owner_.MakeReservation(sizeof(*this))) {
+    auto* factory = args.GetPointer<
+        grpc_event_engine::experimental::MemoryAllocatorFactory>(
+        GRPC_ARG_EVENT_ENGINE_USE_MEMORY_ALLOCATOR_FACTORY);
+    if (factory != nullptr) {
+      user_facing_allocator_ = factory->CreateMemoryAllocator(
+          absl::StrFormat("secure_endpoint-%p", this));
+    }
     GRPC_TRACE_LOG(secure_endpoint, INFO)
         << "FrameProtector: " << this << " protector: " << protector_
         << " zero_copy_protector: " << zero_copy_protector_
@@ -110,8 +119,7 @@ class FrameProtector : public RefCounted<FrameProtector> {
       write_staging_buffer_ =
           memory_owner_.MakeSlice(MemoryRequest(STAGING_BUFFER_SIZE));
     } else {
-      read_staging_buffer_ =
-          memory_owner_.MakeSlice(MemoryRequest(STAGING_BUFFER_SIZE));
+      read_staging_buffer_ = AllocateReadBuffer(STAGING_BUFFER_SIZE);
       write_staging_buffer_ =
           memory_owner_.MakeSlice(MemoryRequest(STAGING_BUFFER_SIZE));
     }
@@ -148,6 +156,13 @@ class FrameProtector : public RefCounted<FrameProtector> {
         CSliceUnref(first);
       }
     }
+  }
+
+  grpc_slice AllocateReadBuffer(size_t size) {
+    if (user_facing_allocator_.has_value()) {
+      return user_facing_allocator_->MakeSlice(MemoryRequest(size));
+    }
+    return memory_owner_.MakeSlice(MemoryRequest(size));
   }
 
   void MaybePostReclaimer() {
@@ -190,8 +205,7 @@ class FrameProtector : public RefCounted<FrameProtector> {
       // bytes when we do a FlushReadStagingBuffer.
       GRPC_CHECK(read_buffer_->length >= required_read_bytes_);
     } else {
-      read_staging_buffer_ =
-          memory_owner_.MakeSlice(MemoryRequest(STAGING_BUFFER_SIZE));
+      read_staging_buffer_ = AllocateReadBuffer(STAGING_BUFFER_SIZE);
     }
     *cur = GRPC_SLICE_START_PTR(read_staging_buffer_);
     *end = GRPC_SLICE_END_PTR(read_staging_buffer_);
@@ -323,14 +337,12 @@ class FrameProtector : public RefCounted<FrameProtector> {
             read_buffer_len + GRPC_SLICE_LENGTH(read_staging_buffer_)) {
           CSliceUnref(read_staging_buffer_);
           size_t size_to_request = required_read_bytes_ - read_buffer_len;
-          read_staging_buffer_ =
-              memory_owner_.MakeSlice(MemoryRequest(size_to_request));
+          read_staging_buffer_ = AllocateReadBuffer(size_to_request);
         }
       } else if (required_read_bytes_ == 0) {
         if (GRPC_SLICE_IS_EMPTY(read_staging_buffer_)) {
           CSliceUnref(read_staging_buffer_);
-          read_staging_buffer_ =
-              memory_owner_.MakeSlice(MemoryRequest(STAGING_BUFFER_SIZE));
+          read_staging_buffer_ = AllocateReadBuffer(STAGING_BUFFER_SIZE);
         }
       }
       uint8_t* cur = GRPC_SLICE_START_PTR(read_staging_buffer_);
@@ -560,6 +572,20 @@ class FrameProtector : public RefCounted<FrameProtector> {
   void Shutdown() {
     shutdown_ = true;
     memory_owner_.Reset();
+    if (user_facing_allocator_.has_value()) {
+      user_facing_allocator_->Reset();
+    }
+  }
+
+  // Resets the read staging buffer.
+  // Per the contract of EnableRpcReceiveCoalescing(), this is only
+  // called when there are no outstanding Read() operations on the endpoint.
+  // Therefore, any valid plaintext has already been fully delivered, and
+  // read_staging_buffer_ contains only unused, leftover memory capacity.
+  void ResetReadStagingBuffer() {
+    MutexLock lock(&read_mu_);
+    CSliceUnref(read_staging_buffer_);
+    read_staging_buffer_ = grpc_empty_slice();
   }
 
  private:
@@ -578,6 +604,9 @@ class FrameProtector : public RefCounted<FrameProtector> {
   grpc_slice write_staging_buffer_ ABSL_GUARDED_BY(write_mu_);
   grpc_event_engine::experimental::SliceBuffer output_buffer_;
   MemoryOwner memory_owner_;
+  // Allocator for memory that is eventually returned to the user (e.g. read
+  // buffers).
+  std::optional<MemoryAllocator> user_facing_allocator_ = std::nullopt;
   MemoryAllocator::Reservation self_reservation_;
   std::atomic<bool> has_posted_reclaimer_{false};
   int min_progress_size_ = 1;
@@ -805,7 +834,8 @@ static const grpc_endpoint_vtable vtable = {endpoint_read,
 namespace grpc_event_engine::experimental {
 namespace {
 
-class SecureEndpoint final : public EventEngine::Endpoint {
+class SecureEndpoint final : public EventEngine::Endpoint,
+                             public ReceiveCoalescingExtension {
  public:
   SecureEndpoint(
       std::unique_ptr<grpc_event_engine::experimental::EventEngine::Endpoint>
@@ -839,7 +869,18 @@ class SecureEndpoint final : public EventEngine::Endpoint {
   }
 
   void* QueryExtension(absl::string_view id) override {
+    if (id == ReceiveCoalescingExtension::EndpointExtensionName()) {
+      return static_cast<ReceiveCoalescingExtension*>(this);
+    }
     return impl_->QueryExtension(id);
+  }
+
+  void EnableRpcReceiveCoalescing() override {
+    impl_->EnableRpcReceiveCoalescing();
+  }
+
+  void DisableRpcReceiveCoalescing() override {
+    impl_->DisableRpcReceiveCoalescing();
   }
 
   std::shared_ptr<TelemetryInfo> GetTelemetryInfo() const override {
@@ -924,11 +965,20 @@ class SecureEndpoint final : public EventEngine::Endpoint {
       // TODO(aananthv): Evaluate if we need to add a channel_arg to enable this
       // selectively.
       if (grpc_core::IsSecureEndpointReadCoalescingEnabled()) {
+        {
+          // This mutex should not have any contention since we can only have
+          // one outstanding Read() at a time.
+          grpc_core::MutexLock lock(&read_settings_mu_);
+          if (rpc_receive_coalescing_enabled_) {
+            // TODO(aananthv): Make required_read_bytes_ a separate field in
+            // ReadArgs to avoid confusion between min_progress_size and
+            // read_hint_bytes, especially if we enable coalescing by default.
+            required_read_bytes_ = std::max<int64_t>(0, args.read_hint_bytes());
+          } else {
+            required_read_bytes_ = 0;
+          }
+        }
         read_buffer_ = buffer;
-        // TODO(aananthv): Make required_read_bytes_ a separate field in
-        // ReadArgs to avoid confusion between min_progress_size and
-        // read_hint_bytes, especially if we enable coalescing by default.
-        required_read_bytes_ = std::max<int64_t>(0, args.read_hint_bytes());
         read_args_ = args;
         frame_protector_.BeginRead(buffer->c_slice_buffer(),
                                    required_read_bytes_);
@@ -1034,6 +1084,24 @@ class SecureEndpoint final : public EventEngine::Endpoint {
 
     const EventEngine::ResolvedAddress& GetLocalAddress() const {
       return wrapped_ep_->GetLocalAddress();
+    }
+
+    void EnableRpcReceiveCoalescing() {
+      {
+        grpc_core::MutexLock lock(&read_settings_mu_);
+        rpc_receive_coalescing_enabled_ = true;
+      }
+      frame_protector_.ResetReadStagingBuffer();
+      // We do not need to enable this in the underlying endpoint since we only
+      // benefit from coalescing the user-facing buffer.
+      // TODO(aananthv): Should we disable it explicitly?
+    }
+
+    void DisableRpcReceiveCoalescing() {
+      {
+        grpc_core::MutexLock lock(&read_settings_mu_);
+        rpc_receive_coalescing_enabled_ = false;
+      }
     }
 
     void* QueryExtension(absl::string_view id) {
@@ -1290,6 +1358,9 @@ class SecureEndpoint final : public EventEngine::Endpoint {
     const size_t large_read_threshold_;
     const size_t large_write_threshold_;
     const size_t max_buffered_writes_;
+    grpc_core::Mutex read_settings_mu_;
+    bool rpc_receive_coalescing_enabled_ ABSL_GUARDED_BY(read_settings_mu_) =
+        false;
   };
 
   grpc_core::RefCountedPtr<Impl> impl_;
