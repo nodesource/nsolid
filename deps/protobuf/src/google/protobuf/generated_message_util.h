@@ -66,6 +66,8 @@ class CodedInputStream;
 namespace internal {
 
 
+class ExtensionSet;
+
 // This fastpath inlines a single branch instead of having to make the
 // InitProtobufDefaults function call.
 // It also generates less inlined code than a function-scope static initializer.
@@ -329,7 +331,7 @@ class MapSorterPtr {
 };
 
 struct WeakDescriptorDefaultTail {
-  const Message** target;
+  const MessageGlobalsBase** target;
   size_t size;
 };
 
@@ -371,6 +373,10 @@ inline void AssignToString(std::string& dest, absl::string_view value,
                            BytesTag /*tag*/ = BytesTag{}) {
   dest.assign(value.data(), value.size());
 }
+inline void AssignToString(std::string& dest, const absl::Cord& value,
+                           BytesTag tag = BytesTag{}) {
+  absl::CopyCordToString(value, &dest);
+}
 
 // Adds `value`, optionally bounded by `size`, as the last element of `dest`.
 // This overload set is used to implement `add_xxx()` methods for repeated
@@ -388,19 +394,6 @@ inline void AddToRepeatedPtrField(InternalVisibility visibility,
                                   std::string&& value,
                                   BytesTag /*tag*/ = BytesTag{}) {
   dest.InternalAddWithArena(visibility, arena, std::move(value));
-}
-
-constexpr absl::optional<uintptr_t> EncodePlacementArenaOffsets(
-    std::initializer_list<size_t> offsets) {
-  uintptr_t arena_bits = 0;
-  for (size_t offset : offsets) {
-    offset /= sizeof(Arena*);
-    if (offset >= sizeof(arena_bits) * 8) {
-      return absl::nullopt;
-    }
-    arena_bits |= uintptr_t{1} << offset;
-  }
-  return arena_bits;
 }
 
 // The struct PrivateAccess is used to provide access to private members of
@@ -424,6 +417,28 @@ struct PrivateAccess {
   static auto& GetExtensionSet(T& msg) {
     return msg._impl_._extensions_;
   }
+
+  template <typename T>
+  static void TrackerOnGetMetadata() {
+    T::Impl_::TrackerOnGetMetadata();
+  }
+
+  template <typename T>
+  static constexpr auto GenerateParseTable(
+      const ::google::protobuf::internal::ClassData* class_data) {
+    return T::InternalGenerateParseTable_(class_data);
+  }
+
+  template <typename T>
+  static constexpr decltype(auto) FullMessageName() {
+    return T::FullMessageName();
+  }
+
+  static internal::ExtensionSet* GetExtensionSet(MessageLite* msg);
+  static const internal::ExtensionSet* GetExtensionSet(const MessageLite* msg);
+
+  template <typename T>
+  using ImplTForTesting = typename T::Impl_;
 };
 
 }  // namespace internal

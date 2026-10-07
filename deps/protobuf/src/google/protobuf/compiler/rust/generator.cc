@@ -30,6 +30,7 @@
 #include "google/protobuf/compiler/rust/context.h"
 #include "google/protobuf/compiler/rust/crate_mapping.h"
 #include "google/protobuf/compiler/rust/enum.h"
+#include "google/protobuf/compiler/rust/extension.h"
 #include "google/protobuf/compiler/rust/message.h"
 #include "google/protobuf/compiler/rust/naming.h"
 #include "google/protobuf/compiler/rust/relative_path.h"
@@ -89,18 +90,79 @@ void EmitPublicImportsForDepFile(Context& ctx, const FileDescriptor* dep) {
 void EmitPublicImports(const RustGeneratorContext& rust_generator_context,
                        Context& ctx, const FileDescriptor& file) {
   std::vector<const FileDescriptor*> files_to_visit{&file};
+  absl::flat_hash_set<const FileDescriptor*> visited_files;
   while (!files_to_visit.empty()) {
     const FileDescriptor* f = files_to_visit.back();
     files_to_visit.pop_back();
 
     if (!rust_generator_context.is_file_in_current_crate(*f)) {
-      EmitPublicImportsForDepFile(ctx, f);
+      // Since import public is transitive in the case of
+      // "import public of a file with an import public", we might
+      // reach the same file again when they form a diamond; ensure
+      // that we only visit each file once in that case.
+      bool first_time = visited_files.insert(f).second;
+      if (first_time) {
+        EmitPublicImportsForDepFile(ctx, f);
+      }
     }
 
     for (int i = 0; i < f->public_dependency_count(); ++i) {
       files_to_visit.push_back(f->public_dependency(i));
     }
   }
+}
+
+// Checks whether any two files in the crate export symbols that would collide
+// at the crate root when re-exported via `pub use <file_mod>::*;`.
+//
+// Return true if there is at least one collision in this crate.
+bool CrateHasSymbolCollision(const std::vector<const FileDescriptor*>& files) {
+  absl::flat_hash_set<std::string> type_names;
+  absl::flat_hash_set<std::string> value_names;
+
+  // Returns true if `symbol` was already contributed by an earlier symbol.
+  auto collides = [](absl::flat_hash_set<std::string>& names,
+                     const std::string& symbol) {
+    return !names.insert(symbol).second;
+  };
+
+  for (const FileDescriptor* file : files) {
+    for (int i = 0; i < file->message_type_count(); ++i) {
+      const Descriptor* msg = file->message_type(i);
+      std::string name = MessageRsName(*msg);
+      // A top-level message is emitted as 'Msg, MsgView, MsgMut'
+      if (collides(type_names, name) ||
+          collides(type_names, absl::StrCat(name, "View")) ||
+          collides(type_names, absl::StrCat(name, "Mut"))) {
+        return true;
+      }
+
+      // A submodule is emitted if the message has nested messages, enums,
+      // extensions, or oneofs.
+      if (msg->nested_type_count() > 0 || msg->enum_type_count() > 0 ||
+          msg->extension_count() > 0 || msg->real_oneof_decl_count() > 0) {
+        if (collides(type_names, RsSafeName(CamelToSnakeCase(msg->name())))) {
+          return true;
+        }
+      }
+    }
+
+    // Enums
+    for (int i = 0; i < file->enum_type_count(); ++i) {
+      if (collides(type_names, EnumRsName(*file->enum_type(i)))) {
+        return true;
+      }
+    }
+
+    // Extensions are emitted as `pub const <ext>`.
+    for (int i = 0; i < file->extension_count(); ++i) {
+      if (collides(value_names, ExtensionRsName(*file->extension(i)))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 void EmitEntryPointRsFile(GeneratorContext* generator_context,
@@ -116,26 +178,50 @@ void EmitEntryPointRsFile(GeneratorContext* generator_context,
   io::Printer printer(outfile.get());
   Context ctx = ctx_without_printer.WithPrinter(&printer);
 
-  // Declare the submodules for all of the the generated code and pub re-export
-  // all of them into a flat namespace.
+  // Declare the submodules for all of the generated code and, where safe,
+  // pub re-export all of them into a flat namespace.
   RelativePath primary_relpath(entry_point_rs_file_path);
+  const bool has_collision = CrateHasSymbolCollision(files);
+
   for (const FileDescriptor* file : files) {
     std::string non_primary_file_path = GetRsFile(ctx, *file);
     std::string relative_mod_path =
         primary_relpath.Relative(RelativePath(non_primary_file_path));
-    // Temporarily emit these re-exported mods as pub to avoid issues with
-    // Crubit. In a future change we should change these back to be private
-    // mods.
-    ctx.Emit({{"file_path", relative_mod_path},
-              {"mod_name", RustInternalModuleName(*file)}},
+    std::string mod_name = RustModuleName(*file);
+
+    // Expose each generated .proto file as a public module named after its
+    // (flattened) file path, providing a fully-qualified path to every type
+    // (e.g. `my_crate::google_network_api_proto::Config`). See
+    // RustModuleName for how the module name is derived from the path.
+    //
+    // The flat `pub use` re-export into the crate root is conditionally emitted
+    ctx.Emit({{"file_path", relative_mod_path}, {"mod_name", mod_name}},
              R"rs(
               #[path="$file_path$"]
-              #[allow(nonstandard_style)]
-              pub mod internal_do_not_use_$mod_name$;
-
-              #[allow(unused_imports, nonstandard_style)]
-              pub use internal_do_not_use_$mod_name$::*;
+              #[allow(nonstandard_style, unused)]
+              pub mod $mod_name$;
             )rs");
+
+    if (!has_collision) {
+      ctx.Emit({{"mod_name", mod_name}},
+               R"rs(
+                #[allow(nonstandard_style, unused)]
+                #[doc(inline)]
+                pub use $mod_name$::*;
+              )rs");
+    }
+  }
+
+  // When the crate has cross-file symbol collisions, the flat `pub use`
+  // re-exports above are omitted for every file. Emit a single breadcrumb (not
+  // one per file) explaining why, so consumers know to use fully-qualified
+  // paths.
+  if (has_collision) {
+    ctx.Emit(R"rs(
+            // Crate-root re-exports (`pub use <mod>::*`) are disabled because
+            // this crate contains symbol name collisions across file modules.
+            // Use fully-qualified paths, e.g. `<crate>::<module>::YourType`.
+          )rs");
   }
 
   auto v = ctx.printer().WithVars({
@@ -143,6 +229,7 @@ void EmitEntryPointRsFile(GeneratorContext* generator_context,
   });
   if (ctx.is_upb() && !ctx.opts().strip_nonfunctional_codegen) {
     ctx.Emit(R"rs(
+      #[allow(nonstandard_style, unused)]
       pub mod __unstable {
     )rs");
     for (const FileDescriptor* file : files) {
@@ -202,13 +289,20 @@ bool RustGenerator::Generate(const FileDescriptor* file,
                                               &*import_path_to_crate_name);
 
   std::vector<std::string> modules;
-  modules.emplace_back(RustInternalModuleName(*file));
+  modules.emplace_back(RustModuleName(*file));
   Context ctx_without_printer(&*opts, &rust_generator_context, nullptr,
                               std::move(modules));
 
   auto outfile = absl::WrapUnique(
       generator_context->Open(GetRsFile(ctx_without_printer, *file)));
-  io::Printer printer(outfile.get());
+  GeneratedCodeInfo annotations;
+  io::AnnotationProtoCollector<GeneratedCodeInfo> annotation_collector(
+      &annotations);
+  io::Printer::Options printer_options{};
+  if (opts->annotate_code) {
+    printer_options.annotation_collector = &annotation_collector;
+  }
+  io::Printer printer(outfile.get(), printer_options);
   Context ctx = ctx_without_printer.WithPrinter(&printer);
 
   // Convenience shorthands for common symbols.
@@ -315,6 +409,23 @@ bool RustGenerator::Generate(const FileDescriptor* file,
         // $enum$
       )cc");
       thunks_ctx.printer().PrintRaw("\n");
+    }
+  }
+
+  if (opts->annotate_code) {
+    ctx.printer().PrintRaw(absl::StrCat(
+        "// google.protobuf.GeneratedCodeInfo ",
+        absl::Base64Escape(annotations.SerializeAsString()), "\n"));
+  }
+
+  for (int i = 0; i < file->extension_count(); ++i) {
+    auto& extension = *file->extension(i);
+    GenerateRs(ctx, extension, pool);
+    ctx.printer().PrintRaw("\n");
+
+    if (ctx.is_cpp()) {
+      auto thunks_ctx = ctx.WithPrinter(thunks_printer.get());
+      GenerateThunksCc(thunks_ctx, extension);
     }
   }
 

@@ -156,7 +156,7 @@ std::string RsTypePath(Context& ctx, const FieldDescriptor& field) {
 }
 
 std::string RsTypePath(Context& ctx, const Descriptor& message) {
-  return absl::StrCat(RustModule(ctx, message), RsSafeName(message.name()));
+  return absl::StrCat(RustModule(ctx, message), MessageRsName(message));
 }
 
 std::string RsTypePath(Context& ctx, const EnumDescriptor& descriptor) {
@@ -206,14 +206,17 @@ static std::string RustModuleForContainingType(
     parent = parent->containing_type();
   }
 
-  // Reverse the vector to get submodules in outer-to-inner order).
+  // Reverse the vector to get submodules in outer-to-inner order.
   std::reverse(modules.begin(), modules.end());
 
-  // If there are any modules at all, push an empty string on the end so that
-  // we get the trailing ::
-  if (!modules.empty()) {
-    modules.push_back("");
-  }
+  // Every type is defined inside its file's mod. References becomes the
+  // canonical `super::<file_mod>::<type_mod>` path instead of relying on the
+  // crate-root re-export, which will be disabled soon.
+  modules.insert(modules.begin(), RustModuleName(file));
+
+  // Push an empty string on the end so that we get the trailing :: to connect
+  // to the type mod name.
+  modules.push_back("");
 
   std::string crate_relative = absl::StrJoin(modules, "::");
 
@@ -241,13 +244,36 @@ std::string RustModule(Context& ctx, const OneofDescriptor& oneof) {
                                      *oneof.file());
 }
 
-std::string RustInternalModuleName(const FileDescriptor& file) {
-  return RsSafeName(
-      absl::StrReplaceAll(StripProto(file.name()), {
-                                                       {"_", "__"},
-                                                       {"/", "_s"},
-                                                       {"-", "__"},
-                                                   }));
+std::string RustModuleName(const FileDescriptor& file) {
+  // Derive a readable and (mostly) unique Rust module name from the full
+  // proto file path, e.g. `foo/bar/baz.proto` becomes `foo_bar_baz_proto`.
+  absl::string_view name = file.name();
+  absl::string_view prefix = "pb_";
+
+  std::string result;
+  result.reserve(name.size() + prefix.size());
+
+  // Rust identifiers must start with a letter or underscore. If the path begins
+  // with anything else (e.g. a digit), prepend `pb_` so the result is valid.
+  if (name.empty() || !absl::ascii_isalpha(name[0])) {
+    result += prefix;
+  }
+
+  for (char c : name) {
+    // Common path/file separators (`/`, `-`, `.`, and `_`) all collapse to a
+    // single underscore for better readability.
+    if (c == '/' || c == '-' || c == '.' || c == '_') {
+      result += '_';
+    } else if (absl::ascii_isalnum(c)) {
+      result += c;
+    } else {
+      // Escape any other characters that aren't valid in Rust identifiers
+      // by substituting them with an underscore followed by their hex value
+      // and another underscore.
+      absl::StrAppendFormat(&result, "_%02x_", static_cast<unsigned char>(c));
+    }
+  }
+  return RsSafeName(result);
 }
 
 std::string FieldInfoComment(Context& ctx, const FieldDescriptor& field) {
@@ -329,12 +355,12 @@ bool AnyChildMessageNamed(const Descriptor* scope, absl::string_view name) {
   return false;
 }
 
-bool MustMangleEnumName(const EnumDescriptor& desc) {
-  // If an enum name ends with 'View', we check if there is a message whose name
-  // matches the enum name without the 'View' suffix. If so,
-  // append an extra 'X' character on the end of the gencode enum name. The
-  // reason we special case mangle this is to avoid breakages from the View
-  // type of the message when the .proto file is following this AIP:
+template <typename Desc>
+bool MustMangleName(const Desc& desc) {
+  // If a name ends with 'View', we check if there is a message whose name
+  // matches the name without the 'View' suffix. If so, we will append an extra
+  // '_' character on the end of the type that ended with 'View'. The reason we
+  // special case mangle this is to avoid breakages from the View breaking.
   // https://google.aip.dev/157#view-enumeration
   if (!absl::EndsWith(desc.name(), "View")) {
     return false;
@@ -349,12 +375,24 @@ bool MustMangleEnumName(const EnumDescriptor& desc) {
 
 }  // namespace
 
-std::string EnumRsName(const EnumDescriptor& desc) {
-  std::string name = RsSafeName(SnakeToUpperCamelCase(desc.name()));
-  if (MustMangleEnumName(desc)) {
+std::string MessageRsName(const Descriptor& desc) {
+  std::string name = RsSafeName(desc.name());
+  if (MustMangleName(desc)) {
     absl::StrAppend(&name, "_");
   }
   return name;
+}
+
+std::string EnumRsName(const EnumDescriptor& desc) {
+  std::string name = RsSafeName(SnakeToUpperCamelCase(desc.name()));
+  if (MustMangleName(desc)) {
+    absl::StrAppend(&name, "_");
+  }
+  return name;
+}
+
+std::string ExtensionRsName(const FieldDescriptor& extension) {
+  return absl::AsciiStrToUpper(extension.name());
 }
 
 std::string EnumValueRsName(const EnumValueDescriptor& value) {
