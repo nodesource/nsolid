@@ -36,9 +36,12 @@ PROTOBUF_FUTURE_ADD_EARLY_NODISCARD
 std::string GetTypeUrl(absl::string_view message_name,
                        absl::string_view type_url_prefix);
 
-template <typename T>
+struct PrivateAccess;
+
+// Template on PrivateAccess to avoid circular dependency.
+template <typename T, typename P = PrivateAccess>
 PROTOBUF_FUTURE_ADD_EARLY_NODISCARD absl::string_view GetAnyMessageName() {
-  return T::FullMessageName();
+  return P::template FullMessageName<T>();
 }
 
 // Helper class used to implement google::protobuf::Any.
@@ -146,10 +149,11 @@ bool ParseAnyTypeUrl(absl::string_view type_url,
 // See if message is of type google.protobuf.Any, if so, return the descriptors
 // for "type_url" and "value" fields.
 PROTOBUF_FUTURE_ADD_EARLY_NODISCARD
-bool GetAnyFieldDescriptors(
-    const Message& message,
-    const FieldDescriptor* PROTOBUF_NULLABLE* PROTOBUF_NONNULL type_url_field,
-    const FieldDescriptor* PROTOBUF_NULLABLE* PROTOBUF_NONNULL value_field);
+bool GetAnyFieldDescriptors(const Message& message,
+                            const FieldDescriptor * PROTOBUF_NULLABLE *
+                                PROTOBUF_NONNULL type_url_field,
+                            const FieldDescriptor * PROTOBUF_NULLABLE *
+                                PROTOBUF_NONNULL value_field);
 
 }  // namespace internal
 }  // namespace protobuf
