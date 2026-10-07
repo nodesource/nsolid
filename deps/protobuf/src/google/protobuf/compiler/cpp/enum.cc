@@ -290,15 +290,23 @@ void EnumGenerator::GenerateGetEnumDescriptorSpecializations(io::Printer* p) {
     template <>
     struct is_proto_enum<$::Msg_Enum$> : std::true_type {};
   )cc");
-  if (!has_reflection_) {
-    return;
+  if (has_reflection_) {
+    p->Emit(R"cc(
+      template <>
+      inline const EnumDescriptor* $nonnull$ GetEnumDescriptor<$::Msg_Enum$>() {
+        return $::Msg_Enum$_descriptor();
+      }
+    )cc");
+  } else {
+    p->Emit(R"cc(
+      template <>
+      struct internal::LiteEnumFuncs<$::Msg_Enum$> {
+        static constexpr bool kIsDefined = true;
+        static constexpr auto kParseFunc = $::Msg_Enum$_Parse;
+        static constexpr auto kNameFunc = $::Msg_Enum$_Name<int>;
+      };
+    )cc");
   }
-  p->Emit(R"cc(
-    template <>
-    inline const EnumDescriptor* $nonnull$ GetEnumDescriptor<$::Msg_Enum$>() {
-      return $::Msg_Enum$_descriptor();
-    }
-  )cc");
 }
 
 
@@ -311,14 +319,23 @@ void EnumGenerator::GenerateSymbolImports(io::Printer* p) const {
 
   for (int j = 0; j < enum_->value_count(); ++j) {
     const auto* value = enum_->value(j);
+    const bool deprecated = value->options().deprecated();
     p->Emit(
         {
             Sub("VALUE", EnumValueName(enum_->value(j))).AnnotatedAs(value),
-            {"DEPRECATED",
-             value->options().deprecated() ? "[[deprecated]]" : ""},
+            {"DEPRECATED", deprecated ? "[[deprecated]]" : ""},
+            // The alias initializer references the deprecated enumerator, so
+            // wrap it to avoid triggering -Wdeprecated-declarations in code the
+            // user does not control. See protocolbuffers/protobuf#18205.
+            {"IGNORE_DEPRECATION_START",
+             deprecated ? "PROTOBUF_IGNORE_DEPRECATION_START" : ""},
+            {"IGNORE_DEPRECATION_STOP",
+             deprecated ? "PROTOBUF_IGNORE_DEPRECATION_STOP" : ""},
         },
         R"cc(
+          $IGNORE_DEPRECATION_START$
           $DEPRECATED $static constexpr $Enum_$ $VALUE$ = $Msg_Enum$_$VALUE$;
+          $IGNORE_DEPRECATION_STOP$
         )cc");
   }
 
