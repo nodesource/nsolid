@@ -35,6 +35,7 @@
 #include "opentelemetry/sdk/common/empty_attributes.h"
 #include "opentelemetry/sdk/trace/exporter.h"
 #include "opentelemetry/sdk/trace/samplers/always_on.h"
+#include "opentelemetry/sdk/trace/span_status.h"
 
 #include "opentelemetry/exporters/etw/etw_config.h"
 #include "opentelemetry/exporters/etw/etw_fields.h"
@@ -788,7 +789,7 @@ protected:
   /**
    * @brief Span name.
    */
-  nostd::string_view name_;
+  std::string name_;
 
   /**
    * @brief Attribute indicating that the span has ended.
@@ -852,7 +853,7 @@ public:
    * @brief Get Span Name.
    * @return Span Name.
    */
-  nostd::string_view GetName() const { return name_; }
+  nostd::string_view GetName() const { return nostd::string_view{name_.data(), name_.size()}; }
 
   /**
    * @brief Span constructor
@@ -870,10 +871,10 @@ public:
       : opentelemetry::trace::Span(),
         start_time_(std::chrono::system_clock::now()),
         owner_(owner),
+        name_(name.data(), name.size()),
         context_(std::move(spanContext)),
         parent_(parent)
   {
-    name_ = name;
     UNREFERENCED_PARAMETER(options);
   }
 
@@ -952,8 +953,15 @@ public:
   void SetStatus(opentelemetry::trace::StatusCode code,
                  nostd::string_view description) noexcept override
   {
-    status_code_        = code;
-    status_description_ = description.data();
+    const auto transition =
+        sdk::trace::detail::ApplyStatusTransition(status_code_, code, description);
+    if (!transition.accepted)
+    {
+      return;
+    }
+
+    status_code_ = transition.code;
+    status_description_.assign(transition.description.data(), transition.description.size());
   }
 
   opentelemetry::trace::StatusCode GetStatus() { return status_code_; }

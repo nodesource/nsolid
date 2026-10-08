@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stdlib.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <cstdlib>
 #include <string>
 #include <thread>
 #include <utility>
@@ -14,8 +14,6 @@
 
 #include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/span.h"
-#include "opentelemetry/nostd/string_view.h"
-#include "opentelemetry/sdk/common/attribute_utils.h"
 #include "opentelemetry/sdk/common/exporter_utils.h"
 #include "opentelemetry/sdk/common/global_log_handler.h"
 #include "opentelemetry/sdk/trace/batch_span_processor.h"
@@ -33,6 +31,9 @@ using opentelemetry::sdk::common::unsetenv;
 #endif
 
 OPENTELEMETRY_BEGIN_NAMESPACE
+
+namespace
+{
 
 /**
  * Returns a mock span exporter meant exclusively for testing only
@@ -500,5 +501,7 @@ TEST(BatchSpanProcessorOptionsEnvTest, TestDesignatedInitializers)
   EXPECT_EQ(partial_options.max_export_batch_size, static_cast<size_t>(50));
 }
 #endif
+
+}  // namespace
 
 OPENTELEMETRY_END_NAMESPACE

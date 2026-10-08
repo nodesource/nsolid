@@ -22,9 +22,25 @@ cc_library(
 )
 
 cc_library(
-    name = "otlp_recordable",
+    name = "otlp_common",
     srcs = [
         "src/otlp_environment.cc",
+    ],
+    hdrs = [
+        "include/opentelemetry/exporters/otlp/otlp_environment.h",
+        "include/opentelemetry/exporters/otlp/otlp_preferred_temporality.h",
+    ],
+    strip_include_prefix = "include",
+    tags = ["otlp"],
+    deps = [
+        "//api",
+        "//sdk/src/common:env_variables",
+    ],
+)
+
+cc_library(
+    name = "otlp_recordable",
+    srcs = [
         "src/otlp_log_recordable.cc",
         "src/otlp_metric_utils.cc",
         "src/otlp_populate_attribute_utils.cc",
@@ -32,7 +48,6 @@ cc_library(
         "src/otlp_recordable_utils.cc",
     ],
     hdrs = [
-        "include/opentelemetry/exporters/otlp/otlp_environment.h",
         "include/opentelemetry/exporters/otlp/otlp_log_recordable.h",
         "include/opentelemetry/exporters/otlp/otlp_metric_utils.h",
         "include/opentelemetry/exporters/otlp/otlp_populate_attribute_utils.h",
@@ -47,6 +62,7 @@ cc_library(
     deps = [
         ":otlp_utf8_validity",
         "//sdk/src/logs",
+        "//sdk/src/metrics",
         "//sdk/src/resource",
         "//sdk/src/trace",
         "@com_github_opentelemetry_proto//:logs_service_proto_cc",
@@ -66,8 +82,9 @@ cc_library(
     strip_include_prefix = "include",
     tags = ["otlp"],
     deps = [
-        ":otlp_http_client",
-        ":otlp_recordable",
+        ":otlp_common",
+        "//sdk/src/common:global_log_handler",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -97,7 +114,9 @@ cc_library(
         "otlp_grpc",
     ],
     deps = [
+        ":otlp_common",
         "//ext:headers",
+        "//sdk:headers",
         "//sdk/src/common:global_log_handler",
         "@com_github_grpc_grpc//:grpc++",
         "@com_github_opentelemetry_proto//:common_proto_cc",
@@ -143,6 +162,7 @@ cc_library(
         "otlp_grpc",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_recordable",
         ":otlp_grpc_client",
         "//ext:headers",
@@ -159,6 +179,7 @@ cc_library(
         "src/otlp_grpc_span_builder.cc",
     ],
     hdrs = [
+        "include/opentelemetry/exporters/otlp/otlp_grpc_builder_utils.h",
         "include/opentelemetry/exporters/otlp/otlp_grpc_span_builder.h",
     ],
     defines = ["ENABLE_OTLP_GRPC_SSL_MTLS_PREVIEW"],
@@ -170,6 +191,8 @@ cc_library(
     deps = [
         ":otlp_builder_utils",
         ":otlp_grpc_exporter",
+        "//sdk/src/common:global_log_handler",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -209,6 +232,7 @@ cc_library(
         "//sdk/src/common:base64",
         "@com_github_opentelemetry_proto//:common_proto_cc",
         "@com_google_absl//absl/strings",
+        "@com_google_protobuf//:protobuf",
         "@github_nlohmann_json//:json",
     ],
 )
@@ -235,6 +259,7 @@ cc_library(
         "otlp_http",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_http_client",
         ":otlp_recordable",
         "//sdk/src/trace",
@@ -248,6 +273,7 @@ cc_library(
         "src/otlp_http_span_builder.cc",
     ],
     hdrs = [
+        "include/opentelemetry/exporters/otlp/otlp_http_builder_utils.h",
         "include/opentelemetry/exporters/otlp/otlp_http_span_builder.h",
     ],
     strip_include_prefix = "include",
@@ -258,6 +284,7 @@ cc_library(
     deps = [
         ":otlp_builder_utils",
         ":otlp_http_exporter",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -311,6 +338,7 @@ cc_library(
         "otlp_file",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_file_client",
         ":otlp_recordable",
         "//sdk/src/trace",
@@ -333,6 +361,7 @@ cc_library(
     ],
     deps = [
         ":otlp_file_exporter",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -359,6 +388,7 @@ cc_library(
         "otlp_grpc_metric",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_recordable",
         ":otlp_grpc_client",
         "//ext:headers",
@@ -375,6 +405,7 @@ cc_library(
         "src/otlp_grpc_push_metric_builder.cc",
     ],
     hdrs = [
+        "include/opentelemetry/exporters/otlp/otlp_grpc_builder_utils.h",
         "include/opentelemetry/exporters/otlp/otlp_grpc_push_metric_builder.h",
     ],
     defines = ["ENABLE_OTLP_GRPC_SSL_MTLS_PREVIEW"],
@@ -386,6 +417,8 @@ cc_library(
     deps = [
         ":otlp_builder_utils",
         ":otlp_grpc_metric_exporter",
+        "//sdk/src/common:global_log_handler",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -411,6 +444,7 @@ cc_library(
         "otlp_http_metric",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_http_client",
         ":otlp_recordable",
         "//sdk/src/metrics",
@@ -424,6 +458,7 @@ cc_library(
         "src/otlp_http_push_metric_builder.cc",
     ],
     hdrs = [
+        "include/opentelemetry/exporters/otlp/otlp_http_builder_utils.h",
         "include/opentelemetry/exporters/otlp/otlp_http_push_metric_builder.h",
     ],
     strip_include_prefix = "include",
@@ -434,6 +469,7 @@ cc_library(
     deps = [
         ":otlp_builder_utils",
         ":otlp_http_metric_exporter",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -459,6 +495,7 @@ cc_library(
         "otlp_file_metric",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_file_client",
         ":otlp_recordable",
         "//sdk/src/metrics",
@@ -482,6 +519,7 @@ cc_library(
     deps = [
         ":otlp_builder_utils",
         ":otlp_file_metric_exporter",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -507,6 +545,7 @@ cc_library(
         "otlp_http_log",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_http_client",
         ":otlp_recordable",
         "//sdk/src/logs",
@@ -520,6 +559,7 @@ cc_library(
         "src/otlp_http_log_record_builder.cc",
     ],
     hdrs = [
+        "include/opentelemetry/exporters/otlp/otlp_http_builder_utils.h",
         "include/opentelemetry/exporters/otlp/otlp_http_log_record_builder.h",
     ],
     strip_include_prefix = "include",
@@ -530,6 +570,7 @@ cc_library(
     deps = [
         ":otlp_builder_utils",
         ":otlp_http_log_record_exporter",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -555,6 +596,7 @@ cc_library(
         "otlp_file_log",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_file_client",
         ":otlp_recordable",
         "//sdk/src/logs",
@@ -576,8 +618,8 @@ cc_library(
         "otlp_file_log",
     ],
     deps = [
-        ":otlp_builder_utils",
         ":otlp_file_log_record_exporter",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -604,6 +646,7 @@ cc_library(
         "otlp_grpc_log",
     ],
     deps = [
+        ":otlp_common",
         ":otlp_recordable",
         ":otlp_grpc_client",
         "//ext:headers",
@@ -619,6 +662,7 @@ cc_library(
         "src/otlp_grpc_log_record_builder.cc",
     ],
     hdrs = [
+        "include/opentelemetry/exporters/otlp/otlp_grpc_builder_utils.h",
         "include/opentelemetry/exporters/otlp/otlp_grpc_log_record_builder.h",
     ],
     defines = ["ENABLE_OTLP_GRPC_SSL_MTLS_PREVIEW"],
@@ -630,6 +674,8 @@ cc_library(
     deps = [
         ":otlp_builder_utils",
         ":otlp_grpc_log_record_exporter",
+        "//sdk/src/common:global_log_handler",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -666,6 +712,23 @@ cc_test(
 )
 
 cc_test(
+    name = "otlp_populate_attribute_utils_test",
+    srcs = [
+        "test/otlp_populate_attribute_utils_test.cc",
+    ],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_recordable",
+        "//sdk/src/metrics",
+        "@com_github_opentelemetry_proto//:common_proto_cc",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "otlp_file_client_test",
     srcs = ["test/otlp_file_client_test.cc"],
     tags = [
@@ -695,6 +758,7 @@ cc_test(
         ":otlp_grpc_exporter",
         "//api",
         "//sdk/src/metrics",
+        "//test_common:headers",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -876,6 +940,7 @@ cc_test(
         "//api",
         "//sdk/src/logs",
         "//sdk/src/metrics",
+        "//test_common:headers",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -909,6 +974,7 @@ cc_test(
         ":otlp_grpc_metric_exporter",
         "//api",
         "//sdk/src/metrics",
+        "//test_common:headers",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -1003,5 +1069,23 @@ otel_cc_benchmark(
         ":otlp_grpc_exporter",
         "//examples/common/foo_library:common_foo_library",
         "//sdk/src/metrics",
+    ],
+)
+
+otel_cc_benchmark(
+    name = "otlp_recordable_benchmark",
+    srcs = ["test/otlp_recordable_benchmark.cc"],
+    tags = [
+        "benchmark",
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_recordable",
+        "//sdk/src/metrics",
+        "//sdk/src/resource",
+        "//sdk/src/trace",
+        "//test_common:headers",
+        "@com_github_opentelemetry_proto//:trace_service_proto_cc",
     ],
 )

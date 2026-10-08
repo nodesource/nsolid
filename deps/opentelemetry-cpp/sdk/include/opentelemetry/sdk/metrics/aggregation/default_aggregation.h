@@ -192,8 +192,6 @@ public:
       case InstrumentType::kGauge:
       case InstrumentType::kObservableGauge:
         return AggregationType::kLastValue;
-      case InstrumentType::kSummary:
-        return AggregationType::kSummary;
       default:
         return AggregationType::kDrop;
     }

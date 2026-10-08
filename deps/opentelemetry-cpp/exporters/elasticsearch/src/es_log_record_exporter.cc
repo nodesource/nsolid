@@ -1,13 +1,14 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#include <stdint.h>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <map>
 #include <memory>  // IWYU pragma: keep
 #include <mutex>
+#include <nlohmann/json.hpp>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -15,6 +16,7 @@
 
 #include "opentelemetry/exporters/elasticsearch/es_log_record_exporter.h"
 #include "opentelemetry/exporters/elasticsearch/es_log_recordable.h"
+#include "opentelemetry/ext/http/client/detail/default_factory.h"
 #include "opentelemetry/ext/http/client/http_client.h"
 #include "opentelemetry/ext/http/client/http_client_factory.h"
 #include "opentelemetry/nostd/function_ref.h"
@@ -28,12 +30,9 @@
 #ifdef ENABLE_ASYNC_EXPORT
 #  include <cstddef>
 #  include <functional>
-#  include <ratio>
 #  include "opentelemetry/common/timestamp.h"
-#  include "opentelemetry/nostd/shared_ptr.h"
 #endif
 
-namespace nostd       = opentelemetry::nostd;
 namespace sdklogs     = opentelemetry::sdk::logs;
 namespace http_client = opentelemetry::ext::http::client;
 
@@ -41,6 +40,8 @@ OPENTELEMETRY_BEGIN_NAMESPACE
 namespace exporter
 {
 namespace logs
+{
+namespace
 {
 /**
  * This class handles the response message from the Elasticsearch request
@@ -60,7 +61,7 @@ public:
     ss << "Status:" << response.GetStatusCode() << ", Header:";
     response.ForEachHeader([&ss](opentelemetry::nostd::string_view header_name,
                                  opentelemetry::nostd::string_view header_value) {
-      ss << "\t" << header_name.data() << ": " << header_value.data() << ",";
+      ss << "\t" << header_name << ": " << header_value << ",";
       return true;
     });
     ss << "Body:" << body;
@@ -101,21 +102,24 @@ public:
                                 << log_message);
       }
 
-      // Set the response_received_ flag to true and notify any threads waiting on this result
-      response_received_ = true;
+      // Record the outcome and notify any threads waiting on this result
+      recordCompletionLocked(CompletionState::Success);
     }
     cv_.notify_all();
   }
 
   /**
-   * A method the user calls to block their thread until the response is received. The longest
-   * duration is the timeout of the request, set by SetTimeoutMs()
+   * A method the user calls to block their thread until the request has either produced a
+   * response or failed. The longest duration is the timeout of the request, set by
+   * SetTimeoutMs(), which arrives here as a TimedOut session event.
    */
   bool waitForResponse()
   {
     std::unique_lock<std::mutex> lk(mutex_);
-    cv_.wait(lk);
-    return response_received_;
+    // Waiting on a predicate rather than bare: the completion may already have been recorded
+    // before this thread got here, in which case there is no notification left to receive.
+    cv_.wait(lk, [this] { return completion_ != CompletionState::Pending; });
+    return completion_ == CompletionState::Success;
   }
 
   /**
@@ -136,20 +140,23 @@ public:
     {
       case http_client::SessionState::CreateFailed:
         OTEL_INTERNAL_LOG_ERROR("[ES Log Exporter] Failed to create session");
-        cv_.notify_all();
+        recordCompletion(CompletionState::Failure);
         break;
       case http_client::SessionState::Created:
         OTEL_INTERNAL_LOG_DEBUG("[ES Log Exporter] Session created");
         break;
       case http_client::SessionState::Destroyed:
         OTEL_INTERNAL_LOG_DEBUG("[ES Log Exporter] Session destroyed");
+        // Nothing else will arrive after this. If no outcome was recorded, the session ended
+        // without a response, so release the waiter rather than leaving it blocked forever.
+        recordCompletion(CompletionState::Failure);
         break;
       case http_client::SessionState::Connecting:
         OTEL_INTERNAL_LOG_DEBUG("[ES Log Exporter] Connecting to peer");
         break;
       case http_client::SessionState::ConnectFailed:
         OTEL_INTERNAL_LOG_ERROR("[ES Log Exporter] Failed to connect to peer");
-        cv_.notify_all();
+        recordCompletion(CompletionState::Failure);
         break;
       case http_client::SessionState::Connected:
         OTEL_INTERNAL_LOG_DEBUG("[ES Log Exporter] Connected to peer");
@@ -159,22 +166,22 @@ public:
         break;
       case http_client::SessionState::SendFailed:
         OTEL_INTERNAL_LOG_ERROR("[ES Log Exporter] Failed to send request");
-        cv_.notify_all();
+        recordCompletion(CompletionState::Failure);
         break;
       case http_client::SessionState::Response:
         OTEL_INTERNAL_LOG_DEBUG("[ES Log Exporter] Received response");
         break;
       case http_client::SessionState::SSLHandshakeFailed:
         OTEL_INTERNAL_LOG_ERROR("[ES Log Exporter] Failed SSL Handshake");
-        cv_.notify_all();
+        recordCompletion(CompletionState::Failure);
         break;
       case http_client::SessionState::TimedOut:
         OTEL_INTERNAL_LOG_ERROR("[ES Log Exporter] Request timed out");
-        cv_.notify_all();
+        recordCompletion(CompletionState::Failure);
         break;
       case http_client::SessionState::NetworkError:
         OTEL_INTERNAL_LOG_ERROR("[ES Log Exporter] Network error");
-        cv_.notify_all();
+        recordCompletion(CompletionState::Failure);
         break;
       case http_client::SessionState::ReadError:
         OTEL_INTERNAL_LOG_DEBUG("[ES Log Exporter] Read error");
@@ -184,18 +191,47 @@ public:
         break;
       case http_client::SessionState::Cancelled:
         OTEL_INTERNAL_LOG_ERROR("[ES Log Exporter] (manually) cancelled");
-        cv_.notify_all();
+        recordCompletion(CompletionState::Failure);
         break;
     }
   }
 
 private:
+  enum class CompletionState : std::uint8_t
+  {
+    Pending,
+    Success,
+    Failure
+  };
+
+  /**
+   * Record the outcome of the request, first writer wins, then release any waiter. Keeping the
+   * first outcome means a session destroyed after a successful response does not overwrite it.
+   */
+  void recordCompletion(CompletionState state)
+  {
+    {
+      std::unique_lock<std::mutex> lk(mutex_);
+      recordCompletionLocked(state);
+    }
+    cv_.notify_all();
+  }
+
+  /// As recordCompletion(), for callers that already hold mutex_ and notify themselves.
+  void recordCompletionLocked(CompletionState state)
+  {
+    if (completion_ == CompletionState::Pending)
+    {
+      completion_ = state;
+    }
+  }
+
   // Define a condition variable and mutex
   std::condition_variable cv_;
   std::mutex mutex_;
 
-  // Whether the response from Elasticsearch has been received
-  bool response_received_ = false;
+  // Whether the request has completed, and how
+  CompletionState completion_ = CompletionState::Pending;
 
   // A string to store the response body
   std::string body_ = "";
@@ -315,6 +351,7 @@ private:
   bool console_debug_ = false;
 };
 #endif
+}  // namespace
 
 ElasticsearchLogRecordExporter::ElasticsearchLogRecordExporter()
     : ElasticsearchLogRecordExporter(ElasticsearchExporterOptions())
@@ -322,8 +359,21 @@ ElasticsearchLogRecordExporter::ElasticsearchLogRecordExporter()
 
 ElasticsearchLogRecordExporter::ElasticsearchLogRecordExporter(
     const ElasticsearchExporterOptions &options)
+    : ElasticsearchLogRecordExporter(options,
+                                     ext::http::client::detail::GetDefaultHttpClientFactory())
+{}
+
+ElasticsearchLogRecordExporter::ElasticsearchLogRecordExporter(
+    const ElasticsearchExporterOptions &options,
+    const std::shared_ptr<ext::http::client::HttpClientFactory> &factory)
+    : ElasticsearchLogRecordExporter(options, factory->Create())
+{}
+
+ElasticsearchLogRecordExporter::ElasticsearchLogRecordExporter(
+    const ElasticsearchExporterOptions &options,
+    std::shared_ptr<ext::http::client::HttpClient> http_client)
     : options_{options},
-      http_client_{ext::http::client::HttpClientFactory::Create()}
+      http_client_{std::move(http_client)}
 #ifdef ENABLE_ASYNC_EXPORT
       ,
       synchronization_data_(new SynchronizationData())
@@ -379,7 +429,13 @@ sdk::common::ExportResult ElasticsearchLogRecordExporter::Export(
     // Add the context of the Recordable
     auto json_record = std::unique_ptr<ElasticSearchRecordable>(
         static_cast<ElasticSearchRecordable *>(record.release()));
-    body += json_record->GetJSON().dump() + "\n";
+    // A log record's body or attributes may carry bytes that are not valid UTF-8 (e.g. a
+    // truncated multibyte sequence, or a payload read in another encoding). dump() throws
+    // on those by default, and Export() is noexcept, so the exception would otherwise
+    // terminate the process. error_handler_t::replace substitutes U+FFFD for the invalid
+    // bytes instead, so the record is still exported with everything else intact.
+    body += json_record->GetJSON().dump(-1, ' ', false, nlohmann::json::error_handler_t::replace) +
+            "\n";
   }
   std::vector<uint8_t> body_vec(body.begin(), body.end());
   request->SetBody(body_vec);

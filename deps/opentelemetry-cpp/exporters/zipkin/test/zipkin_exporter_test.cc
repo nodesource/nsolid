@@ -1,29 +1,51 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef OPENTELEMETRY_STL_VERSION
+#include <gtest/gtest.h>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <ostream>
+#include <string>
+#include <utility>
+#include <vector>
+#include "gmock/gmock.h"
+#include "nlohmann/json.hpp"
 
-#  include "opentelemetry/exporters/zipkin/zipkin_exporter.h"
-#  include "opentelemetry/ext/http/client/curl/http_client_curl.h"
-#  include "opentelemetry/ext/http/server/http_server.h"
-#  include "opentelemetry/sdk/trace/batch_span_processor.h"
-#  include "opentelemetry/sdk/trace/batch_span_processor_options.h"
-#  include "opentelemetry/sdk/trace/tracer_provider.h"
-#  include "opentelemetry/trace/provider.h"
+#include "opentelemetry/common/timestamp.h"
+#include "opentelemetry/context/context.h"
+#include "opentelemetry/exporters/zipkin/zipkin_exporter.h"
+#include "opentelemetry/exporters/zipkin/zipkin_exporter_factory.h"
+#include "opentelemetry/exporters/zipkin/zipkin_exporter_options.h"
+#include "opentelemetry/ext/http/client/curl/http_client_curl.h"
+#include "opentelemetry/ext/http/client/http_client.h"
+#include "opentelemetry/nostd/shared_ptr.h"
+#include "opentelemetry/nostd/span.h"
+#include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/variant.h"
+#include "opentelemetry/sdk/common/exporter_utils.h"
+#include "opentelemetry/sdk/resource/resource.h"
+#include "opentelemetry/sdk/trace/batch_span_processor.h"
+#include "opentelemetry/sdk/trace/batch_span_processor_options.h"
+#include "opentelemetry/sdk/trace/exporter.h"
+#include "opentelemetry/sdk/trace/processor.h"
+#include "opentelemetry/sdk/trace/recordable.h"
+#include "opentelemetry/sdk/trace/tracer_provider.h"
+#include "opentelemetry/trace/span.h"
+#include "opentelemetry/trace/span_context.h"
+#include "opentelemetry/trace/span_startoptions.h"
+#include "opentelemetry/trace/trace_id.h"
+#include "opentelemetry/trace/tracer.h"
+#include "opentelemetry/trace/tracer_provider.h"
+#include "opentelemetry/version.h"
 
-#  include <gtest/gtest.h>
-#  include "gmock/gmock.h"
+#include "opentelemetry/test_common/ext/http/client/nosend/http_client_factory_nosend.h"
 
-#  include "nlohmann/json.hpp"
-
-#  include <string>
-#  include <utility>
-
-#  if defined(_MSC_VER)
-#    include "opentelemetry/sdk/common/env_variables.h"
+#if defined(_MSC_VER)
+#  include "opentelemetry/sdk/common/env_variables.h"
 using opentelemetry::sdk::common::setenv;
 using opentelemetry::sdk::common::unsetenv;
-#  endif
+#endif
 namespace sdk_common = opentelemetry::sdk::common;
 using namespace testing;
 
@@ -58,6 +80,8 @@ public:
   }
 };
 
+namespace
+{
 class MockHttpClient : public opentelemetry::ext::http::client::HttpClientSync
 {
 public:
@@ -78,7 +102,10 @@ public:
                const ext::http::client::Compression &),
               (noexcept, override));
 };
+}  // namespace
 
+namespace
+{
 class IsValidMessageMatcher
 {
 public:
@@ -100,6 +127,7 @@ public:
 private:
   std::string trace_id_;
 };
+}  // namespace
 
 static PolymorphicMatcher<IsValidMessageMatcher> IsValidMessage(const std::string &trace_id)
 {
@@ -209,7 +237,7 @@ TEST_F(ZipkinExporterTestPeer, ConfigTest)
   EXPECT_EQ(GetOptions(exporter).endpoint, "http://localhost:45455/v1/traces");
 }
 
-#  ifndef NO_GETENV
+#ifndef NO_GETENV
 // Test exporter configuration options from env
 TEST_F(ZipkinExporterTestPeer, ConfigFromEnv)
 {
@@ -222,9 +250,26 @@ TEST_F(ZipkinExporterTestPeer, ConfigFromEnv)
   unsetenv("OTEL_EXPORTER_ZIPKIN_ENDPOINT");
 }
 
-#  endif  // NO_GETENV
+#endif  // NO_GETENV
+
+TEST_F(ZipkinExporterTestPeer, FactoryInjectionCreatesExporter)
+{
+  ZipkinExporterOptions opts;
+  auto factory = std::make_shared<
+      opentelemetry::test_common::ext::http::client::nosend::HttpClientFactoryNosend>();
+  auto exporter = ZipkinExporterFactory::Create(opts, std::move(factory));
+  ASSERT_NE(exporter, nullptr);
+}
+
+TEST_F(ZipkinExporterTestPeer, HttpClientSyncInjectionCreatesExporter)
+{
+  ZipkinExporterOptions opts;
+  auto client =
+      std::shared_ptr<opentelemetry::ext::http::client::HttpClientSync>(new MockHttpClient);
+  auto exporter = ZipkinExporterFactory::Create(opts, std::move(client));
+  ASSERT_NE(exporter, nullptr);
+}
 
 }  // namespace zipkin
 }  // namespace exporter
 OPENTELEMETRY_END_NAMESPACE
-#endif /* OPENTELEMETRY_STL_VERSION */
