@@ -2743,10 +2743,20 @@ static void close_nsolid_loader(void* ptr) {
 }
 
 
+static void cancel_nsolid_loader(void* ptr) {
+  static_cast<ns_timer*>(ptr)->close_and_delete();
+}
+
+
 static void run_nsolid_loader(ns_timer* handle, Environment* env) {
+  env->RemoveCleanupHook(cancel_nsolid_loader, handle);
   if (env->can_call_into_js()) {
     HandleScope handle_scope(env->isolate());
     Context::Scope context_scope(env->context());
+    InternalCallbackScope callback_scope(env,
+                                         env->process_object(),
+                                         {0, 0},
+                                         InternalCallbackScope::kSkipAsyncHooks);
     env->nsolid_loader_fn()->Call(
         env->context(), env->process_object(), 0, nullptr).ToLocalChecked();
   }
@@ -2789,6 +2799,7 @@ static void RunStartInTimeout(const FunctionCallbackInfo<Value>& args) {
 
   er = loader_timer->start(run_nsolid_loader, delay, 0, env);
   CHECK_EQ(er, 0);
+  env->AddCleanupHook(cancel_nsolid_loader, loader_timer);
   loader_timer->unref();
 }
 
