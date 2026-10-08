@@ -15,11 +15,13 @@
 #include "opentelemetry/context/context.h"
 #include "opentelemetry/context/propagation/text_map_propagator.h"
 #include "opentelemetry/nostd/function_ref.h"
-#include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/string_view.h"
 
 using namespace opentelemetry;
 using namespace opentelemetry::baggage::propagation;
+
+namespace
+{
 
 class BaggageCarrierTest : public context::propagation::TextMapCarrier
 {
@@ -75,21 +77,21 @@ TEST(BaggagePropagatorTest, ExtractAndInjectBaggage)
   for (const auto &baggage : baggages)
   {
     BaggageCarrierTest carrier1;
-    carrier1.headers_[baggage::kBaggageHeader.data()] = baggage.first;
-    context::Context ctx1                             = context::Context{};
-    context::Context ctx2                             = format.Extract(carrier1, ctx1);
+    carrier1.headers_[baggage::kBaggageHeader] = baggage.first;
+    context::Context ctx1                      = context::Context{};
+    context::Context ctx2                      = format.Extract(carrier1, ctx1);
 
     BaggageCarrierTest carrier2;
     format.Inject(carrier2, ctx2);
-    EXPECT_EQ(carrier2.headers_[baggage::kBaggageHeader.data()], baggage.second);
+    EXPECT_EQ(carrier2.headers_[baggage::kBaggageHeader], baggage.second);
 
     std::vector<std::string> fields;
     format.Fields([&fields](nostd::string_view field) {
-      fields.push_back(field.data());
+      fields.emplace_back(field.data());
       return true;
     });
     EXPECT_EQ(fields.size(), 1);
-    EXPECT_EQ(fields[0], baggage::kBaggageHeader.data());
+    EXPECT_EQ(fields[0], baggage::kBaggageHeader);
   }
 }
 
@@ -104,20 +106,22 @@ TEST(BaggagePropagatorTest, InjectEmptyHeader)
   {
     // Test empty baggage in context
     BaggageCarrierTest carrier1;
-    carrier1.headers_[baggage::kBaggageHeader.data()] = "";
-    context::Context ctx1                             = context::Context{};
-    context::Context ctx2                             = format.Extract(carrier1, ctx1);
+    carrier1.headers_[baggage::kBaggageHeader] = "";
+    context::Context ctx1                      = context::Context{};
+    context::Context ctx2                      = format.Extract(carrier1, ctx1);
     format.Inject(carrier, ctx2);
     EXPECT_EQ(carrier.headers_.find(baggage::kBaggageHeader), carrier.headers_.end());
   }
   {
     // Invalid baggage in context
     BaggageCarrierTest carrier1;
-    carrier1.headers_[baggage::kBaggageHeader.data()] = "InvalidBaggageData";
-    context::Context ctx1                             = context::Context{};
-    context::Context ctx2                             = format.Extract(carrier1, ctx1);
+    carrier1.headers_[baggage::kBaggageHeader] = "InvalidBaggageData";
+    context::Context ctx1                      = context::Context{};
+    context::Context ctx2                      = format.Extract(carrier1, ctx1);
 
     format.Inject(carrier, ctx2);
     EXPECT_EQ(carrier.headers_.find(baggage::kBaggageHeader), carrier.headers_.end());
   }
 }
+
+}  // namespace

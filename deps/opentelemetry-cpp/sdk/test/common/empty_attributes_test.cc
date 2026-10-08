@@ -1,10 +1,15 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#include "opentelemetry/sdk/common/empty_attributes.h"
-
 #include <gtest/gtest.h>
-#include <string.h>
+#include <array>
+#include <cstring>
+#include <string>
+#include <utility>
+
+#include "opentelemetry/common/key_value_iterable_view.h"
+#include "opentelemetry/nostd/utility.h"
+#include "opentelemetry/sdk/common/empty_attributes.h"
 
 TEST(EmptyAttributesTest, TestSize)
 {
@@ -16,7 +21,7 @@ TEST(EmptyAttributesTest, TestMemory)
 {
   auto attributes1 = opentelemetry::sdk::GetEmptyAttributes();
   auto attributes2 = opentelemetry::sdk::GetEmptyAttributes();
-  EXPECT_EQ(memcmp(static_cast<void *>(&attributes1), static_cast<void *>(&attributes2),
-                   sizeof(attributes1)),
+  EXPECT_EQ(std::memcmp(static_cast<void *>(&attributes1), static_cast<void *>(&attributes2),
+                        sizeof(attributes1)),
             0);  // NOLINT
 }

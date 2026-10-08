@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stdint.h>
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <initializer_list>
 #include <iostream>
 #include <sstream>
@@ -18,6 +18,7 @@
 #include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/span.h"
 #include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/utility.h"
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/trace/exporter.h"
 #include "opentelemetry/sdk/trace/processor.h"
@@ -41,6 +42,9 @@ namespace resource      = opentelemetry::sdk::resource;
 namespace exportertrace = opentelemetry::exporter::trace;
 
 using Attributes = std::initializer_list<std::pair<nostd::string_view, common::AttributeValue>>;
+
+namespace
+{
 
 class TestResource : public resource::Resource
 {
@@ -410,3 +414,5 @@ TEST(OStreamSpanExporter, PrintSpanToClog)
 
   EXPECT_EQ(captured, kDefaultSpanPrinted);
 }
+
+}  // namespace

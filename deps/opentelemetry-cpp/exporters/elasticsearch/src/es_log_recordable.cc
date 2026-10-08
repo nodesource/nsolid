@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "opentelemetry/exporters/elasticsearch/es_log_recordable.h"
+#include "opentelemetry/common/timestamp.h"
 #include "opentelemetry/logs/severity.h"
 #include "opentelemetry/nostd/span.h"
 #include "opentelemetry/nostd/string_view.h"
@@ -14,7 +15,6 @@
 #include "opentelemetry/trace/trace_id.h"
 #include "opentelemetry/version.h"
 
-#include <stdint.h>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -22,7 +22,6 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 
 #if defined(__cpp_lib_format)
@@ -30,6 +29,8 @@
 #endif
 
 namespace nlohmann
+{
+namespace
 {
 template <class T>
 struct json_assign_visitor
@@ -53,6 +54,7 @@ struct json_assign_visitor
     }
   }
 };
+}  // namespace
 
 template <>
 struct adl_serializer<opentelemetry::sdk::common::OwnedAttributeValue>

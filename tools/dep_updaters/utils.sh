@@ -112,7 +112,7 @@ regenerate_proto_otel() {
 
   echo "Getting opentelemetry-proto files"
   cd "$_workspace" || exit 1
-  OTEL_PROTO_VERSION=$(grep "opentelemetry-proto" "$_deps_dir/opentelemetry-cpp/MODULE.bazel" | sed -n 's/.*version = "\([^"]*\)".*/\1/p')
+  OTEL_PROTO_VERSION=$(grep "opentelemetry-proto" "$_deps_dir/opentelemetry-cpp/third_party_release" | awk -Fv '{ print $2 }')
   OTEL_PROTO_TARBALL=v$OTEL_PROTO_VERSION.tar.gz
 
   curl -sL -o "$OTEL_PROTO_TARBALL" "https://github.com/open-telemetry/opentelemetry-proto/archive/refs/tags/$OTEL_PROTO_TARBALL"

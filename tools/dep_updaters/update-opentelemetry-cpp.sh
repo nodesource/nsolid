@@ -78,8 +78,8 @@ cp "$DEPS_DIR/opentelemetry-cpp/otlp-http-exporter.gyp" "$WORKSPACE/opentelemetr
 cd "$WORKSPACE"
 echo "Getting opentelemetry-proto files"
 
-OTEL_PROTO_VERSION=$(grep "opentelemetry-proto" "opentelemetry-cpp/third_party_release" | awk -F= '{ print $2 }')
-OTEL_PROTO_TARBALL=$OTEL_PROTO_VERSION.tar.gz
+OTEL_PROTO_VERSION=$(grep "opentelemetry-proto" "opentelemetry-cpp/third_party_release" | awk -Fv '{ print $2 }')
+OTEL_PROTO_TARBALL=v$OTEL_PROTO_VERSION.tar.gz
 
 curl -sL -o "$OTEL_PROTO_TARBALL" "https://github.com/open-telemetry/opentelemetry-proto/archive/refs/tags/$OTEL_PROTO_TARBALL"
 
