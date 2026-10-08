@@ -67,6 +67,21 @@ cc_test(
 )
 
 cc_test(
+    name = "multi_log_record_processor_test",
+    srcs = [
+        "multi_log_record_processor_test.cc",
+    ],
+    tags = [
+        "logs",
+        "test",
+    ],
+    deps = [
+        "//sdk/src/logs",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "log_record_test",
     srcs = [
         "log_record_test.cc",
@@ -82,10 +97,39 @@ cc_test(
 )
 
 cc_test(
+    name = "log_record_limits_test",
+    srcs = [
+        "log_record_limits_test.cc",
+    ],
+    tags = [
+        "logs",
+        "test",
+    ],
+    deps = [
+        "//api",
+        "//sdk/src/logs",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "batch_log_record_processor_test",
     srcs = [
         "batch_log_record_processor_test.cc",
     ],
+    tags = [
+        "logs",
+        "test",
+    ],
+    deps = [
+        "//sdk/src/logs",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "batch_log_record_processor_test_stress",
+    srcs = glob(["*_test_stress.cc"]),
     tags = [
         "logs",
         "test",

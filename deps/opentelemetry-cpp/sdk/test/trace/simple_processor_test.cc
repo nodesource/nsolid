@@ -10,7 +10,6 @@
 
 #include "opentelemetry/exporters/memory/in_memory_span_data.h"
 #include "opentelemetry/exporters/memory/in_memory_span_exporter.h"
-#include "opentelemetry/nostd/span.h"
 #include "opentelemetry/sdk/common/exporter_utils.h"
 #include "opentelemetry/sdk/trace/exporter.h"
 #include "opentelemetry/sdk/trace/recordable.h"
@@ -42,6 +41,9 @@ TEST(SimpleProcessor, ToInMemorySpanExporter)
 
   EXPECT_TRUE(processor.Shutdown());
 }
+
+namespace
+{
 
 // An exporter that does nothing but record (and give back ) the # of times Shutdown was called.
 class RecordShutdownExporter final : public SpanExporter
@@ -142,3 +144,5 @@ TEST(SimpleSpanProcessor, ForceFlushFail)
       std::unique_ptr<SpanExporter>{new FailShutDownForceFlushExporter()});
   EXPECT_EQ(false, processor.ForceFlush());
 }
+
+}  // namespace

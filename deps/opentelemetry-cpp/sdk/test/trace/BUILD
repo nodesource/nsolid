@@ -14,6 +14,7 @@ cc_test(
         "trace",
     ],
     deps = [
+        "//exporters/memory:in_memory_span_exporter",
         "//sdk/src/resource",
         "//sdk/src/trace",
         "@com_google_googletest//:gtest_main",
@@ -52,6 +53,21 @@ cc_test(
 )
 
 cc_test(
+    name = "span_status_test",
+    srcs = [
+        "span_status_test.cc",
+    ],
+    tags = [
+        "test",
+        "trace",
+    ],
+    deps = [
+        "//sdk/src/trace",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "simple_processor_test",
     srcs = [
         "simple_processor_test.cc",
@@ -68,10 +84,38 @@ cc_test(
 )
 
 cc_test(
+    name = "multi_span_processor_test",
+    srcs = [
+        "multi_span_processor_test.cc",
+    ],
+    tags = [
+        "test",
+        "trace",
+    ],
+    deps = [
+        "//sdk/src/trace",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "batch_span_processor_test",
     srcs = [
         "batch_span_processor_test.cc",
     ],
+    tags = [
+        "test",
+        "trace",
+    ],
+    deps = [
+        "//sdk/src/trace",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "batch_span_processor_test_stress",
+    srcs = glob(["*_test_stress.cc"]),
     tags = [
         "test",
         "trace",
@@ -145,6 +189,22 @@ cc_test(
 )
 
 cc_test(
+    name = "probability_sampler_test",
+    srcs = [
+        "probability_sampler_test.cc",
+    ],
+    tags = [
+        "test",
+        "trace",
+    ],
+    deps = [
+        "//sdk/src/common:random",
+        "//sdk/src/trace",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "trace_id_ratio_sampler_test",
     srcs = [
         "trace_id_ratio_sampler_test.cc",
@@ -155,6 +215,21 @@ cc_test(
     ],
     deps = [
         "//sdk/src/common:random",
+        "//sdk/src/trace",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "composable_sampler_test",
+    srcs = [
+        "composable_sampler_test.cc",
+    ],
+    tags = [
+        "test",
+        "trace",
+    ],
+    deps = [
         "//sdk/src/trace",
         "@com_google_googletest//:gtest_main",
     ],
@@ -187,5 +262,37 @@ otel_cc_benchmark(
         "//exporters/memory:in_memory_span_exporter",
         "//sdk/src/resource",
         "//sdk/src/trace",
+    ],
+)
+
+otel_cc_benchmark(
+    name = "span_data_benchmark",
+    srcs = ["span_data_benchmark.cc"],
+    tags = [
+        "benchmark",
+        "test",
+        "trace",
+    ],
+    deps = [
+        "//exporters/memory:in_memory_span_exporter",
+        "//sdk/src/resource",
+        "//sdk/src/trace",
+        "//test_common:headers",
+    ],
+)
+
+otel_cc_benchmark(
+    name = "tracer_benchmark",
+    srcs = ["tracer_benchmark.cc"],
+    tags = [
+        "benchmark",
+        "test",
+        "trace",
+    ],
+    deps = [
+        "//exporters/memory:in_memory_span_exporter",
+        "//sdk/src/resource",
+        "//sdk/src/trace",
+        "//test_common:headers",
     ],
 )

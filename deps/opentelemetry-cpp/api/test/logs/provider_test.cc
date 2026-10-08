@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 
-#include "opentelemetry/common/key_value_iterable.h"
 #include "opentelemetry/common/key_value_iterable_view.h"
 #include "opentelemetry/logs/event_logger.h"           // IWYU pragma: keep
 #include "opentelemetry/logs/event_logger_provider.h"  // IWYU pragma: keep
@@ -15,6 +14,7 @@
 #include "opentelemetry/logs/provider.h"
 #include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/utility.h"
 
 #if OPENTELEMETRY_ABI_VERSION_NO < 2
 using opentelemetry::logs::EventLogger;
@@ -28,8 +28,12 @@ using opentelemetry::logs::Provider;
 using opentelemetry::nostd::shared_ptr;
 namespace nostd = opentelemetry::nostd;
 
+namespace
+{
+
 class TestProvider : public LoggerProvider
 {
+public:
   nostd::shared_ptr<Logger> GetLogger(
       nostd::string_view /* logger_name */,
       nostd::string_view /* library_name */,
@@ -62,6 +66,23 @@ TEST(Provider, MultipleLoggerProviders)
   Provider::SetLoggerProvider(tf2);
 
   ASSERT_NE(Provider::GetLoggerProvider(), tf);
+}
+
+TEST(Provider, SetNullLoggerProvider)
+{
+  auto tf = shared_ptr<LoggerProvider>(new TestProvider());
+  Provider::SetLoggerProvider(tf);
+  ASSERT_EQ(tf, Provider::GetLoggerProvider());
+
+  // Setting a null LoggerProvider installs a no-op LoggerProvider.
+  Provider::SetLoggerProvider(shared_ptr<LoggerProvider>());
+
+  auto noop = Provider::GetLoggerProvider();
+  ASSERT_NE(nullptr, noop);
+  ASSERT_NE(tf, noop);
+
+  // The no-op LoggerProvider is usable, it does not crash on use.
+  EXPECT_NE(nullptr, noop->GetLogger("test"));
 }
 
 TEST(Provider, GetLogger)
@@ -141,6 +162,23 @@ TEST(Provider, MultipleEventLoggerProviders)
   ASSERT_NE(Provider::GetEventLoggerProvider(), tf);
 }
 
+TEST(Provider, SetNullEventLoggerProvider)
+{
+  auto tf = nostd::shared_ptr<EventLoggerProvider>(new TestEventLoggerProvider());
+  Provider::SetEventLoggerProvider(tf);
+  ASSERT_EQ(tf, Provider::GetEventLoggerProvider());
+
+  // Setting a null EventLoggerProvider installs a no-op EventLoggerProvider.
+  Provider::SetEventLoggerProvider(nostd::shared_ptr<EventLoggerProvider>());
+
+  auto noop = Provider::GetEventLoggerProvider();
+  ASSERT_NE(nullptr, noop);
+  ASSERT_NE(tf, noop);
+
+  // The no-op EventLoggerProvider is usable, it does not crash on use.
+  EXPECT_NE(nullptr, noop->CreateEventLogger(nostd::shared_ptr<Logger>(nullptr), "domain"));
+}
+
 TEST(Provider, CreateEventLogger)
 {
   auto tf     = nostd::shared_ptr<TestEventLoggerProvider>(new TestEventLoggerProvider());
@@ -166,3 +204,5 @@ TEST(NoopEventLoggerProvider, CreateNoopEventLogger)
 #  endif
 
 #endif
+
+}  // namespace

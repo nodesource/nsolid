@@ -42,6 +42,7 @@ cc_library(
     tags = ["prometheus"],
     deps = [
         ":prometheus_exporter",
+        "//sdk/src/configuration:configuration_core",
     ],
 )
 
@@ -58,6 +59,7 @@ cc_library(
     deps = [
         "//api",
         "//sdk:headers",
+        "//sdk/src/metrics",
         "@com_github_jupp0r_prometheus_cpp//core",
         "@com_github_jupp0r_prometheus_cpp//pull",
     ],

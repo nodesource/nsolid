@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
+#include <cstdint>
 #include <initializer_list>
 #include <string>
 #include <utility>
@@ -14,9 +15,11 @@
 #include "opentelemetry/metrics/sync_instruments.h"
 #include "opentelemetry/nostd/function_ref.h"
 #include "opentelemetry/nostd/shared_ptr.h"
-#include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/utility.h"  // IWYU pragma: keep
 #include "opentelemetry/nostd/variant.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
+#include "opentelemetry/sdk/metrics/aggregation/aggregation_config.h"
+#include "opentelemetry/sdk/metrics/data/circular_buffer.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/data/point_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
@@ -192,8 +195,8 @@ std::shared_ptr<MeterProvider> MakeBase2ExponentialHistogramViewProvider(
   meter_provider->AddMetricReader(reader);
 
   Base2ExponentialHistogramAggregationConfig config;
-  config.max_scale_   = 5;
-  config.max_buckets_ = 160;
+  config.max_scale_ = 5;
+  config.max_size_  = 160;
   auto view =
       std::make_unique<View>("exponential_histogram", "exponential_histogram_description",
                              AggregationType::kBase2ExponentialHistogram,
