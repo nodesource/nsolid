@@ -2,15 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
+#include <string>
 
 #include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/trace/provider.h"
 #include "opentelemetry/trace/tracer_provider.h"
-
-#if OPENTELEMETRY_ABI_VERSION_NO >= 2
-#  include "opentelemetry/common/key_value_iterable.h"
-#endif
 
 using opentelemetry::trace::Provider;
 using opentelemetry::trace::Tracer;
@@ -18,9 +15,12 @@ using opentelemetry::trace::TracerProvider;
 
 namespace nostd = opentelemetry::nostd;
 
-class TestProvider : public TracerProvider
+namespace
 {
 
+class TestProvider : public TracerProvider
+{
+public:
 #if OPENTELEMETRY_ABI_VERSION_NO >= 2
   nostd::shared_ptr<Tracer> GetTracer(
       nostd::string_view /* name */,
@@ -52,3 +52,22 @@ TEST(Provider, SetTracerProvider)
   Provider::SetTracerProvider(tf);
   ASSERT_EQ(tf, Provider::GetTracerProvider());
 }
+
+TEST(Provider, SetNullTracerProvider)
+{
+  auto tf = nostd::shared_ptr<TracerProvider>(new TestProvider());
+  Provider::SetTracerProvider(tf);
+  ASSERT_EQ(tf, Provider::GetTracerProvider());
+
+  // Setting a null TracerProvider installs a no-op TracerProvider.
+  Provider::SetTracerProvider(nostd::shared_ptr<TracerProvider>());
+
+  auto noop = Provider::GetTracerProvider();
+  ASSERT_NE(nullptr, noop);
+  ASSERT_NE(tf, noop);
+
+  // The no-op TracerProvider is usable, it does not crash on use.
+  EXPECT_NE(nullptr, noop->GetTracer("test"));
+}
+
+}  // namespace

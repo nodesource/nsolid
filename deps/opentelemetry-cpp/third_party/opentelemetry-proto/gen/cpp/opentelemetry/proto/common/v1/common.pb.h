@@ -460,6 +460,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED AnyValue final : public ::google::p
     kArrayValue = 5,
     kKvlistValue = 6,
     kBytesValue = 7,
+    kStringValueStrindex = 8,
     VALUE_NOT_SET = 0,
   };
   static constexpr int kIndexInFileMessages = 0;
@@ -559,6 +560,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED AnyValue final : public ::google::p
     kArrayValueFieldNumber = 5,
     kKvlistValueFieldNumber = 6,
     kBytesValueFieldNumber = 7,
+    kStringValueStrindexFieldNumber = 8,
   };
   // string string_value = 1;
   [[nodiscard]] bool has_string_value() const;
@@ -663,6 +665,17 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED AnyValue final : public ::google::p
   ::std::string* PROTOBUF_NONNULL _internal_mutable_bytes_value();
 
   public:
+  // int32 string_value_strindex = 8;
+  [[nodiscard]] bool has_string_value_strindex() const;
+  void clear_string_value_strindex() ;
+  [[nodiscard]] ::int32_t string_value_strindex() const;
+  void set_string_value_strindex(::int32_t value);
+
+  private:
+  ::int32_t _internal_string_value_strindex() const;
+  void _internal_set_string_value_strindex(::int32_t value);
+
+  public:
   void clear_value();
   ValueCase value_case() const;
   // @@protoc_insertion_point(class_scope:opentelemetry.proto.common.v1.AnyValue)
@@ -675,11 +688,12 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED AnyValue final : public ::google::p
   void set_has_array_value();
   void set_has_kvlist_value();
   void set_has_bytes_value();
+  void set_has_string_value_strindex();
   [[nodiscard]] inline bool has_value() const;
   inline void clear_has_value();
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<0, 7,
-                          2, 59,
+      ::google::protobuf::internal::TcParseTable<0, 8,
+                          2, 67,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
       const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
@@ -715,6 +729,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED AnyValue final : public ::google::p
       ::opentelemetry::proto::common::v1::ArrayValue* PROTOBUF_NULLABLE array_value_;
       ::opentelemetry::proto::common::v1::KeyValueList* PROTOBUF_NULLABLE kvlist_value_;
       ::google::protobuf::internal::ArenaStringPtr bytes_value_;
+      ::int32_t string_value_strindex_;
     } value_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::uint32_t _oneof_case_[1];
@@ -1086,6 +1101,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED KeyValue final : public ::google::p
   enum : int {
     kKeyFieldNumber = 1,
     kValueFieldNumber = 2,
+    kKeyStrindexFieldNumber = 3,
   };
   // string key = 1;
   void clear_key() ;
@@ -1117,11 +1133,21 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED KeyValue final : public ::google::p
   ::opentelemetry::proto::common::v1::AnyValue* PROTOBUF_NONNULL _internal_mutable_value();
 
   public:
+  // int32 key_strindex = 3;
+  void clear_key_strindex() ;
+  [[nodiscard]] ::int32_t key_strindex() const;
+  void set_key_strindex(::int32_t value);
+
+  private:
+  ::int32_t _internal_key_strindex() const;
+  void _internal_set_key_strindex(::int32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:opentelemetry.proto.common.v1.KeyValue)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<1, 2,
+      ::google::protobuf::internal::TcParseTable<2, 3,
                           1, 50,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -1152,6 +1178,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED KeyValue final : public ::google::p
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::internal::ArenaStringPtr key_;
     ::opentelemetry::proto::common::v1::AnyValue* PROTOBUF_NULLABLE value_;
+    ::int32_t key_strindex_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -2061,6 +2088,39 @@ inline void AnyValue::set_allocated_bytes_value(::std::string* PROTOBUF_NULLABLE
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.common.v1.AnyValue.bytes_value)
 }
 
+// int32 string_value_strindex = 8;
+inline bool AnyValue::has_string_value_strindex() const {
+  return value_case() == kStringValueStrindex;
+}
+inline void AnyValue::set_has_string_value_strindex() {
+  _impl_._oneof_case_[0] = kStringValueStrindex;
+}
+inline void AnyValue::clear_string_value_strindex() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value_case() == kStringValueStrindex) {
+    _impl_.value_.string_value_strindex_ = 0;
+    clear_has_value();
+  }
+}
+inline ::int32_t AnyValue::string_value_strindex() const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.common.v1.AnyValue.string_value_strindex)
+  return _internal_string_value_strindex();
+}
+inline void AnyValue::set_string_value_strindex(::int32_t value) {
+  if (value_case() != kStringValueStrindex) {
+    clear_value();
+    set_has_string_value_strindex();
+  }
+  _impl_.value_.string_value_strindex_ = value;
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.AnyValue.string_value_strindex)
+}
+inline ::int32_t AnyValue::_internal_string_value_strindex() const {
+  if (value_case() == kStringValueStrindex) {
+    return _impl_.value_.string_value_strindex_;
+  }
+  return 0;
+}
+
 inline bool AnyValue::has_value() const {
   return value_case() != VALUE_NOT_SET;
 }
@@ -2352,6 +2412,30 @@ inline void KeyValue::set_allocated_value(::opentelemetry::proto::common::v1::An
 
   _impl_.value_ = reinterpret_cast<::opentelemetry::proto::common::v1::AnyValue*>(value);
   // @@protoc_insertion_point(field_set_allocated:opentelemetry.proto.common.v1.KeyValue.value)
+}
+
+// int32 key_strindex = 3;
+inline void KeyValue::clear_key_strindex() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.key_strindex_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+}
+inline ::int32_t KeyValue::key_strindex() const {
+  // @@protoc_insertion_point(field_get:opentelemetry.proto.common.v1.KeyValue.key_strindex)
+  return _internal_key_strindex();
+}
+inline void KeyValue::set_key_strindex(::int32_t value) {
+  _internal_set_key_strindex(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:opentelemetry.proto.common.v1.KeyValue.key_strindex)
+}
+inline ::int32_t KeyValue::_internal_key_strindex() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.key_strindex_;
+}
+inline void KeyValue::_internal_set_key_strindex(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.key_strindex_ = value;
 }
 
 // -------------------------------------------------------------------

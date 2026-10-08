@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -15,6 +14,7 @@
 #include "opentelemetry/common/timestamp.h"
 #include "opentelemetry/nostd/function_ref.h"
 #include "opentelemetry/nostd/span.h"
+#include "opentelemetry/nostd/utility.h"
 #include "opentelemetry/nostd/variant.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
@@ -36,11 +36,12 @@ using namespace opentelemetry::sdk::metrics;
 using namespace opentelemetry::sdk::instrumentationscope;
 using namespace opentelemetry::sdk::resource;
 using namespace opentelemetry::common;
-namespace nostd = opentelemetry::nostd;
 
-using M = std::map<std::string, std::string>;
+namespace
+{
 
-class WritableMetricStorageTestFixture : public ::testing::TestWithParam<AggregationTemporality>
+class AsyncWritableMetricStorageTestFixture
+    : public ::testing::TestWithParam<AggregationTemporality>
 {};
 
 class WritableMetricStorageTestUpDownFixture
@@ -51,7 +52,7 @@ class WritableMetricStorageTestObservableGaugeFixture
     : public ::testing::TestWithParam<AggregationTemporality>
 {};
 
-TEST_P(WritableMetricStorageTestFixture, TestAggregation)
+TEST_P(AsyncWritableMetricStorageTestFixture, TestAggregation)
 {
   AggregationTemporality temporality = GetParam();
 
@@ -141,7 +142,7 @@ TEST_P(WritableMetricStorageTestFixture, TestAggregation)
 }
 
 INSTANTIATE_TEST_SUITE_P(WritableMetricStorageTestLong,
-                         WritableMetricStorageTestFixture,
+                         AsyncWritableMetricStorageTestFixture,
                          ::testing::Values(AggregationTemporality::kCumulative,
                                            AggregationTemporality::kDelta));
 
@@ -320,3 +321,5 @@ INSTANTIATE_TEST_SUITE_P(WritableMetricStorageTestObservableGaugeFixtureLong,
                          WritableMetricStorageTestObservableGaugeFixture,
                          ::testing::Values(AggregationTemporality::kCumulative,
                                            AggregationTemporality::kDelta));
+
+}  // namespace

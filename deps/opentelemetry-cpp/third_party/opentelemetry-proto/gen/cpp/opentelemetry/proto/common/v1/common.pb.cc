@@ -239,11 +239,11 @@ constexpr AnyValue::ParseTableT_ AnyValue::InternalGenerateParseTable_(const ::_
       PROTOBUF_FIELD_OFFSET(AnyValue,
                             _impl_._cached_size_),  // no hasbits
       0, // no _extensions_
-      7, 0,  // max_field_number, fast_idx_mask
+      8, 0,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967168,  // skipmap
+      4294967040,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      7,  // num_field_entries
+      8,  // num_field_entries
       2,  // num_aux_entries
       offsetof(ParseTableT_, aux_entries),
       class_data,
@@ -253,12 +253,12 @@ constexpr AnyValue::ParseTableT_ AnyValue::InternalGenerateParseTable_(const ::_
       ::_pbi::TcParser::GetTable<::opentelemetry::proto::common::v1::AnyValue>(),  // to_prefetch
       #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
     }, {{
-      // double double_value = 4;
+      // int32 string_value_strindex = 8;
       {::_pbi::TcParser::FastMiniParse1,
-       {33, ::uint8_t{3},
+       {64, ::uint8_t{1},
         ::uint32_t{
             PROTOBUF_FIELD_OFFSET(ParseTableT_, field_entries) +
-            sizeof(_pbi::TcParseTableBase::FieldEntry) * 3}}},
+            sizeof(_pbi::TcParseTableBase::FieldEntry) * 7}}},
     }}, {{
       65535, 65535
     }}, {{
@@ -276,6 +276,8 @@ constexpr AnyValue::ParseTableT_ AnyValue::InternalGenerateParseTable_(const ::_
       {PROTOBUF_FIELD_OFFSET(AnyValue, _impl_.value_.kvlist_value_), _Internal::kOneofCaseOffset + 0, 1, (0 | ::_fl::kFcOneof | ::_fl::kMessage | ::_fl::kTvTable)},
       // bytes bytes_value = 7;
       {PROTOBUF_FIELD_OFFSET(AnyValue, _impl_.value_.bytes_value_), _Internal::kOneofCaseOffset + 0, 0, (0 | ::_fl::kFcOneof | ::_fl::kBytes | ::_fl::kRepAString)},
+      // int32 string_value_strindex = 8;
+      {PROTOBUF_FIELD_OFFSET(AnyValue, _impl_.value_.string_value_strindex_), _Internal::kOneofCaseOffset + 0, 0, (0 | ::_fl::kFcOneof | ::_fl::kInt32)},
     }},
     {{
         #ifndef PROTOBUF_MESSAGE_GLOBALS
@@ -290,7 +292,7 @@ constexpr AnyValue::ParseTableT_ AnyValue::InternalGenerateParseTable_(const ::_
         #endif
     }},
     {{
-      "\46\14\0\0\0\0\0\0"
+      "\46\14\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
       "opentelemetry.proto.common.v1.AnyValue"
       "string_value"
     }},
@@ -558,11 +560,11 @@ constexpr KeyValue::ParseTableT_ KeyValue::InternalGenerateParseTable_(const ::_
     {
       PROTOBUF_FIELD_OFFSET(KeyValue, _impl_._has_bits_),
       0, // no _extensions_
-      2, 8,  // max_field_number, fast_idx_mask
+      3, 24,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967292,  // skipmap
+      4294967288,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      2,  // num_field_entries
+      3,  // num_field_entries
       1,  // num_aux_entries
       offsetof(ParseTableT_, aux_entries),
       class_data,
@@ -572,14 +574,19 @@ constexpr KeyValue::ParseTableT_ KeyValue::InternalGenerateParseTable_(const ::_
       ::_pbi::TcParser::GetTable<::opentelemetry::proto::common::v1::KeyValue>(),  // to_prefetch
       #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
     }, {{
-      // .opentelemetry.proto.common.v1.AnyValue value = 2;
-      {::_pbi::TcParser::FastMtS1,
-       {18, 1, 0,
-        PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.value_)}},
+      {::_pbi::TcParser::MiniParse, {}},
       // string key = 1;
       {::_pbi::TcParser::FastUS1,
        {10, 0, 0,
         PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.key_)}},
+      // .opentelemetry.proto.common.v1.AnyValue value = 2;
+      {::_pbi::TcParser::FastMtS1,
+       {18, 1, 0,
+        PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.value_)}},
+      // int32 key_strindex = 3;
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(KeyValue, _impl_.key_strindex_), 2>(),
+       {24, 2, 0,
+        PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.key_strindex_)}},
     }}, {{
       65535, 65535
     }}, {{
@@ -587,6 +594,8 @@ constexpr KeyValue::ParseTableT_ KeyValue::InternalGenerateParseTable_(const ::_
       {PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.key_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
       // .opentelemetry.proto.common.v1.AnyValue value = 2;
       {PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.value_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+      // int32 key_strindex = 3;
+      {PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.key_strindex_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     }},
     {{
         #ifndef PROTOBUF_MESSAGE_GLOBALS
@@ -610,7 +619,8 @@ inline constexpr KeyValue::Impl_::Impl_(
       : key_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        value_{nullptr} {}
+        value_{nullptr},
+        key_strindex_{0} {}
 
 template <typename>
 constexpr KeyValue::KeyValue(::_pbi::ConstantInitialized,
@@ -1054,6 +1064,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::AnyValue, _impl_.value_),
         PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::AnyValue, _impl_.value_),
         PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::AnyValue, _impl_.value_),
+        PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::AnyValue, _impl_.value_),
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::ArrayValue, _impl_._has_bits_),
         4, // hasbit index offset
@@ -1066,11 +1077,13 @@ const ::uint32_t
         0,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::KeyValue, _impl_._has_bits_),
-        5, // hasbit index offset
+        6, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::KeyValue, _impl_.key_),
         PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::KeyValue, _impl_.value_),
+        PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::KeyValue, _impl_.key_strindex_),
         0,
         1,
+        2,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::opentelemetry::proto::common::v1::InstrumentationScope, _impl_._has_bits_),
         7, // hasbit index offset
@@ -1098,11 +1111,11 @@ const ::uint32_t
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::opentelemetry::proto::common::v1::AnyValue)},
-        {10, sizeof(::opentelemetry::proto::common::v1::ArrayValue)},
-        {15, sizeof(::opentelemetry::proto::common::v1::KeyValueList)},
-        {20, sizeof(::opentelemetry::proto::common::v1::KeyValue)},
-        {27, sizeof(::opentelemetry::proto::common::v1::InstrumentationScope)},
-        {38, sizeof(::opentelemetry::proto::common::v1::EntityRef)},
+        {11, sizeof(::opentelemetry::proto::common::v1::ArrayValue)},
+        {16, sizeof(::opentelemetry::proto::common::v1::KeyValueList)},
+        {21, sizeof(::opentelemetry::proto::common::v1::KeyValue)},
+        {30, sizeof(::opentelemetry::proto::common::v1::InstrumentationScope)},
+        {41, sizeof(::opentelemetry::proto::common::v1::EntityRef)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
@@ -1116,35 +1129,36 @@ static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
 const char descriptor_table_protodef_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n*opentelemetry/proto/common/v1/common.p"
-    "roto\022\035opentelemetry.proto.common.v1\"\214\002\n\010"
+    "roto\022\035opentelemetry.proto.common.v1\"\255\002\n\010"
     "AnyValue\022\026\n\014string_value\030\001 \001(\tH\000\022\024\n\nbool"
     "_value\030\002 \001(\010H\000\022\023\n\tint_value\030\003 \001(\003H\000\022\026\n\014d"
     "ouble_value\030\004 \001(\001H\000\022@\n\013array_value\030\005 \001(\013"
     "2).opentelemetry.proto.common.v1.ArrayVa"
     "lueH\000\022C\n\014kvlist_value\030\006 \001(\0132+.openteleme"
     "try.proto.common.v1.KeyValueListH\000\022\025\n\013by"
-    "tes_value\030\007 \001(\014H\000B\007\n\005value\"E\n\nArrayValue"
-    "\0227\n\006values\030\001 \003(\0132\'.opentelemetry.proto.c"
-    "ommon.v1.AnyValue\"G\n\014KeyValueList\0227\n\006val"
+    "tes_value\030\007 \001(\014H\000\022\037\n\025string_value_strind"
+    "ex\030\010 \001(\005H\000B\007\n\005value\"E\n\nArrayValue\0227\n\006val"
     "ues\030\001 \003(\0132\'.opentelemetry.proto.common.v"
-    "1.KeyValue\"O\n\010KeyValue\022\013\n\003key\030\001 \001(\t\0226\n\005v"
-    "alue\030\002 \001(\0132\'.opentelemetry.proto.common."
-    "v1.AnyValue\"\224\001\n\024InstrumentationScope\022\014\n\004"
-    "name\030\001 \001(\t\022\017\n\007version\030\002 \001(\t\022;\n\nattribute"
-    "s\030\003 \003(\0132\'.opentelemetry.proto.common.v1."
-    "KeyValue\022 \n\030dropped_attributes_count\030\004 \001"
-    "(\r\"X\n\tEntityRef\022\022\n\nschema_url\030\001 \001(\t\022\014\n\004t"
-    "ype\030\002 \001(\t\022\017\n\007id_keys\030\003 \003(\t\022\030\n\020descriptio"
-    "n_keys\030\004 \003(\tB{\n io.opentelemetry.proto.c"
-    "ommon.v1B\013CommonProtoP\001Z(go.opentelemetr"
-    "y.io/proto/otlp/common/v1\252\002\035OpenTelemetr"
-    "y.Proto.Common.V1b\006proto3"
+    "1.AnyValue\"G\n\014KeyValueList\0227\n\006values\030\001 \003"
+    "(\0132\'.opentelemetry.proto.common.v1.KeyVa"
+    "lue\"e\n\010KeyValue\022\013\n\003key\030\001 \001(\t\0226\n\005value\030\002 "
+    "\001(\0132\'.opentelemetry.proto.common.v1.AnyV"
+    "alue\022\024\n\014key_strindex\030\003 \001(\005\"\224\001\n\024Instrumen"
+    "tationScope\022\014\n\004name\030\001 \001(\t\022\017\n\007version\030\002 \001"
+    "(\t\022;\n\nattributes\030\003 \003(\0132\'.opentelemetry.p"
+    "roto.common.v1.KeyValue\022 \n\030dropped_attri"
+    "butes_count\030\004 \001(\r\"X\n\tEntityRef\022\022\n\nschema"
+    "_url\030\001 \001(\t\022\014\n\004type\030\002 \001(\t\022\017\n\007id_keys\030\003 \003("
+    "\t\022\030\n\020description_keys\030\004 \003(\tB{\n io.opente"
+    "lemetry.proto.common.v1B\013CommonProtoP\001Z("
+    "go.opentelemetry.io/proto/otlp/common/v1"
+    "\252\002\035OpenTelemetry.Proto.Common.V1b\006proto3"
 };
 static ::absl::once_flag descriptor_table_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto = {
     false,
     false,
-    945,
+    1000,
     descriptor_table_protodef_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto,
     "opentelemetry/proto/common/v1/common.proto",
     &descriptor_table_opentelemetry_2fproto_2fcommon_2fv1_2fcommon_2eproto_once,
@@ -1243,6 +1257,9 @@ AnyValue::AnyValue(
       case kBytesValue:
         new (&_impl_.value_.bytes_value_) decltype(_impl_.value_.bytes_value_){arena, from._impl_.value_.bytes_value_};
         break;
+      case kStringValueStrindex:
+        _impl_.value_.string_value_strindex_ = from._impl_.value_.string_value_strindex_;
+        break;
   }
 
   // @@protoc_insertion_point(copy_constructor:opentelemetry.proto.common.v1.AnyValue)
@@ -1311,6 +1328,10 @@ void AnyValue::clear_value() {
     }
     case kBytesValue: {
       _impl_.value_.bytes_value_.Destroy();
+      break;
+    }
+    case kStringValueStrindex: {
+      // No need to clear
       break;
     }
     case VALUE_NOT_SET: {
@@ -1418,6 +1439,12 @@ PROTOBUF_NOINLINE void AnyValue::Clear() {
       target = stream->WriteBytesMaybeAliased(7, _s, target);
       break;
     }
+    case kStringValueStrindex: {
+      target =
+          ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<8>(
+              stream, this_._internal_string_value_strindex(), target);
+      break;
+    }
     default:
       break;
   }
@@ -1481,6 +1508,12 @@ PROTOBUF_NOINLINE void AnyValue::Clear() {
     case kBytesValue: {
       total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
                                       this_._internal_bytes_value());
+      break;
+    }
+    // int32 string_value_strindex = 8;
+    case kStringValueStrindex: {
+      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+          this_._internal_string_value_strindex());
       break;
     }
     case VALUE_NOT_SET: {
@@ -1556,6 +1589,10 @@ void AnyValue::MergeImpl(::google::protobuf::MessageLite& to_msg,
           _this->_impl_.value_.bytes_value_.InitDefault();
         }
         _this->_impl_.value_.bytes_value_.Set(from._internal_bytes_value(), arena);
+        break;
+      }
+      case kStringValueStrindex: {
+        _this->_impl_.value_.string_value_strindex_ = from._impl_.value_.string_value_strindex_;
         break;
       }
       case VALUE_NOT_SET:
@@ -2052,6 +2089,7 @@ KeyValue::KeyValue(
   _impl_.value_ = (CheckHasBit(cached_has_bits, 0x00000002U))
                  ? Super_::CopyConstruct(arena, *from._impl_.value_)
                  : nullptr;
+  _impl_.key_strindex_ = from._impl_.key_strindex_;
 
   // @@protoc_insertion_point(copy_constructor:opentelemetry.proto.common.v1.KeyValue)
 }
@@ -2062,7 +2100,12 @@ PROTOBUF_NDEBUG_INLINE KeyValue::Impl_::Impl_(
 
 inline void KeyValue::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.value_ = {};
+  ::memset(reinterpret_cast<char*>(&_impl_) +
+               offsetof(Impl_, value_),
+           0,
+           offsetof(Impl_, key_strindex_) -
+               offsetof(Impl_, value_) +
+               sizeof(Impl_::key_strindex_));
 }
 KeyValue::~KeyValue() {
   // @@protoc_insertion_point(destructor:opentelemetry.proto.common.v1.KeyValue)
@@ -2122,6 +2165,7 @@ PROTOBUF_NOINLINE void KeyValue::Clear() {
       this_._impl_.value_->Clear();
     }
   }
+  this_._impl_.key_strindex_ = 0;
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -2162,6 +2206,15 @@ PROTOBUF_NOINLINE void KeyValue::Clear() {
         stream);
   }
 
+  // int32 key_strindex = 3;
+  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (this_._internal_key_strindex() != 0) {
+      target =
+          ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<3>(
+              stream, this_._internal_key_strindex(), target);
+    }
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -2185,7 +2238,7 @@ PROTOBUF_NOINLINE void KeyValue::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
     // string key = 1;
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!this_._internal_key().empty()) {
@@ -2197,6 +2250,13 @@ PROTOBUF_NOINLINE void KeyValue::Clear() {
     if (CheckHasBit(cached_has_bits, 0x00000002U)) {
       total_size += 1 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.value_);
+    }
+    // int32 key_strindex = 3;
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+      if (this_._internal_key_strindex() != 0) {
+        total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+            this_._internal_key_strindex());
+      }
     }
   }
   return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -2217,7 +2277,7 @@ void KeyValue::MergeImpl(::google::protobuf::MessageLite& to_msg,
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!from._internal_key().empty()) {
         _this->_internal_set_key(from._internal_key());
@@ -2233,6 +2293,11 @@ void KeyValue::MergeImpl(::google::protobuf::MessageLite& to_msg,
         _this->_impl_.value_ = Super_::CopyConstruct(arena, *from._impl_.value_);
       } else {
         _this->_impl_.value_->MergeFrom(*from._impl_.value_);
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+      if (from._internal_key_strindex() != 0) {
+        _this->_impl_.key_strindex_ = from._impl_.key_strindex_;
       }
     }
   }
@@ -2256,7 +2321,12 @@ void KeyValue::InternalSwap(KeyValue* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) 
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.key_, &other->_impl_.key_, arena);
-  swap(_impl_.value_, other->_impl_.value_);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.key_strindex_)
+      + sizeof(KeyValue::_impl_.key_strindex_)
+      - PROTOBUF_FIELD_OFFSET(KeyValue, _impl_.value_)>(
+          reinterpret_cast<char*>(&_impl_.value_),
+          reinterpret_cast<char*>(&other->_impl_.value_));
 }
 
 ::google::protobuf::Metadata KeyValue::GetMetadata() const {

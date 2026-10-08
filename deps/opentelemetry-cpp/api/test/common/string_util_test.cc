@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <string.h>
+#include <cstring>
+#include <string>
 
 #include <opentelemetry/common/string_util.h>
-#include "opentelemetry/nostd/string_view.h"
 
 // ------------------------- StringUtil class tests ---------------------------------
 
@@ -22,7 +22,8 @@ TEST(StringUtilTest, TrimStringWithIndex)
                    {"   k1=v1 ", "k1=v1"}, {"  ", ""}};
   for (auto &testcase : testcases)
   {
-    EXPECT_EQ(StringUtil::Trim(testcase.input, 0, strlen(testcase.input) - 1), testcase.expected);
+    EXPECT_EQ(StringUtil::Trim(testcase.input, 0, std::strlen(testcase.input) - 1),
+              testcase.expected);
   }
 }
 
@@ -49,4 +50,9 @@ TEST(StringUtilTest, TrimString)
   {
     EXPECT_EQ(StringUtil::Trim(testcase.input), testcase.expected);
   }
+}
+
+TEST(StringUtilTest, TrimStringOutOfRange)
+{
+  EXPECT_EQ(StringUtil::Trim("x", 2, 1), "");
 }

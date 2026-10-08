@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stdint.h>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <initializer_list>
 #include <string>
@@ -11,7 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include "opentelemetry/common/key_value_iterable.h"
 #include "opentelemetry/common/timestamp.h"
 #include "opentelemetry/logs/log_record.h"
 #include "opentelemetry/logs/logger.h"
@@ -21,6 +20,7 @@
 #include "opentelemetry/nostd/span.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/nostd/unique_ptr.h"
+#include "opentelemetry/nostd/utility.h"
 #include "opentelemetry/nostd/variant.h"
 #include "opentelemetry/sdk/common/attribute_utils.h"
 #include "opentelemetry/sdk/logs/read_write_log_record.h"
@@ -85,6 +85,9 @@ TEST(ReadWriteLogRecord, SetAndGet)
   ASSERT_EQ(record.GetTimestamp().time_since_epoch(), now.time_since_epoch());
 }
 
+namespace
+{
+
 // Define a basic Logger class
 class TestBodyLogger : public opentelemetry::logs::Logger
 {
@@ -95,6 +98,8 @@ public:
   }
 
   const nostd::string_view GetName() noexcept override { return "test body logger"; }
+
+  using opentelemetry::logs::Logger::CreateLogRecord;
 
   nostd::unique_ptr<opentelemetry::logs::LogRecord> CreateLogRecord() noexcept override
   {
@@ -115,6 +120,22 @@ public:
   const opentelemetry::sdk::common::OwnedAttributeValue &GetLastLogRecord() const noexcept
   {
     return last_body_;
+  }
+
+protected:
+  using opentelemetry::logs::Logger::EnabledImplementation;
+
+  bool EnabledImplementation(opentelemetry::logs::Severity /*severity*/,
+                             int64_t /*event_id*/) const noexcept override
+  {
+    return true;
+  }
+
+  bool EnabledImplementation(
+      opentelemetry::logs::Severity /*severity*/,
+      const opentelemetry::logs::EventId & /*event_id*/) const noexcept override
+  {
+    return true;
   }
 
 private:
@@ -325,3 +346,5 @@ TEST(LogBody, BodyConversation)
     }
   }
 }
+
+}  // namespace

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stdint.h>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <utility>
@@ -29,6 +29,9 @@
 #include "opentelemetry/trace/trace_id.h"
 
 using namespace opentelemetry;
+
+namespace
+{
 
 class TextMapCarrierTest : public context::propagation::TextMapCarrier
 {
@@ -188,7 +191,7 @@ TEST(JaegerPropagatorTest, InjectsContext)
 
   std::vector<std::string> fields;
   format.Fields([&fields](nostd::string_view field) {
-    fields.push_back(field.data());
+    fields.emplace_back(field.data());
     return true;
   });
   EXPECT_EQ(fields.size(), 1);
@@ -204,3 +207,5 @@ TEST(JaegerPropagatorTest, DoNotInjectInvalidContext)
   format.Inject(carrier, ctx);
   EXPECT_TRUE(carrier.headers_.count("uber-trace-id") == 0);
 }
+
+}  // namespace

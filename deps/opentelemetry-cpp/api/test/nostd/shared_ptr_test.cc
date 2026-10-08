@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stddef.h>
 #include <algorithm>
+#include <cstddef>
 #include <string>
 #include <utility>
 #include <vector>
@@ -12,6 +12,9 @@
 #include "opentelemetry/nostd/unique_ptr.h"
 
 using opentelemetry::nostd::shared_ptr;
+
+namespace
+{
 
 class A
 {
@@ -218,7 +221,7 @@ static void SharedPtrTest_Sort(size_t size = 10)
 
   for (int i = static_cast<int>(size); i > 0; i--)
   {
-    nums.push_back(shared_ptr<int>(new int(i)));
+    nums.emplace_back(new int(i));
   }
 
   auto nums2 = nums;
@@ -237,3 +240,5 @@ TEST(SharedPtrTest, Sort)
 {
   SharedPtrTest_Sort();
 }
+
+}  // namespace

@@ -6,7 +6,6 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
-#include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
@@ -18,6 +17,7 @@
 #include "opentelemetry/exporters/zipkin/recordable.h"
 #include "opentelemetry/nostd/span.h"
 #include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/utility.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/trace/recordable.h"
@@ -156,6 +156,19 @@ TEST(ZipkinSpanRecordable, SetStatus)
   }
 }
 
+TEST(ZipkinSpanRecordable, SetStatusClearsStaleErrorTag)
+{
+  zipkin::Recordable rec;
+
+  rec.SetStatus(trace::StatusCode::kError, "boom");
+  EXPECT_EQ(rec.span()["tags"]["error"], "boom");
+
+  rec.SetStatus(trace::StatusCode::kOk, "");
+  const json j_span = {{"tags", {{"otel.status_code", trace::StatusCode::kOk}}}};
+  EXPECT_EQ(rec.span(), j_span);
+  EXPECT_FALSE(rec.span()["tags"].contains("error"));
+}
+
 TEST(ZipkinSpanRecordable, SetSpanKind)
 {
   json j_json_client = {{"kind", "CLIENT"}};
@@ -268,11 +281,14 @@ TEST(ZipkinSpanRecordable, SetResource)
  * unsigned int, and uint64_t. To avoid writing test cases for each, we can
  * use a template approach to test all int types.
  */
+namespace
+{
 template <typename T>
 struct ZipkinIntAttributeTest : public testing::Test
 {
   using IntParamType = T;
 };
+}  // namespace
 
 using IntTypes = testing::Types<int, int64_t, unsigned int, uint64_t>;
 TYPED_TEST_SUITE(ZipkinIntAttributeTest, IntTypes);

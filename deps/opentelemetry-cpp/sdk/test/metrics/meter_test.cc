@@ -2,22 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <initializer_list>  // IWYU pragma: keep
 #include <iostream>
 #include <string>
 #include <thread>
-#include <type_traits>
 #include <utility>
 #include <vector>
 #include "common.h"
 
 #include <functional>
-#include "opentelemetry/common/key_value_iterable.h"
 #include "opentelemetry/context/context.h"  // IWYU pragma: keep
 #include "opentelemetry/metrics/async_instruments.h"
 #include "opentelemetry/metrics/meter.h"
@@ -28,7 +26,6 @@
 #include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/nostd/variant.h"
-#include "opentelemetry/sdk/common/attribute_utils.h"
 #include "opentelemetry/sdk/common/global_log_handler.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/instrumentationscope/scope_configurator.h"
@@ -112,7 +109,7 @@ public:
     if (LogLevel::Warning == level)
     {
       std::cout << msg << "\n";
-      warnings.push_back(msg);
+      warnings.emplace_back(msg);
     }
   }
 
