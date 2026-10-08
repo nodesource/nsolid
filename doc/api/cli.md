@@ -4009,6 +4009,14 @@ added: v6.0.0
 
 Automatically zero-fills all newly allocated [`Buffer`][] instances.
 
+### `-vv`
+
+<!-- YAML
+added: v0.1.3
+-->
+
+Print nsolid's version.
+
 ## Environment variables
 
 > Stability: 2 - Stable

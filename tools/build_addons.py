@@ -27,7 +27,7 @@ def generate_headers(headers_dir, install_args):
 def rebuild_addons(args):
   headers_dir = os.path.abspath(args.headers_dir)
   out_dir = os.path.abspath(args.out_dir)
-  node_bin = os.path.join(out_dir, 'node')
+  node_bin = os.path.join(out_dir, 'nsolid')
   if args.is_win:
     node_bin += '.exe'
 

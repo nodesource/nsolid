@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message SourceCodeArgs {
+  int64 thread_id = 1;
+  int32 script_id = 2;
+  string path = 3;
+}
+
+message SourceCodeEvent {
+  CommonResponse common = 1;
+  int64 thread_id = 2;
+  string path = 3;
+  string code = 4;
+  bool is_esm = 5;
+}

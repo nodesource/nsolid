@@ -52,6 +52,7 @@
 #include "v8-external-memory-accounter.h"
 #include "v8-profiler.h"
 #include "v8.h"
+#include "nsolid.h"
 
 #include <array>
 #include <atomic>
@@ -1210,6 +1211,8 @@ class Environment final : public MemoryRetainer {
     kHasExitCode,
     kExitInfoFieldCount
   };
+
+  nsolid::SharedEnvInst envinst_;
 
 #if HAVE_OPENSSL
   uint64_t hash_cache_generation = 0;

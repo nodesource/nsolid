@@ -71,10 +71,10 @@ static_optgroup = parser.add_argument_group("Static libraries",
     "Flags that allows you to control whether you want to build against "
     "additional static libraries.")
 intl_optgroup = parser.add_argument_group("Internationalization",
-    "Flags that lets you enable i18n features in Node.js as well as which "
+    "Flags that lets you enable i18n features in N|Solid as well as which "
     "library you want to build against.")
 http2_optgroup = parser.add_argument_group("HTTP2",
-    "Flags that allows you to control HTTP2 features in Node.js")
+    "Flags that allows you to control HTTP2 features in N|Solid")
 shared_builtin_optgroup = parser.add_argument_group("Shared builtins",
     "Flags that allows you to control whether you want to build against "
     "internal builtins or shared files.")
@@ -103,7 +103,7 @@ parser.add_argument('--debug-node',
     action='store_true',
     dest='debug_node',
     default=None,
-    help='build the Node.js part of the binary with debugging symbols')
+    help='build the N|Solid part of the binary with debugging symbols')
 
 parser.add_argument('--debug-symbols',
     action='store_true',
@@ -200,7 +200,7 @@ parser.add_argument("--enable-vtune-profiling",
     action="store_true",
     dest="enable_vtune_profiling",
     help="Enable profiling support for Intel VTune profiler to profile "
-         "JavaScript code executed in Node.js. This feature is only available "
+         "JavaScript code executed in N|Solid. This feature is only available "
          "for x32, x86, and x64 architectures.")
 
 parser.add_argument("--enable-pgo-generate",
@@ -252,7 +252,7 @@ parser.add_argument("--openssl-conf-name",
     action="store",
     dest="openssl_conf_name",
     default='nodejs_conf',
-    help="The OpenSSL config appname (config section name) used by Node.js")
+    help="The OpenSSL config appname (config section name) used by N|Solid")
 
 parser.add_argument('--openssl-default-cipher-list',
     action='store',
@@ -860,7 +860,7 @@ parser.add_argument('--release-urlbase',
     dest='release_urlbase',
     help='Provide a custom URL prefix for the `process.release` properties '
          '`sourceUrl` and `headersUrl`. When compiling a release build, this '
-         'will default to https://nodejs.org/download/release/')
+         'will default to NSolid\'s default')
 
 parser.add_argument('--enable-d8',
     action='store_true',
@@ -966,7 +966,7 @@ parser.add_argument('--use-section-ordering-file',
     dest='node_section_ordering_info',
     default='',
     help='Pass a section ordering file to the linker. This requires that ' +
-         'Node.js be linked using the gold linker. The gold linker must have ' +
+         'N|Solid be linked using the gold linker. The gold linker must have ' +
          'version 1.2 or greater.')
 
 intl_optgroup.add_argument('--with-intl',
@@ -1009,7 +1009,7 @@ intl_optgroup.add_argument('--with-icu-default-data-dir',
     help='Path to the icuXXdt{lb}.dat file. If unspecified, ICU data will '
          'only be read if the NODE_ICU_DATA environment variable or the '
          '--icu-data-dir runtime argument is used. This option has effect '
-         'only when Node.js is built with --with-intl=small-icu.')
+         'only when N|Solid is built with --with-intl=small-icu.')
 
 parser.add_argument('--with-ltcg',
     action='store_true',
@@ -1467,6 +1467,24 @@ def get_xcode_version(cc):
   return get_version_helper(
     cc, r"(^Apple (?:clang|LLVM) version) ([0-9]+\.[0-9]+)")
 
+def get_glibc_version():
+  try:
+    proc = subprocess.Popen(['/usr/bin/ldd', '--version'],
+                            stdin=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            stdout=subprocess.PIPE)
+  except OSError:
+    error('''No acceptable glibc found!''')
+
+  # print(to_utf8(proc.communicate()[0]))
+  match = re.search(r"ldd \(.*\) ([0-9]+)\.([0-9]+)",
+                    to_utf8(proc.communicate()[0]))
+  if match:
+    return tuple(map(int, match.group(1, 2)))
+  else:
+    return (0, 0)
+
+
 def get_gas_version(cc):
   try:
     custom_env = os.environ.copy()
@@ -1865,6 +1883,7 @@ def configure_mips(o, target_arch):
   o['variables']['v8_host_byteorder'] = host_byteorder
 
 def configure_zos(o):
+  o['variables']['node_static_zoslib'] = b(True)
   if os.environ.get('ZOSLIB_INCLUDES'):
     o['variables']['zoslib_include_dir'] = os.environ.get('ZOSLIB_INCLUDES')
     o['include_dirs'] += [o['variables']['zoslib_include_dir']]
@@ -3089,6 +3108,13 @@ if bin_override:
 write('config.mk', do_not_edit + config_str)
 
 
+# N|Solid. Copy asserts-cpp and nlohmann::json headers to src/
+shutil.rmtree('./src/asserts-cpp', True)
+shutil.rmtree('./src/nlohmann', True)
+shutil.copytree('./deps/asserts-cpp', './src/asserts-cpp')
+shutil.copytree('./deps/json/single_include/nlohmann', './src/nlohmann')
+shutil.copyfile('src/nlohmann/json.hpp', 'src/nlohmann/json.h')
+
 
 gyp_args = ['--no-parallel', '-Dconfiguring_node=1']
 gyp_args += ['-Dbuild_type=' + config['BUILDTYPE']]
@@ -3129,6 +3155,12 @@ if options.compile_commands_json:
   if sys.platform != 'win32':
     os.path.lexists('./compile_commands.json') and os.unlink('./compile_commands.json')
     os.symlink('./out/' + config['BUILDTYPE'] + '/compile_commands.json', './compile_commands.json')
+
+
+if flavor == 'linux':
+  glibc_version = get_glibc_version()
+  if glibc_version < (2, 17):
+    gyp_args += ['-Dnsolid_use_librt=1']
 
 # pass the leftover non-whitespace positional arguments to GYP
 gyp_args += [arg for arg in args if not str.isspace(arg)]

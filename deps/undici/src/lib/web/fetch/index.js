@@ -73,6 +73,7 @@ const defaultUserAgent = typeof __UNDICI_IS_NODE__ !== 'undefined' || typeof esb
   ? 'node'
   : 'undici'
 
+const channels = require('../../core/diagnostics.js').channels.tracingChannel
 /** @type {import('buffer').resolveObjectURL} */
 let resolveObjectURL
 
@@ -156,12 +157,68 @@ function handleFetchDone (response) {
   finalizeAndReportTiming(response, 'fetch')
 }
 
+// This will publish all diagnostic events only when we have subscribers.
+function ifSubscribersRunStores (req, input, init, callback) {
+  const hasSubscribers = subscribersCheck()
+
+  if (hasSubscribers) {
+    const context = { req, input, init, result: null, error: null }
+
+    return channels.start.runStores(context, () => {
+      try {
+        return callback(createInstrumentedDeferredPromise(context))
+      } catch (e) {
+        context.error = e
+        channels.error.publish(context)
+        throw e
+      } finally {
+        channels.end.publish(context)
+      }
+    })
+  } else {
+    return callback(Promise.withResolvers())
+  }
+}
+
+// subscribersCheck will be called at the beginning of the fetch call
+// and will check if we have subscribers
+function subscribersCheck () {
+  return channels && (channels.start.hasSubscribers ||
+  channels.end.hasSubscribers ||
+  channels.asyncStart.hasSubscribers ||
+  channels.asyncEnd.hasSubscribers ||
+  channels.error.hasSubscribers)
+}
+
+function createInstrumentedDeferredPromise (context) {
+  let res
+  let rej
+  const promise = new Promise((resolve, reject) => {
+    res = function (result) {
+      context.result = result
+      channels.asyncStart.runStores(context, () => {
+        resolve(result)
+        channels.asyncEnd.publish(context)
+      })
+    }
+    rej = function (error) {
+      context.error = error
+      channels.error.publish(context)
+      channels.asyncStart.runStores(context, () => {
+        reject(error)
+        channels.asyncEnd.publish(context)
+      })
+    }
+  })
+
+  return { promise, resolve: res, reject: rej }
+}
+
 // https://fetch.spec.whatwg.org/#fetch-method
 function fetch (input, init = undefined) {
   webidl.argumentLengthCheck(arguments, 1, 'globalThis.fetch')
 
   // 1. Let p be a new promise.
-  let p = Promise.withResolvers()
 
   // 2. Let requestObject be the result of invoking the initial value of
   // Request as constructor with input and init as arguments. If this throws
@@ -171,133 +228,120 @@ function fetch (input, init = undefined) {
   try {
     requestObject = new Request(input, init)
   } catch (e) {
-    p.reject(e)
-    return p.promise
+    return Promise.reject(e)
   }
 
-  // 3. Let request be requestObject’s request.
-  const request = getRequestState(requestObject)
+  return ifSubscribersRunStores(requestObject, input, init, p => {
+    // 3. Let request be requestObject’s request.
+    const request = getRequestState(requestObject)
 
-  // 4. If requestObject’s signal’s aborted flag is set, then:
-  if (requestObject.signal.aborted) {
+    // 4. If requestObject’s signal’s aborted flag is set, then:
+    if (requestObject.signal.aborted) {
     // 1. Abort the fetch() call with p, request, null, and
     //    requestObject’s signal’s abort reason.
-    abortFetch(p, request, null, requestObject.signal.reason, null)
+      abortFetch(p, request, null, requestObject.signal.reason, null)
 
-    // 2. Return p.
+      // 2. Return p.
+      return p.promise
+    }
+
+    // 5. Let globalObject be request’s client’s global object.
+    const globalObject = request.client.globalObject
+
+    // 6. If globalObject is a ServiceWorkerGlobalScope object, then set
+    // request’s service-workers mode to "none".
+    if (globalObject?.constructor?.name === 'ServiceWorkerGlobalScope') {
+      request.serviceWorkers = 'none'
+    }
+
+    // 7. Let responseObject be null.
+    let responseObject = null
+
+    // 8. Let relevantRealm be this’s relevant Realm.
+
+    // 9. Let locallyAborted be false.
+    let locallyAborted = false
+
+    // 10. Let controller be null.
+    let controller = null
+
+    // 11. Add the following abort steps to requestObject’s signal:
+    addAbortListener(
+      requestObject.signal,
+      () => {
+        // 1. Set locallyAborted to true.
+        locallyAborted = true
+
+        // 2. Assert: controller is non-null.
+        assert(controller != null)
+
+        // 3. Abort controller with requestObject’s signal’s abort reason.
+        controller.abort(requestObject.signal.reason)
+
+        const realResponse = responseObject?.deref()
+
+        // 4. Abort the fetch() call with p, request, responseObject,
+        //    and requestObject’s signal’s abort reason.
+        abortFetch(p, request, realResponse, requestObject.signal.reason, controller.controller)
+      }
+    )
+
+    // 12. Let handleFetchDone given response response be to finalize and
+    // report timing with response, globalObject, and "fetch".
+    // see function handleFetchDone
+
+    // 13. Set controller to the result of calling fetch given request,
+    // with processResponseEndOfBody set to handleFetchDone, and processResponse
+    // given response being these substeps:
+
+    const processResponse = (response) => {
+      // 1. If locallyAborted is true, terminate these substeps.
+      if (locallyAborted) {
+        return
+      }
+
+      // 2. If response’s aborted flag is set, then:
+      if (response.aborted) {
+        // 1. Let deserializedError be the result of deserialize a serialized
+        //    abort reason given controller’s serialized abort reason and
+        //    relevantRealm.
+
+        // 2. Abort the fetch() call with p, request, responseObject, and
+        //    deserializedError.
+
+        abortFetch(p, request, responseObject, controller.serializedAbortReason, controller.controller)
+        return
+      }
+
+      // 3. If response is a network error, then reject p with a TypeError
+      // and terminate these substeps.
+      if (response.type === 'error') {
+        p.reject(new TypeError('fetch failed', { cause: response.error }))
+        return
+      }
+
+      // 4. Set responseObject to the result of creating a Response object,
+      // given response, "immutable", and relevantRealm.
+      responseObject = new WeakRef(fromInnerResponse(response, 'immutable'))
+
+      // 5. Resolve p with responseObject.
+      p.resolve(responseObject.deref())
+      p = null
+    }
+
+    controller = fetching({
+      request,
+      processResponseEndOfBody: handleFetchDone,
+      processResponse,
+      dispatcher: getRequestDispatcher(requestObject), // undici
+      // Keep requestObject alive to prevent its AbortController from being GC'd
+      // See https://github.com/nodejs/undici/issues/4627
+      requestObject
+    })
+
+    // 14. Return p.
     return p.promise
-  }
-
-  // 5. Let globalObject be request’s client’s global object.
-  const globalObject = request.client.globalObject
-
-  // 6. If globalObject is a ServiceWorkerGlobalScope object, then set
-  // request’s service-workers mode to "none".
-  if (globalObject?.constructor?.name === 'ServiceWorkerGlobalScope') {
-    request.serviceWorkers = 'none'
-  }
-
-  // 7. Let responseObject be null.
-  let responseObject = null
-
-  // 8. Let relevantRealm be this’s relevant Realm.
-
-  // 9. Let locallyAborted be false.
-  let locallyAborted = false
-
-  // 10. Let controller be null.
-  let controller = null
-
-  // 11. Add the following abort steps to requestObject’s signal:
-  const removeAbortListener = addAbortListener(
-    requestObject.signal,
-    () => {
-      // 1. Set locallyAborted to true.
-      locallyAborted = true
-
-      // 2. Assert: controller is non-null.
-      assert(controller != null)
-
-      // 3. Abort controller with requestObject’s signal’s abort reason.
-      controller.abort(requestObject.signal.reason)
-
-      const realResponse = responseObject?.deref()
-
-      // 4. Abort the fetch() call with p, request, responseObject,
-      //    and requestObject’s signal’s abort reason.
-      abortFetch(p, request, realResponse, requestObject.signal.reason, controller.controller)
-    }
-  )
-
-  // Remove the `abort` listeners registered above and in the Request
-  // constructor once the fetch has settled. Without this, reusing a single
-  // signal across many requests leaks listeners and Node.js emits a
-  // MaxListenersExceededWarning. See https://github.com/nodejs/undici/issues/5285
-  const cleanupAbortListeners = () => {
-    removeAbortListener()
-    removeRequestAbortListener(requestObject)
-  }
-
-  // 12. Let handleFetchDone given response response be to finalize and
-  // report timing with response, globalObject, and "fetch".
-  // see function handleFetchDone
-
-  // 13. Set controller to the result of calling fetch given request,
-  // with processResponseEndOfBody set to handleFetchDone, and processResponse
-  // given response being these substeps:
-
-  const processResponse = (response) => {
-    // 1. If locallyAborted is true, terminate these substeps.
-    if (locallyAborted) {
-      return
-    }
-
-    // 2. If response’s aborted flag is set, then:
-    if (response.aborted) {
-      // 1. Let deserializedError be the result of deserialize a serialized
-      //    abort reason given controller’s serialized abort reason and
-      //    relevantRealm.
-
-      // 2. Abort the fetch() call with p, request, responseObject, and
-      //    deserializedError.
-
-      abortFetch(p, request, responseObject, controller.serializedAbortReason, controller.controller)
-      cleanupAbortListeners()
-      return
-    }
-
-    // 3. If response is a network error, then reject p with a TypeError
-    // and terminate these substeps.
-    if (response.type === 'error') {
-      p.reject(new TypeError('fetch failed', { cause: response.error }))
-      cleanupAbortListeners()
-      return
-    }
-
-    // 4. Set responseObject to the result of creating a Response object,
-    // given response, "immutable", and relevantRealm.
-    responseObject = new WeakRef(fromInnerResponse(response, 'immutable'))
-
-    // 5. Resolve p with responseObject.
-    p.resolve(responseObject.deref())
-    p = null
-  }
-
-  controller = fetching({
-    request,
-    processResponseEndOfBody: (response) => {
-      handleFetchDone(response)
-      cleanupAbortListeners()
-    },
-    processResponse,
-    dispatcher: getRequestDispatcher(requestObject), // undici
-    // Keep requestObject alive to prevent its AbortController from being GC'd
-    // See https://github.com/nodejs/undici/issues/4627
-    requestObject
   })
-
-  // 14. Return p.
-  return p.promise
 }
 
 // https://fetch.spec.whatwg.org/#finalize-and-report-timing
@@ -492,7 +536,8 @@ function fetching ({
   // 9. If request’s origin is "client", then set request’s origin to request’s
   // client’s origin.
   if (request.origin === 'client') {
-    request.origin = request.client.origin
+    // TODO: What if request.client is null?
+    request.origin = request.client?.origin
   }
 
   // 10. If all of the following conditions are true:

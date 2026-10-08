@@ -205,6 +205,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
     reset_timeout = 1;
     user_timeout = timeout;
     timeout = 0;
+    uv__get_loop_metrics(loop)->loop_starting = 1;
   } else {
     reset_timeout = 0;
   }

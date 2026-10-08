@@ -1,11 +1,11 @@
-# Building Node.js
+# Building N|Solid
 
 Depending on what platform or features you need, the build process may
 differ. After you've built a binary, running the
 test suite to confirm that the binary works as intended is a good next step.
 
 If you can reproduce a test failure, search for it in the
-[Node.js issue tracker](https://github.com/nodejs/node/issues) or
+[N|Solid issue tracker](https://github.com/nodesource/nsolid/issues) or
 file a new issue.
 
 ## Table of contents
@@ -17,14 +17,13 @@ file a new issue.
   * [Supported toolchains](#supported-toolchains)
   * [Official binary platforms and toolchains](#official-binary-platforms-and-toolchains)
     * [OpenSSL asm support](#openssl-asm-support)
-  * [Previous versions of this document](#previous-versions-of-this-document)
-* [Building Node.js on supported platforms](#building-nodejs-on-supported-platforms)
+* [Building N|Solid on supported platforms](#building-nsolid-on-supported-platforms)
   * [Prerequisites](#prerequisites)
   * [Unix and macOS](#unix-and-macos)
     * [Unix prerequisites](#unix-prerequisites)
     * [macOS prerequisites](#macos-prerequisites)
-    * [Building Node.js](#building-nodejs-1)
-    * [Installing Node.js](#installing-nodejs)
+    * [Building N|Solid](#building-nsolid-1)
+    * [Installing N|Solid](#installing-nsolid)
     * [Running Tests](#running-tests)
     * [Running Coverage](#running-coverage)
     * [Building the documentation](#building-the-documentation)
@@ -38,7 +37,7 @@ file a new issue.
     * [Windows Prerequisites](#windows-prerequisites)
       * [Option 1: Manual install](#option-1-manual-install)
       * [Option 2: Automated install with WinGet](#option-2-automated-install-with-winget)
-    * [Building Node.js](#building-nodejs-2)
+    * [Building N|Solid](#building-nsolid-2)
       * [Using ccache](#using-ccache)
   * [Android](#android)
 * [`Intl` (ECMA-402) support](#intl-ecma-402-support)
@@ -56,12 +55,11 @@ file a new issue.
     * [Unix/macOS](#unixmacos-3)
     * [Windows](#windows-4)
 * [Configuring OpenSSL config appname](#configure-openssl-appname)
-* [Building Node.js with FIPS-compliant OpenSSL](#building-nodejs-with-fips-compliant-openssl)
-* [Building Node.js with Temporal support](#building-nodejs-with-temporal-support)
-* [Building Node.js with external core modules](#building-nodejs-with-external-core-modules)
+* [Building N|Solid with FIPS-compliant OpenSSL](#building-nsolid-with-fips-compliant-openssl)
+* [Building N|Solid with external core modules](#building-nsolid-with-external-core-modules)
   * [Unix/macOS](#unixmacos-4)
   * [Windows](#windows-5)
-* [Note for downstream distributors of Node.js](#note-for-downstream-distributors-of-nodejs)
+* [Note for downstream distributors of N|Solid](#note-for-downstream-distributors-of-nsolid)
 
 ## Supported platforms
 
@@ -70,17 +68,17 @@ which it belongs.
 
 ### Input
 
-Node.js relies on V8 and libuv. We adopt a subset of their supported platforms.
+N|Solid relies on V8 and libuv. We adopt a subset of their supported platforms.
 
 ### Strategy
 
 There are three support tiers:
 
-* **Tier 1**: These platforms represent the majority of Node.js users. The
-  Node.js Build Working Group maintains infrastructure for full test coverage.
+* **Tier 1**: These platforms represent the majority of N|Solid users. The
+  N|Solid Build Working Group maintains infrastructure for full test coverage.
   Test failures on tier 1 platforms will block releases.
-* **Tier 2**: These platforms represent smaller segments of the Node.js user
-  base. The Node.js Build Working Group maintains infrastructure for full test
+* **Tier 2**: These platforms represent smaller segments of the N|Solid user
+  base. The N|Solid Build Working Group maintains infrastructure for full test
   coverage. Test failures on tier 2 platforms will block releases.
   Infrastructure issues may delay the release of binaries for these platforms.
 * **Experimental**: May not compile or test suite may not pass. The core team
@@ -93,15 +91,15 @@ will reflect those changes.
 
 ### Platform list
 
-Node.js compilation/execution support depends on operating system, architecture,
+N|Solid compilation/execution support depends on operating system, architecture,
 and libc version. The table below lists the support tier for each supported
 combination. A list of [supported compile toolchains](#supported-toolchains) is
 also supplied for tier 1 platforms.
 
-**For production applications, run Node.js on supported platforms only (Tier 1 or 2).**
+**For production applications, run N|Solid on supported platforms only.**
 
-Node.js does not support a platform version if a vendor has expired support
-for it. In other words, Node.js does not support running on End-of-Life (EoL)
+N|Solid does not support a platform version if a vendor has expired support
+for it. In other words, N|Solid does not support running on End-of-Life (EoL)
 platforms. This is true regardless of entries in the table below.
 
 | Operating System | Architectures    | Versions                          | Support Type | Notes                                                      |
@@ -126,14 +124,14 @@ platforms. This is true regardless of entries in the table below.
 
 <!--lint disable final-definition-->
 
-[^1]: Older kernel versions may work. However, official Node.js release
+[^1]: Older kernel versions may work. However, official N|Solid release
     binaries are [built on RHEL 8 systems](#official-binary-platforms-and-toolchains)
     with kernel 4.18.
 
-[^2]: On Windows, running Node.js in Windows terminal emulators
+[^2]: On Windows, running N|Solid in Windows terminal emulators
     like `mintty` requires the usage of [winpty](https://github.com/rprichard/winpty)
-    for the tty channels to work (e.g. `winpty node.exe script.js`).
-    In "Git bash" if you call the node shell alias (`node` without the `.exe`
+    for the tty channels to work (e.g. `winpty nsolid.exe script.js`).
+    In "Git bash" if you call the nsolid shell alias (`nsolid` without the `.exe`
     extension), `winpty` is used automatically.
 
 [^3]: The Windows Subsystem for Linux (WSL) is not
@@ -141,8 +139,8 @@ platforms. This is true regardless of entries in the table below.
     community will only address issues that reproduce on native GNU/Linux
     systems. Issues that only reproduce on WSL should be reported in the
     [WSL issue tracker](https://github.com/Microsoft/WSL/issues). Running the
-    Windows binary (`node.exe`) in WSL will not work without workarounds such as
-    stdio redirection.
+    Windows binary (`nsolid.exe`) in WSL will not work without workarounds such
+    as stdio redirection.
 
 [^4]: Our macOS Binaries are compiled with 13.5 as a target. Xcode 16 is
     required to compile.
@@ -176,7 +174,7 @@ Depending on the host platform, the selection of toolchains may vary.
 
 ### Official binary platforms and toolchains
 
-Binaries at <https://nodejs.org/download/release/> are produced on:
+Binaries at <https://downloads.nodesource.com/> are produced on:
 
 | Binary package          | Platform and Toolchain                                        |
 | ----------------------- | ------------------------------------------------------------- |
@@ -230,18 +228,18 @@ If compiling without one of the above, use `configure` with the
 
 ### Previous versions of this document
 
-Supported platforms and toolchains change with each major version of Node.js.
-This document is only valid for the current version of Node.js, and is expected
+Supported platforms and toolchains change with each major version of N|Solid.
+This document is only valid for the current version of N|Solid, and is expected
 to be valid for the entire lifetime of this release line.
 
 To consult the version of this document for another version, download its source
 tarball and/or browse the git repository checked out at the relevant tag.
 
-## Building Node.js on supported platforms
+## Building N|Solid on supported platforms
 
 ### Prerequisites
 
-* [A supported version of Python][Python versions] (excludes pre-release versions) for building and testing.
+* [A supported version of Python][Python versions] for building and testing.
 * A Rust toolchain if [building Node.js with Temporal support](#building-nodejs-with-temporal-support).
 * Memory: at least 8GB of RAM is typically required when compiling with 4 parallel jobs (e.g: `make -j4`).
 
@@ -251,7 +249,7 @@ tarball and/or browse the git repository checked out at the relevant tag.
 
 * `gcc` and `g++` >= 13.2 or `clang` and `clang++` >= 19.1
 * GNU Make 3.81 or newer
-* [A supported version of Python][Python versions]
+* Python >=3.6 <=3.11 (see note above)
   * For test coverage, your Python installation must include pip.
 
 Installation via Linux package manager can be achieved with:
@@ -277,87 +275,12 @@ installed, you can find them under the menu `Xcode -> Open Developer Tool ->
 More Developer Tools...`. This step will install `clang`, `clang++`, and
 `make`.
 
-#### Nix integration
-
-If you are using Nix and direnv, you can use the following to get started:
-
-```bash
-echo 'use_nix --arg sharedLibDeps {} --argstr icu small' > .envrc
-direnv allow .
-make build-ci -j12
-```
-
-Most dependencies will likely be available in the official nixpkgs cache,
-although for some dependencies we have to deviate for the upstream repository,
-in which case those will be built locally, or you can use the Cachix repository
-for the project: `cachix use nodejs`. See <https://docs.cachix.org/> for more
-information.
-
-The use of `make build-ci` is to ensure you are using the `CONFIG_FLAGS`
-environment variable. You can also specify it manually:
-
-```bash
-./configure $CONFIG_FLAGS
-make -j12
-```
-
-Passing the `--arg sharedLibDeps {}` instructs direnv and Nix to generate an
-environment that uses the vendored-in native dependencies. Using the vendored-in
-dependencies result in a result closer to the official binaries, the tradeoff
-being the build will take longer to complete as you'd have to build those
-dependencies instead of using the cached ones from the Nix cache. You can omit
-that flag to use all the shared dependencies, or specify only some dependencies:
-
-```bash
-cat -> .envrc <<'EOF'
-use nix --arg sharedLibDeps '{
-  inherit (import ./tools/nix/sharedLibDeps.nix {})
-    openssl
-    zlib
-  ;
-}'
-EOF
-```
-
-Passing the `--argstr icu small` instructs direnv and Nix to pass `--with-intl=small` in
-the `CONFIG_FLAGS` environment variable. If you omit this, the prebuilt ICU from Nix cache
-will be used, which should speed up greatly compilation time.
-
-The use of `direnv` is completely optional, you can also use `nix-shell` directly,
-e.g. here's a command you can use to build a binary for benchmarking purposes:
-
-```bash
-# Passing `--arg loadJSBuiltinsDynamically false` to instruct the compiler to
-# embed the JS core files so it is no longer affected by local changes
-# (necessary for getting useful benchmark results).
-# Passing `--arg devTools '[]' --arg benchmarkTools '[]'` since we don't need
-# those to build node.
-nix-shell \
-  --arg loadJSBuiltinsDynamically false \
-  --arg devTools '[]' --arg benchmarkTools '[]' \
-  --run 'make build-ci -j12'
-
-mv out/Release/node ./node_old
-
-# ...
-# Make your local changes, and re-build node
-
-nix-shell \
-  --arg loadJSBuiltinsDynamically false \
-  --arg devTools '[]' --arg benchmarkTools '[]' \
-  --run 'make build-ci -j12'
-
-nix-shell --pure --run './node benchmark/compare.js --old ./node_old  --new ./node http | Rscript benchmark/compare.R'
-```
-
-There are additional attributes you can pass, see `shell.nix` file for more details.
-
-#### Building Node.js
+#### Building N|Solid
 
 If the path to your build directory contains a space, the build will likely
 fail.
 
-To build Node.js:
+To build N|Solid:
 
 ```bash
 ./configure
@@ -371,7 +294,7 @@ make -j4
 
 We can speed up the builds by using [Ninja](https://ninja-build.org/). For more
 information, see
-[Building Node.js with Ninja](doc/contributing/building-node-with-ninja.md).
+[Building N|Solid with Ninja](doc/contributing/building-nsolid-with-ninja.md).
 
 The `-j4` option will cause `make` to run 4 simultaneous compilation jobs which
 may reduce build time. For more information, see the
@@ -384,16 +307,16 @@ After building, setting up [firewall rules](tools/macos-firewall.sh) can avoid
 popups asking to accept incoming network connections when running tests.
 
 Running the following script on macOS will add the firewall rules for the
-executable `node` in the `out` directory and the symbolic `node` link in the
+executable `nsolid` in the `out` directory and the symbolic `nsolid` link in the
 project's root directory.
 
 ```bash
 sudo ./tools/macos-firewall.sh
 ```
 
-#### Installing Node.js
+#### Installing N|Solid
 
-To install this version of Node.js into a system directory:
+To install this version of N|Solid into a system directory:
 
 ```bash
 [sudo] make install
@@ -418,8 +341,6 @@ make -j4 test
 `make -j4 test` does a full check on the codebase, including documentation tests.
 
 To run the linter, use `make lint`/`vcbuild lint`. It will lint JavaScript, C++, and Markdown files.
-
-To fix auto fixable JavaScript linting errors, use `make lint-js-fix`.
 
 If you are updating tests and want to run tests in a single test file
 (e.g. `test/parallel/test-stream2-transform.js`):
@@ -473,13 +394,13 @@ tools/test.py --help
 > Note: On Windows you should use `python3` executable.
 > Example: `python3 tools/test.py test/message`
 
-You can usually run tests directly with node:
+You can usually run tests directly with nsolid:
 
 ```bash
-./node test/parallel/test-stream2-transform.js
+./nsolid test/parallel/test-stream2-transform.js
 ```
 
-> Info: `./node` points to your local Node.js build.
+> Info: `./nsolid` points to your local N|Solid build.
 
 Remember to recompile with `make -j4` in between test runs if you change code in
 the `lib` or `src` directories.
@@ -548,22 +469,22 @@ make coverage-clean
 
 To build the documentation:
 
-This will build Node.js first (if necessary) and then use it to build the docs:
+This will build N|Solid first (if necessary) and then use it to build the docs:
 
 ```bash
 make doc
 ```
 
-If you have an existing Node.js build, you can build just the docs with:
+If you have an existing N|Solid build, you can build just the docs with:
 
 ```bash
-NODE=/path/to/node make doc-only
+NODE=/path/to/nsolid make doc-only
 ```
 
 To read the man page:
 
 ```bash
-man doc/node.1
+man doc/nsolid.1
 ```
 
 If you prefer to read the full documentation in a browser, run the following.
@@ -585,16 +506,10 @@ make docopen
 This will open a file URL to a one-page version of all the browsable HTML
 documents using the default browser.
 
-```bash
-make docclean
-```
-
-This will clean previously built doc.
-
-To test if Node.js was built correctly:
+To test if N|Solid was built correctly:
 
 ```bash
-./node -e "console.log('Hello from Node.js ' + process.version)"
+./nsolid -e "console.log('Hello from N|Solid ' + process.version)"
 ```
 
 #### Building a debug build
@@ -609,15 +524,15 @@ make -j4
 ```
 
 `make` with `./configure --debug` generates two binaries, the regular release
-one in `out/Release/node` and a debug binary in `out/Debug/node`, only the
+one in `out/Release/nsolid` and a debug binary in `out/Debug/nsolid`, only the
 release version is actually installed when you run `make install`.
 
 To use the debug build with all the normal dependencies overwrite the release
 version in the install directory:
 
 ```bash
-make install PREFIX=/opt/node-debug/
-cp -a -f out/Debug/node /opt/node-debug/node
+make install PREFIX=/opt/nsolid-debug/
+cp -a -f out/Debug/nsolid /opt/nsolid-debug/nsolid
 ```
 
 When using the debug binary, core dumps will be generated in case of crashes.
@@ -625,14 +540,14 @@ These core dumps are useful for debugging when provided with the
 corresponding original debug binary and system information.
 
 Reading the core dump requires `gdb` built on the same platform the core dump
-was captured on (i.e. 64-bit `gdb` for `node` built on a 64-bit system, Linux
-`gdb` for `node` built on Linux) otherwise you will get errors like
+was captured on (i.e. 64-bit `gdb` for `nsolid` built on a 64-bit system, Linux
+`gdb` for `nsolid` built on Linux) otherwise you will get errors like
 `not in executable format: File format not recognized`.
 
 Example of generating a backtrace from the core dump:
 
 ```bash
-$ gdb /opt/node-debug/node core.node.8.1535359906
+$ gdb /opt/nsolid-debug/nsolid core.nsolid.8.1535359906
 (gdb) backtrace
 ```
 
@@ -640,9 +555,6 @@ $ gdb /opt/node-debug/node core.node.8.1535359906
 
 [ASan](https://github.com/google/sanitizers) can help detect various memory
 related bugs. ASan builds are currently only supported on linux.
-If you want to check it on Windows or macOS or you want a consistent toolchain
-on Linux, you can try [Docker](https://www.docker.com/products/docker-desktop/)
-(using an image like `gengjiawen/node-build:2020-02-14`).
 
 The `--debug` is not necessary and will slow down build and testing, but it can
 show a clear stack trace if ASan hits an issue.
@@ -654,39 +566,23 @@ make test-only
 
 #### Speeding up frequent rebuilds when developing
 
-##### ccache
-
-Tips: The `ccache` utility is widely used and should generally work fine.
-If you encounter any difficulties, consider disabling `mold` as a
-troubleshooting step.
-
-If you plan to frequently rebuild Node.js, especially if using several
-branches, installing `ccache` can help to greatly reduce build
-times. Set up with:
+If you plan to frequently rebuild N|Solid, especially if using several branches,
+installing `ccache` can help to greatly reduce build times. Set up with:
 
 On GNU/Linux:
 
-Tips: `mold` can speed up the link process, which can't be cached, you may
-need to install the latest version but not the apt version.
-
 ```bash
-sudo apt install ccache mold   # for Debian/Ubuntu, included in most Linux distros
-export CC="ccache gcc"         # add to your .profile
-export CXX="ccache g++"        # add to your .profile
-export LDFLAGS="-fuse-ld=mold" # add to your .profile
+sudo apt install ccache   # for Debian/Ubuntu, included in most Linux distros
+export CC="ccache gcc"    # add to your .profile
+export CXX="ccache g++"   # add to your .profile
 ```
-
-Refs:
-
-1. <https://ccache.dev/performance.html>
-2. <https://github.com/rui314/mold>
 
 On macOS:
 
 ```bash
-brew install ccache            # see https://brew.sh
-export CC="ccache cc"          # add to ~/.zshrc or other shell config file
-export CXX="ccache c++"        # add to ~/.zshrc or other shell config file
+brew install ccache      # see https://brew.sh
+export CC="ccache cc"    # add to ~/.zshrc or other shell config file
+export CXX="ccache c++"  # add to ~/.zshrc or other shell config file
 ```
 
 ##### Loading JS files from disk instead of embedding
@@ -721,7 +617,7 @@ the number of parallel build tasks (`-j<n>`).
 
 ### Windows
 
-#### Tips
+#### Prerequisites
 
 You may need to disable vcpkg integration if you encounter a link error about symbol
 redefinition related to zlib.lib(zlib1.dll), even if you never installed it by hand,
@@ -754,7 +650,7 @@ Refs:
   The Build Tools Edition has the lowest disk space requirements of all editions.
   Professional or Enterprise Editions can also be alternatively selected.
 * During installation of Visual Studio, select the "Desktop development with C++" workload.
-  As of Node.js 24.0.0, ClangCL is required to compile on Windows.
+  As of N|Solid 24.0.0, ClangCL is required to compile on Windows.
   To install it, select the following two optional components:
   * C++ Clang Compiler for Windows (Microsoft.VisualStudio.Component.VC.Llvm.Clang)
   * MSBuild support for LLVM (clang-cl) toolset (Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset)
@@ -793,8 +689,8 @@ first and then reinstalling them.
 
 ##### Option 2: Automated install with WinGet
 
-[WinGet configuration files](./.configurations)
-can be used to install all the required prerequisites for Node.js development
+[WinGet configuration files](https://github.com/nodesource/nsolid/tree/main/.configurations)
+can be used to install all the required prerequisites for N|Solid development
 easily. These files will install the following
 [WinGet](https://learn.microsoft.com/en-us/windows/package-manager/winget/) packages:
 
@@ -819,19 +715,52 @@ Use one of the above DSC files with
 in a PowerShell Terminal to install Node.js prerequisites.
 For example, using the DSC file for Visual Studio Community Edition, execute the following command line:
 
+To install N|Solid prerequisites from PowerShell Terminal:
+
 ```powershell
 winget configure .\.configurations\configuration.dsc.yaml
 ```
 
-To add optional components for MSI or ARM64 builds, refer to [Option 1: Manual install](#option-1-manual-install).
+##### Option 3: Automated install with Boxstarter
 
-#### Building Node.js
+A [Boxstarter](https://boxstarter.org/) script can be used for easy setup of
+Windows systems with all the required prerequisites for N|Solid development.
+This script will install the following [Chocolatey](https://chocolatey.org/)
+packages:
 
-* Remember to first clone the Node.js repository with the Git command
+* [Git for Windows](https://chocolatey.org/packages/git) with the `git` and
+  Unix tools added to the `PATH`
+* [Python 3.x](https://chocolatey.org/packages/python)
+* [Visual Studio 2022 Build Tools](https://chocolatey.org/packages/visualstudio2022buildtools)
+  with [Visual C++ workload](https://chocolatey.org/packages/visualstudio2022-workload-vctools)
+* [NetWide Assembler](https://chocolatey.org/packages/nasm)
+
+To install N|Solid prerequisites using
+[Boxstarter WebLauncher](https://boxstarter.org/weblauncher), visit
+<https://boxstarter.org/package/nr/url?https://raw.githubusercontent.com/nodesource/nsolid/HEAD/tools/bootstrap/windows_boxstarter>
+with a supported browser.
+
+Alternatively, you can use PowerShell. Run those commands from
+an elevated (Administrator) PowerShell terminal:
+
+```powershell
+Set-ExecutionPolicy Unrestricted -Force
+iex ((New-Object System.Net.WebClient).DownloadString('https://boxstarter.org/bootstrapper.ps1'))
+get-boxstarter -Force
+Install-BoxstarterPackage https://raw.githubusercontent.com/nodesource/nsolid/HEAD/tools/bootstrap/windows_boxstarter -DisableReboots
+refreshenv
+```
+
+The entire installation using Boxstarter will take up approximately 10 GB of
+disk space.
+
+#### Building N|Solid
+
+* Remember to first clone the N|Solid repository with the Git command
   and head to the directory that Git created; If you haven't already
   ```powershell
-  git clone https://github.com/nodejs/node.git
-  cd node
+  git clone https://github.com/nodesource/nsolid.git
+  cd nsolid
   ```
 
 > \[!TIP]
@@ -857,10 +786,10 @@ To run the tests:
 .\vcbuild test
 ```
 
-To test if Node.js was built correctly:
+To test if N|Solid was built correctly:
 
 ```powershell
-Release\node -e "console.log('Hello from Node.js', process.version)"
+Release\nsolid -e "console.log('Hello from N|Solid', process.version)"
 ```
 
 > \[!TIP]
@@ -874,13 +803,22 @@ Follow <https://github.com/ccache/ccache/wiki/MS-Visual-Studio>, and you
 should notice that obj file will be bigger than the normal one.
 
 First, install ccache. Assuming the installation of ccache is in `c:\ccache`
-(where you can find `ccache.exe`), setup aliases as the following commands:
+(where you can find `ccache.exe`), copy `c:\ccache\ccache.exe` to `c:\ccache\cl.exe`
+with this command.
+
+```powershell
+cp c:\ccache\ccache.exe c:\ccache\cl.exe
+```
+
+With newer version of Visual Studio, it may need the copy to be `clang-cl.exe`
+instead. If the output of `vcbuild.bat` suggests missing `clang-cl.exe`, copy
+it differently:
 
 ```powershell
 cp c:\ccache\ccache.exe c:\ccache\clang-cl.exe
 ```
 
-When building Node.js, provide a path to your ccache via the option:
+When building N|Solid, provide a path to your ccache via the option:
 
 ```powershell
 .\vcbuild.bat ccache c:\ccache\
@@ -888,6 +826,12 @@ When building Node.js, provide a path to your ccache via the option:
 
 This will allow for near-instantaneous rebuilds when switching branches back
 and forth that were built with cache.
+
+To use it with ClangCL, run this instead:
+
+```powershell
+.\vcbuild.bat clang-cl ccache c:\ccache\
+```
 
 ### Android
 
@@ -932,7 +876,7 @@ This is the default option.
 ### Trimmed: `small-icu` (English only) support
 
 In this configuration, only English data is included, but
-the full `Intl` (ECMA-402) APIs. It does not need to download
+the full `Intl` (ECMA-402) APIs.  It does not need to download
 any dependencies to function. You can add full data at runtime.
 
 #### Unix/macOS
@@ -1016,62 +960,30 @@ as `deps/icu` (You'll have: `deps/icu/source/...`)
 
 ### Configure OpenSSL appname
 
-Node.js can use an OpenSSL configuration file by specifying the environment
-variable `OPENSSL_CONF`, or using the command line option `--openssl-config`,
-which takes precedence. If neither is specified, Node.js defaults to reading the
-default OpenSSL configuration file `openssl.cnf`. Node.js will only read a
-section that is by default named `nodejs_conf`, but this name can be overridden
-using the following configure option:
+N|Solid can use an OpenSSL configuration file by specifying the environment
+variable `OPENSSL_CONF`, or using the command line option `--openssl-conf`, and
+if none of those are specified will default to reading the default OpenSSL
+configuration file `openssl.cnf`. N|Solid will only read a section that is by
+default named `nodejs_conf`, but this name can be overridden using the following
+configure option:
 
 ```bash
 ./configure --openssl-conf-name=<some_conf_name>
 ```
 
-## Building Node.js with FIPS-compliant OpenSSL
+## Building N|Solid with FIPS-compliant OpenSSL
 
-Node.js supports FIPS when statically or dynamically linked with OpenSSL 3 via
-[OpenSSL's provider model](https://docs.openssl.org/3.0/man7/crypto/#OPENSSL-PROVIDERS).
-It is not necessary to rebuild Node.js to enable support for FIPS.
+N|Solid supports FIPS when statically or dynamically linked with OpenSSL 3 via
+[OpenSSL's provider model](https://www.openssl.org/docs/man3.0/man7/crypto.html#OPENSSL-PROVIDERS).
+It is not necessary to rebuild N|Solid to enable support for FIPS.
 
-When using OpenSSL 1.1.1, Node.js must be built against a FIPS-capable OpenSSL.
+See [FIPS mode](./doc/api/crypto.md#fips-mode) for more information on how to
+enable FIPS support in N|Solid.
 
-See [FIPS mode](doc/api/crypto.md#fips-mode) for more information on how to
-enable FIPS support in Node.js.
-
-## Building Node.js with Temporal support
-
-Node.js supports the [Temporal](https://github.com/tc39/proposal-temporal) APIs, when
-linking statically or dynamically with a version of [temporal\_rs](https://github.com/boa-dev/temporal).
-Building it requires a Rust toolchain:
-
-* rustc >= 1.86 (with LLVM >= 19)
-* cargo >= 1.86
-
-Refer to [Install Rust](https://rust-lang.org/tools/install/) for instructions.
-Individual packages such as `rust` and `cargo` in some operating system distributions may be considered
-as an alternative, for example in CI environments.
-Consult with relevant operating system documentation to ensure that packages
-meet the minimum version specified above,
-as packaged versions may lag behind the `stable` version installed by the official instructions.
-Avoid mixing `rustup` together with `rust` and `cargo` package installations, due to
-potential version conflicts.
-
-If `--v8-enable-temporal-support` and `--v8-disable-temporal-support` are both
-omitted, `configure.py` probes for `cargo` and `rustc`. If either is missing,
-a warning is printed and Temporal support is disabled.
-
-* Pass `--v8-enable-temporal-support` to `configure.py` to require Temporal
-  support. The build will stop with an error if `cargo` or `rustc` cannot be
-  found.
-* Pass `--v8-disable-temporal-support` to opt out of Temporal support and
-  remove the Rust toolchain requirement.
-
-Passing both options to `configure.py` is an error.
-
-## Building Node.js with external core modules
+## Building N|Solid with external core modules
 
 It is possible to specify one or more JavaScript text files to be bundled in
-the binary as built-in modules when building Node.js.
+the binary as built-in modules when building N|Solid.
 
 ### Unix/macOS
 
@@ -1094,17 +1006,17 @@ To make `./myModule.js` available via `require('myModule')` and
 
 ## Building to use shared dependencies at runtime
 
-By default Node.js is built so that all dependencies are bundled into
-the Node.js binary itself. This provides a single binary that includes
+By default N|Solid is built so that all dependencies are bundled into
+the N|Solid binary itself. This provides a single binary that includes
 the correct versions of all dependencies on which it depends.
 
-Some Node.js distributions, however, prefer to manage dependencies.
+Some N|Solid distributions, however, prefer to manage dependencies.
 A number of `configure` options are provided to support this use case.
 
 * For dependencies with native code, the first set of options allow
-  Node.js to be built so that it uses a shared library
+  N|Solid to be built so that it uses a shared library
   at runtime instead of building and including the dependency
-  in the Node.js binary itself. These options are in the
+  in the N|Solid binary itself. These options are in the
   `Shared libraries` section of the `configure` help
   (run `./configure --help` to get the complete list).
   They provide the ability to enable the use of a shared library,
@@ -1112,9 +1024,9 @@ A number of `configure` options are provided to support this use case.
   contain the include and shared library files.
 
 * For dependencies with JavaScript code (including WASM), the second
-  set of options allow the Node.js binary to be built so that it loads
+  set of options allow the N|Solid binary to be built so that it loads
   the JavaScript for dependencies at runtime instead of being built into
-  the Node.js binary itself. These options are in the `Shared builtins`
+  the N|Solid binary itself. These options are in the `Shared builtins`
   section of the `configure` help
   (run `./configure --help` to get the complete list). They
   provide the ability to set the path to an external JavaScript file
@@ -1124,25 +1036,25 @@ It is the responsibility of any distribution
 shipping with these options to:
 
 * ensure that the shared dependencies available at runtime
-  match what is expected by the Node.js binary. A
+  match what is expected by the N|Solid binary. A
   mismatch may result in crashes or unexpected behavior.
-* fully test that Node.js operates as expected with the
+* fully test that N|Solid operates as expected with the
   external dependencies. There may be little or no test coverage
-  within the Node.js project CI for these non-default options.
+  within the N|Solid project CI for these non-default options.
 
-## Note for downstream distributors of Node.js
+## Note for downstream distributors of N|Solid
 
-The Node.js ecosystem is reliant on ABI compatibility within a major release.
-To maintain ABI compatibility it is required that distributed builds of Node.js
+The N|Solid ecosystem is reliant on ABI compatibility within a major release.
+To maintain ABI compatibility it is required that distributed builds of N|Solid
 be built against the same version of dependencies, or similar versions that do
-not break their ABI compatibility, as those released by Node.js for any given
+not break their ABI compatibility, as those released by N|Solid for any given
 `NODE_MODULE_VERSION` (located in `src/node_version.h`).
 
-When Node.js is built (with an intention to distribute) with an ABI
-incompatible with the official Node.js builds (e.g. using a ABI incompatible
+When N|Solid is built (with an intention to distribute) with an ABI
+incompatible with the official N|Solid builds (e.g. using a ABI incompatible
 version of a dependency), please reserve and use a custom `NODE_MODULE_VERSION`
 by opening a pull request against the registry available at
-<https://github.com/nodejs/node/blob/HEAD/doc/abi_version_registry.json>.
+<https://github.com/nodesource/nsolid/blob/HEAD/doc/abi_version_registry.json>.
 
 [Developer Mode]: https://learn.microsoft.com/en-us/windows/advanced-settings/developer-mode
 [Python downloads]: https://www.python.org/downloads/

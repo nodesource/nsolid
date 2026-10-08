@@ -846,17 +846,26 @@ void CpuProfileJSONSerializer::SerializePositionTicks(
 
 void CpuProfileJSONSerializer::SerializeCallFrame(
     const v8::CpuProfileNode* node) {
-  writer_->AddString("\"functionName\":\"");
-  writer_->AddString(node->GetFunctionNameStr());
-  writer_->AddString("\",\"lineNumber\":");
-  writer_->AddNumber(node->GetLineNumber() - 1);
-  writer_->AddString(",\"columnNumber\":");
-  writer_->AddNumber(node->GetColumnNumber() - 1);
+  writer_->AddString("\"functionName\":");
+  writer_->EscapeAndAddString(node->GetFunctionNameStr());
+  if (node->GetLineNumber()) {
+    writer_->AddString(",\"lineNumber\":");
+    writer_->AddNumber(node->GetLineNumber() - 1);
+  }
+
+  if (node->GetColumnNumber()) {
+    writer_->AddString(",\"columnNumber\":");
+    writer_->AddNumber(node->GetColumnNumber() - 1);
+  }
+
   writer_->AddString(",\"scriptId\":");
   writer_->AddNumber(node->GetScriptId());
-  writer_->AddString(",\"url\":\"");
-  writer_->AddString(node->GetScriptResourceNameStr());
-  writer_->AddCharacter('"');
+
+  const char* url = node->GetScriptResourceNameStr();
+  if (url) {
+    writer_->AddString(",\"url\":");
+    writer_->EscapeAndAddString(url);
+  }
 }
 
 void CpuProfileJSONSerializer::SerializeChildren(const v8::CpuProfileNode* node,
@@ -917,12 +926,13 @@ void CpuProfileJSONSerializer::SerializeNodes() {
 
 void CpuProfileJSONSerializer::SerializeTimeDeltas() {
   int count = profile_->samples_count();
-  uint64_t lastTime = profile_->start_time().since_origin().InMicroseconds();
+  base::TimeTicks lastTimestamp = profile_->start_time();
   for (int i = 0; i < count; i++) {
-    uint64_t ts = profile_->sample(i).timestamp.since_origin().InMicroseconds();
-    writer_->AddNumber(static_cast<int>(ts - lastTime));
+    int delta = static_cast<int>(
+        (profile_->sample(i).timestamp - lastTimestamp).InMicroseconds());
+    writer_->AddString(std::to_string(delta).c_str());
     if (i != (count - 1)) writer_->AddString(",");
-    lastTime = ts;
+    lastTimestamp = profile_->sample(i).timestamp;
   }
 }
 
