@@ -2,23 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stdlib.h>
+#include <cstdlib>
+#include <string>
 
 #include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/sdk/trace/provider.h"
 #include "opentelemetry/trace/provider.h"
-#include "opentelemetry/trace/tracer.h"
 #include "opentelemetry/trace/tracer_provider.h"
 
 #if defined(_MSC_VER)
 #  include "opentelemetry/sdk/common/env_variables.h"
 using opentelemetry::sdk::common::setenv;
 using opentelemetry::sdk::common::unsetenv;
-#endif
-
-#if OPENTELEMETRY_ABI_VERSION_NO >= 2
-#  include "opentelemetry/common/key_value_iterable.h"
 #endif
 
 using opentelemetry::trace::Tracer;
@@ -28,9 +24,12 @@ namespace nostd     = opentelemetry::nostd;
 namespace trace_api = opentelemetry::trace;
 namespace trace_sdk = opentelemetry::sdk::trace;
 
-class TestProvider : public TracerProvider
+namespace
 {
 
+class TestProvider : public TracerProvider
+{
+public:
 #if OPENTELEMETRY_ABI_VERSION_NO >= 2
   nostd::shared_ptr<Tracer> GetTracer(
       nostd::string_view /* name */,
@@ -84,3 +83,5 @@ TEST(Provider, SetTracerProviderDisabled)
   unsetenv("OTEL_SDK_DISABLED");
 }
 #endif
+
+}  // namespace

@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 #include <memory>
-#include <ratio>
 #include <string>
 #include <thread>
 #include <utility>
@@ -16,8 +15,6 @@
 
 #include "opentelemetry/common/attribute_value.h"
 #include "opentelemetry/common/timestamp.h"
-#include "opentelemetry/logs/log_record.h"
-#include "opentelemetry/logs/severity.h"
 #include "opentelemetry/nostd/span.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/nostd/variant.h"
@@ -38,6 +35,9 @@ using namespace opentelemetry::sdk::logs;
 using namespace opentelemetry::sdk::common;
 
 namespace nostd = opentelemetry::nostd;
+
+namespace
+{
 
 class MockLogRecordable final : public opentelemetry::sdk::logs::Recordable
 {
@@ -477,3 +477,5 @@ TEST_F(BatchLogRecordProcessorTest, TestOptionsReadFromMultipleEnvVars)
   unsetenv("OTEL_BLRP_EXPORT_TIMEOUT");
   unsetenv("OTEL_BLRP_MAX_EXPORT_BATCH_SIZE");
 }
+
+}  // namespace

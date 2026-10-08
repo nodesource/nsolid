@@ -1,41 +1,67 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef OPENTELEMETRY_STL_VERSION
+#include <gtest/gtest.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+#include "gmock/gmock.h"
+#include "nlohmann/json.hpp"
 
-#  include <chrono>
+#include "opentelemetry/common/key_value_iterable_view.h"
+#include "opentelemetry/exporters/otlp/otlp_environment.h"
+#include "opentelemetry/exporters/otlp/otlp_http.h"
+#include "opentelemetry/exporters/otlp/otlp_http_client.h"
+#include "opentelemetry/exporters/otlp/otlp_http_log_record_exporter.h"
+#include "opentelemetry/exporters/otlp/otlp_http_log_record_exporter_options.h"
+#include "opentelemetry/ext/http/client/http_client.h"
+#include "opentelemetry/logs/logger.h"
+#include "opentelemetry/logs/severity.h"
+#include "opentelemetry/nostd/shared_ptr.h"
+#include "opentelemetry/nostd/span.h"
+#include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/sdk/common/exporter_utils.h"
+#include "opentelemetry/sdk/common/global_log_handler.h"
+#include "opentelemetry/sdk/common/thread_instrumentation.h"
+#include "opentelemetry/sdk/logs/batch_log_record_processor.h"
+#include "opentelemetry/sdk/logs/batch_log_record_processor_options.h"
+#include "opentelemetry/sdk/logs/exporter.h"
+#include "opentelemetry/sdk/logs/logger_provider.h"
+#include "opentelemetry/sdk/logs/processor.h"
+#include "opentelemetry/sdk/logs/recordable.h"
+#include "opentelemetry/test_common/ext/http/client/http_client_test_factory.h"
+#include "opentelemetry/test_common/ext/http/client/nosend/http_client_nosend.h"
+#include "opentelemetry/test_common/sdk/common/scoped_test_log_handler.h"
+#include "opentelemetry/trace/span_id.h"
+#include "opentelemetry/trace/trace_flags.h"
+#include "opentelemetry/trace/trace_id.h"
+#include "opentelemetry/version.h"
+
+// clang-format off
+#include "opentelemetry/exporters/otlp/protobuf_include_prefix.h" // IWYU pragma: keep
+#include "opentelemetry/proto/common/v1/common.pb.h"
+#include "opentelemetry/proto/logs/v1/logs.pb.h"
+#include "opentelemetry/proto/collector/logs/v1/logs_service.pb.h"
+#include "opentelemetry/exporters/otlp/protobuf_include_suffix.h" // IWYU pragma: keep
+// clang-format on
+
+// IWYU pragma: no_include <google/protobuf/repeated_ptr_field.h>
+// IWYU pragma: no_include <google/protobuf/stubs/common.h>
+
+#ifdef ENABLE_ASYNC_EXPORT
 #  include <thread>
+#endif
 
-#  include "opentelemetry/exporters/otlp/otlp_http_log_record_exporter.h"
-
-#  include "opentelemetry/exporters/otlp/protobuf_include_prefix.h"
-
-#  include "opentelemetry/proto/collector/logs/v1/logs_service.pb.h"
-
-#  include "opentelemetry/exporters/otlp/protobuf_include_suffix.h"
-
-#  include "opentelemetry/common/key_value_iterable_view.h"
-#  include "opentelemetry/ext/http/client/http_client_factory.h"
-#  include "opentelemetry/ext/http/server/http_server.h"
-#  include "opentelemetry/logs/provider.h"
-#  include "opentelemetry/sdk/logs/batch_log_record_processor.h"
-#  include "opentelemetry/sdk/logs/exporter.h"
-#  include "opentelemetry/sdk/logs/logger_provider.h"
-#  include "opentelemetry/sdk/resource/resource.h"
-#  include "opentelemetry/test_common/ext/http/client/http_client_test_factory.h"
-#  include "opentelemetry/test_common/ext/http/client/nosend/http_client_nosend.h"
-
-#  include <google/protobuf/message_lite.h>
-#  include <gtest/gtest.h>
-#  include "gmock/gmock.h"
-
-#  include "nlohmann/json.hpp"
-
-#  if defined(_MSC_VER)
-#    include "opentelemetry/sdk/common/env_variables.h"
+#if defined(_MSC_VER)
+#  include "opentelemetry/sdk/common/env_variables.h"
 using opentelemetry::sdk::common::setenv;
 using opentelemetry::sdk::common::unsetenv;
-#  endif
+#endif
 
 using namespace testing;
 
@@ -44,6 +70,20 @@ namespace exporter
 {
 namespace otlp
 {
+
+namespace
+{
+class ProtobufGlobalSymbolGuard
+{
+public:
+  ProtobufGlobalSymbolGuard() = default;
+  ~ProtobufGlobalSymbolGuard() { google::protobuf::ShutdownProtobufLibrary(); }
+  ProtobufGlobalSymbolGuard(const ProtobufGlobalSymbolGuard &)            = delete;
+  ProtobufGlobalSymbolGuard &operator=(const ProtobufGlobalSymbolGuard &) = delete;
+  ProtobufGlobalSymbolGuard(ProtobufGlobalSymbolGuard &&)                 = delete;
+  ProtobufGlobalSymbolGuard &operator=(ProtobufGlobalSymbolGuard &&)      = delete;
+};
+}  // namespace
 
 template <class T, size_t N>
 static nostd::span<T, N> MakeSpan(T (&array)[N])
@@ -88,6 +128,8 @@ static OtlpHttpClientOptions MakeOtlpHttpClientOptions(HttpRequestContentType co
 
 namespace http_client = opentelemetry::ext::http::client;
 
+using opentelemetry::test_common::ScopedTestLogHandler;
+
 class OtlpHttpLogRecordExporterTestPeer : public ::testing::Test
 {
 public:
@@ -130,9 +172,8 @@ public:
 
     auto provider = nostd::shared_ptr<sdk::logs::LoggerProvider>(new sdk::logs::LoggerProvider());
 
-    provider->AddProcessor(
-        std::unique_ptr<sdk::logs::LogRecordProcessor>(new sdk::logs::BatchLogRecordProcessor(
-            std::move(exporter), 5, std::chrono::milliseconds(256), 5)));
+    provider->AddProcessor(std::make_unique<sdk::logs::BatchLogRecordProcessor>(
+        std::move(exporter), 5, std::chrono::milliseconds(256), 5));
 
     std::string report_trace_id;
     std::string report_span_id;
@@ -244,7 +285,7 @@ public:
     EXPECT_GE(received_record_counter, 1);
   }
 
-#  ifdef ENABLE_ASYNC_EXPORT
+#ifdef ENABLE_ASYNC_EXPORT
   void ExportJsonIntegrationTestAsync()
   {
     auto mock_otlp_client = OtlpHttpLogRecordExporterTestPeer::GetMockOtlpHttpClient(
@@ -267,8 +308,8 @@ public:
     options.schedule_delay_millis = std::chrono::milliseconds(256);
     options.max_export_batch_size = 5;
 
-    provider->AddProcessor(std::unique_ptr<sdk::logs::LogRecordProcessor>(
-        new sdk::logs::BatchLogRecordProcessor(std::move(exporter), options)));
+    provider->AddProcessor(
+        std::make_unique<sdk::logs::BatchLogRecordProcessor>(std::move(exporter), options));
 
     std::string report_trace_id;
     std::string report_span_id;
@@ -390,7 +431,7 @@ public:
     // Exporting can be retried
     EXPECT_GE(received_record_counter, 1);
   }
-#  endif
+#endif
 
   void ExportBinaryIntegrationTest()
   {
@@ -413,8 +454,8 @@ public:
     processor_options.max_export_batch_size = 5;
     processor_options.max_queue_size        = 5;
     processor_options.schedule_delay_millis = std::chrono::milliseconds(256);
-    provider->AddProcessor(std::unique_ptr<sdk::logs::LogRecordProcessor>(
-        new sdk::logs::BatchLogRecordProcessor(std::move(exporter), processor_options)));
+    provider->AddProcessor(std::make_unique<sdk::logs::BatchLogRecordProcessor>(std::move(exporter),
+                                                                                processor_options));
 
     std::string report_trace_id;
     std::string report_span_id;
@@ -441,9 +482,14 @@ public:
             [&mock_session, report_trace_id, report_span_id, &received_record_counter](
                 const std::shared_ptr<opentelemetry::ext::http::client::EventHandler> &callback) {
               opentelemetry::proto::collector::logs::v1::ExportLogsServiceRequest request_body;
-              request_body.ParseFromArray(
+              const bool parsed = request_body.ParseFromArray(
                   &mock_session->GetRequest()->body_[0],
                   static_cast<int>(mock_session->GetRequest()->body_.size()));
+              EXPECT_TRUE(parsed);
+              if (!parsed)
+              {
+                return;
+              }
               if (request_body.resource_logs_size() == 0 ||
                   request_body.resource_logs(0).scope_logs_size() == 0 ||
                   request_body.resource_logs(0).scope_logs(0).log_records_size() == 0)
@@ -518,7 +564,7 @@ public:
     EXPECT_GE(received_record_counter, 1);
   }
 
-#  ifdef ENABLE_ASYNC_EXPORT
+#ifdef ENABLE_ASYNC_EXPORT
   void ExportBinaryIntegrationTestAsync()
   {
     auto mock_otlp_client = OtlpHttpLogRecordExporterTestPeer::GetMockOtlpHttpClient(
@@ -541,8 +587,8 @@ public:
     processor_options.max_export_batch_size = 5;
     processor_options.max_queue_size        = 5;
     processor_options.schedule_delay_millis = std::chrono::milliseconds(256);
-    provider->AddProcessor(std::unique_ptr<sdk::logs::LogRecordProcessor>(
-        new sdk::logs::BatchLogRecordProcessor(std::move(exporter), processor_options)));
+    provider->AddProcessor(std::make_unique<sdk::logs::BatchLogRecordProcessor>(std::move(exporter),
+                                                                                processor_options));
 
     std::string report_trace_id;
     std::string report_span_id;
@@ -569,9 +615,14 @@ public:
             [&mock_session, report_trace_id, report_span_id, schema_url, &received_record_counter](
                 const std::shared_ptr<opentelemetry::ext::http::client::EventHandler> &callback) {
               opentelemetry::proto::collector::logs::v1::ExportLogsServiceRequest request_body;
-              request_body.ParseFromArray(
+              const bool parsed = request_body.ParseFromArray(
                   &mock_session->GetRequest()->body_[0],
                   static_cast<int>(mock_session->GetRequest()->body_.size()));
+              EXPECT_TRUE(parsed);
+              if (!parsed)
+              {
+                return;
+              }
               if (request_body.resource_logs_size() == 0 ||
                   request_body.resource_logs(0).scope_logs_size() == 0 ||
                   request_body.resource_logs(0).scope_logs(0).log_records_size() == 0)
@@ -648,13 +699,13 @@ public:
     // Exporting can be retried
     EXPECT_GE(received_record_counter, 1);
   }
-#  endif
+#endif
 };
 
 TEST(OtlpHttpLogRecordExporterTest, Shutdown)
 {
-  auto exporter =
-      std::unique_ptr<opentelemetry::sdk::logs::LogRecordExporter>(new OtlpHttpLogRecordExporter());
+  std::unique_ptr<opentelemetry::sdk::logs::LogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>();
   ASSERT_TRUE(exporter->Shutdown());
 
   nostd::span<std::unique_ptr<opentelemetry::sdk::logs::Recordable>> logs = {};
@@ -669,13 +720,13 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ExportJsonIntegrationTestSync)
   ExportJsonIntegrationTest();
 }
 
-#  ifdef ENABLE_ASYNC_EXPORT
+#ifdef ENABLE_ASYNC_EXPORT
 TEST_F(OtlpHttpLogRecordExporterTestPeer, ExportJsonIntegrationTestAsync)
 {
   ExportJsonIntegrationTestAsync();
-  google::protobuf::ShutdownProtobufLibrary();
+  static ProtobufGlobalSymbolGuard global_symbol_guard;
 }
-#  endif
+#endif
 
 // Create log records, let processor call Export()
 TEST_F(OtlpHttpLogRecordExporterTestPeer, ExportBinaryIntegrationTestSync)
@@ -683,19 +734,20 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ExportBinaryIntegrationTestSync)
   ExportBinaryIntegrationTest();
 }
 
-#  ifdef ENABLE_ASYNC_EXPORT
+#ifdef ENABLE_ASYNC_EXPORT
 TEST_F(OtlpHttpLogRecordExporterTestPeer, ExportBinaryIntegrationTestAsync)
 {
   ExportBinaryIntegrationTestAsync();
 }
-#  endif
+#endif
 
 // Test exporter configuration options
 TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigTest)
 {
   OtlpHttpLogRecordExporterOptions opts;
   opts.url = "http://localhost:45456/v1/logs";
-  std::unique_ptr<OtlpHttpLogRecordExporter> exporter(new OtlpHttpLogRecordExporter(opts));
+  std::unique_ptr<OtlpHttpLogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>(opts);
   EXPECT_EQ(GetOptions(exporter).url, "http://localhost:45456/v1/logs");
 }
 
@@ -704,7 +756,8 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigUseJsonNameTest)
 {
   OtlpHttpLogRecordExporterOptions opts;
   opts.use_json_name = true;
-  std::unique_ptr<OtlpHttpLogRecordExporter> exporter(new OtlpHttpLogRecordExporter(opts));
+  std::unique_ptr<OtlpHttpLogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>(opts);
   EXPECT_EQ(GetOptions(exporter).use_json_name, true);
 }
 
@@ -713,7 +766,8 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigJsonBytesMappingTest)
 {
   OtlpHttpLogRecordExporterOptions opts;
   opts.json_bytes_mapping = JsonBytesMappingKind::kHex;
-  std::unique_ptr<OtlpHttpLogRecordExporter> exporter(new OtlpHttpLogRecordExporter(opts));
+  std::unique_ptr<OtlpHttpLogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>(opts);
   EXPECT_EQ(GetOptions(exporter).json_bytes_mapping, JsonBytesMappingKind::kHex);
 }
 
@@ -723,7 +777,7 @@ TEST(OtlpHttpLogRecordExporterTest, ConfigDefaultProtocolTest)
   EXPECT_EQ(opts.content_type, HttpRequestContentType::kBinary);
 }
 
-#  ifndef NO_GETENV
+#ifndef NO_GETENV
 // Test exporter configuration options with use_ssl_credentials
 TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigFromEnv)
 {
@@ -734,7 +788,8 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigFromEnv)
   setenv("OTEL_EXPORTER_OTLP_LOGS_HEADERS", "k1=v3,k1=v4", 1);
   setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/json", 1);
 
-  std::unique_ptr<OtlpHttpLogRecordExporter> exporter(new OtlpHttpLogRecordExporter());
+  std::unique_ptr<OtlpHttpLogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>();
   EXPECT_EQ(GetOptions(exporter).url, url);
   EXPECT_EQ(
       GetOptions(exporter).timeout.count(),
@@ -777,7 +832,8 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigFromLogsEnv)
   setenv("OTEL_EXPORTER_OTLP_LOGS_HEADERS", "k1=v3,k1=v4", 1);
   setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", "http/json", 1);
 
-  std::unique_ptr<OtlpHttpLogRecordExporter> exporter(new OtlpHttpLogRecordExporter());
+  std::unique_ptr<OtlpHttpLogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>();
   EXPECT_EQ(GetOptions(exporter).url, url);
   EXPECT_EQ(
       GetOptions(exporter).timeout.count(),
@@ -820,7 +876,8 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, DefaultEndpoint)
 
 TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigRetryDefaultValues)
 {
-  std::unique_ptr<OtlpHttpLogRecordExporter> exporter(new OtlpHttpLogRecordExporter());
+  std::unique_ptr<OtlpHttpLogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>();
   const auto options = GetOptions(exporter);
   ASSERT_EQ(options.retry_policy_max_attempts, 5);
   ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 1.0f);
@@ -835,7 +892,8 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigRetryValuesFromEnv)
   setenv("OTEL_CPP_EXPORTER_OTLP_LOGS_RETRY_MAX_BACKOFF", "6.7", 1);
   setenv("OTEL_CPP_EXPORTER_OTLP_LOGS_RETRY_BACKOFF_MULTIPLIER", "8.9", 1);
 
-  std::unique_ptr<OtlpHttpLogRecordExporter> exporter(new OtlpHttpLogRecordExporter());
+  std::unique_ptr<OtlpHttpLogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>();
   const auto options = GetOptions(exporter);
   ASSERT_EQ(options.retry_policy_max_attempts, 123);
   ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 4.5f);
@@ -855,7 +913,8 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigRetryGenericValuesFromEnv)
   setenv("OTEL_CPP_EXPORTER_OTLP_RETRY_MAX_BACKOFF", "7.6", 1);
   setenv("OTEL_CPP_EXPORTER_OTLP_RETRY_BACKOFF_MULTIPLIER", "9.8", 1);
 
-  std::unique_ptr<OtlpHttpLogRecordExporter> exporter(new OtlpHttpLogRecordExporter());
+  std::unique_ptr<OtlpHttpLogRecordExporter> exporter =
+      std::make_unique<OtlpHttpLogRecordExporter>();
   const auto options = GetOptions(exporter);
   ASSERT_EQ(options.retry_policy_max_attempts, 321);
   ASSERT_FLOAT_EQ(options.retry_policy_initial_backoff.count(), 5.4f);
@@ -867,9 +926,116 @@ TEST_F(OtlpHttpLogRecordExporterTestPeer, ConfigRetryGenericValuesFromEnv)
   unsetenv("OTEL_CPP_EXPORTER_OTLP_RETRY_MAX_BACKOFF");
   unsetenv("OTEL_CPP_EXPORTER_OTLP_RETRY_BACKOFF_MULTIPLIER");
 }
-#  endif  // NO_GETENV
+#endif  // NO_GETENV
+
+// Exporter logs the rejection on partial_success.
+TEST_F(OtlpHttpLogRecordExporterTestPeer, ExportPartialSuccess)
+{
+  ScopedTestLogHandler log{sdk::common::internal_log::LogLevel::Error};
+
+  proto::collector::logs::v1::ExportLogsServiceResponse partial;
+  partial.mutable_partial_success()->set_rejected_log_records(21);
+  partial.mutable_partial_success()->set_error_message("too many logs!!");
+  std::string serialized = partial.SerializeAsString();
+
+  auto mock_otlp_client =
+      OtlpHttpLogRecordExporterTestPeer::GetMockOtlpHttpClient(HttpRequestContentType::kBinary);
+  auto exporter = GetExporter(std::unique_ptr<OtlpHttpClient>{mock_otlp_client.first});
+
+  auto no_send_client =
+      std::static_pointer_cast<http_client::nosend::HttpClient>(mock_otlp_client.second);
+  auto mock_session =
+      std::static_pointer_cast<http_client::nosend::Session>(no_send_client->session_);
+
+  EXPECT_CALL(*mock_session, SendRequest)
+      .WillOnce([&serialized](const std::shared_ptr<http_client::EventHandler> &callback) {
+        http_client::nosend::Response response;
+        response.body_.assign(serialized.begin(), serialized.end());
+        response.Finish(*callback.get());
+      });
+
+  auto recordable = exporter->MakeRecordable();
+  nostd::span<std::unique_ptr<opentelemetry::sdk::logs::Recordable>> batch(&recordable, 1);
+  EXPECT_EQ(opentelemetry::sdk::common::ExportResult::kSuccess, exporter->Export(batch));
+
+  auto entries  = log.Drain();
+  auto contains = [&](const std::string &needle) {
+    return std::any_of(entries.begin(), entries.end(), [&](const ScopedTestLogHandler::Entry &e) {
+      return e.msg.find(needle) != std::string::npos;
+    });
+  };
+  EXPECT_TRUE(contains("partial success"));
+  EXPECT_TRUE(contains("21 log record(s) rejected"));
+  EXPECT_TRUE(contains("too many logs!!"));
+}
+
+// Exporter logs the rejection on partial_success when the response is JSON encoded.
+TEST_F(OtlpHttpLogRecordExporterTestPeer, ExportPartialSuccessJson)
+{
+  ScopedTestLogHandler log{sdk::common::internal_log::LogLevel::Error};
+
+  std::string serialized =
+      R"({"partialSuccess":{"rejectedLogRecords":"21","errorMessage":"too many logs!!"}})";
+
+  auto mock_otlp_client =
+      OtlpHttpLogRecordExporterTestPeer::GetMockOtlpHttpClient(HttpRequestContentType::kJson);
+  auto exporter = GetExporter(std::unique_ptr<OtlpHttpClient>{mock_otlp_client.first});
+
+  auto no_send_client =
+      std::static_pointer_cast<http_client::nosend::HttpClient>(mock_otlp_client.second);
+  auto mock_session =
+      std::static_pointer_cast<http_client::nosend::Session>(no_send_client->session_);
+
+  EXPECT_CALL(*mock_session, SendRequest)
+      .WillOnce([&serialized](const std::shared_ptr<http_client::EventHandler> &callback) {
+        http_client::nosend::Response response;
+        response.body_.assign(serialized.begin(), serialized.end());
+        response.Finish(*callback.get());
+      });
+
+  auto recordable = exporter->MakeRecordable();
+  nostd::span<std::unique_ptr<opentelemetry::sdk::logs::Recordable>> batch(&recordable, 1);
+  EXPECT_EQ(opentelemetry::sdk::common::ExportResult::kSuccess, exporter->Export(batch));
+
+  auto entries  = log.Drain();
+  auto contains = [&](const std::string &needle) {
+    return std::any_of(entries.begin(), entries.end(), [&](const ScopedTestLogHandler::Entry &e) {
+      return e.msg.find(needle) != std::string::npos;
+    });
+  };
+  EXPECT_TRUE(contains("partial success"));
+  EXPECT_TRUE(contains("21 log record(s) rejected"));
+  EXPECT_TRUE(contains("too many logs!!"));
+}
+
+// A malformed response body on a 2xx should return as kFailure for sync exports.
+#ifndef ENABLE_ASYNC_EXPORT
+TEST_F(OtlpHttpLogRecordExporterTestPeer, ExportParseFailureReturnsFailure)
+{
+  std::string serialized = "{some bad JSON";
+
+  auto mock_otlp_client =
+      OtlpHttpLogRecordExporterTestPeer::GetMockOtlpHttpClient(HttpRequestContentType::kJson);
+  auto exporter = GetExporter(std::unique_ptr<OtlpHttpClient>{mock_otlp_client.first});
+
+  auto no_send_client =
+      std::static_pointer_cast<http_client::nosend::HttpClient>(mock_otlp_client.second);
+  auto mock_session =
+      std::static_pointer_cast<http_client::nosend::Session>(no_send_client->session_);
+
+  EXPECT_CALL(*mock_session, SendRequest)
+      .WillOnce([&serialized](const std::shared_ptr<http_client::EventHandler> &callback) {
+        http_client::nosend::Response response;
+        response.body_.assign(serialized.begin(), serialized.end());
+        response.Finish(*callback.get());
+      });
+
+  auto recordable = exporter->MakeRecordable();
+  nostd::span<std::unique_ptr<opentelemetry::sdk::logs::Recordable>> batch(&recordable, 1);
+  EXPECT_EQ(opentelemetry::sdk::common::ExportResult::kFailure, exporter->Export(batch));
+}
+#endif
 
 }  // namespace otlp
 }  // namespace exporter
 OPENTELEMETRY_END_NAMESPACE
-#endif /* OPENTELEMETRY_STL_VERSION */

@@ -22,8 +22,7 @@ using PointType       = opentelemetry::nostd::variant<SumPointData,
                                                       HistogramPointData,
                                                       Base2ExponentialHistogramPointData,
                                                       LastValuePointData,
-                                                      DropPointData,
-                                                      SummaryPointData>;
+                                                      DropPointData>;
 
 struct PointDataAttributes
 {
@@ -35,7 +34,7 @@ class MetricData
 {
 public:
   InstrumentDescriptor instrument_descriptor;
-  AggregationTemporality aggregation_temporality;
+  AggregationTemporality aggregation_temporality{AggregationTemporality::kUnspecified};
   opentelemetry::common::SystemTimestamp start_ts;
   opentelemetry::common::SystemTimestamp end_ts;
   std::vector<PointDataAttributes> point_data_attr_;

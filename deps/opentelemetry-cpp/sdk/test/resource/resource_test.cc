@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdlib>
 #include <map>
 #include <string>
@@ -17,6 +17,8 @@
 #include "opentelemetry/semconv/service_attributes.h"
 #include "opentelemetry/semconv/telemetry_attributes.h"
 
+#include "src/resource/detail/percent_decode.h"
+
 #if defined(_MSC_VER)
 #  include "opentelemetry/sdk/common/env_variables.h"
 using opentelemetry::sdk::common::setenv;
@@ -26,6 +28,9 @@ using opentelemetry::sdk::common::unsetenv;
 using namespace opentelemetry::sdk::resource;
 namespace nostd   = opentelemetry::nostd;
 namespace semconv = opentelemetry::semconv;
+
+namespace
+{
 
 class TestResource : public Resource
 {
@@ -235,6 +240,66 @@ TEST(ResourceTest, OtelResourceDetector)
   unsetenv("OTEL_RESOURCE_ATTRIBUTES");
 }
 
+TEST(ResourceTest, PercentDecode)
+{
+  using opentelemetry::sdk::resource::detail::PercentDecode;
+
+  EXPECT_EQ(PercentDecode("hello%20world"), "hello world");
+  EXPECT_EQ(PercentDecode("a%2Cb"), "a,b");
+  EXPECT_EQ(PercentDecode("100%25"), "100%");
+  EXPECT_EQ(PercentDecode("%41%42%43"), "ABC");
+
+  EXPECT_EQ(PercentDecode("100%"), "100%");
+  EXPECT_EQ(PercentDecode("50%z"), "50%z");
+  EXPECT_EQ(PercentDecode("%GG"), "%GG");
+  EXPECT_EQ(PercentDecode("plain"), "plain");
+}
+
+TEST(ResourceTest, OtelResourceDetectorPercentDecodesValues)
+{
+  std::map<std::string, std::string> expected_attributes = {
+      {"key1", "hello world"}, {"key2", "a,b"}, {"key3", "100%"}};
+
+  setenv("OTEL_RESOURCE_ATTRIBUTES", "key1=hello%20world,key2=a%2Cb,key3=100%25", 1);
+
+  OTELResourceDetector detector;
+  auto resource            = detector.Detect();
+  auto received_attributes = resource.GetAttributes();
+  for (auto &e : received_attributes)
+  {
+    EXPECT_TRUE(expected_attributes.find(e.first) != expected_attributes.end());
+    if (expected_attributes.find(e.first) != expected_attributes.end())
+    {
+      EXPECT_EQ(expected_attributes.find(e.first)->second, nostd::get<std::string>(e.second));
+    }
+  }
+  EXPECT_EQ(received_attributes.size(), expected_attributes.size());
+
+  unsetenv("OTEL_RESOURCE_ATTRIBUTES");
+}
+
+TEST(ResourceTest, OtelResourceDetectorMalformedEscapeLeftAsIs)
+{
+  std::map<std::string, std::string> expected_attributes = {{"key", "100%"}, {"bad", "50%z"}};
+
+  setenv("OTEL_RESOURCE_ATTRIBUTES", "key=100%,bad=50%z", 1);
+
+  OTELResourceDetector detector;
+  auto resource            = detector.Detect();
+  auto received_attributes = resource.GetAttributes();
+  for (auto &e : received_attributes)
+  {
+    EXPECT_TRUE(expected_attributes.find(e.first) != expected_attributes.end());
+    if (expected_attributes.find(e.first) != expected_attributes.end())
+    {
+      EXPECT_EQ(expected_attributes.find(e.first)->second, nostd::get<std::string>(e.second));
+    }
+  }
+  EXPECT_EQ(received_attributes.size(), expected_attributes.size());
+
+  unsetenv("OTEL_RESOURCE_ATTRIBUTES");
+}
+
 TEST(ResourceTest, OtelResourceDetectorServiceNameOverride)
 {
   std::map<std::string, std::string> expected_attributes = {{"service.name", "new_name"}};
@@ -292,3 +357,5 @@ TEST(ResourceTest, DerivedResourceDetector)
   EXPECT_EQ(resource.GetSchemaURL(), detector.schema_url);
   EXPECT_TRUE(received_attributes.find("key") != received_attributes.end());
 }
+
+}  // namespace
