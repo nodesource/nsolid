@@ -161,6 +161,8 @@
 //         Octal(&a), Hex(&b), CRadix(&c), CRadix(&d));
 // will leave 64 in a, b, c, and d.
 
+#include <cstdint>
+
 #include "util/util.h"
 #include "re2/stringpiece.h"
 
