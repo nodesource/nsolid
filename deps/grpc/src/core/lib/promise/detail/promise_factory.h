@@ -22,6 +22,7 @@
 #include <utility>
 
 #include "src/core/lib/promise/detail/promise_like.h"
+#include "src/core/lib/promise/promise.h"
 #include "absl/meta/type_traits.h"
 
 // PromiseFactory is an adaptor class.
@@ -129,7 +130,13 @@ GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION
     absl::enable_if_t<!IsVoidCallable<ResultOf<F(A)>>::value,
                       PromiseLike<Curried<RemoveCVRef<F>, A>>>
     PromiseFactoryImpl(Token, F&& f, A&& arg) {
-  return Curried<RemoveCVRef<F>, A>(std::forward<F>(f), std::forward<A>(arg));
+  return PromiseLike<Curried<RemoveCVRef<F>, A>>(
+      std::in_place,
+      [](F&& f, A&& arg) {
+        return Curried<RemoveCVRef<F>, A>(std::forward<F>(f),
+                                          std::forward<A>(arg));
+      },
+      std::forward<F>(f), std::forward<A>(arg));
 }
 
 // Promote a callable() -> T|Poll<T> to a PromiseFactory(A) -> Promise<T>
@@ -180,7 +187,8 @@ GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION inline absl::enable_if_t<
     IsVoidCallable<ResultOf<F(A)>>::value,
     PromiseLike<decltype(std::declval<F>()(std::declval<A>()))>>
 PromiseFactoryImpl(Token, F&& f, A&& arg) {
-  return f(std::forward<A>(arg));
+  return PromiseLike<decltype(std::declval<F>()(std::declval<A>()))>(
+      std::in_place, std::forward<F>(f), std::forward<A>(arg));
 }
 
 // Given a callable(A) -> Promise<T>, name it a PromiseFactory and use it.
@@ -189,26 +197,29 @@ GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION inline absl::enable_if_t<
     IsVoidCallable<ResultOf<F(A)>>::value,
     PromiseLike<decltype(std::declval<F>()(std::declval<A>()))>>
 PromiseFactoryImpl(Token, F& f, A&& arg) {
-  return f(std::forward<A>(arg));
+  return PromiseLike<decltype(std::declval<F>()(std::declval<A>()))>(
+      std::in_place, f, std::forward<A>(arg));
 }
 
 // Given a callable() -> Promise<T>, promote it to a
 // PromiseFactory(A) -> Promise<T> by dropping the first argument.
 template <typename Token, typename A, typename F>
-GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION
-    absl::enable_if_t<IsVoidCallable<ResultOf<F()>>::value,
-                      PromiseLike<decltype(std::declval<F>()())>>
-    PromiseFactoryImpl(Token, F&& f, A&&) {
-  return f();
+GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION inline absl::enable_if_t<
+    IsVoidCallable<ResultOf<F()>>::value,
+    PromiseLike<decltype(std::declval<F>()())>>
+PromiseFactoryImpl(Token, F&& f, A&&) {
+  return PromiseLike<decltype(std::declval<F>()())>(std::in_place,
+                                                    std::forward<F>(f));
 }
 
 // Given a callable() -> Promise<T>, name it a PromiseFactory and use it.
 template <typename Token, typename F>
-GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION
-    absl::enable_if_t<IsVoidCallable<ResultOf<F()>>::value,
-                      PromiseLike<decltype(std::declval<F>()())>>
-    PromiseFactoryImpl(Token, F&& f) {
-  return f();
+GPR_ATTRIBUTE_ALWAYS_INLINE_FUNCTION inline absl::enable_if_t<
+    IsVoidCallable<ResultOf<F()>>::value,
+    PromiseLike<decltype(std::declval<F>()())>>
+PromiseFactoryImpl(Token, F&& f) {
+  return PromiseLike<decltype(std::declval<F>()())>(std::in_place,
+                                                    std::forward<F>(f));
 }
 
 template <typename A, typename F>
