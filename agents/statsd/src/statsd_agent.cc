@@ -983,11 +983,14 @@ int StatsDAgent::config_cb_(const json& config) {
   }
 
   if (bucket().empty() ||
-      utils::find_any_fields_in_diff(diff, { "/statsdBucket",
-                                             "/statsdTags" })) {
+      utils::find_any_fields_in_diff(
+          diff,
+          {"/statsdBucket", "/statsdTags", "/app", "/env", "/hostname"}) ||
+      old_config.value("tags", json::array()) !=
+          config_.value("tags", json::array())) {
     config_bucket();
-    // if "statsdTags" changed, recalculate tags_
     config_tags();
+    Debug("StatsD format updated: %s %s\n", bucket().c_str(), tags().c_str());
   }
 
   // If metrics timer is not active or if the diff contains metrics fields,
