@@ -44,13 +44,15 @@ setupNSolid({ lookup: false }, common.mustCall(() => {
   const span = tracer.startSpan('initial_name', { kind: api.SpanKind.CLIENT });
 
   function pushSpanName() {
-    nsolidBinding.pushSpanDataString(span.internalId,
+    nsolidBinding.pushSpanDataString(span.spanIdHigh,
+                                     span.spanIdLow,
                                      nsolid_consts.kSpanName,
                                      'Espa\u00f1a');
   }
 
   function pushSpanUrl() {
-    nsolidBinding.pushSpanDataString3(span.internalId,
+    nsolidBinding.pushSpanDataString3(span.spanIdHigh,
+                                      span.spanIdLow,
                                       nsolid_consts.kSpanHttpReqUrl,
                                       'http:',
                                       'localhost',

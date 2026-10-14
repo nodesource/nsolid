@@ -40,45 +40,49 @@ class BindingData : public SnapshotableObject {
   static void SlowPushSpanDataDouble(
       const v8::FunctionCallbackInfo<v8::Value>& args);
   static void FastPushSpanDataDouble(v8::Local<v8::Object> receiver,
-                                     uint32_t trace_id,
+                                     uint32_t span_id_high,
+                                     uint32_t span_id_low,
                                      uint32_t type,
                                      double val);
   static void PushSpanDataDoubleImpl(BindingData* data,
-                                     uint32_t trace_id,
+                                     uint64_t span_id,
                                      uint32_t type,
                                      double val);
 
   static void SlowPushSpanDataUint64(
       const v8::FunctionCallbackInfo<v8::Value>& args);
   static void FastPushSpanDataUint64(v8::Local<v8::Object> receiver,
-                                     uint32_t trace_id,
+                                     uint32_t span_id_high,
+                                     uint32_t span_id_low,
                                      uint32_t type,
                                      uint64_t val);
   static void PushSpanDataUint64Impl(BindingData* data,
-                                     uint32_t trace_id,
+                                     uint64_t span_id,
                                      uint32_t type,
                                      uint64_t val);
 
   static void SlowPushSpanDataString(
       const v8::FunctionCallbackInfo<v8::Value>& args);
   static void FastPushSpanDataString(v8::Local<v8::Object> receiver,
-                                     uint32_t trace_id,
+                                     uint32_t span_id_high,
+                                     uint32_t span_id_low,
                                      uint32_t type,
                                      const v8::FastOneByteString& val);
   static void PushSpanDataStringImpl(BindingData* data,
-                                     uint32_t trace_id,
+                                     uint64_t span_id,
                                      uint32_t type,
                                      const std::string& val);
   static void SlowPushSpanDataString3(
       const v8::FunctionCallbackInfo<v8::Value>& args);
   static void FastPushSpanDataString3(v8::Local<v8::Object> receiver,
-                                      uint32_t trace_id,
+                                      uint32_t span_id_high,
+                                      uint32_t span_id_low,
                                       uint32_t type,
                                       const v8::FastOneByteString& val1,
                                       const v8::FastOneByteString& val2,
                                       const v8::FastOneByteString& val3);
   static void PushSpanDataStringImpl3(BindingData* data,
-                                     uint32_t trace_id,
+                                     uint64_t span_id,
                                      uint32_t type,
                                      const std::string& val1,
                                      const std::string& val2,
