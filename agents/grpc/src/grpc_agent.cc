@@ -26,6 +26,7 @@
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/service_attributes.h"
+#include "util-inl.h"
 
 using std::chrono::duration_cast;
 using std::chrono::nanoseconds;
@@ -1197,8 +1198,16 @@ int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
         per_process::system_environment->Get(kNSOLID_GRPC_INSECURE);
       // Only parse the insecure flag in non SaaS mode.
       if (insecure_str.has_value() && (!saas_ || saas_->testing)) {
-        // insecure = std::stoull(insecure_str.value());
-        insecure = std::stoi(insecure_str.value());
+        const std::string value = ToLower(insecure_str.value());
+        insecure = value == "1" || value == "true";
+        static bool warned = false;
+        if (!insecure && !value.empty() && value != "0" && value != "false" &&
+            !warned) {
+          warned = true;
+          fprintf(stderr,
+                  "N|Solid warning: invalid NSOLID_GRPC_INSECURE value; "
+                  "using TLS\n");
+        }
       }
 
       const std::string& endpoint = !saas_ ?
