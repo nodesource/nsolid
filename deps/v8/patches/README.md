@@ -14,6 +14,7 @@ This directory contains individual patches applied to the V8 dependency for N|So
 - **007-redacted-heap-snapshot-api.patch**: Implements RedactedHeapSnapshot in api.cc
 - **008-redacted-heap-snapshot-header.patch**: Adds RedactedHeapSnapshot class to v8-profiler.h
 - **009-int64-lowering-tuple-fix.patch**: Fixes Tuple construction in int64-lowering-reducer.h
+- **010-profile-generator-timestamps-fix.patch**: Preserves CPU profile timestamps without 32-bit truncation and tests them against native profile values
 
 ## Usage
 
