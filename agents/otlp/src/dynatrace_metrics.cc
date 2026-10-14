@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "asserts-cpp/asserts.h"
+#include "otlp_common.h"
 
 using ProcessMetricsStor = node::nsolid::ProcessMetrics::MetricsStor;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
@@ -33,35 +34,34 @@ void DynatraceMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                         const ProcessMetricsStor& prev_stor) {
   if (prev_stor.timestamp == 0) return;
   std::string metrics;
+  const std::string dimensions =
+      GetVendorMetricDimensions(*GetMetricsResource());
 
 #define V(CType, CName, JSName, MType, Unit)                                   \
-{                                                                              \
-  auto it = std::find(discarded_metrics.begin(),                               \
-                      discarded_metrics.end(),                                 \
-                      #CName);                                                 \
-  if (it == discarded_metrics.end()) {                                         \
-    switch (MetricsType::MType) {                                              \
-      case MetricsType::ECounter:                                              \
-      {                                                                        \
-        metrics += "nsolid."#CName;                                            \
-        metrics += " count,delta=";                                            \
-        metrics += std::to_string(stor.CName - prev_stor.CName);               \
-        metrics += "\n";                                                       \
+  {                                                                            \
+    auto it =                                                                  \
+        std::find(discarded_metrics.begin(), discarded_metrics.end(), #CName); \
+    if (it == discarded_metrics.end()) {                                       \
+      switch (MetricsType::MType) {                                            \
+        case MetricsType::ECounter: {                                          \
+          metrics += "nsolid." #CName;                                         \
+          metrics += dimensions;                                               \
+          metrics += " count,delta=";                                          \
+          metrics += std::to_string(stor.CName - prev_stor.CName);             \
+          metrics += "\n";                                                     \
+        } break;                                                               \
+        case MetricsType::EGauge: {                                            \
+          metrics += "nsolid." #CName;                                         \
+          metrics += dimensions;                                               \
+          metrics += " gauge,";                                                \
+          metrics += std::to_string(stor.CName);                               \
+          metrics += "\n";                                                     \
+        } break;                                                               \
+        default:                                                               \
+          break;                                                               \
       }                                                                        \
-      break;                                                                   \
-      case MetricsType::EGauge:                                                \
-      {                                                                        \
-        metrics += "nsolid."#CName;                                            \
-        metrics += " gauge,";                                                  \
-        metrics += std::to_string(stor.CName);                                 \
-        metrics += "\n";                                                       \
-      }                                                                        \
-      break;                                                                   \
-      default:                                                                 \
-      break;                                                                   \
     }                                                                          \
-  }                                                                            \
-}
+  }
   NSOLID_PROCESS_METRICS_NUMBERS(V)
 #undef V
 
@@ -90,6 +90,8 @@ std::string DynatraceMetrics::got_thr_metrics(
     const ThreadMetricsStor& prev_stor) {
   if (prev_stor.timestamp == 0) return std::string();
   std::string metrics;
+  const std::string dimensions =
+      GetVendorMetricDimensions(*GetMetricsResource());
 #define V(CType, CName, JSName, MType, Unit)                                   \
   {                                                                            \
     auto it =                                                                  \
@@ -98,6 +100,7 @@ std::string DynatraceMetrics::got_thr_metrics(
       switch (MetricsType::MType) {                                            \
         case MetricsType::ECounter: {                                          \
           metrics += "nsolid." #CName;                                         \
+          metrics += dimensions;                                               \
           metrics += ",thread_id=" + std::to_string(stor.thread_id);           \
           metrics += " count,delta=";                                          \
           metrics += std::to_string(stor.CName - prev_stor.CName);             \
@@ -106,6 +109,7 @@ std::string DynatraceMetrics::got_thr_metrics(
         case MetricsType::EGauge: {                                            \
           metrics += "nsolid." #CName;                                         \
           metrics += ",thread_id=" + std::to_string(stor.thread_id);           \
+          metrics += dimensions;                                               \
           metrics += " gauge,";                                                \
           metrics += std::to_string(stor.CName);                               \
           metrics += "\n";                                                     \
