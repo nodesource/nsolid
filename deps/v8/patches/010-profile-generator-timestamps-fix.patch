@@ -1,0 +1,57 @@
+diff --git a/deps/v8/src/profiler/profile-generator.cc b/deps/v8/src/profiler/profile-generator.cc
+index a5daf0d2f7d..3527f0cd2ca 100644
+--- a/deps/v8/src/profiler/profile-generator.cc
++++ b/deps/v8/src/profiler/profile-generator.cc
+@@ -918,12 +918,10 @@ void CpuProfileJSONSerializer::SerializeImpl() {
+   writer_->AddString("]");
+ 
+   writer_->AddString(",\"startTime\":");
+-  writer_->AddNumber(static_cast<unsigned>(
+-      profile_->start_time().since_origin().InMicroseconds()));
++  writer_->AddNumber(profile_->start_time().since_origin().InMicroseconds());
+ 
+   writer_->AddString(",\"endTime\":");
+-  writer_->AddNumber(static_cast<unsigned>(
+-      profile_->end_time().since_origin().InMicroseconds()));
++  writer_->AddNumber(profile_->end_time().since_origin().InMicroseconds());
+ 
+   writer_->AddString(",\"samples\":[");
+   SerializeSamples();
+diff --git a/deps/v8/test/cctest/test-cpu-profiler.cc b/deps/v8/test/cctest/test-cpu-profiler.cc
+index c2392f86896..e854d684308 100644
+--- a/deps/v8/test/cctest/test-cpu-profiler.cc
++++ b/deps/v8/test/cctest/test-cpu-profiler.cc
+@@ -4865,6 +4865,8 @@ TEST(CpuProfileJSONSerialization) {
+ 
+   TestJSONStream stream;
+   profile->Serialize(&stream, v8::CpuProfile::kJSON);
++  const int64_t start_time = profile->GetStartTime();
++  const int64_t end_time = profile->GetEndTime();
+   profile->Delete();
+   cpu_profiler->Dispose();
+   CHECK_GT(stream.size(), 0);
+@@ -4901,14 +4903,16 @@ TEST(CpuProfileJSONSerialization) {
+             .ToLocalChecked()
+             ->IsArray());
+ 
+-  CHECK(profile_obj->Get(env.local(), v8_str("startTime"))
+-            .ToLocalChecked()
+-            .As<v8::Number>()
+-            ->Value() > 0);
+-  CHECK(profile_obj->Get(env.local(), v8_str("endTime"))
+-            .ToLocalChecked()
+-            .As<v8::Number>()
+-            ->Value() > 0);
++  CHECK_EQ(static_cast<double>(start_time),
++           profile_obj->Get(env.local(), v8_str("startTime"))
++               .ToLocalChecked()
++               .As<v8::Number>()
++               ->Value());
++  CHECK_EQ(static_cast<double>(end_time),
++           profile_obj->Get(env.local(), v8_str("endTime"))
++               .ToLocalChecked()
++               .As<v8::Number>()
++               ->Value());
+ }
+ 
+ }  // namespace test_cpu_profiler
