@@ -109,6 +109,10 @@ if (isMainThread) {
       }
 
       process.send({ type: 'config', config: nsolid.config });
+    } else if (msg.type === 'nativeConfig') {
+      const { internalBinding } = require('internal/test/binding');
+      internalBinding('nsolid_api').updateConfig(JSON.stringify(msg.config));
+      process.send(msg);
     } else if (msg.type === 'shutdown') {
       clearInterval(interval);
       if (!msg.error) {
