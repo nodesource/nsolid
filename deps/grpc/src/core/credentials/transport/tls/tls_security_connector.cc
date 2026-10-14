@@ -315,11 +315,11 @@ TlsChannelSecurityConnector::TlsChannelSecurityConnector(
     if (watch_root_cert) {
       options_->root_certificate_distributor()->WatchTlsCertificates(
           std::move(root_watcher_ptr), watched_root_cert_name,
-          watched_identity_cert_name);
+          std::nullopt);
     }
     if (watch_identity_cert) {
       options_->identity_certificate_distributor()->WatchTlsCertificates(
-          std::move(identity_watcher_ptr), watched_root_cert_name,
+          std::move(identity_watcher_ptr), std::nullopt,
           watched_identity_cert_name);
     }
   }

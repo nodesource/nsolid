@@ -212,7 +212,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void command_stream_closed(const ::grpc::Status& s);
 
-  int config(const nlohmann::json& config);
+  int config(const nlohmann::json& config, bool reset_grpc_clients = false);
 
   void do_start();
 
@@ -361,6 +361,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   int auth_retries_;
   uint64_t command_retry_interval_ = 500;
   bool unauthorized_;
+  std::atomic<bool> grpc_reconnect_in_progress_;
+  std::atomic<bool> reset_grpc_clients_on_retry_;
 
   // For the Logging API
   nsuv::ns_async log_msg_;
