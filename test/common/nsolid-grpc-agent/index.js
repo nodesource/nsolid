@@ -120,9 +120,13 @@ class GRPCServer extends EventEmitter {
   }
 
   start(cb) {
+    let started = false;
     const args = [];
     if (this.#opts.rejectAuth) {
       args.push('--reject-auth');
+    }
+    if (this.#opts.port) {
+      args.push('--port', String(this.#opts.port));
     }
     if (this.#opts.tls) {
       args.push('--tls');
@@ -135,6 +139,12 @@ class GRPCServer extends EventEmitter {
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     };
     this.#server = fork(path.join(__dirname, 'server.mjs'), args, opts);
+    this.#server.once('error', (err) => cb(err));
+    this.#server.once('exit', (code, signal) => {
+      if (!started) {
+        cb(new Error(`gRPC test server exited before listening (${code ?? signal})`));
+      }
+    });
     this.#server.on('message', (message) => {
       switch (message.type) {
         case 'command':
@@ -177,6 +187,7 @@ class GRPCServer extends EventEmitter {
           this.emit('spans', message.data);
           break;
         case 'port':
+          started = true;
           cb(null, message.port);
           break;
       }
@@ -360,7 +371,13 @@ class GRPCServer extends EventEmitter {
   }
 
   close() {
-    this.#server.send({ type: 'close' });
+    if (this.#server.exitCode !== null || this.#server.signalCode !== null) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.#server.once('exit', resolve);
+      this.#server.send({ type: 'close' });
+    });
   }
 }
 
