@@ -869,7 +869,10 @@ Sometimes useful for container environments.
 .
 .It Ev NSOLID_TAGS Ar tags...
 Comma-separated list of tags for identification and filtering in the N|Solid Console.
-Tags must be 2\-140 characters in length.
+Tags must be 2\-140 UTF-8 bytes in length.
+Tags are sorted alphabetically; at most the first 20 are retained.
+Tags shorter than 2 UTF-8 bytes are dropped; longer tags are truncated
+to at most 140 bytes without splitting a character.
 .Pp
 Example: NSOLID_TAGS="api,staging,v1.9.2"
 .
