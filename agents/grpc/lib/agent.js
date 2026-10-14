@@ -7,9 +7,7 @@ module.exports = ({ heapProfile,
                     profile,
                     profileEnd,
                     snapshot,
-                    start,
-                    status,
-                    stop }) => {
+                    start }) => {
 
   return {
     ...require('internal/nsolid_assets')({
@@ -22,7 +20,5 @@ module.exports = ({ heapProfile,
       snapshot,
     }),
     start,
-    status,
-    stop,
   };
 };
