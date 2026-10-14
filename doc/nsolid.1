@@ -802,7 +802,9 @@ If competing values for a single key are set, the environment variable will take
 Location of the N|Solid gRPC endpoint.
 .
 .It Ev NSOLID_GRPC_INSECURE
-Use insecure gRPC transport (1). TLS is enabled by default.
+Use insecure gRPC transport with 1 or true (case-insensitive).
+Use TLS with 0, false or an empty value. TLS is the default.
+Unrecognized values emit a warning once per process and use TLS.
 .
 .It Ev NSOLID_GRPC_CERTS
 Path of the gRPC CA certificate bundle.
