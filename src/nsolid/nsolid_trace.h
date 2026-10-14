@@ -166,7 +166,7 @@ class SpanProp: public SpanPropBase {
 
 
 struct SpanItem {
-  uint32_t span_id = 0;
+  uint64_t span_id = 0;
   uint64_t thread_id = -1;
   std::unique_ptr<SpanPropBase> prop;
 };
@@ -207,7 +207,7 @@ class NODE_EXTERN TracerImpl {
 
   void update_flags();
 
-  LRUMap<uint32_t, Span> pending_spans_;
+  LRUMap<uint64_t, Span> pending_spans_;
   TSList<TraceHookStor> trace_hook_list_;
   std::atomic<uint32_t> ts_trace_flags_ = { 0 };
 };

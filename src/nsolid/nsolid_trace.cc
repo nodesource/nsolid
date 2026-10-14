@@ -224,7 +224,7 @@ void TracerImpl::endPendingSpans() {
 
 void TracerImpl::pushSpanData(SpanItem&& item) {
   std::string thread_name;
-  uint32_t tid;
+  const uint64_t span_id = item.span_id;
   uint64_t thread_id = item.thread_id;
   bool send_thread_name = item.prop->type() == Span::kSpanStart;
   if (send_thread_name) {
@@ -235,16 +235,12 @@ void TracerImpl::pushSpanData(SpanItem&& item) {
     }
   }
 
-  if (send_thread_name) {
-    tid = item.span_id;
-  }
-
   EnvList* envlist = EnvList::Inst();
   envlist->send_trace_data(std::move(item));
   if (send_thread_name) {
     auto prop = Span::createSpanProp<std::string>(Span::kSpanThreadName,
                                                   thread_name);
-    item = SpanItem { tid, thread_id, std::move(prop) };
+    item = SpanItem { span_id, thread_id, std::move(prop) };
     envlist->send_trace_data(std::move(item));
   }
 }
