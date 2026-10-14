@@ -26,7 +26,7 @@ const {
 //   timeNS: '1703172421333469660'
 // }
 
-function checkPingData(data, requestId, agentId) {
+function checkPingData(data, requestId, agentId, version = 4) {
   console.dir(data, { depth: null });
   assert.strictEqual(data.requestId, requestId);
   assert.strictEqual(data.agentId, agentId);
@@ -38,7 +38,7 @@ function checkPingData(data, requestId, agentId) {
   validateUint32(data.recorded.nanoseconds, 'recorded.nanoseconds');
   validateUint32(data.duration, 'duration');
   validateUint32(data.interval, 'interval');
-  assert.strictEqual(data.version, 4);
+  assert.strictEqual(data.version, version);
   validateObject(data.body, 'body');
   validateInteger(data.time, 'time');
   // also the body fields
@@ -129,6 +129,26 @@ tests.push({
       }));
     });
   }),
+});
+
+tests.push({
+  name: 'should preserve the negotiated version when omitted',
+  test: async (playground) => {
+    const agentId = await new Promise((resolve) => {
+      playground.bootstrap(mustSucceed(resolve));
+    });
+    let expectedVersion = 4;
+    for (const version of [undefined, 3, undefined, 4, undefined]) {
+      if (version !== undefined) expectedVersion = version;
+      await new Promise((resolve) => {
+        const requestId = playground.zmqAgentBus._sendCB(
+          { id: agentId, command: 'ping', version }, mustSucceed((ping) => {
+            checkPingData(ping, requestId, agentId, expectedVersion);
+            resolve();
+          }));
+      });
+    }
+  },
 });
 
 const config = {
