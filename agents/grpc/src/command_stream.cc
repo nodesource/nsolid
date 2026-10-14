@@ -59,6 +59,13 @@ void CommandStream::OnDone(const Status& s) {
   obs->on_command_stream_done(s);
 }
 
+void CommandStream::OnReadInitialMetadataDone(bool ok) {
+  if (ok) {
+    nsuv::ns_mutex::scoped_lock lock(lock_);
+    established_at_ = uv_hrtime() / 1000000;
+  }
+}
+
 void CommandStream::OnReadDone(bool ok) {
   if (ok) {
     auto obs = observer_.lock();
