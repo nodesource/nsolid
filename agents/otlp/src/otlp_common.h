@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "nlohmann/json.hpp"
 #include "nsolid.h"
 #include "nsolid/nsolid_metrics.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
@@ -52,6 +53,12 @@ std::shared_ptr<OPENTELEMETRY_NAMESPACE::sdk::resource::Resource>
 
 std::shared_ptr<OPENTELEMETRY_NAMESPACE::sdk::resource::Resource>
     GetMetricsResource();
+
+nlohmann::json GetVendorMetricAttributes(
+    const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource& resource);
+
+std::string GetVendorMetricDimensions(
+    const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource& resource);
 
 void InvalidateMetricsResource();
 
