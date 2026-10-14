@@ -340,6 +340,8 @@ function testProfileEndsBeforeExit(playground) {
       if (eventType === 'agent-exit') {
         assert.strictEqual(gotExit, false);
         checkExitData(data, { exit_code: 0, error: null });
+        assert.strictEqual(data.profile, requestId);
+        console.log(`Exit profile ID: ${data.profile}`);
         gotExit = true;
         if (gotProfile && processExited) {
           resolve();
