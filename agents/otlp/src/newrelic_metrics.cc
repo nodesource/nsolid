@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "asserts-cpp/asserts.h"
+#include "otlp_common.h"
 
 using ProcessMetricsStor = node::nsolid::ProcessMetrics::MetricsStor;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
@@ -73,9 +74,9 @@ void NewRelicMetrics::got_proc_metrics(
 
   json body = json::array();
   json common = {
-    { "timestamp", stor.timestamp },
-    { "interval.ms", stor.timestamp - prev_stor.timestamp }
-  };
+      {"attributes", GetVendorMetricAttributes(*GetMetricsResource())},
+      {"timestamp", stor.timestamp},
+      {"interval.ms", stor.timestamp - prev_stor.timestamp}};
 
   body.push_back({
     { "common", common },
@@ -150,6 +151,8 @@ json NewRelicMetrics::got_thr_metrics(const ThreadMetricsStor& stor,
       { "thread_name", stor.thread_name }
     }}
   };
+
+  common["attributes"].update(GetVendorMetricAttributes(*GetMetricsResource()));
 
   json thr_metrics = {
     { "common", common },

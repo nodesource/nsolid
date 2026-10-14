@@ -320,6 +320,41 @@ std::shared_ptr<Resource> GetMetricsResource() {
   return metrics_resource_g;
 }
 
+json GetVendorMetricAttributes(const Resource& resource) {
+  json attributes = json::object();
+  const auto& attrs = resource.GetAttributes();
+  for (const char* key : {kServiceName, kServiceInstanceId, kHostName}) {
+    auto it = attrs.find(key);
+    if (it != attrs.end()) {
+      const auto* value =
+          opentelemetry::nostd::get_if<std::string>(&it->second);
+      if (value != nullptr) attributes[key] = *value;
+    }
+  }
+  auto it = attrs.find(kProcessPid);
+  if (it != attrs.end()) {
+    const auto* value = opentelemetry::nostd::get_if<int64_t>(&it->second);
+    if (value != nullptr) attributes[kProcessPid] = *value;
+  }
+  return attributes;
+}
+
+std::string GetVendorMetricDimensions(const Resource& resource) {
+  std::string dimensions;
+  const json attributes = GetVendorMetricAttributes(resource);
+  for (const auto& attr : attributes.items()) {
+    std::string value = attr.value().is_string()
+                            ? attr.value().get<std::string>()
+                            : attr.value().dump();
+    // Control characters cannot appear in Dynatrace dimension values.
+    for (char& c : value) {
+      if (static_cast<unsigned char>(c) < 0x20) c = ' ';
+    }
+    dimensions += "," + attr.key() + "=" + json(value).dump();
+  }
+  return dimensions;
+}
+
 void InvalidateMetricsResource() {
   nsuv::ns_mutex::scoped_lock lock(ResourceMutex());
   metrics_resource_g.reset();
