@@ -431,7 +431,7 @@ void StatsDUdp::connect_() {
 
   prep_retry_timer_();
 
-  if (++addr_index_ > endpoint_->addresses().size()) {
+  if (++addr_index_ >= endpoint_->addresses().size()) {
     Debug("Error connecting to all addresses. Retry in 3 seconds...\n");
     status(ConnectionError);
     // Reattempt all IP addresses after 3 seconds.
