@@ -15,6 +15,8 @@
 namespace node {
 namespace nsolid {
 
+constexpr uint64_t kDefaultContCpuProfileIntervalMs = 30000;
+
 class ContinuousProfiler;
 
 using SharedContinuousProfiler = std::shared_ptr<ContinuousProfiler>;
@@ -45,7 +47,7 @@ class ContinuousProfiler :
 
   // Enable/disable profiling (disabled by default)
   void Disable();
-  void Enable(uint64_t interval_ms = 60000);
+  void Enable(uint64_t interval_ms = kDefaultContCpuProfileIntervalMs);
   bool IsEnabled();
 
   // Register a hook for profile data
@@ -114,7 +116,7 @@ class ContinuousProfiler :
 
   // Loop
   uv_loop_t* loop_ = nullptr;
-  std::atomic<uint64_t> interval_ = 60000;  // 1 min
+  std::atomic<uint64_t> interval_ = kDefaultContCpuProfileIntervalMs;
   bool enabled_ = false;  // Disabled by default per config
 
   // Thread management

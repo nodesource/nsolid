@@ -68,3 +68,10 @@ function runWithEnv(envVars) {
   });
   assert.strictEqual(config.contCpuProfile, false);
 }
+
+
+for (const interval of ['0', '-1', '1.5', 'abc', 'Infinity']) {
+  const config = runWithEnv({ NSOLID_CONT_CPU_PROFILE_INTERVAL: interval });
+  assert.strictEqual(config.contCpuProfileInterval, 30000);
+  console.log(`Invalid startup interval ${interval}: default 30000`);
+}
