@@ -16,7 +16,6 @@ using ::grpc::SslCredentialsOptions;
 // These APIs are subject to change in future gRPC releases. This project
 // currently pins gRPC to version 1.76.0
 // (see deps/grpc/include/grpcpp/version_info.h).
-using ::grpc::experimental::IdentityKeyCertPair;
 using ::grpc::experimental::TlsCredentials;
 using ::grpc::experimental::TlsChannelCredentialsOptions;
 using ::grpc::experimental::StaticDataCertificateProvider;
@@ -38,32 +37,21 @@ std::shared_ptr<::grpc::ChannelCredentials>
     return InsecureChannelCredentials();
   }
 
-  if (client_identity != nullptr) {
-    // Mutual TLS. The identity provider re-reads the key and certificate
-    // files, so a renewed certificate is used for the next connections.
+  if (client_identity != nullptr || !tls_keylog_file.empty()) {
     TlsChannelCredentialsOptions tls_opts;
     if (!options.ssl_credentials_cacert_as_string.empty()) {
       tls_opts.set_root_certificate_provider(
           std::make_shared<StaticDataCertificateProvider>(
               options.ssl_credentials_cacert_as_string));
     }
-    tls_opts.set_identity_certificate_provider(client_identity);
+    if (client_identity != nullptr) {
+      // The provider re-reads the key and certificate files, so a renewed
+      // certificate is used for the next connections.
+      tls_opts.set_identity_certificate_provider(client_identity);
+    }
     if (!tls_keylog_file.empty()) {
       tls_opts.set_tls_session_key_log_file_path(tls_keylog_file);
     }
-    return TlsCredentials(tls_opts);
-  }
-
-  if (!tls_keylog_file.empty()) {
-    TlsChannelCredentialsOptions tls_opts;
-    if (!options.ssl_credentials_cacert_as_string.empty()) {
-      auto cert_provider = std::make_shared<StaticDataCertificateProvider>(
-          options.ssl_credentials_cacert_as_string,
-          std::vector<IdentityKeyCertPair>());
-      tls_opts.set_certificate_provider(cert_provider);
-      tls_opts.watch_root_certs();
-    }
-    tls_opts.set_tls_session_key_log_file_path(tls_keylog_file);
     return TlsCredentials(tls_opts);
   }
 
