@@ -91,34 +91,30 @@ std::string DynatraceMetrics::got_thr_metrics(
   if (prev_stor.timestamp == 0) return std::string();
   std::string metrics;
 #define V(CType, CName, JSName, MType, Unit)                                   \
-{                                                                              \
-  auto it = std::find(discarded_metrics.begin(),                               \
-                      discarded_metrics.end(),                                 \
-                      #CName);                                                 \
-  if (it == discarded_metrics.end()) {                                         \
-    switch (MetricsType::MType) {                                              \
-      case MetricsType::ECounter:                                              \
-      {                                                                        \
-        metrics += "nsolid."#CName;                                            \
-        metrics += ",thread_id=" + std::to_string(stor.thread_id);             \
-        metrics += " count,delta=";                                            \
-        metrics += std::to_string(stor.CName - prev_stor.CName);               \
-        metrics += "\n";                                                       \
+  {                                                                            \
+    auto it =                                                                  \
+        std::find(discarded_metrics.begin(), discarded_metrics.end(), #CName); \
+    if (it == discarded_metrics.end()) {                                       \
+      switch (MetricsType::MType) {                                            \
+        case MetricsType::ECounter: {                                          \
+          metrics += "nsolid." #CName;                                         \
+          metrics += ",thread_id=" + std::to_string(stor.thread_id);           \
+          metrics += " count,delta=";                                          \
+          metrics += std::to_string(stor.CName - prev_stor.CName);             \
+          metrics += "\n";                                                     \
+        } break;                                                               \
+        case MetricsType::EGauge: {                                            \
+          metrics += "nsolid." #CName;                                         \
+          metrics += ",thread_id=" + std::to_string(stor.thread_id);           \
+          metrics += " gauge,";                                                \
+          metrics += std::to_string(stor.CName);                               \
+          metrics += "\n";                                                     \
+        } break;                                                               \
+        default:                                                               \
+          break;                                                               \
       }                                                                        \
-      break;                                                                   \
-      case MetricsType::EGauge:                                                \
-      {                                                                        \
-        metrics += "nsolid."#CName;                                            \
-        metrics += " gauge,";                                                  \
-        metrics += std::to_string(stor.CName);                                 \
-        metrics += "\n";                                                       \
-      }                                                                        \
-      break;                                                                   \
-      default:                                                                 \
-      break;                                                                   \
     }                                                                          \
-  }                                                                            \
-}
+  }
   NSOLID_ENV_METRICS_NUMBERS(V)
 #undef V
   return metrics;
