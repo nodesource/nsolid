@@ -637,8 +637,7 @@ int GrpcAgent::stop(bool profile_stopped) {
   } else {
     Debug("Stopping gRPC Agent(2): %d\n", profile_stopped);
     if (profile_stopped) {
-      auto it = config_.find("contCpuProfile");
-      if (it == config_.end() || it->get<bool>() == false) {
+      if (!cont_cpu_profile_enabled_.load(std::memory_order_acquire)) {
         profile_on_exit_ = profile_stopped;
       }
 
@@ -1259,8 +1258,9 @@ int GrpcAgent::config(const json& config) {
 
   {
     auto it = config_.find("contCpuProfile");
-    if (it != config_.end() && it->is_boolean()) {
-      cont_cpu_profile_enabled_.store(*it, std::memory_order_release);
+    if (it == config_.end() || it->is_boolean()) {
+      cont_cpu_profile_enabled_.store(it != config_.end() && it->get<bool>(),
+                                      std::memory_order_release);
     }
   }
 

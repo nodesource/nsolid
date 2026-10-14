@@ -1,5 +1,8 @@
+// Flags: --expose-internals
 import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { once } from 'node:events';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
   checkExitData,
   TestPlayground,
@@ -22,7 +25,7 @@ import {
 function checkProfileData(requestId, options, agentId, data, complete, onExit = false) {
   assert.strictEqual(data.requestId, requestId);
   assert.strictEqual(data.agentId, agentId);
-  assert.strictEqual(data.app, 'untitled application');
+  assert.strictEqual(data.app, options.app || 'untitled application');
   assert.strictEqual(data.command, 'profile');
   if (onExit) {
     assert.ok(data.duration < options.duration);
@@ -42,6 +45,8 @@ function testMainThreadProfile(playground) {
     let events = 0;
     let profile = '';
     let requestId;
+    let gotExit = false;
+    let processExited = false;
     const options = {
       duration: 100,
       threadId: 0,
@@ -63,7 +68,19 @@ function testMainThreadProfile(playground) {
           assert.strictEqual(eventType, 'asset-received');
           checkProfileData(requestId, options, agentId, data, true);
           JSON.parse(profile);
-          resolve();
+          playground.client.shutdown(0).then(mustCall((exit) => {
+            assert.strictEqual(exit.code, 0);
+            assert.strictEqual(exit.signal, null);
+            processExited = true;
+            if (gotExit) resolve();
+          }));
+          break;
+        case 3:
+          assert.strictEqual(eventType, 'agent-exit');
+          checkExitData(data, { exit_code: 0, error: null });
+          assert.strictEqual(data.profile, null);
+          gotExit = true;
+          if (processExited) resolve();
       }
     }
 
@@ -321,7 +338,7 @@ function testProfileAlreadyRunningWorker(playground) {
   });
 }
 
-function testProfileEndsBeforeExit(playground) {
+function testProfileEndsBeforeExit(playground, removeContCpuProfile = false) {
   return new Promise((resolve) => {
     let events = 0;
     let profile = '';
@@ -329,6 +346,7 @@ function testProfileEndsBeforeExit(playground) {
     const options = {
       duration: 1000,
       threadId: 0,
+      app: removeContCpuProfile ? 'removed-cont-profile' : 'untitled application',
     };
 
     let gotExit = false;
@@ -336,10 +354,11 @@ function testProfileEndsBeforeExit(playground) {
     let processExited = false;
 
     function onEvent(eventType, agentId, data) {
-      console.dir(data, { depth: null });
+      if (eventType === 'agent-ping') return;
       if (eventType === 'agent-exit') {
         assert.strictEqual(gotExit, false);
         checkExitData(data, { exit_code: 0, error: null });
+        assert.strictEqual(data.profile, requestId);
         gotExit = true;
         if (gotProfile && processExited) {
           resolve();
@@ -369,7 +388,29 @@ function testProfileEndsBeforeExit(playground) {
       }
     }
 
-    playground.bootstrap(mustSucceed((agentId) => {
+    const opts = {
+      opts: { env: { NSOLID_CONT_CPU_PROFILE: removeContCpuProfile ? '1' : '0' } },
+    };
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      if (removeContCpuProfile) {
+        const child = playground.client.child();
+        const reply = once(child, 'message');
+        child.send({
+          type: 'nativeConfig',
+          config: { contCpuProfile: null, app: options.app },
+        });
+        const [msg] = await reply;
+        assert.strictEqual(msg.type, 'nativeConfig');
+        // The app header confirms ZMQ has consumed the removal snapshot.
+        let app;
+        do {
+          const ping = await new Promise((done) => {
+            playground.zmqAgentBus.agentPingRequest(agentId, mustSucceed(done));
+          });
+          app = ping.app;
+          if (app !== options.app) await delay(10);
+        } while (app !== options.app);
+      }
       requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
       setTimeout(mustCall(async () => {
         const exit = await playground.client.shutdown(0);
@@ -434,6 +475,11 @@ tests.push({
 tests.push({
   name: 'should end an ongoing profile before exiting',
   test: testProfileEndsBeforeExit,
+});
+
+tests.push({
+  name: 'should link the exit profile after removing contCpuProfile',
+  test: (playground) => testProfileEndsBeforeExit(playground, true),
 });
 
 

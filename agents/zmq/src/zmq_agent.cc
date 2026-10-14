@@ -659,6 +659,7 @@ ZmqAgent::ZmqAgent()
       config_(default_agent_config),
       status_(Unconfigured),
       profile_on_exit_(false),
+      cont_cpu_profile_enabled_(false),
       assets_enabled_(true),
       trace_flags_(0),
       status_cb_(nullptr) {
@@ -754,6 +755,10 @@ int ZmqAgent::stop(bool profile_stopped) {
 
   if (status_ != Unconfigured) {
     if (profile_stopped) {
+      if (!cont_cpu_profile_enabled_.load(std::memory_order_acquire)) {
+        profile_on_exit_ = profile_stopped;
+      }
+
       // Wait here until the are no remaining profiles to be completed
       uv_mutex_lock(&stop_lock_);
       while (pending_profiles()) {
@@ -763,7 +768,6 @@ int ZmqAgent::stop(bool profile_stopped) {
       uv_mutex_unlock(&stop_lock_);
     }
 
-    profile_on_exit_ = profile_stopped;
     r = shutdown_.send();
     if (r != 0) {
       return r;
@@ -962,6 +966,10 @@ void ZmqAgent::config_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
     json config_msg = json::parse(config_str, nullptr, false);
     // assert because the runtime should never send me an invalid JSON config
     ASSERT(!config_msg.is_discarded());
+    // Runtime snapshots omit removed fields, but config() merges local state.
+    if (!config_msg.contains("contCpuProfile")) {
+      config_msg["contCpuProfile"] = false;
+    }
     agent->config(config_msg);
     // anytime there's a reconfiguration, notify to check 'ready' state.
     ASSERT_EQ(0, agent->update_state_msg_.send());
@@ -1270,6 +1278,14 @@ int ZmqAgent::config(const json& config) {
   DebugJSON("Old Config: \n%s\n", old_config);
   DebugJSON("NewConfig: \n%s\n", config_);
   DebugJSON("Diff: \n%s\n", diff);
+
+  {
+    auto it = config_.find("contCpuProfile");
+    if (it == config_.end() || it->is_boolean()) {
+      cont_cpu_profile_enabled_.store(it != config_.end() && it->get<bool>(),
+                                      std::memory_order_release);
+    }
+  }
   if (ZmqHandle::needs_reset(diff, ZmqCommandHandle::restart_fields)) {
     ret = reset_command_handle();
     if (ret != 0) {
@@ -1685,8 +1701,10 @@ void ZmqAgent::send_exit() {
 
   int r;
   ProfileState& cpu_profile_state = profile_state_[kCpu];
-  const char* profile = cpu_profile_state.last_main_profile.empty() ?
-                        "null" : cpu_profile_state.last_main_profile.c_str();
+  const std::string profile =
+      !profile_on_exit_ || cpu_profile_state.last_main_profile.empty()
+          ? "null"
+          : json(cpu_profile_state.last_main_profile).dump();
   if (error == nullptr) {
     r = snprintf(msg_buf_,
                  msg_size_,
@@ -1695,7 +1713,7 @@ void ZmqAgent::send_exit() {
                  app_name_.c_str(),
                  exit_code,
                  version_,
-                 profile);
+                 profile.c_str());
   } else {
     // Use nlohmann::json to properly escape the error message and stack.
     nlohmann::json jmsg(std::get<0>(*error));
@@ -1710,7 +1728,7 @@ void ZmqAgent::send_exit() {
                  jmsg.dump().c_str(),
                  jstack.dump().c_str(),
                  500,
-                 profile);
+                 profile.c_str());
   }
 
   ASSERT_GT(r, 0);
@@ -2059,7 +2077,8 @@ void ZmqAgent::do_got_prof(ProfileType type,
     }
   }
 
-  if (type != kHeapSnapshot && profile_on_exit_ && thread_id == 0) {
+  if (type != kHeapSnapshot && thread_id == 0 &&
+      (profile_on_exit_ || EnvList::Inst()->exiting())) {
     // Store the req_id of the main thread profile
     profile_state.last_main_profile = prof_stor.req_id;
   }
