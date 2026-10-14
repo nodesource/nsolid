@@ -161,16 +161,15 @@ void InitStatsDAgent(Local<Object> exports,
                      Local<Context> context,
                      void* priv) {
   NODE_SET_METHOD(exports, "status", Status);
-  // status is the only method exported to worker threads
-  if (ThreadId(context) != 0) {
-    return;
-  }
-
   NODE_SET_METHOD(exports, "bucket", Bucket);
   NODE_SET_METHOD(exports, "send", Send);
   NODE_SET_METHOD(exports, "tags", Tags);
   NODE_SET_METHOD(exports, "tcpIp", TcpIp);
   NODE_SET_METHOD(exports, "udpIp", UdpIp);
+  if (ThreadId(context) != 0) {
+    return;
+  }
+
   // Only for testing
   NODE_SET_METHOD(exports, "config", Config);
   NODE_SET_METHOD(exports, "_registerStatusCb", RegisterStatusCb);
