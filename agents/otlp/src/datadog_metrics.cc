@@ -33,6 +33,7 @@ DatadogMetrics::~DatadogMetrics() {
 /*virtual*/
 void DatadogMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                       const ProcessMetricsStor& prev_stor) {
+  if (prev_stor.timestamp == 0) return;
   json series = json::array();
 
 #define V(CType, CName, JSName, MType, Unit)                                   \
@@ -105,6 +106,7 @@ void DatadogMetrics::got_thr_metrics(
 void DatadogMetrics::got_thr_metrics(const ThreadMetricsStor& stor,
                                      const ThreadMetricsStor& prev_stor,
                                      nlohmann::json& series) {
+  if (prev_stor.timestamp == 0) return;
 #define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \
   auto it = std::find(discarded_metrics.begin(),                               \
