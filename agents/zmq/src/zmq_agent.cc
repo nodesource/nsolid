@@ -1227,17 +1227,18 @@ void ZmqAgent::command_handler(const std::string& cmd) {
   }
 
   auto it = message.find(kVersion);
-  if (it != message.end() && !it->is_number_integer()) {
-    Debug("Rejecting invalid command version\n");
-    send_error_message("invalid command", 400);
-    return;
-  }
-  int version = it == message.end() ? 3 : it->get<int>();
-  // This should almost never happen, only if the runtime was already connected
-  // to a console in relay mode and the end-console changed versions. Take that
-  // into account and set the version_ to the new value.
-  if (version_ != version) {
-    version_ = version;
+  if (it != message.end()) {
+    if (!it->is_number_integer()) {
+      Debug("Rejecting invalid command version\n");
+      send_error_message("invalid command", 400);
+      return;
+    }
+
+    // This should almost never happen, only if the runtime was already
+    // connected to a console in relay mode and the end-console changed
+    // versions. Take that into account and set the version_ to the new value.
+    version_ = it->get<int>();
+    Debug("Command protocol version: %d\n", version_);
   }
 
   command_message(message);
