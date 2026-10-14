@@ -1,5 +1,8 @@
+// Flags: --expose-internals
 import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { once } from 'node:events';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
   checkExitData,
   TestPlayground,
@@ -22,7 +25,7 @@ import {
 function checkProfileData(requestId, options, agentId, data, complete, onExit = false) {
   assert.strictEqual(data.requestId, requestId);
   assert.strictEqual(data.agentId, agentId);
-  assert.strictEqual(data.app, 'untitled application');
+  assert.strictEqual(data.app, options.app || 'untitled application');
   assert.strictEqual(data.command, 'profile');
   if (onExit) {
     assert.ok(data.duration < options.duration);
@@ -37,41 +40,396 @@ function checkProfileData(requestId, options, agentId, data, complete, onExit = 
 
 const tests = [];
 
-tests.push({
-  name: 'should work for the main thread',
-  test: async (playground) => {
-    return new Promise((resolve) => {
-      let events = 0;
-      let profile = '';
-      let requestId;
-      const options = {
-        duration: 100,
-        threadId: 0,
-      };
+function testMainThreadProfile(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    let gotExit = false;
+    let processExited = false;
+    const options = {
+      duration: 100,
+      threadId: 0,
+    };
 
-      playground.bootstrap(mustSucceed((agentId) => {
-        requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
-      }), (eventType, agentId, data) => {
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          playground.client.shutdown(0).then(mustCall((exit) => {
+            assert.strictEqual(exit.code, 0);
+            assert.strictEqual(exit.signal, null);
+            processExited = true;
+            if (gotExit) resolve();
+          }));
+          break;
+        case 3:
+          assert.strictEqual(eventType, 'agent-exit');
+          checkExitData(data, { exit_code: 0, error: null });
+          assert.strictEqual(data.profile, null);
+          gotExit = true;
+          if (processExited) resolve();
+      }
+    }
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+    }), onEvent);
+  });
+}
+
+function testWorkerThreadProfile(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 100,
+    };
+
+    const opts = {
+      args: [ '-w', 1 ],
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      options.threadId = workers[0];
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+    }), onEvent);
+  });
+}
+
+function testAssetsEnabledToggle(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    let resolved = false;
+    const options = {
+      duration: 100,
+      threadId: 0,
+    };
+
+    async function onEvent(eventType, agentId, data) {
+      if (resolved)
+        return;
+
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2: {
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolved = true;
+          const currentConfig = await playground.client.config();
+          assert.strictEqual(currentConfig.assetsEnabled, true);
+          resolve();
+        }
+      }
+    }
+
+    playground.bootstrap(mustSucceed(async (agentId) => {
+      const disabledConfig = await playground.client.config({ assetsEnabled: false });
+      assert.strictEqual(disabledConfig.assetsEnabled, false);
+
+      await new Promise((done) => {
+        playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+          assert.strictEqual(err.code, 422);
+          assert.strictEqual(err.message, 'Invalid arguments');
+          done();
+        }));
+      });
+
+      const enabledConfig = await playground.client.config({ assetsEnabled: true });
+      assert.strictEqual(enabledConfig.assetsEnabled, true);
+
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+    }), onEvent);
+  });
+}
+
+function testMissingThread(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      duration: 100,
+      threadId: 10,
+    };
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 410);
+        assert.strictEqual(err.message, 'Thread already gone');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testInvalidThreadId(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      duration: 100,
+      threadId: 'wth',
+    };
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testInvalidDuration(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      duration: 'wth',
+    };
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testNullArgs(playground) {
+  return new Promise((resolve) => {
+    const options = null;
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
+function testProfileAlreadyRunningMain(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 100,
+      threadId: 0,
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(mustSucceed((agentId) => {
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 409);
+        assert.strictEqual(err.message, 'Profile already in progress');
+      }));
+    }), onEvent);
+  });
+}
+
+function testProfileAlreadyRunningWorker(playground) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 100,
+    };
+
+    const opts = {
+      args: [ '-w', 1 ],
+    };
+
+    function onEvent(eventType, agentId, data) {
+      switch (++events) {
+        case 1:
+          assert.strictEqual(eventType, 'asset-data-packet');
+          if (data.packet.length > 0) {
+            checkProfileData(requestId, options, agentId, data.metadata, false);
+            profile += data.packet;
+            --events;
+          } else {
+            checkProfileData(requestId, options, agentId, data.metadata, true);
+          }
+          break;
+        case 2:
+          assert.strictEqual(eventType, 'asset-received');
+          checkProfileData(requestId, options, agentId, data, true);
+          JSON.parse(profile);
+          resolve();
+      }
+    }
+
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      const workers = await playground.client.workers();
+      options.threadId = workers[0];
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      playground.zmqAgentBus.agentProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 409);
+        assert.strictEqual(err.message, 'Profile already in progress');
+      }));
+    }), onEvent);
+  });
+}
+
+function testProfileEndsBeforeExit(playground, removeContCpuProfile = false) {
+  return new Promise((resolve) => {
+    let events = 0;
+    let profile = '';
+    let requestId;
+    const options = {
+      duration: 1000,
+      threadId: 0,
+      app: removeContCpuProfile ? 'removed-cont-profile' : 'untitled application',
+    };
+
+    let gotExit = false;
+    let gotProfile = false;
+    let processExited = false;
+
+    function onEvent(eventType, agentId, data) {
+      if (eventType === 'agent-ping') return;
+      if (eventType === 'agent-exit') {
+        assert.strictEqual(gotExit, false);
+        checkExitData(data, { exit_code: 0, error: null });
+        assert.strictEqual(data.profile, requestId);
+        gotExit = true;
+        if (gotProfile && processExited) {
+          resolve();
+        }
+      } else {
         switch (++events) {
           case 1:
             assert.strictEqual(eventType, 'asset-data-packet');
             if (data.packet.length > 0) {
-              checkProfileData(requestId, options, agentId, data.metadata, false);
+              checkProfileData(requestId, options, agentId, data.metadata, false, true);
               profile += data.packet;
               --events;
             } else {
-              checkProfileData(requestId, options, agentId, data.metadata, true);
+              checkProfileData(requestId, options, agentId, data.metadata, true, true);
             }
             break;
           case 2:
+            assert.strictEqual(gotProfile, false);
             assert.strictEqual(eventType, 'asset-received');
-            checkProfileData(requestId, options, agentId, data, true);
+            checkProfileData(requestId, options, agentId, data, true, true);
             JSON.parse(profile);
-            resolve();
+            gotProfile = true;
+            if (gotExit && processExited) {
+              resolve();
+            }
         }
-      });
-    });
-  },
+      }
+    }
+
+    const opts = {
+      opts: { env: { NSOLID_CONT_CPU_PROFILE: removeContCpuProfile ? '1' : '0' } },
+    };
+    playground.bootstrap(opts, mustSucceed(async (agentId) => {
+      if (removeContCpuProfile) {
+        const child = playground.client.child();
+        const reply = once(child, 'message');
+        child.send({
+          type: 'nativeConfig',
+          config: { contCpuProfile: null, app: options.app },
+        });
+        const [msg] = await reply;
+        assert.strictEqual(msg.type, 'nativeConfig');
+        // The app header confirms ZMQ has consumed the removal snapshot.
+        let app;
+        do {
+          const ping = await new Promise((done) => {
+            playground.zmqAgentBus.agentPingRequest(agentId, mustSucceed(done));
+          });
+          app = ping.app;
+          if (app !== options.app) await delay(10);
+        } while (app !== options.app);
+      }
+      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      setTimeout(mustCall(async () => {
+        const exit = await playground.client.shutdown(0);
+        assert.ok(exit);
+        assert.strictEqual(exit.code, 0);
+        assert.strictEqual(exit.signal, null);
+        if (gotProfile && gotExit) {
+          resolve();
+        } else {
+          processExited = true;
+        }
+      }), 100);
+    }), onEvent);
+  });
+}
+
+tests.push({
+  name: 'should work for the main thread',
+  test: testMainThreadProfile,
 });
 
 tests.push({
@@ -403,6 +761,11 @@ tests.push({
       });
     });
   },
+});
+
+tests.push({
+  name: 'should link the exit profile after removing contCpuProfile',
+  test: (playground) => testProfileEndsBeforeExit(playground, true),
 });
 
 

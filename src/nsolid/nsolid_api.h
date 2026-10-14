@@ -552,6 +552,7 @@ class EnvList {
   void UpdateConfig(const std::string& config);
 
   void DoExit(bool on_signal);
+  bool exiting() const { return exiting_.load(std::memory_order_acquire); }
   void SetupExitHandlers();
 
   void AtExitHook(at_exit_sig hook, void* data, internal::deleter_sig deleter);
