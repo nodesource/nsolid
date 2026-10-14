@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "asserts-cpp/asserts.h"
+#include "otlp_common.h"
 
 using ProcessMetricsStor = node::nsolid::ProcessMetrics::MetricsStor;
 using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
@@ -75,6 +76,15 @@ void DatadogMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
   NSOLID_PROCESS_METRICS_NUMBERS(V)
 #undef V
 
+  const json attributes = GetVendorMetricAttributes(*GetMetricsResource());
+  for (auto& metric : series) {
+    for (const auto& attr : attributes.items()) {
+      metric["tags"].push_back(attr.key() + ":" +
+                               (attr.value().is_string()
+                                    ? attr.value().get<std::string>()
+                                    : attr.value().dump()));
+    }
+  }
   json body = {
     { "series", series }
   };
@@ -92,6 +102,15 @@ void DatadogMetrics::got_thr_metrics(
     got_thr_metrics(tm.stor, tm.prev_stor, series);
   }
 
+  const json attributes = GetVendorMetricAttributes(*GetMetricsResource());
+  for (auto& metric : series) {
+    for (const auto& attr : attributes.items()) {
+      metric["tags"].push_back(attr.key() + ":" +
+                               (attr.value().is_string()
+                                    ? attr.value().get<std::string>()
+                                    : attr.value().dump()));
+    }
+  }
   if (series.size() > 0) {
     json body = {
       { "series", series }
