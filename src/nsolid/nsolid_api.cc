@@ -2303,6 +2303,7 @@ void EnvInst::get_event_loop_stats_(EnvInst* envinst,
     idle_diff = loop_diff;
   uint64_t proc_diff = loop_diff - idle_diff;
   uint64_t count_diff = metrics->loop_count - stor->loop_iterations;
+  uint64_t events_diff = metrics->events - stor->events_processed;
   auto entry_exit = envinst->provider_times();
   uint64_t entry_time = entry_exit.first;
   uint64_t exit_time = entry_exit.second;
@@ -2331,7 +2332,7 @@ void EnvInst::get_event_loop_stats_(EnvInst* envinst,
   // Metrics for backwards compatibility.
   stor->loop_total_count = metrics->loop_count;
   stor->loop_avg_tasks = count_diff == 0 ? 0 :
-    1.0 * (metrics->events - stor->events_processed) / count_diff;
+    1.0 * events_diff / count_diff;
   stor->loop_estimated_lag =
     (exit_time > 0 && stor->prev_call_time_ > exit_time) ?
     (stor->current_hrtime_ - exit_time) / 1e6 : envinst->rolling_est_lag_;
