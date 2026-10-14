@@ -534,6 +534,7 @@ void GrpcAgent::on_command_stream_done(const ::grpc::Status& status) {
 
 void GrpcAgent::reset_command_stream() {
   Debug("Resetting command stream\n");
+  command_stream_started_ = uv_now(&loop_);
   command_stream_ = std::make_unique<CommandStream>(nsolid_service_stub_.get(),
                                                     weak_from_this(),
                                                     rpc_metadata());
@@ -547,9 +548,16 @@ void GrpcAgent::set_asset_cb(SharedEnvInst envinst,
 }
 
 void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
+  if (exiting_ || nsolid_service_stub_ == nullptr) {
+    return;
+  }
+
+  if (uv_now(&loop_) - command_stream_started_ >= 60000) {
+    command_retry_interval_ = auth_timer_interval;
+    auth_retries_ = 0;
+  }
   const ::grpc::StatusCode code = status.error_code();
   if (code == ::grpc::StatusCode::UNAUTHENTICATED) {
-    Debug("Error Authenticating. Retrying in %ld ms\n", auth_timer_interval);
     auth_retries_++;
     if (auth_retries_ == MAX_AUTH_RETRIES) {
       fprintf(stderr,
@@ -568,12 +576,14 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
       }, weak_from_this());
       return;
     }
-  } else if (code == ::grpc::StatusCode::UNAVAILABLE) {
-    Debug("Service unavailable. Retrying in %ld ms\n", auth_timer_interval);
-  } else {
-    reset_command_stream();
-    return;
   }
+
+  const uint64_t delay = command_retry_interval_ -
+      uv_hrtime() % (command_retry_interval_ / 4 + 1);
+  command_retry_interval_ =
+      std::min<uint64_t>(command_retry_interval_ * 2, 60000);
+  Debug("Command stream closed (%d). Retrying in %llu ms\n",
+        static_cast<int>(code), static_cast<unsigned long long>(delay));
 
   ASSERT_EQ(0, auth_timer_.start(+[](nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
     SharedGrpcAgent agent = agent_wp.lock();
@@ -582,7 +592,7 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
     }
 
     agent->reset_command_stream();
-  }, auth_timer_interval, 0, weak_from_this()));
+  }, delay, 0, weak_from_this()));
 }
 
 int GrpcAgent::start() {
@@ -1069,6 +1079,8 @@ int GrpcAgent::config(const json& config) {
   }
 
   if (grpc_changed || saas_changed) {
+    command_retry_interval_ = auth_timer_interval;
+    auth_retries_ = 0;
     ResetGrpcClients();
     auto it = config_.find("grpc");
     if (it != config_.end() || saas_) {
