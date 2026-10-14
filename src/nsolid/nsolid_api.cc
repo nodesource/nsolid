@@ -1202,6 +1202,13 @@ void EnvList::validate_trace_sample_rate(nlohmann::json* config) {
 
 void EnvList::validate_config(nlohmann::json* config) {
   validate_trace_sample_rate(config);
+  auto it = config->find("contCpuProfileInterval");
+  if (it != config->end() &&
+      (!it->is_number_integer() || it->get<double>() <= 0 ||
+       it->get<double>() > 9007199254740991.0)) {
+    fprintf(stderr, "N|Solid warning: invalid contCpuProfileInterval\n");
+    config->erase(it);
+  }
 }
 
 
@@ -1235,7 +1242,7 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
                                                "/contCpuProfileInterval" })) {
       bool assetsEnabled = true;
       bool contCpuProfile = false;
-      uint64_t contCpuProfileInterval = 60000;  // Default: 1 minute
+      uint64_t contCpuProfileInterval = kDefaultContCpuProfileIntervalMs;
 
       it = curr.find("assetsEnabled");
       if (it != curr.end() && !it->is_null()) {

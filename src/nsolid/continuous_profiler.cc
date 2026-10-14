@@ -54,7 +54,7 @@ void ContinuousProfiler::Disable() {
 
 void ContinuousProfiler::Enable(uint64_t interval_ms) {
   bool start = false;
-  interval_ = interval_ms > 0 ? interval_ms : 60000;
+  interval_ = interval_ms > 0 ? interval_ms : kDefaultContCpuProfileIntervalMs;
   {
     nsuv::ns_mutex::scoped_lock lock(callback_mutex_);
     enabled_ = true;
