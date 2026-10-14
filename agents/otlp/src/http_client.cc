@@ -79,6 +79,7 @@ int OTLPHttpClient::post_metrics(const std::string& url,
                                               struct HttpClientStor* stor) {
   auto header_list = reinterpret_cast<struct curl_slist*>(stor->data);
   curl_slist_free_all(header_list);
+  delete stor;
 }
 
 }  // namespace otlp

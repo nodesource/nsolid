@@ -33,6 +33,7 @@ NewRelicMetrics::~NewRelicMetrics() {
 void NewRelicMetrics::got_proc_metrics(
     const ProcessMetricsStor& stor,
     const ProcessMetricsStor& prev_stor) {
+  if (prev_stor.timestamp == 0) return;
   json metrics = json::array();
 
 #define V(CType, CName, JSName, MType, Unit)                                   \
@@ -91,7 +92,8 @@ void NewRelicMetrics::got_thr_metrics(
     const std::vector<MetricsExporter::ThrMetricsStor>& thr_metrics) {
   json body = json::array();
   for (const auto& tm : thr_metrics) {
-    body.push_back(got_thr_metrics(tm.stor, tm.prev_stor));
+    if (tm.prev_stor.timestamp != 0)
+      body.push_back(got_thr_metrics(tm.stor, tm.prev_stor));
   }
 
   if (body.size() > 0) {
@@ -103,6 +105,7 @@ void NewRelicMetrics::got_thr_metrics(
 
 json NewRelicMetrics::got_thr_metrics(const ThreadMetricsStor& stor,
                                       const ThreadMetricsStor& prev_stor) {
+  if (prev_stor.timestamp == 0) return json::object();
   json metrics = json::array();
 #define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \

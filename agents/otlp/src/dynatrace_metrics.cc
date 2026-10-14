@@ -31,6 +31,7 @@ DynatraceMetrics::~DynatraceMetrics() {
 /*virtual*/
 void DynatraceMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
                                         const ProcessMetricsStor& prev_stor) {
+  if (prev_stor.timestamp == 0) return;
   std::string metrics;
 
 #define V(CType, CName, JSName, MType, Unit)                                   \
@@ -87,6 +88,7 @@ void DynatraceMetrics::got_thr_metrics(
 std::string DynatraceMetrics::got_thr_metrics(
     const ThreadMetricsStor& stor,
     const ThreadMetricsStor& prev_stor) {
+  if (prev_stor.timestamp == 0) return std::string();
   std::string metrics;
 #define V(CType, CName, JSName, MType, Unit)                                   \
 {                                                                              \
