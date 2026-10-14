@@ -38,6 +38,8 @@ class CommandStream:
 
   void OnDone(const ::grpc::Status& /*s*/) override;
 
+  void OnReadInitialMetadataDone(bool ok) override;
+
   void OnReadDone(bool ok) override;
 
   void OnWriteDone(bool /*ok*/) override;
@@ -47,6 +49,11 @@ class CommandStream:
   bool is_done() const {
     nsuv::ns_mutex::scoped_lock lock(lock_);
     return write_state_.done;
+  }
+
+  uint64_t established_at() const {
+    nsuv::ns_mutex::scoped_lock lock(lock_);
+    return established_at_;
   }
 
  private:
@@ -59,6 +66,7 @@ class CommandStream:
   WriteState write_state_;
   TSQueue<grpcagent::CommandResponse> response_q_;
   nsuv::ns_mutex lock_;
+  uint64_t established_at_ = 0;
   uv_cond_t on_done_cond_;
   bool cancelling_for_destruction_ = false;
 };
