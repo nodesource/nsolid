@@ -74,7 +74,7 @@ const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
 
-const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4GB
+const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4 MiB
 
 const int PUB_KEY_SIZE = 40;
 const int CONSOLE_ID_SIZE = 36;
