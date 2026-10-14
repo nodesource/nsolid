@@ -1,3 +1,4 @@
+// Flags: --expose-internals
 'use strict';
 
 require('../common');
@@ -51,3 +52,18 @@ nsolid.start({
 });
 
 assert.strictEqual(nsolid.config.contCpuProfile, false);
+
+
+for (const interval of [0, -1, NaN, Infinity, 1.5,
+                        Number.MAX_SAFE_INTEGER + 1, 'abc', null]) {
+  nsolid.start({ contCpuProfileInterval: interval });
+  assert.strictEqual(nsolid.config.contCpuProfileInterval, 45000);
+  console.log(`Rejected CPU profiling interval: ${interval}`);
+}
+const { internalBinding } = require('internal/test/binding');
+for (const interval of [0, -1, 1.5, 'abc', null]) {
+  internalBinding('nsolid_api').updateConfig(JSON.stringify({
+    contCpuProfileInterval: interval,
+  }));
+  assert.strictEqual(nsolid.config.contCpuProfileInterval, 45000);
+}
