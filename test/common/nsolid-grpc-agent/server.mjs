@@ -7,13 +7,16 @@ import protoLoader from '@grpc/proto-loader';
 import fixtures from '../fixtures.js';
 
 const options = {
-  tls: {
+  'tls': {
     type: 'boolean',
     default: false,
   },
   // With --tls: require a client certificate issued by this CA (a file in
   // test/fixtures/keys).
   'client-ca': {
+    type: 'string',
+  },
+  'port': {
     type: 'string',
   },
 };
@@ -60,6 +63,9 @@ async function startServer(cb) {
     Export: (data, callback) => {
       // console.dir(data, { depth: null });
       console.log('Metrics received');
+      if (args.values['client-ca']) {
+        data.request.peer = data.getAuthContext().sslPeerCertificate?.subject?.CN ?? null;
+      }
       callback(null, { message: 'Metrics received' });
       cb(null, 'metrics', data.request);
     },
@@ -244,7 +250,11 @@ async function startServer(cb) {
   }
 
   return new Promise((resolve, reject) => {
-    server.bindAsync('localhost:0', credentials, (err, port) => {
+    server.bindAsync(`localhost:${args.values.port || 0}`, credentials, (err, port) => {
+      if (err) {
+        reject(err);
+        return;
+      }
       server.start();
       resolve({ server, port });
     });

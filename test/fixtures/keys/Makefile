@@ -490,6 +490,17 @@ agent2-cert.pem: agent2-csr.pem agent2-key.pem
 agent2-verify: agent2-cert.pem
 	openssl verify -CAfile agent2-cert.pem agent2-cert.pem
 
+# A second ca1 identity for client certificate renewal tests.
+agent2-ca1-cert.pem: agent2-csr.pem ca1-cert.pem ca1-key.pem
+	openssl x509 -req \
+		-days 36500 \
+		-passin "pass:password" \
+		-in agent2-csr.pem \
+		-CA ca1-cert.pem \
+		-CAkey ca1-key.pem \
+		-set_serial 0x4e534f4c494432 \
+		-out agent2-ca1-cert.pem
+
 #
 # agent3 is signed by ca2.
 #

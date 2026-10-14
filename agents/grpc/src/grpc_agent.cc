@@ -23,6 +23,7 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "../../src/node_version.h"
+#include <charconv>
 
 using std::chrono::duration_cast;
 using std::chrono::nanoseconds;
@@ -73,10 +74,12 @@ const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
 const char* const kNSOLID_GRPC_CLIENT_CERT = "NSOLID_GRPC_CLIENT_CERT";
 const char* const kNSOLID_GRPC_CLIENT_KEY = "NSOLID_GRPC_CLIENT_KEY";
+const char* const kNSOLID_GRPC_CLIENT_CERT_REFRESH_INTERVAL =
+    "NSOLID_GRPC_CLIENT_CERT_REFRESH_INTERVAL";
 
 // How often the client certificate and key files are read again, so a renewed
 // certificate is picked up without restarting the process.
-constexpr unsigned int kClientCertRefreshSec = 60;
+constexpr unsigned int kDefaultClientCertRefreshSec = 60;
 
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
@@ -475,6 +478,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         rpc_metadata_(BuildRpcMetadata(agent_id_, "")),
                         auth_retries_(0),
                         unauthorized_(false),
+                        grpc_reconnect_in_progress_(false),
+                        reset_grpc_clients_on_retry_(false),
                         assets_enabled_(true),
                         cont_cpu_profile_enabled_(false),
                         profile_on_exit_(false) {
@@ -541,11 +546,28 @@ void GrpcAgent::setup_client_identity() {
   Debug("Using client certificate from: %s, key from: %s\n",
         cert.value().c_str(),
         key.value().c_str());
+  unsigned int refresh_sec = kDefaultClientCertRefreshSec;
+  auto refresh_interval = per_process::system_environment->Get(
+      kNSOLID_GRPC_CLIENT_CERT_REFRESH_INTERVAL);
+  if (refresh_interval.has_value()) {
+    unsigned int parsed_interval;
+    const std::string& value = refresh_interval.value();
+    auto [end, error] = std::from_chars(value.data(),
+                                        value.data() + value.size(),
+                                        parsed_interval);
+    if (error == std::errc() && end == value.data() + value.size() &&
+        parsed_interval > 0) {
+      refresh_sec = parsed_interval;
+    }
+  }
   auto provider =
       std::make_shared<::grpc::experimental::FileWatcherCertificateProvider>(
-          key.value(), cert.value(), kClientCertRefreshSec);
-  // The files are read again every kClientCertRefreshSec, so they may still
-  // appear or be fixed: warn, and keep watching them.
+          key.value(), cert.value(), refresh_sec);
+  // The files are read again on this interval, so they may still
+  // appear or be fixed: warn, and keep watching them. This warns only
+  // about contents that do not parse. A file that cannot be read counts
+  // as nothing loaded yet, which ValidateCredentials() accepts; gRPC's
+  // own error log names that file.
   absl::Status status = provider->ValidateCredentials();
   if (!status.ok()) {
     fprintf(stderr,
@@ -569,6 +591,7 @@ GrpcAgent::~GrpcAgent() {
 
 /*virtual*/
 void GrpcAgent::on_command_received(grpcagent::CommandRequest&& request) {
+  grpc_reconnect_in_progress_ = false;
   if (command_q_.enqueue(CommandRequestStor{std::move(request)}) == 1) {
     ASSERT_EQ(0, command_msg_.send());
   }
@@ -618,6 +641,9 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
     }
   } else if (code == ::grpc::StatusCode::UNAVAILABLE) {
     Debug("Service unavailable. Retrying in %ld ms\n", auth_timer_interval);
+    if (!grpc_reconnect_in_progress_.exchange(true)) {
+      reset_grpc_clients_on_retry_ = true;
+    }
   } else {
     reset_command_stream();
     return;
@@ -629,7 +655,11 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
       return;
     }
 
-    agent->reset_command_stream();
+    if (agent->reset_grpc_clients_on_retry_.exchange(false)) {
+      agent->config(agent->config_, true);
+    } else {
+      agent->reset_command_stream();
+    }
   }, auth_timer_interval, 0, weak_from_this()));
 }
 
@@ -1096,7 +1126,7 @@ void GrpcAgent::check_exit_on_profile() {
   }
 }
 
-int GrpcAgent::config(const json& config) {
+int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
   int ret = 0;
   json old_config = config_;
   config_ = config;
@@ -1116,7 +1146,7 @@ int GrpcAgent::config(const json& config) {
     RefreshRpcMetadata();
   }
 
-  if (grpc_changed || saas_changed) {
+  if (grpc_changed || saas_changed || reset_grpc_clients) {
     ResetGrpcClients();
     auto it = config_.find("grpc");
     if (it != config_.end() || saas_) {
