@@ -798,6 +798,48 @@ If competing values for a single key are set, the environment variable will take
 .
 .Ss Configuring N|Solid using environment variables
 .Bl -tag -width 6n
+.It Ev NSOLID_GRPC
+Location of the N|Solid gRPC endpoint.
+.
+.It Ev NSOLID_GRPC_INSECURE
+Use insecure gRPC transport (1). TLS is enabled by default.
+.
+.It Ev NSOLID_GRPC_CERTS
+Path of the gRPC CA certificate bundle.
+.
+.It Ev NSOLID_GRPC_KEYLOG
+Path of the gRPC TLS key log file.
+.
+.It Ev NSOLID_AUTH_URL
+Override the ZMQ SaaS authentication URL.
+.
+.It Ev NSOLID_ASSETS_ENABLED
+Enable profiling and snapshot assets (default: true).
+.
+.It Ev NSOLID_TRACE_SAMPLE_RATE
+Tracing sampling rate from 0 to 1 (default: 1).
+.
+.It Ev NSOLID_CONT_CPU_PROFILE
+Enable continuous CPU profiling (default: false).
+.
+.It Ev NSOLID_CONT_CPU_PROFILE_INTERVAL
+Positive CPU profiling interval in milliseconds (default: 30000).
+.
+.It Ev NSOLID_APPNAME
+Alias for NSOLID_APP.
+.
+.It Ev NSOLID_COMMAND_REMOTE
+Alias for NSOLID_COMMAND.
+.
+.It Ev NSOLID_DATA_REMOTE
+Alias for NSOLID_DATA.
+.
+.It Ev NSOLID_BULK_REMOTE
+Alias for NSOLID_BULK.
+.
+.It Ev NSOLID_STORAGE_PUBKEY
+Alias for NSOLID_PUBKEY.
+.
 .It Ev NSOLID_PACKAGE_JSON Ar path
 Provide the path of the package.json that contains NSolid configuration.
 .
@@ -845,7 +887,7 @@ Default (unsecure) key: '^kvy<i^qI<r{=ZDrfK4K<#NtqY+zaH:ksm/YGE6I'
 .Pp
 Data will always be encrypted, but for security you should create your own CurveZMQ key pair. See nsolid-cli documentation for instructions.
 .
-.It NSOLID_SAAS Ar key
+.It Ev NSOLID_SAAS Ar key
 The SaaS token acquired while signing up for a SaaS account.
 .
 .It Ev NSOLID_STATSD Ar [ip|hostname][:port]
@@ -890,7 +932,7 @@ Redact all strings from snapshots.
 .
 .It Ev NSOLID_INTERVAL Ar interval
 Override the default metrics reporting interval (milliseconds) of the N|Solid Agent.
-Default is 3000.
+Default is 5000.
 .
 .It Ev NSOLID_DELAY_INIT Ar interval
 Delay initializing nsolid for duration (milliseconds) after the process starts.
@@ -923,9 +965,6 @@ Track Promises and report them to the Console. This can be enabled dynamically f
 .It Ev NSOLID_TRACING_MODULES_BLACKLIST Ar config
 List of core instrumented modules you want to disable when tracing is enabled. This can be enabled dynamically from the Console.
 .
-.It Ev NSOLID_CHECK_TEST_METRICS
-When running tests check metrics at the end of every test.
-.
 .It Ev NODE_ENV Ar name
 N|Solid will report the NODE_ENV set for your application, defaulting to "prod" if unset.
 .El
@@ -946,7 +985,6 @@ A full list of supported environment variables is:
   \fBOTEL_EXPORTER_OTLP_COMPRESSION\fR, \fBOTEL_EXPORTER_OTLP_TRACES_COMPRESSION\fR, \fBOTEL_EXPORTER_OTLP_METRICS_COMPRESSION\fR
   \fBOTEL_EXPORTER_OTLP_TIMEOUT\fR, \fBOTEL_EXPORTER_OTLP_TRACES_TIMEOUT\fR, \fBOTEL_EXPORTER_OTLP_METRICS_TIMEOUT\fR
   \fBOTEL_EXPORTER_OTLP_PROTOCOL\fR, \fBOTEL_EXPORTER_OTLP_TRACES_PROTOCOL\fR, \fBOTEL_EXPORTER_OTLP_METRICS_PROTOCOL\fR
-s
 .Ss Configuring N|Solid using the package.json
 .
 Adding an
@@ -966,6 +1004,12 @@ Example:
 .Pp
 The following lists all package.json field names along with their environment variable counterparts.
 .Bl -tag -offset indent
+.It grpc : Ev NSOLID_GRPC
+.It saas : Ev NSOLID_SAAS
+.It assetsEnabled : Ev NSOLID_ASSETS_ENABLED
+.It traceSampleRate : Ev NSOLID_TRACE_SAMPLE_RATE
+.It contCpuProfile : Ev NSOLID_CONT_CPU_PROFILE
+.It contCpuProfileInterval : Ev NSOLID_CONT_CPU_PROFILE_INTERVAL
 .It app : Ev NSOLID_APP
 .It hostname : Ev NSOLID_HOSTNAME
 .It tags : Ev NSOLID_TAGS
