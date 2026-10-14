@@ -1685,8 +1685,8 @@ void ZmqAgent::send_exit() {
 
   int r;
   ProfileState& cpu_profile_state = profile_state_[kCpu];
-  const char* profile = cpu_profile_state.last_main_profile.empty() ?
-                        "null" : cpu_profile_state.last_main_profile.c_str();
+  const std::string profile = cpu_profile_state.last_main_profile.empty() ?
+      "null" : json(cpu_profile_state.last_main_profile).dump();
   if (error == nullptr) {
     r = snprintf(msg_buf_,
                  msg_size_,
@@ -1695,7 +1695,7 @@ void ZmqAgent::send_exit() {
                  app_name_.c_str(),
                  exit_code,
                  version_,
-                 profile);
+                 profile.c_str());
   } else {
     // Use nlohmann::json to properly escape the error message and stack.
     nlohmann::json jmsg(std::get<0>(*error));
@@ -1710,7 +1710,7 @@ void ZmqAgent::send_exit() {
                  jmsg.dump().c_str(),
                  jstack.dump().c_str(),
                  500,
-                 profile);
+                 profile.c_str());
   }
 
   ASSERT_GT(r, 0);
