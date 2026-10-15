@@ -178,6 +178,14 @@
  * generate OpenTelemetry-like traces.
  * @property {Array<string>} tracingModulesBlacklist - The list of modules that
  * aren't going to be generating traces event thought tracingEnabled is set.
+ * @property {boolean} sourceCodeEnabled - Allow remote `source_code` commands.
+ * Defaults to false. Enable it through NSOLID_SOURCE_CODE_ENABLED, the
+ * package.json nsolid.sourceCodeEnabled setting, configuration, or Console
+ * reconfigure. Like other boolean options, the strings 0 and false disable
+ * reads; any other nonempty string enables them. Empty or invalid values
+ * fall back to the next configuration source or preserve the current value.
+ * Upgrading disables existing Console source views until explicitly enabled;
+ * set NSOLID_SOURCE_CODE_ENABLED=1 to restore them.
  * @example
  * {
  *  app: 'application name',

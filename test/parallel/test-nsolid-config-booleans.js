@@ -14,9 +14,9 @@ const tmpdir = require('../common/tmpdir');
 const nsolid = require('nsolid');
 
 const keys = [
-  'assetsEnabled', 'contCpuProfile', 'disableIpv6', 'disablePackageScan',
+  'assetsEnabled', 'contCpuProfile', 'disablePackageScan',
   'disableSnapshots', 'iisNode', 'pauseMetrics', 'promiseTracking',
-  'redactSnapshots',
+  'redactSnapshots', 'sourceCodeEnabled',
   'tracingEnabled', 'trackGlobalPackages',
 ];
 
@@ -94,13 +94,13 @@ for (const [config, expected] of [
 const envKeys = {
   assetsEnabled: 'NSOLID_ASSETS_ENABLED',
   contCpuProfile: 'NSOLID_CONT_CPU_PROFILE',
-  disableIpv6: 'NSOLID_DISABLE_IPV6',
   disablePackageScan: 'NSOLID_DISABLE_PACKAGE_SCAN',
   disableSnapshots: 'NSOLID_DISABLE_SNAPSHOTS',
   iisNode: 'NSOLID_IISNODE',
   pauseMetrics: 'NSOLID_PAUSE_METRICS',
   promiseTracking: 'NSOLID_PROMISE_TRACKING',
   redactSnapshots: 'NSOLID_REDACT_SNAPSHOTS',
+  sourceCodeEnabled: 'NSOLID_SOURCE_CODE_ENABLED',
   tracingEnabled: 'NSOLID_TRACING_ENABLED',
   trackGlobalPackages: 'NSOLID_TRACK_GLOBAL_PACKAGES',
 };
