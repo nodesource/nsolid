@@ -678,6 +678,15 @@ void fill_log_recordable(LogsRecordable* recordable,
   recordable->SetBody(info.msg);
   recordable->SetSeverity(
       static_cast<opentelemetry::logs::Severity>(info.severity));
+  if (!info.trace_id.empty() && !info.span_id.empty()) {
+    uint8_t trace_buf[kTraceIdSize / 2];
+    HexToBinary(info.trace_id, trace_buf, sizeof(trace_buf));
+    uint8_t span_buf[kSpanIdSize / 2];
+    HexToBinary(info.span_id, span_buf, sizeof(span_buf));
+    recordable->SetTraceId(TraceId(trace_buf));
+    recordable->SetSpanId(SpanId(span_buf));
+    recordable->SetTraceFlags(TraceFlags(info.trace_flags));
+  }
   SystemTimestamp ts(duration_cast<time_point::duration>(
     nanoseconds(static_cast<uint64_t>(info.timestamp))));
   recordable->SetTimestamp(ts);
