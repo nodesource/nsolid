@@ -72,6 +72,18 @@ function checkSourceCodeError(sourceCode, metadata, requestId, agentId, code, ms
   assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
 }
 
+async function checkSourceCodeDisabled(grpcServer, agentId, options) {
+  const { data, requestId } = await grpcServer.sourceCode(agentId, options);
+  checkSourceCodeError(data.msg, data.metadata, requestId, agentId,
+                       500, 'Source code reads disabled(1009)');
+  assert.strictEqual(data.msg.code, '');
+}
+
+async function setSourceCodeEnabled(grpcServer, agentId, enabled) {
+  const { data } = await grpcServer.reconfigure(agentId, { sourceCodeEnabled: enabled });
+  assert.strictEqual(data.msg.body.sourceCodeEnabled, enabled);
+}
+
 const tests = [];
 
 tests.push({
@@ -101,6 +113,11 @@ tests.push({
           }
 
           assert.strictEqual(scripts.length, 4);
+          const firstScript = { threadId: 0, ...scripts[0] };
+          await checkSourceCodeDisabled(grpcServer, agentId, firstScript);
+          await checkSourceCodeDisabled(grpcServer, agentId,
+                                        { ...firstScript, threadId: 23 });
+          await setSourceCodeEnabled(grpcServer, agentId, true);
           for (const { scriptId, path } of scripts) {
             const options = {
               threadId: 0,
@@ -163,6 +180,8 @@ tests.push({
                                  'Thread already gone(1002)');
           }
 
+          await setSourceCodeEnabled(grpcServer, agentId, false);
+          await checkSourceCodeDisabled(grpcServer, agentId, firstScript);
           await child.shutdown(0);
           grpcServer.close();
           resolve();
@@ -208,6 +227,9 @@ tests.push({
           }
 
           assert.strictEqual(scripts.length, 4);
+          const firstScript = { threadId: wid, ...scripts[0] };
+          await checkSourceCodeDisabled(grpcServer, agentId, firstScript);
+          await setSourceCodeEnabled(grpcServer, agentId, true);
           for (const { scriptId, path } of scripts) {
             const options = {
               threadId: wid,
@@ -253,6 +275,8 @@ tests.push({
                                  'Internal Runtime Error(1007)');
           }
 
+          await setSourceCodeEnabled(grpcServer, agentId, false);
+          await checkSourceCodeDisabled(grpcServer, agentId, firstScript);
           await child.shutdown(0);
           grpcServer.close();
           resolve();
@@ -295,6 +319,9 @@ tests.push({
           }
 
           assert.strictEqual(scripts.length, 2);
+          const firstScript = { threadId: 0, ...scripts[0] };
+          await checkSourceCodeDisabled(grpcServer, agentId, firstScript);
+          await setSourceCodeEnabled(grpcServer, agentId, true);
           for (const { scriptId, path } of scripts) {
             const options = {
               threadId: 0,
@@ -306,6 +333,8 @@ tests.push({
             checkSourceCodeData(ret.data.msg, ret.data.metadata, ret.requestId, agentId, options);
           }
 
+          await setSourceCodeEnabled(grpcServer, agentId, false);
+          await checkSourceCodeDisabled(grpcServer, agentId, firstScript);
           await child.shutdown(0);
           grpcServer.close();
           resolve();
