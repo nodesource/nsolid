@@ -10,7 +10,8 @@
   X(ENoMemory, 500, "Internal Runtime Error", 1005)                            \
   X(ENotAvailable, 404, "Resource not available", 1006)                        \
   X(ESourceCodeFileError, 500, "Internal Runtime Error", 1007)                 \
-  X(EAssetsDisabled, 500, "Assets collection disabled", 1008)
+  X(EAssetsDisabled, 500, "Assets collection disabled", 1008)                  \
+  X(ESourceCodeDisabled, 500, "Source code reads disabled", 1009)
 
 namespace node {
 namespace nsolid {
