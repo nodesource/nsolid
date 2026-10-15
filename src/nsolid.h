@@ -31,6 +31,7 @@ struct LogWriteInfo;
 #define kNSByte "byte"
 #define kNSMhz "MHz"
 #define kNSMSecs "ms"
+#define kNSNSecs "ns"
 #define kNSSecs "s"
 #define kNSUSecs "us"
 #define kNSNoUnit ""
@@ -132,13 +133,13 @@ struct LogWriteInfo;
     ECounter,                                                                  \
     kNSNoUnit)                                                                 \
   V(uint64_t, http_server_count, httpServerCount, ECounter, kNSNoUnit)         \
-  V(uint64_t, loop_idle_time, loopIdleTime, EGauge, kNSMSecs)                  \
+  V(uint64_t, loop_idle_time, loopIdleTime, EGauge, kNSNSecs)                  \
   V(uint64_t, loop_iterations, loopIterations, ECounter, kNSNoUnit)            \
   V(uint64_t, loop_iter_with_events, loopIterWithEvents, ECounter, kNSNoUnit)  \
   V(uint64_t, events_processed, eventsProcessed, ECounter, kNSNoUnit)          \
   V(uint64_t, events_waiting, eventsWaiting, EGauge, kNSNoUnit)                \
-  V(uint64_t, provider_delay, providerDelay, EGauge, kNSMSecs)                 \
-  V(uint64_t, processing_delay, processingDelay, EGauge, kNSMSecs)             \
+  V(uint64_t, provider_delay, providerDelay, EGauge, kNSNSecs)                 \
+  V(uint64_t, processing_delay, processingDelay, EGauge, kNSNSecs)             \
   V(uint64_t, loop_total_count, loopTotalCount, ECounter, kNSNoUnit)           \
   V(uint64_t,                                                                  \
     pipe_server_created_count,                                                 \
