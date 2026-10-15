@@ -119,7 +119,6 @@ expected.atRunTime = new Set([
   'NativeModule internal/dns/utils',
   'NativeModule internal/process/pre_execution',
   'NativeModule internal/modules/esm/utils',
-  'NativeModule internal/async_local_storage/async_hooks',
   'Internal Binding nsolid_statsd_agent',
   'Internal Binding nsolid_zmq_agent',
   'NativeModule internal/agents/statsd/lib/agent',
@@ -132,7 +131,6 @@ expected.atRunTime = new Set([
   'NativeModule internal/nsolid_diag',
   'NativeModule internal/nsolid_trace',
   'NativeModule internal/otel/api',
-  'NativeModule internal/otel/context',
   'NativeModule internal/otel/core',
 ]);
 
