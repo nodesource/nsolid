@@ -918,12 +918,10 @@ void CpuProfileJSONSerializer::SerializeImpl() {
   writer_->AddString("]");
 
   writer_->AddString(",\"startTime\":");
-  writer_->AddNumber(static_cast<unsigned>(
-      profile_->start_time().since_origin().InMicroseconds()));
+  writer_->AddNumber(profile_->start_time().since_origin().InMicroseconds());
 
   writer_->AddString(",\"endTime\":");
-  writer_->AddNumber(static_cast<unsigned>(
-      profile_->end_time().since_origin().InMicroseconds()));
+  writer_->AddNumber(profile_->end_time().since_origin().InMicroseconds());
 
   writer_->AddString(",\"samples\":[");
   SerializeSamples();
