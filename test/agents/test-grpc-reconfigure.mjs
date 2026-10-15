@@ -47,6 +47,7 @@ function checkReconfigureData(reconfigure, metadata, requestId, agentId, nsolidC
     'contCpuProfile',
     'assetsEnabled',
     'traceSampleRate',
+    'sourceCodeEnabled',
   ];
 
   // Process reconfigure.body - remove properties starting with underscore
@@ -127,6 +128,8 @@ const newConfigs = [
   [ 'tracingModulesBlacklist', 1 ],
   [ 'contCpuProfile', true ],
   [ 'traceSampleRate', 0.4 ],
+  [ 'sourceCodeEnabled', true ],
+  [ 'sourceCodeEnabled', false ],
 ];
 
 tests.push({

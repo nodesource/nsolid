@@ -19,6 +19,7 @@ message ReconfigureBody {
   optional bool contCpuProfile = 12;
   optional bool assetsEnabled = 13;
   optional double traceSampleRate = 14;
+  optional bool sourceCodeEnabled = 16;
 }
 
 message ReconfigureEvent {

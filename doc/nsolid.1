@@ -979,6 +979,10 @@ without histograms.
 .It Ev NSOLID_OTLP_CONFIG Ar config
 Specify the configuration for the OTLP endpoint defined in \fBNSOLID_OTLP\fR.
 .
+.It Ev NSOLID_SOURCE_CODE_ENABLED
+Allow remote source code reads from the Console. Disabled by default.
+This can be enabled dynamically from the Console.
+.
 .It Ev NSOLID_TRACING_ENABLED
 Enable tracing generation. By default \fBhttp\fR and \fBdns\fR spans are automatically generated. They can be disabled by using \fBNSOLID_TRACING_MODULES_BLACKLIST\fR. This option can be enabled dynamically from the Console.
 .
@@ -1053,6 +1057,7 @@ The following lists all package.json field names along with their environment va
 .It iisNode : NSOLID_IISNODE
 .It otlp : NSOLID_OTLP
 .It otlpConfig : NSOLID_OTLP_CONFIG
+.It sourceCodeEnabled : Ev NSOLID_SOURCE_CODE_ENABLED
 .It tracingEnabled : NSOLID_TRACING_ENABLED
 .It promiseTracking : NSOLID_PROMISE_TRACKING
 .It tracingModulesBlacklist : NSOLID_TRACING_MODULES_BLACKLIST

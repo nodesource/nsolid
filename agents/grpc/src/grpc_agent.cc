@@ -436,6 +436,10 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   if (it != config.end()) {
     body->set_tracesamplerate(*it);
   }
+  it = config.find("sourceCodeEnabled");
+  if (it != config.end()) {
+    body->set_sourcecodeenabled(*it);
+  }
 }
 
 void PopulateStartupTimesEvent(grpcagent::StartupTimesEvent* st_events,
@@ -1948,6 +1952,9 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   if (body.has_tracesamplerate()) {
       out["traceSampleRate"] = body.tracesamplerate();
   }
+  if (body.has_sourcecodeenabled()) {
+    out["sourceCodeEnabled"] = body.sourcecodeenabled();
+  }
 
   DebugJSON("Reconfigure out: \n%s\n", out);
 
@@ -2191,9 +2198,16 @@ void GrpcAgent::send_source_code_event(const grpcagent::CommandRequest& req) {
   source_code_event->set_thread_id(thread_id);
   source_code_event->set_path(path);
 
-
+  // Read the current setting before the asynchronous agent config catches up.
+  json config = json::parse(GetConfig(), nullptr, false);
+  ASSERT(!config.is_discarded());
+  auto enabled = config.find("sourceCodeEnabled");
   auto envinst_sp = EnvInst::GetInst(thread_id);
-  if (envinst_sp == nullptr) {
+  if (enabled == config.end() || !enabled->is_boolean() ||
+      !enabled->get<bool>()) {
+    PopulateError(source_code_event->mutable_common(),
+                  ErrorType::ESourceCodeDisabled);
+  } else if (envinst_sp == nullptr) {
     Debug("Error getting EnvInst for thread: %ld\n", thread_id);
     PopulateError(source_code_event->mutable_common(),
                   ErrorType::EThreadGoneError);
