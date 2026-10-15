@@ -607,8 +607,8 @@ struct LogWriteInfo {
   std::string msg;
   uint32_t severity;
   uint64_t timestamp;     // nanoseconds since unix epoch
-  std::string trace_id;   // byte sequence
-  std::string span_id;    // byte sequence
+  std::string trace_id;   // hexadecimal string
+  std::string span_id;    // hexadecimal string
   uint32_t trace_flags;
 };
 

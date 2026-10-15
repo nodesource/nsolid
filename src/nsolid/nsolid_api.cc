@@ -2475,18 +2475,24 @@ static void AgentId(const FunctionCallbackInfo<Value>& args) {
 static void WriteLog(const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsString());
   DCHECK(args[1]->IsUint32());
+  DCHECK(args[2]->IsString());
+  DCHECK(args[3]->IsString());
+  DCHECK(args[4]->IsUint32());
   node::Utf8Value s(args.GetIsolate(), args[0]);
+  node::Utf8Value trace_id(args.GetIsolate(), args[2]);
+  node::Utf8Value span_id(args.GetIsolate(), args[3]);
   std::string ss = *s;
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-  // TODO(trevnorris): Allow tracing through this at some point?
+  uint64_t nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
   EnvList::Inst()->WriteLogLine(GetLocalEnvInst(args.GetIsolate()),
-                                { ss,
-                                  args[1].As<v8::Uint32>()->Value(),
-                                  nanoseconds,
-                                  "",
-                                  "",
-                                  0});
+                                {ss,
+                                 args[1].As<v8::Uint32>()->Value(),
+                                 nanoseconds,
+                                 *trace_id,
+                                 *span_id,
+                                 args[4].As<v8::Uint32>()->Value()});
 }
 
 
