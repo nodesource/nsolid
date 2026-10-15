@@ -349,6 +349,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   nsuv::ns_timer auth_timer_;
   int auth_retries_;
+  uint64_t command_retry_interval_ = 500;
+  uint64_t command_stream_started_ = 0;
   bool unauthorized_;
 
   // For the Logging API
