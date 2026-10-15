@@ -562,10 +562,8 @@ void StatsDAgent::do_start() {
 }
 
 void StatsDAgent::do_stop() {
-  {
-    nsuv::ns_rwlock::scoped_wrlock lock(stop_lock_);
-    status(Unconfigured);
-  }
+  nsuv::ns_rwlock::scoped_wrlock lock(stop_lock_);
+  status(Unconfigured);
   if (connection_) {
     connection_->close_and_delete();
     connection_ = nullptr;
@@ -774,6 +772,11 @@ void StatsDAgent::send_stats_msg_cb_(nsuv::ns_async*,
 }
 
 int StatsDAgent::send(const std::vector<std::string>& sv, size_t len) {
+  nsuv::ns_rwlock::scoped_rdlock lock(stop_lock_);
+  if (status_ != Ready) {
+    return -1;
+  }
+
   send_stats_msg_q_.enqueue(sv);
   return send_stats_msg_.send();
 }
@@ -801,6 +804,7 @@ std::string StatsDAgent::status() const {
 }
 
 const std::string StatsDAgent::tcp_ip() {
+  nsuv::ns_rwlock::scoped_rdlock lock(stop_lock_);
   if (!connection_ ||
       connection_->endpoint()->type() != StatsDEndpoint::Type::Tcp)
     return std::string();
@@ -808,6 +812,7 @@ const std::string StatsDAgent::tcp_ip() {
 }
 
 const std::string StatsDAgent::udp_ip() {
+  nsuv::ns_rwlock::scoped_rdlock lock(stop_lock_);
   if (!connection_ ||
       connection_->endpoint()->type() != StatsDEndpoint::Type::Udp)
     return std::string();
@@ -860,6 +865,7 @@ int StatsDAgent::config_handles() {
     return UV_EINVAL;
   }
 
+  nsuv::ns_rwlock::scoped_wrlock lock(stop_lock_);
   if (connection_) {
     connection_->close_and_delete();
     connection_ = nullptr;
