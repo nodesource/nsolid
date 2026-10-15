@@ -439,6 +439,13 @@ NODE_EXTERN ns_error_tp* GetExitError();
 NODE_EXTERN int GetExitCode();
 
 /**
+ * @brief Return the signal ending the process (SIGABRT when it aborts), or 0
+ * when it exits on its own.
+ *
+ */
+NODE_EXTERN int GetExitSignal();
+
+/**
  * @brief Return a string of the general process info. Such as arch or platform.
  *
  */

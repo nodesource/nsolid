@@ -141,7 +141,15 @@ function handleTrace(msg) {
 if (isMainThread) {
   const workers = new Map();
   process.on('message', (msg) => {
-    if (msg.type === 'block') {
+    if (msg.type === 'abort') {
+      process.abort();
+    } else if (msg.type === 'oom') {
+      // Fast with a small heap (--max-old-space-size).
+      const leak = [];
+      for (;;) {
+        leak.push(new Array(1e5).fill(leak.length));
+      }
+    } else if (msg.type === 'block') {
       if (threadId === msg.threadId) {
         blockFor(msg.duration);
       } else {
