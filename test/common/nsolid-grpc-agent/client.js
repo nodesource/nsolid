@@ -159,12 +159,24 @@ if (isMainThread) {
     } else if (msg.type === 'disable_assets') {
       nsolid.disableAssets();
       process.send({ type: 'disable_assets' });
-    } else if (msg.type === 'enable_traces') {
-      nsolid.enableTraces();
-      process.send({ type: 'enable_traces' });
-    } else if (msg.type === 'disable_traces') {
-      nsolid.disableTraces();
-      process.send({ type: 'disable_traces' });
+    } else if (msg.type === 'enable_traces' || msg.type === 'disable_traces') {
+      const enabled = msg.type === 'enable_traces';
+      const { getTraceFlags, nsolidTracer } = require('internal/nsolid_trace');
+      if (enabled) {
+        nsolid.enableTraces();
+      } else {
+        nsolid.disableTraces();
+      }
+
+      // Wait for the tracing thread to apply the configuration.
+      const onFlagsUpdated = () => {
+        if (!!getTraceFlags() !== enabled)
+          return;
+        nsolidTracer.removeListener('flagsUpdated', onFlagsUpdated);
+        process.send({ type: msg.type });
+      };
+      nsolidTracer.on('flagsUpdated', onFlagsUpdated);
+      onFlagsUpdated();
     } else if (msg.type === 'heap_profile') {
       nsolid.heapProfile(msg.duration);
     } else if (msg.type === 'heap_sampling') {
