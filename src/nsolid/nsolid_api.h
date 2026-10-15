@@ -436,6 +436,9 @@ class EnvList {
   using env_deletion_sig = env_creation_sig;
   using on_config_sig = void(*)(std::string, void*);
   using on_log_write_sig = void(*)(SharedEnvInst, LogWriteInfo, void*);
+  using on_permission_audit_sig = void (*)(SharedEnvInst,
+                                           PermissionAuditInfo,
+                                           void*);
   using on_config_void_cb_sig = void(*)(void(*)(), std::string, void*);
   using on_blocked_loop_sig = void(*)(SharedEnvInst,
                                       std::string,
@@ -476,6 +479,11 @@ class EnvList {
     nsolid::internal::user_data data;
   };
 
+  struct OnPermissionAuditHookStor {
+    on_permission_audit_sig cb;
+    nsolid::internal::user_data data;
+  };
+
   struct BlockedLoopStor {
     uint64_t threshold;
     on_blocked_loop_sig cb;
@@ -509,6 +517,10 @@ class EnvList {
       void* data,
       internal::on_log_write_hook_proxy_sig proxy,
       internal::deleter_sig deleter);
+
+  void OnPermissionAuditHook(void* data,
+                             internal::on_permission_audit_hook_proxy_sig proxy,
+                             internal::deleter_sig deleter);
 
   void EnvironmentCreationHook(
       void* data,
@@ -570,6 +582,8 @@ class EnvList {
   void PromiseTracking(bool promiseTracking);
 
   void WriteLogLine(SharedEnvInst, LogWriteInfo);
+
+  void PushPermissionAudit(SharedEnvInst, PermissionAuditInfo);
 
   // Updated to use raw binary data instead of strings
   // NOLINTNEXTLINE(runtime/references)
@@ -654,6 +668,7 @@ class EnvList {
   static void get_blocked_loop_body_(SharedEnvInst envinst_sp, void*);
   static void process_callbacks_(nsuv::ns_async*, EnvList* envlist);
   static void log_written_cb_(nsuv::ns_async*, EnvList* envlist);
+  static void permission_audit_cb_(nsuv::ns_async*, EnvList* envlist);
   static void removed_env_cb_(nsuv::ns_async*, EnvList* envlist);
   static void env_list_routine_(nsuv::ns_thread*, EnvList* envlist);
   static void blocked_loop_timer_cb_(nsuv::ns_timer*);
@@ -676,6 +691,7 @@ class EnvList {
   uv_loop_t thread_loop_;
   nsuv::ns_async process_callbacks_msg_;
   nsuv::ns_async log_written_msg_;
+  nsuv::ns_async permission_audit_msg_;
   nsuv::ns_async removed_env_msg_;
   nsuv::ns_thread thread_;
   // Used to access env_map.
@@ -697,6 +713,14 @@ class EnvList {
   // List for OnLogWriteHook callbacks.
   TSList<OnLogWriteHookStor> on_log_write_hook_list_;
   TSQueue<std::pair<SharedEnvInst, LogWriteInfo>> on_log_write_q_;
+  // List for OnPermissionAuditHook callbacks.
+  TSList<OnPermissionAuditHookStor> on_permission_audit_hook_list_;
+  TSQueue<std::pair<SharedEnvInst, PermissionAuditInfo>> on_permission_audit_q_;
+  // Audit events received before any OnPermissionAuditHook was registered
+  // (e.g. while the main module is loading). Only accessed from the EnvList
+  // thread.
+  std::vector<std::pair<SharedEnvInst, PermissionAuditInfo>>
+      pending_permission_audit_;
   // Queue for QueueCallback with timer to create the timer from the EnvList
   // thread.
   TSQueue<QCbTimeoutStor*> q_cb_create_timeout_;

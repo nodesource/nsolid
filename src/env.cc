@@ -951,20 +951,27 @@ Environment::Environment(IsolateData* isolate_data,
                                       tracing::CastTracedValue(traced_value));
   }
 
-  if (options_->permission || options_->permission_audit) {
+  if (options_->permission || options_->permission_audit ||
+      options_->nsolid_permission_audit) {
     permission()->EnablePermissions();
-    if (options_->permission_audit) {
+    if (options_->permission_audit || options_->nsolid_permission_audit) {
       permission()->EnableWarningOnly();
     }
     // The process shouldn't be able to neither
     // spawn/worker nor use addons or enable inspector
-    // unless explicitly allowed by the user
+    // unless explicitly allowed by the user.
+    // NSOLID_PERMISSION_AUDIT only audits these scopes, so addons and the
+    // inspector keep working.
     if (!options_->allow_addons) {
-      options_->allow_native_addons = false;
+      if (!options_->nsolid_permission_audit) {
+        options_->allow_native_addons = false;
+      }
       permission()->Apply(this, {"*"}, permission::PermissionScope::kAddon);
     }
     if (!options_->allow_inspector) {
-      flags_ = flags_ | EnvironmentFlags::kNoCreateInspector;
+      if (!options_->nsolid_permission_audit) {
+        flags_ = flags_ | EnvironmentFlags::kNoCreateInspector;
+      }
       permission()->Apply(this, {"*"}, permission::PermissionScope::kInspector);
     }
     if (!options_->allow_child_process) {

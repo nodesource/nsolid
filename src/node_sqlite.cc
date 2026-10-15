@@ -1010,7 +1010,8 @@ bool DatabaseSync::Open() {
   }
 
   if (allow_load_extension_) {
-    if (env()->permission()->enabled()) [[unlikely]] {
+    if (env()->permission()->enabled() &&
+        !env()->options()->nsolid_permission_audit) [[unlikely]] {
       THROW_ERR_LOAD_SQLITE_EXTENSION(env(),
                                       "Cannot load SQLite extensions when the "
                                       "permission model is enabled.");
