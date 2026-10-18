@@ -8,6 +8,7 @@
 #include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
 #include "absl/log/initialize.h"
+#include "absl/status/status.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
@@ -22,6 +23,7 @@
 #include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "../../src/node_version.h"
+#include <charconv>
 
 using std::chrono::duration_cast;
 using std::chrono::nanoseconds;
@@ -70,6 +72,14 @@ constexpr size_t span_msg_q_min_size = 1000;
 const char* const kNSOLID_GRPC_INSECURE = "NSOLID_GRPC_INSECURE";
 const char* const kNSOLID_GRPC_CERTS = "NSOLID_GRPC_CERTS";
 const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
+const char* const kNSOLID_GRPC_CLIENT_CERT = "NSOLID_GRPC_CLIENT_CERT";
+const char* const kNSOLID_GRPC_CLIENT_KEY = "NSOLID_GRPC_CLIENT_KEY";
+const char* const kNSOLID_GRPC_CLIENT_CERT_REFRESH_INTERVAL =
+    "NSOLID_GRPC_CLIENT_CERT_REFRESH_INTERVAL";
+
+// How often the client certificate and key files are read again, so a renewed
+// certificate is picked up without restarting the process.
+constexpr unsigned int kDefaultClientCertRefreshSec = 60;
 
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
@@ -468,6 +478,8 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
                         rpc_metadata_(BuildRpcMetadata(agent_id_, "")),
                         auth_retries_(0),
                         unauthorized_(false),
+                        grpc_reconnect_in_progress_(false),
+                        reset_grpc_clients_on_retry_(false),
                         assets_enabled_(true),
                         cont_cpu_profile_enabled_(false),
                         profile_on_exit_(false) {
@@ -509,6 +521,61 @@ GrpcAgent::GrpcAgent(): hooks_init_(false),
     uv_fs_unlink(nullptr, &req, tls_keylog_file_.c_str(), nullptr);
     uv_fs_req_cleanup(&req);
   }
+
+  setup_client_identity();
+}
+
+void GrpcAgent::setup_client_identity() {
+  auto cert = per_process::system_environment->Get(kNSOLID_GRPC_CLIENT_CERT);
+  auto key = per_process::system_environment->Get(kNSOLID_GRPC_CLIENT_KEY);
+  const bool has_cert = cert.has_value() && !cert.value().empty();
+  const bool has_key = key.has_value() && !key.value().empty();
+  if (!has_cert && !has_key) {
+    return;
+  }
+
+  if (has_cert != has_key) {
+    fprintf(stderr,
+            "N|Solid warning: %s is set without %s, so the agent connects "
+            "without a client certificate\n",
+            has_cert ? kNSOLID_GRPC_CLIENT_CERT : kNSOLID_GRPC_CLIENT_KEY,
+            has_cert ? kNSOLID_GRPC_CLIENT_KEY : kNSOLID_GRPC_CLIENT_CERT);
+    return;
+  }
+
+  Debug("Using client certificate from: %s, key from: %s\n",
+        cert.value().c_str(),
+        key.value().c_str());
+  unsigned int refresh_sec = kDefaultClientCertRefreshSec;
+  auto refresh_interval = per_process::system_environment->Get(
+      kNSOLID_GRPC_CLIENT_CERT_REFRESH_INTERVAL);
+  if (refresh_interval.has_value()) {
+    unsigned int parsed_interval;
+    const std::string& value = refresh_interval.value();
+    auto [end, error] = std::from_chars(value.data(),
+                                        value.data() + value.size(),
+                                        parsed_interval);
+    if (error == std::errc{} && end == value.data() + value.size() &&
+        parsed_interval > 0) {
+      refresh_sec = parsed_interval;
+    }
+  }
+  auto provider =
+      std::make_shared<::grpc::experimental::FileWatcherCertificateProvider>(
+          key.value(), cert.value(), refresh_sec);
+  // The files are read again on this interval, so they may still
+  // appear or be fixed: warn, and keep watching them.
+  absl::Status status = provider->ValidateCredentials();
+  if (!status.ok()) {
+    fprintf(stderr,
+            "N|Solid warning: the client certificate (%s) or its key (%s) "
+            "cannot be used yet: %s\n",
+            cert.value().c_str(),
+            key.value().c_str(),
+            std::string(status.message()).c_str());
+  }
+
+  client_identity_ = std::move(provider);
 }
 
 GrpcAgent::~GrpcAgent() {
@@ -521,6 +588,7 @@ GrpcAgent::~GrpcAgent() {
 
 /*virtual*/
 void GrpcAgent::on_command_received(grpcagent::CommandRequest&& request) {
+  grpc_reconnect_in_progress_ = false;
   if (command_q_.enqueue(CommandRequestStor{std::move(request)}) == 1) {
     ASSERT_EQ(0, command_msg_.send());
   }
@@ -570,6 +638,9 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
     }
   } else if (code == ::grpc::StatusCode::UNAVAILABLE) {
     Debug("Service unavailable. Retrying in %ld ms\n", auth_timer_interval);
+    if (!grpc_reconnect_in_progress_.exchange(true)) {
+      reset_grpc_clients_on_retry_ = true;
+    }
   } else {
     reset_command_stream();
     return;
@@ -581,7 +652,11 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
       return;
     }
 
-    agent->reset_command_stream();
+    if (agent->reset_grpc_clients_on_retry_.exchange(false)) {
+      agent->config(agent->config_, true);
+    } else {
+      agent->reset_command_stream();
+    }
   }, auth_timer_interval, 0, weak_from_this()));
 }
 
@@ -1048,7 +1123,7 @@ void GrpcAgent::check_exit_on_profile() {
   }
 }
 
-int GrpcAgent::config(const json& config) {
+int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
   int ret = 0;
   json old_config = config_;
   config_ = config;
@@ -1068,7 +1143,7 @@ int GrpcAgent::config(const json& config) {
     RefreshRpcMetadata();
   }
 
-  if (grpc_changed || saas_changed) {
+  if (grpc_changed || saas_changed || reset_grpc_clients) {
     ResetGrpcClients();
     auto it = config_.find("grpc");
     if (it != config_.end() || saas_) {
@@ -1086,8 +1161,11 @@ int GrpcAgent::config(const json& config) {
       const std::string& endpoint = !saas_ ?
                                     it->get<std::string>() :
                                     saas_->endpoint;
-      Debug("GrpcAgent configured. Endpoint: %s. Insecure: %d\n",
-            endpoint.c_str(), static_cast<unsigned>(insecure));
+      Debug("GrpcAgent configured. Endpoint: %s. Insecure: %d. "
+            "Client certificate: %d\n",
+            endpoint.c_str(),
+            static_cast<unsigned>(insecure),
+            static_cast<unsigned>(!insecure && client_identity_ != nullptr));
 
       OtlpGrpcClientOptions opts;
       opts.compression = "gzip";
@@ -1106,15 +1184,16 @@ int GrpcAgent::config(const json& config) {
         }
       }
 
-      nsolid_service_stub_ =
-          GrpcClient::MakeNSolidServiceStub(opts, tls_keylog_file_);
+      nsolid_service_stub_ = GrpcClient::MakeNSolidServiceStub(
+          opts, tls_keylog_file_, client_identity_);
 
       // CommandStream needs to be created before the OTLP client to avoid
       // a race condition with abseil mutexes.
       reset_command_stream();
 
-      // Enable TLS keylog for the OTLP client
-      opts.credentials = GrpcClient::MakeCredentials(opts, tls_keylog_file_);
+      // The OTLP client shares the TLS keylog and the client certificate.
+      opts.credentials = GrpcClient::MakeCredentials(
+          opts, tls_keylog_file_, client_identity_);
       opts.use_ssl_credentials = false;
 
       std::shared_ptr<OtlpGrpcClient> client =
