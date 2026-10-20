@@ -57,7 +57,8 @@ static void Send(const FunctionCallbackInfo<Value>& args) {
   Local<Array> strings = args[0].As<Array>();
   uint32_t len = strings->Length();
   size_t full_size = 0;
-  std::vector<std::string> sv(len);
+  std::vector<std::string> sv;
+  sv.reserve(len);
   for (uint32_t i = 0; i < len; i++) {
     auto el = strings->Get(context, i).ToLocalChecked().As<String>();
     String::Utf8Value str(isolate, el);
