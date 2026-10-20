@@ -9,7 +9,7 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 // Helper to run a small script with specific environment variables
-function runWithEnv(envVars) {
+function runWithEnv(envVars, expectWarning = false) {
   const script = path.join(__dirname, '../fixtures/test-nsolid-config-continuous-profiling-env-script.js');
 
   const result = spawnSync(process.execPath, [script], {
@@ -25,6 +25,12 @@ function runWithEnv(envVars) {
     throw new Error(`Script execution failed with status ${result.status}`);
   }
 
+  if (expectWarning) {
+    assert.match(result.stderr,
+                 /N\|Solid warning: invalid contCpuProfileInterval/);
+  } else {
+    assert.doesNotMatch(result.stderr, /contCpuProfileInterval/);
+  }
   return JSON.parse(result.stdout.trim());
 }
 
@@ -70,8 +76,14 @@ function runWithEnv(envVars) {
 }
 
 
+// Empty environment variables are unset and should not warn.
+{
+  const config = runWithEnv({ NSOLID_CONT_CPU_PROFILE_INTERVAL: '' });
+  assert.strictEqual(config.contCpuProfileInterval, 30000);
+}
+
 for (const interval of ['0', '-1', '1.5', 'abc', 'Infinity']) {
-  const config = runWithEnv({ NSOLID_CONT_CPU_PROFILE_INTERVAL: interval });
+  const config = runWithEnv({ NSOLID_CONT_CPU_PROFILE_INTERVAL: interval }, true);
   assert.strictEqual(config.contCpuProfileInterval, 30000);
   console.log(`Invalid startup interval ${interval}: default 30000`);
 }
