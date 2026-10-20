@@ -1486,8 +1486,6 @@ void GrpcAgent::export_otlp_profiles(const std::vector<const Stack*>& stacks) {
       auto* profile = scope_profiles->add_profiles();
       profile->mutable_sample_type()->set_type_strindex(intern("samples"));
       profile->mutable_sample_type()->set_unit_strindex(intern("count"));
-      profile->mutable_sample_type()->set_aggregation_temporality(
-        otlp_profiles::AGGREGATION_TEMPORALITY_DELTA);
       profile->mutable_period_type()->set_type_strindex(intern("cpu"));
       profile->mutable_period_type()->set_unit_strindex(intern("nanoseconds"));
       profile->set_period(1000000000 / 99);
@@ -1551,7 +1549,7 @@ void GrpcAgent::export_otlp_profiles(const std::vector<const Stack*>& stacks) {
         if (location_inserted) {
           auto* value = dictionary->add_location_table();
           value->set_address(frame.addr);
-          auto* line = value->add_line();
+          auto* line = value->add_lines();
           line->set_function_index(function->second);
           line->set_line(frame.script_line);
           line->set_column(frame.script_column);
@@ -1584,7 +1582,7 @@ void GrpcAgent::export_otlp_profiles(const std::vector<const Stack*>& stacks) {
     const uint64_t bucket_start = EBPFProfileBucketStartNs(
       timestamp, ebpf_profile_bucket_size_ns_);
     auto* profile = get_profile(bucket_start);
-    auto* sample = profile->add_sample();
+    auto* sample = profile->add_samples();
     sample->set_stack_index(stack_entry->second);
     sample->add_values(1);
     sample->add_timestamps_unix_nano(timestamp);
