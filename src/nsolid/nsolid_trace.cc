@@ -104,6 +104,9 @@ void Span::add_prop(const SpanPropBase& prop) {
     case kSpanCustomAttrs:
       stor_.extra_attrs.push_back(prop.val<std::string>());
     break;
+    case kSpanLink:
+      stor_.links.push_back(prop.val<std::string>());
+    break;
     case kSpanEvent:
       stor_.events.push_back(prop.val<std::string>());
     break;
