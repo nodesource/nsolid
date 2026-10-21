@@ -23,7 +23,7 @@ const interval = setInterval(() => {
 
 function execHttpTransaction() {
   const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.writeHead(200, 'OK "quoted" \\status', { 'Content-Type': 'text/plain' });
     res.end('Hello World\n');
   });
 
@@ -34,6 +34,7 @@ function execHttpTransaction() {
       port,
       method: 'GET',
       path: '/',
+      headers: { Host: 'quoted"host\\name' },
     }, (res) => {
       res.on('data', () => {
       });
@@ -61,14 +62,14 @@ function execCustomTrace() {
                                       { paths: [fixturesDir] }));
   console.log(nsolid.otel.register(api));
   const tracer = api.trace.getTracer('test');
-  const span = tracer.startSpan('initial_name', { attributes: { a: 1, b: 2 },
-                                                  kind: api.SpanKind.CLIENT });
+  const span = tracer.startSpan('initial"name\\\n\t', { attributes: { a: 1, b: 2 },
+                                                        kind: api.SpanKind.CLIENT });
   span.setAttributes({ c: 3, d: 4 })
       .setAttribute('e', 5)
       .addEvent('my_event 1', Date.now())
       .addEvent('my_event 2', { attr1: 'val1', attr2: 'val2' }, Date.now());
   span.recordException(new Error('my_exception'));
-  span.setStatus({ code: api.SpanStatusCode.ERROR, message: 'my_message' });
+  span.setStatus({ code: api.SpanStatusCode.ERROR, message: 'my"message\\\n\t' });
   span.end();
   setTimeout(() => {}, 1000);
 }

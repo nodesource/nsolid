@@ -22,5 +22,11 @@ nsolid.metrics(common.mustSucceed((m) => {
   nsolid.metrics(common.mustSucceed((m) => {
     metricsUtil.checkMetrics(m);
     assert.strictEqual(m.threadName, 'my_thread');
+    const threadName = 'thread"\\\n\t';
+    nsolid.setThreadName(threadName);
+    nsolid.metrics(common.mustSucceed((m) => {
+      metricsUtil.checkMetrics(m);
+      assert.strictEqual(m.threadName, threadName);
+    }));
   }));
 }));

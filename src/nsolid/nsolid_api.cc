@@ -255,7 +255,7 @@ static void AppendStartupTimeString(const std::string& name,
   uint32_t ns;
 
   if (tm <= 0) {
-    *mstr += "\"" + name + "\": [0,0],";
+    *mstr += nlohmann::json(name).dump() + ": [0,0],";
     return;
   }
 
@@ -265,8 +265,8 @@ static void AppendStartupTimeString(const std::string& name,
   sec = ((tm / NANOS_PER_SEC) >> 32) * 0x100000000 +
         ((tm / NANOS_PER_SEC) & 0xffffffff);
   ns = tm % NANOS_PER_SEC;
-  *mstr += "\"" + name + "\":[" + std::to_string(sec) + "," +
-    std::to_string(ns) + "],";
+  *mstr += nlohmann::json(name).dump() + ":[" + std::to_string(sec) + "," +
+           std::to_string(ns) + "],";
 }
 
 
