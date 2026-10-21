@@ -338,7 +338,10 @@ function testProfileAlreadyRunningWorker(playground) {
   });
 }
 
-function testProfileEndsBeforeExit(playground, removeContCpuProfile = false) {
+function testProfileEndsBeforeExit(
+  playground,
+  { withError = false, removeContCpuProfile = false } = {},
+) {
   return new Promise((resolve) => {
     let events = 0;
     let profile = '';
@@ -357,8 +360,13 @@ function testProfileEndsBeforeExit(playground, removeContCpuProfile = false) {
       if (eventType === 'agent-ping') return;
       if (eventType === 'agent-exit') {
         assert.strictEqual(gotExit, false);
-        checkExitData(data, { exit_code: 0, error: null });
         assert.strictEqual(data.profile, requestId);
+        if (withError) {
+          assert.strictEqual(data.exit_code, 1);
+          assert.strictEqual(data.error.message, 'Uncaught Error: error');
+        } else {
+          checkExitData(data, { exit_code: 0, error: null });
+        }
         gotExit = true;
         if (gotProfile && processExited) {
           resolve();
@@ -411,11 +419,17 @@ function testProfileEndsBeforeExit(playground, removeContCpuProfile = false) {
           if (app !== options.app) await delay(10);
         } while (app !== options.app);
       }
-      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      requestId = playground.zmqAgentBus._sendCB({
+        id: agentId,
+        command: 'profile',
+        args: options,
+        requestId: `profile"\\\n\t-${withError}-${removeContCpuProfile}`,
+      });
       setTimeout(mustCall(async () => {
-        const exit = await playground.client.shutdown(0);
+        const exit = await (withError ?
+          playground.client.exception('error') : playground.client.shutdown(0));
         assert.ok(exit);
-        assert.strictEqual(exit.code, 0);
+        assert.strictEqual(exit.code, withError ? 1 : 0);
         assert.strictEqual(exit.signal, null);
         if (gotProfile && gotExit) {
           resolve();
@@ -479,7 +493,12 @@ tests.push({
 
 tests.push({
   name: 'should link the exit profile after removing contCpuProfile',
-  test: (playground) => testProfileEndsBeforeExit(playground, true),
+  test: (playground) => testProfileEndsBeforeExit(playground, { removeContCpuProfile: true }),
+});
+
+tests.push({
+  name: 'should include the profile request ID when exiting with an error',
+  test: (playground) => testProfileEndsBeforeExit(playground, { withError: true }),
 });
 
 
