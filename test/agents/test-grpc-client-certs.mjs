@@ -171,10 +171,13 @@ await checkRecovery('mismatched');
   console.log('[client-certs] gRPC names a client certificate file it cannot read');
   const dir = await mkdtemp(path.join(os.tmpdir(), 'nsolid-client-certs-'));
   const key = path.join(dir, 'key.pem');
+  // The agent's own debug output names the key too, so wait for gRPC's line.
+  const logged = /Failed to get the file's modification time of .*key\.pem/;
   const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
     env: {
       ...process.env,
       ...baseEnv(1),
+      NODE_DEBUG_NATIVE: undefined,
       GRPC_VERBOSITY: undefined,
       NSOLID_GRPC_CLIENT_CERT: path.join(dir, 'cert.pem'),
       NSOLID_GRPC_CLIENT_KEY: key,
@@ -185,16 +188,17 @@ await checkRecovery('mismatched');
   child.stderr.setEncoding('utf8');
   try {
     await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`No error in: ${stderr}`)), 10_000);
+      const timer = setTimeout(() => {
+        reject(new Error(`No gRPC error naming the key in: ${stderr.slice(-2000)}`));
+      }, 10_000);
       child.stderr.on('data', (chunk) => {
         stderr += chunk;
-        if (stderr.includes(key)) {
+        if (logged.test(stderr)) {
           clearTimeout(timer);
           resolve();
         }
       });
     });
-    assert.match(stderr, /Failed to get the file's modification time of .*key\.pem/);
   } finally {
     child.kill();
     await rm(dir, { recursive: true, force: true });
