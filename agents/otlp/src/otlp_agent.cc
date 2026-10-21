@@ -217,7 +217,8 @@ int OTLPAgent::config(const nlohmann::json& config) {
   // If metrics timer is not active or if the diff contains metrics fields,
   // recalculate the metrics status. (stop/start/what period)
   if (!metrics_timer_.is_active() ||
-      utils::find_any_fields_in_diff(diff, metrics_fields)) {
+      utils::find_any_fields_in_diff(diff, metrics_fields) ||
+      utils::find_any_fields_in_diff(diff, otlp_fields)) {
     uint64_t period = 0;
     if (metrics_exporter_ != nullptr) {
       auto it = config_.find("pauseMetrics");
@@ -354,6 +355,7 @@ void OTLPAgent::do_start() {
 
 
 void OTLPAgent::do_stop() {
+  EnvList::Inst()->SetHttpHistogramConsumerActive(false, true);
   ready_ = false;
   shutdown_.close();
   env_msg_.close();
@@ -402,7 +404,11 @@ void OTLPAgent::got_spans(const UniqRecordables& recordables) {
     auto it = agent->env_metrics_map_.find(stor.thread_id);
     if (it != agent->env_metrics_map_.end()) {
       auto& metrics = it->second;
-      thr_metrics_vector.push_back({stor, metrics.prev_, metrics.loop_start_ });
+      auto envinst = EnvInst::GetInst(stor.thread_id);
+      thr_metrics_vector.push_back({
+        stor, metrics.prev_, metrics.loop_start_,
+        envinst ? envinst->TakeHttpHistogramSnapshots(true) :
+                  std::vector<HttpHistogramSnapshot>{}});
       metrics.prev_ = stor;
     }
   }
@@ -602,6 +608,8 @@ void OTLPAgent::setup_trace_grpc_otlp_exporter(
 
 
 int OTLPAgent::setup_metrics_timer(uint64_t period) {
+  EnvList::Inst()->SetHttpHistogramConsumerActive(
+      period != 0 && config_.value("otlp", std::string{}) == "otlp", true);
   if (period == 0) {
     return metrics_timer_.stop();
   }

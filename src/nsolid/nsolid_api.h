@@ -283,7 +283,8 @@ class EnvInst {
     http_client_histogram_points() const { return http_client_hist_points_; }
   SharedPointDataAttributes
     http_server_histogram_points() const { return http_server_hist_points_; }
-  std::vector<HttpHistogramSnapshot> TakeHttpHistogramSnapshots();
+  std::vector<HttpHistogramSnapshot> TakeHttpHistogramSnapshots(
+      bool otlp = false);
 
   std::atomic<bool> metrics_paused = { false };
 
@@ -420,9 +421,13 @@ class EnvInst {
   UniqueAttributesHashMap
     http_server_hashmap_ =
       std::make_unique<AttributesHashMap>(kHttpHistogramCardinalityLimit);
+  UniqueAttributesHashMap gc_hashmap_ =
+      std::make_unique<AttributesHashMap>(kHttpHistogramCardinalityLimit);
+  SharedPointDataAttributes gc_hist_points_;
   SharedPointDataAttributes http_client_hist_points_;
   SharedPointDataAttributes http_server_hist_points_;
   std::deque<HttpHistogramSnapshot> http_histogram_snapshots_;
+  std::deque<HttpHistogramSnapshot> otlp_histogram_snapshots_;
   nsuv::ns_mutex http_histogram_snapshots_lock_;
   uint64_t http_histogram_window_end_ms_ = 0;
   std::atomic<double> dns_median_ = { 0 };
@@ -576,7 +581,7 @@ class EnvList {
   // argument
   void UpdateConfig(const nlohmann::json& config);
   void UpdateConfig(const std::string& config);
-  void SetHttpHistogramConsumerActive(bool active);
+  void SetHttpHistogramConsumerActive(bool active, bool otlp = false);
 
   void DoExit(bool on_signal);
   void SetupExitHandlers();
@@ -751,6 +756,7 @@ class EnvList {
   // Close HTTP/DNS metrics windows at the configured collection interval.
   nsuv::ns_timer metrics_window_timer_;
   std::atomic<uint64_t> metrics_window_interval_ = { 5000 };
+  std::atomic<bool> otlp_histogram_consumer_active_ = { false };
   std::atomic<bool> http_histogram_consumer_active_ = { false };
   // exit data
   std::atomic<bool> exiting_ = { false };

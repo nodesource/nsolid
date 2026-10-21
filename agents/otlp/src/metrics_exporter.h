@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "nsolid.h"
+#include "nsolid/nsolid_metrics.h"
 
 namespace node {
 namespace nsolid {
@@ -16,6 +17,7 @@ class MetricsExporter {
     ThreadMetrics::MetricsStor stor;
     ThreadMetrics::MetricsStor prev_stor;
     double loop_start;
+    std::vector<HttpHistogramSnapshot> histogram_snapshots;
   };
 
   virtual ~MetricsExporter() {}

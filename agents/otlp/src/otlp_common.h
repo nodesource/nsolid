@@ -72,6 +72,7 @@ void fill_http_histograms(
     const ThreadMetrics::MetricsStor& stor,
     SharedPointDataAttributes http_client_points,
     SharedPointDataAttributes http_server_points,
+    SharedPointDataAttributes gc_points,
     bool use_snake_case = true,
     uint64_t start_timestamp_ms = 0,
     uint64_t end_timestamp_ms = 0);
