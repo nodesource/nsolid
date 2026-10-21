@@ -76,79 +76,79 @@ const uint64_t invalid_key_timer_interval = 500;
 constexpr uint64_t span_timer_interval = 100;
 constexpr size_t span_msg_q_min_size = 200;
 
-const char MSG_1[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"app\":\"%s\""
-  ",\"requestId\": \"%s\""
-  ",\"command\":\"%s\""
-  ",\"recorded\":{\"seconds\":%" PRIu64",\"nanoseconds\":%" PRIu64"}"
-  ",\"duration\":%d"
-  ",\"interval\":%" PRIu64
-  ",\"version\":%d"
-  ",\"body\":%s"
-  "}";
+const char MSG_1[] =
+    "{"
+    "\"agentId\":\"%s\""
+    ",\"app\":%s"
+    ",\"requestId\": %s"
+    ",\"command\":%s"
+    ",\"recorded\":{\"seconds\":%" PRIu64 ",\"nanoseconds\":%" PRIu64 "}"
+    ",\"duration\":%d"
+    ",\"interval\":%" PRIu64 ",\"version\":%d"
+    ",\"body\":%s"
+    "}";
 
-const char MSG_2[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"app\":\"%s\""
-  ",\"requestId\": null"
-  ",\"command\":\"%s\""
-  ",\"recorded\":{\"seconds\":%" PRIu64",\"nanoseconds\":%" PRIu64"}"
-  ",\"duration\":%d"
-  ",\"interval\":%" PRIu64
-  ",\"version\":%d"
-  ",\"body\":%s"
-  "}";
+const char MSG_2[] =
+    "{"
+    "\"agentId\":\"%s\""
+    ",\"app\":%s"
+    ",\"requestId\": null"
+    ",\"command\":%s"
+    ",\"recorded\":{\"seconds\":%" PRIu64 ",\"nanoseconds\":%" PRIu64 "}"
+    ",\"duration\":%d"
+    ",\"interval\":%" PRIu64 ",\"version\":%d"
+    ",\"body\":%s"
+    "}";
 
 const char MSG_3[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"app\":\"%s\""
-  ",\"requestId\": \"%s\""
-  ",\"command\":\"%s\""
-  ",\"duration\":%" PRIu64
-  ",\"metadata\":%s"
-  ",\"complete\":%s"
-  ",\"threadId\":%" PRIu64
-  ",\"version\":%d"
-  "}";
+                     "\"agentId\":\"%s\""
+                     ",\"app\":%s"
+                     ",\"requestId\": %s"
+                     ",\"command\":\"%s\""
+                     ",\"duration\":%" PRIu64 ",\"metadata\":%s"
+                     ",\"complete\":%s"
+                     ",\"threadId\":%" PRIu64 ",\"version\":%d"
+                     "}";
 
-const char MSG_4[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"app\":\"%s\""
-  ",\"requestId\": \"%s\""
-  ",\"command\":\"%s\""
-  ",\"recorded\":{\"seconds\":%" PRIu64",\"nanoseconds\":%" PRIu64"}"
-  ",\"version\":%d"
-  ",\"error\":{\"message\":\"%s\",\"code\":%d}"
-  "}";
+const char MSG_4[] =
+    "{"
+    "\"agentId\":\"%s\""
+    ",\"app\":%s"
+    ",\"requestId\": %s"
+    ",\"command\":%s"
+    ",\"recorded\":{\"seconds\":%" PRIu64 ",\"nanoseconds\":%" PRIu64 "}"
+    ",\"version\":%d"
+    ",\"error\":{\"message\":%s,\"code\":%d}"
+    "}";
 
-const char MSG_5[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"app\":\"%s\""
-  ",\"recorded\":{\"seconds\":%" PRIu64",\"nanoseconds\":%" PRIu64"}"
-  ",\"version\":%d"
-  ",\"error\":{\"message\":\"%s\",\"code\":%d}"
-  "}";
+const char MSG_5[] =
+    "{"
+    "\"agentId\":\"%s\""
+    ",\"app\":%s"
+    ",\"recorded\":{\"seconds\":%" PRIu64 ",\"nanoseconds\":%" PRIu64 "}"
+    ",\"version\":%d"
+    ",\"error\":{\"message\":%s,\"code\":%d}"
+    "}";
 
 const char MSG_6[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"app\":\"%s\""
-  ",\"command\":\"exit\""
-  ",\"exit_code\":%d"
-  ",\"version\":%d"
-  ",\"error\":{\"message\":%s,\"stack\":%s,\"code\":%d}"
-  ",\"profile\":%s"
-"}";
+                     "\"agentId\":\"%s\""
+                     ",\"app\":%s"
+                     ",\"command\":\"exit\""
+                     ",\"exit_code\":%d"
+                     ",\"version\":%d"
+                     ",\"error\":{\"message\":%s,\"stack\":%s,\"code\":%d}"
+                     ",\"profile\":%s"
+                     "}";
 
 const char MSG_7[] = "{"
-  "\"agentId\":\"%s\""
-  ",\"app\":\"%s\""
-  ",\"command\":\"exit\""
-  ",\"exit_code\":%d"
-  ",\"version\":%d"
-  ",\"error\":null"
-  ",\"profile\":%s"
-"}";
+                     "\"agentId\":\"%s\""
+                     ",\"app\":%s"
+                     ",\"command\":\"exit\""
+                     ",\"exit_code\":%d"
+                     ",\"version\":%d"
+                     ",\"error\":null"
+                     ",\"profile\":%s"
+                     "}";
 
 const char PROCESS_METRICS_MSG[] = "{"
 #define V(Type, CName, JSName, MType, Unit) \
@@ -188,21 +188,20 @@ const char THREAD_METRICS_MSG[] = "{"
 #undef V
   "}";
 
-const char SPAN_MSG[] = "{"
-  "\"id\":\"%s\""
-  ",\"parentId\":\"%s\""
-  ",\"traceId\":\"%s\""
-  ",\"start\":%f"
-  ",\"end\":%f"
-  ",\"kind\":%d"
-  ",\"type\":%d"
-  ",\"name\":\"%s\""
-  ",\"threadId\":%" PRIu64
-  ",\"status\":{\"message\":\"%s\",\"code\":%d}"
-  ",\"attributes\":%s"
-  ",\"events\":[%s]"
-  "}";
-
+const char SPAN_MSG[] =
+    "{"
+    "\"id\":\"%s\""
+    ",\"parentId\":\"%s\""
+    ",\"traceId\":\"%s\""
+    ",\"start\":%f"
+    ",\"end\":%f"
+    ",\"kind\":%d"
+    ",\"type\":%d"
+    ",\"name\":%s"
+    ",\"threadId\":%" PRIu64 ",\"status\":{\"message\":%s,\"code\":%d}"
+    ",\"attributes\":%s"
+    ",\"events\":[%s]"
+    "}";
 
 const char PONG[] = "{\"pong\":true}";
 
@@ -1085,8 +1084,8 @@ int ZmqAgent::send_command_message(const char* command,
                  msg_size_,
                  MSG_2,
                  agent_id_.c_str(),
-                 app_name_.c_str(),
-                 command,
+                 json(app_name_).dump().c_str(),
+                 json(command).dump().c_str(),
                  std::get<0>(recorded),
                  std::get<1>(recorded),
                  0,
@@ -1099,9 +1098,9 @@ int ZmqAgent::send_command_message(const char* command,
                  msg_size_,
                  MSG_1,
                  agent_id_.c_str(),
-                 app_name_.c_str(),
-                 request_id,
-                 command,
+                 json(app_name_).dump().c_str(),
+                 json(request_id).dump().c_str(),
+                 json(command).dump().c_str(),
                  std::get<0>(recorded),
                  std::get<1>(recorded),
                  0,
@@ -1579,11 +1578,11 @@ void ZmqAgent::send_error_message(const std::string& msg,
                    msg_size_,
                    MSG_5,
                    agent_id_.c_str(),
-                   app_name_.c_str(),
+                   json(app_name_).dump().c_str(),
                    std::get<0>(recorded),
                    std::get<1>(recorded),
                    version_,
-                   msg.c_str(),
+                   json(msg).dump().c_str(),
                    code);
 
   if (r < 0) {
@@ -1596,11 +1595,11 @@ void ZmqAgent::send_error_message(const std::string& msg,
                  msg_size_,
                  MSG_5,
                  agent_id_.c_str(),
-                 app_name_.c_str(),
+                 json(app_name_).dump().c_str(),
                  std::get<0>(recorded),
                  std::get<1>(recorded),
                  version_,
-                 msg.c_str(),
+                 json(msg).dump().c_str(),
                  code);
   }
 
@@ -1620,13 +1619,13 @@ int ZmqAgent::send_error_command_message(const std::string& req_id,
                    msg_size_,
                    MSG_4,
                    agent_id_.c_str(),
-                   app_name_.c_str(),
-                   req_id.c_str(),
-                   command.c_str(),
+                   json(app_name_).dump().c_str(),
+                   json(req_id).dump().c_str(),
+                   json(command).dump().c_str(),
                    std::get<0>(recorded),
                    std::get<1>(recorded),
                    version_,
-                   err.message.c_str(),
+                   json(err.message).dump().c_str(),
                    err.code);
 
   if (r < 0) {
@@ -1639,13 +1638,13 @@ int ZmqAgent::send_error_command_message(const std::string& req_id,
                  msg_size_,
                  MSG_4,
                  agent_id_.c_str(),
-                 app_name_.c_str(),
-                 req_id.c_str(),
-                 command.c_str(),
+                 json(app_name_).dump().c_str(),
+                 json(req_id).dump().c_str(),
+                 json(command).dump().c_str(),
                  std::get<0>(recorded),
                  std::get<1>(recorded),
                  version_,
-                 err.message.c_str(),
+                 json(err.message).dump().c_str(),
                  err.code);
   }
 
@@ -1692,7 +1691,7 @@ void ZmqAgent::send_exit() {
                  msg_size_,
                  MSG_7,
                  agent_id_.c_str(),
-                 app_name_.c_str(),
+                 json(app_name_).dump().c_str(),
                  exit_code,
                  version_,
                  profile);
@@ -1704,7 +1703,7 @@ void ZmqAgent::send_exit() {
                  msg_size_,
                  MSG_6,
                  agent_id_.c_str(),
-                 app_name_.c_str(),
+                 json(app_name_).dump().c_str(),
                  exit_code,
                  version_,
                  jmsg.dump().c_str(),
@@ -1911,13 +1910,14 @@ void ZmqAgent::got_spans(const std::vector<Tracer::SpanStor>& spans) {
   std::string spans_str = "{\"spans\":[";
   for (const Tracer::SpanStor& stor : spans) {
     json attrs = json::parse(stor.attrs, nullptr, false);
-    // stor.attrs must always be a valid JSON
-    ASSERT(!attrs.is_discarded() && attrs.is_object());
+    if (!attrs.is_object()) {
+      attrs = json::object();
+    }
     for (const std::string& a : stor.extra_attrs) {
       json attr = json::parse(a, nullptr, false);
-      // a must always be a valid JSON
-      ASSERT(!attr.is_discarded());
-      attrs.merge_patch(attr);
+      if (attr.is_object()) {
+        attrs.merge_patch(attr);
+      }
     }
 
     std::string events;
@@ -1940,9 +1940,9 @@ void ZmqAgent::got_spans(const std::vector<Tracer::SpanStor>& spans) {
                      stor.end,
                      stor.kind,
                      stor.type,
-                     stor.name.c_str(),
+                     json(stor.name).dump().c_str(),
                      stor.thread_id,
-                     stor.status_msg.c_str(),
+                     json(stor.status_msg).dump().c_str(),
                      stor.status_code,
                      attrs.dump().c_str(),
                      events.c_str());
@@ -1959,9 +1959,9 @@ void ZmqAgent::got_spans(const std::vector<Tracer::SpanStor>& spans) {
                    stor.end,
                    stor.kind,
                    stor.type,
-                   stor.name.c_str(),
+                   json(stor.name).dump().c_str(),
                    stor.thread_id,
-                   stor.status_msg.c_str(),
+                   json(stor.status_msg).dump().c_str(),
                    stor.status_code,
                    attrs.dump().c_str(),
                    events.c_str());
@@ -2094,8 +2094,8 @@ void ZmqAgent::do_got_prof(ProfileType type,
              msg_size_,
              MSG_3,
              agent_id_.c_str(),
-             app_name_.c_str(),
-             prof_stor.req_id.c_str(),
+             json(app_name_).dump().c_str(),
+             json(prof_stor.req_id).dump().c_str(),
              cmd,
              uv_now(&loop_) - prof_stor.timestamp,
              metadata_dump.c_str(),

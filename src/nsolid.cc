@@ -332,9 +332,9 @@ std::string ThreadMetrics::toJSON() {
 
   metrics_string += "{";
 #define V(Type, CName, JSName, MType, Unit)                                    \
-  metrics_string += "\"" #JSName "\":\"";                                      \
-  metrics_string += dup.CName;                                                 \
-  metrics_string += "\",";
+  metrics_string += "\"" #JSName "\":";                                        \
+  metrics_string += nlohmann::json(dup.CName).dump();                          \
+  metrics_string += ",";
   NSOLID_ENV_METRICS_STRINGS(V)
 #undef V
 #define V(Type, CName, JSName, MType, Unit)                                    \
