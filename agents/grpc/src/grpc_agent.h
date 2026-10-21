@@ -64,6 +64,7 @@ struct CachedThreadMetrics {
   uint64_t hist_end_ts_ms = 0;
   SharedPointDataAttributes http_client_points;
   SharedPointDataAttributes http_server_points;
+  SharedPointDataAttributes dns_points;
   SharedPointDataAttributes gc_points;
 };
 

@@ -246,8 +246,9 @@ void EnvInst::PushServerBucket(double value,
 }
 
 
-void EnvInst::PushDnsBucket(double value) {
-  send_datapoint(MetricsStream::Type::kDns, value);
+void EnvInst::PushDnsBucket(double value,
+                            MetricsStream::DnsDatapointAttrs&& attrs) {
+  send_datapoint(MetricsStream::Type::kDns, value, std::move(attrs));
 }
 
 
@@ -1944,6 +1945,8 @@ void EnvList::metrics_window_cb_(ns_timer* timer) {
                          envinst_sp->http_client_hist_points_);
     harvestHttpHistogram(envinst_sp->http_server_hashmap_,
                          envinst_sp->http_server_hist_points_);
+    harvestHttpHistogram(envinst_sp->dns_hashmap_,
+                         envinst_sp->dns_hist_points_);
     harvestHttpHistogram(envinst_sp->gc_hashmap_, envinst_sp->gc_hist_points_);
     envlist->update_http_histogram_snapshots_(envinst_sp.get(),
                                              window_end_ms);
@@ -1967,6 +1970,7 @@ void EnvList::update_http_histogram_snapshots_(EnvInst* envinst,
       auto second = std::next(first);
       MergeHttpHistogramPoints(first->client_points, second->client_points);
       MergeHttpHistogramPoints(first->server_points, second->server_points);
+      MergeHttpHistogramPoints(first->dns_points, second->dns_points);
       MergeHttpHistogramPoints(first->gc_points, second->gc_points);
       first->end_timestamp_ms = second->end_timestamp_ms;
       snapshots.erase(second);
@@ -1974,7 +1978,7 @@ void EnvList::update_http_histogram_snapshots_(EnvInst* envinst,
     snapshots.push_back({
       envinst->http_histogram_window_end_ms_, window_end_ms,
       envinst->http_client_hist_points_, envinst->http_server_hist_points_,
-      envinst->gc_hist_points_
+      envinst->dns_hist_points_, envinst->gc_hist_points_
     });
   };
   update(envinst->http_histogram_snapshots_,
@@ -2214,6 +2218,18 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
     case MetricsStream::Type::kDns:
     {
       dns_bucket_.push_back(value);
+      auto* dns = std::get_if<MetricsStream::DnsDatapointAttrs>(&attrs);
+      if (dns) {
+        opentelemetry::sdk::metrics::MetricAttributes metric_attrs;
+        if (!dns->question_name.empty()) {
+          metric_attrs.insert({"dns.question.name", dns->question_name});
+        }
+        if (!dns->error_type.empty()) {
+          metric_attrs.insert({"error.type", dns->error_type});
+        }
+        AggregateHistogram(dns_hashmap_.get(), value / 1000,
+                           std::move(metric_attrs));
+      }
     }
     break;
     case MetricsStream::Type::kHttpClient:
@@ -2610,19 +2626,25 @@ void BindingData::PushClientBucketImpl(BindingData* data,
 void BindingData::SlowPushDnsBucket(
     const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsNumber());
-  PushDnsBucketImpl(PrincipalRealm::GetBindingData<BindingData>(args),
-                    args[0].As<Number>()->Value());
+  DCHECK(args[1]->IsString());
+  DCHECK(args[2]->IsString());
+  Utf8Value name(args.GetIsolate(), args[1]);
+  Utf8Value error(args.GetIsolate(), args[2]);
+  auto* data = PrincipalRealm::GetBindingData<BindingData>(args);
+  data->env()->envinst_->PushDnsBucket(
+      args[0].As<Number>()->Value(),
+      {std::string(*name, name.length()), std::string(*error, error.length())});
 }
 
 
-void BindingData::FastPushDnsBucket(v8::Local<v8::Object> receiver,
-                                    double val) {
-  PushDnsBucketImpl(FromJSObject<BindingData>(receiver), val);
-}
-
-
-void BindingData::PushDnsBucketImpl(BindingData* data, double val) {
-  data->env()->envinst_->PushDnsBucket(val);
+void BindingData::FastPushDnsBucket(
+    v8::Local<v8::Object> receiver,
+    double val,
+    const v8::FastOneByteString& name,
+    const v8::FastOneByteString& error) {
+  auto* data = FromJSObject<BindingData>(receiver);
+  data->env()->envinst_->PushDnsBucket(
+      val, {OneByteToUtf8(name), OneByteToUtf8(error)});
 }
 
 

@@ -138,7 +138,7 @@ void OTLPMetrics::got_thr_metrics(
       std::vector<MetricData> histogram_metrics;
       fill_http_histograms(histogram_metrics, tm.stor,
                            snapshot.client_points, snapshot.server_points,
-                           snapshot.gc_points, true,
+                           snapshot.dns_points, snapshot.gc_points, true,
                            snapshot.start_timestamp_ms,
                            snapshot.end_timestamp_ms);
       export_metrics(std::move(histogram_metrics));
