@@ -2238,10 +2238,11 @@ ErrorType GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
                                         ProfileOptions& opts) {
   HeapProfileOptions& options = std::get<HeapProfileOptions>(opts);
   options.track_allocations = args.heap_profile().track_allocations();
+  options.redacted = args.heap_profile().redacted();
   auto it = config_.find("redactSnapshots");
   if (it != config_.end()) {
     if (it->is_boolean()) {
-      options.redacted = *it;
+      options.redacted = options.redacted || it->get<bool>();
     }
   }
 
@@ -2282,10 +2283,11 @@ ErrorType GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
     return ErrorType::ESnapshotDisabled;
   }
 
+  options.redacted = args.heap_snapshot().redacted();
   it = config_.find("redactSnapshots");
   if (it != config_.end()) {
     if (it->is_boolean()) {
-      options.redacted = *it;
+      options.redacted = options.redacted || it->get<bool>();
     }
   }
 
