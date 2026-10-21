@@ -7,7 +7,7 @@ import protoLoader from '@grpc/proto-loader';
 import fixtures from '../fixtures.js';
 
 const options = {
-  tls: {
+  'tls': {
     type: 'boolean',
     default: false,
   },
