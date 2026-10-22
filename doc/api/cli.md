@@ -794,6 +794,17 @@ Enable [FIPS mode][] at startup. With OpenSSL 3, a configured provider named
 `fips` must be available and initialize successfully. With OpenSSL 1.1.1,
 Node.js must be built against a FIPS-capable OpenSSL.
 
+### `--enable-fips-indicator-events`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+Publish OpenSSL FIPS indicator results to the
+[`'crypto.fips.indicator'`][] diagnostics channel. This option requires OpenSSL
+3.4 or later. It does not enable [FIPS mode][] or change whether an operation
+is permitted.
+
 ### `--enable-network-family-autoselection`
 
 <!-- YAML
@@ -1386,14 +1397,33 @@ added: v12.12.0
 
 Disable loading native addons that are not [context-aware][].
 
-### `--force-fips`
+<a id="--force-fips"></a>
+
+### `--force-fips[=mode]`
 
 <!-- YAML
 added: v6.0.0
+changes:
+  - version: v24.22.0
+    pr-url: https://github.com/nodejs/node/pull/65645
+    description: Added the optional `provider` and `strict` modes.
 -->
 
 Enable [FIPS mode][] at startup and prevent it from being disabled from script
 code. The same OpenSSL requirements as [`--enable-fips`][] apply.
+
+An optional mode can be specified using `--force-fips=mode`:
+
+* `provider`: Preserve the OpenSSL FIPS provider's configured handling of
+  non-approved operations. This is the current default when the mode is
+  omitted.
+* `strict`: Reject non-approved operations reported through the OpenSSL FIPS
+  indicator callback. This mode requires OpenSSL 3.4 or later.
+
+The `strict` mode only covers operations reported through the callback for
+OpenSSL's default library context. It does not cover native addons that use
+another `OSSL_LIB_CTX` or another copy of `libcrypto`, nor operation-specific
+indicators that do not invoke the callback.
 
 ### `--force-node-api-uncaught-exceptions-policy`
 
@@ -2463,6 +2493,9 @@ forked processes, or clustered processes.
 <!-- YAML
 added: v22.0.0
 changes:
+  - version: v24.22.0
+    pr-url: https://github.com/nodejs/node/pull/64606
+    description: Passing `--run` without a command lists the available scripts.
   - version: v22.3.0
     pr-url: https://github.com/nodejs/node/pull/53032
     description: NODE_RUN_SCRIPT_NAME environment variable is added.
@@ -2478,6 +2511,15 @@ changes:
 
 This runs a specified command from a package.json's `"scripts"` object.
 If a missing `"command"` is provided, it will list the available scripts.
+
+Passing `--run` without a command lists the available scripts and exits
+with a non-zero exit code:
+
+```console
+$ node --run
+Available scripts are:
+  test: node --test
+```
 
 `--run` will traverse up to the root directory and finds a `package.json`
 file to run the command from.
@@ -3631,6 +3673,7 @@ one is included in the list below.
 * `--disable-warning`
 * `--disable-wasm-trap-handler`
 * `--dns-result-order`
+* `--enable-fips-indicator-events`
 * `--enable-fips`
 * `--enable-network-family-autoselection`
 * `--enable-source-maps`
@@ -4260,6 +4303,7 @@ node --stack-trace-limit=12 -p -e "Error.stackTraceLimit" # prints 12
 [V8 Inspector integration for Node.js]: debugger.md#v8-inspector-integration-for-nodejs
 [V8 JavaScript code coverage]: https://v8project.blogspot.com/2017/12/javascript-code-coverage.html
 [`"type"`]: packages.md#type
+[`'crypto.fips.indicator'`]: diagnostics_channel.md#event-cryptofipsindicator
 [`--allow-addons`]: #--allow-addons
 [`--allow-child-process`]: #--allow-child-process
 [`--allow-fs-read`]: #--allow-fs-read

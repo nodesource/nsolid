@@ -372,7 +372,9 @@ class PerProcessOptions : public Options {
   bool use_openssl_ca = false;
   bool use_bundled_ca = false;
   bool enable_fips_crypto = false;
+  bool enable_fips_indicator_events = false;
   bool force_fips_crypto = false;
+  std::string force_fips_crypto_policy = "provider";
 #endif
 #if OPENSSL_VERSION_MAJOR >= 3
   bool openssl_legacy_provider = false;
@@ -390,6 +392,9 @@ class PerProcessOptions : public Options {
   // TODO(addaleax): Some of these could probably be per-Environment.
   std::string use_largepages = "off";
   bool trace_sigint = false;
+  // Tracks whether `--run` was passed, since an empty `run` is ambiguous
+  // between "not passed" and "passed without a script name" (lists scripts).
+  bool has_run = false;
   std::vector<std::string> cmdline;
 
   inline PerIsolateOptions* get_per_isolate_options();

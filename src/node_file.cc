@@ -1749,6 +1749,41 @@ static void RMDir(const FunctionCallbackInfo<Value>& args) {
   }
 }
 
+#ifdef _WIN32
+static void ClearReadOnlyAttributeWHelper(const wchar_t* path) {
+  DWORD attrs = GetFileAttributesW(path);
+  if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY)) {
+    SetFileAttributesW(path, attrs & ~FILE_ATTRIBUTE_READONLY);
+  }
+}
+
+static void ClearReadOnlyAttributeW(const std::filesystem::path& path,
+                                    bool recursive) {
+  std::error_code ec;
+  auto file_status = std::filesystem::symlink_status(path, ec);
+  if (ec) return;
+
+  if (recursive &&
+      file_status.type() == std::filesystem::file_type::directory) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(
+             path,
+             std::filesystem::directory_options::skip_permission_denied,
+             ec)) {
+      std::error_code entry_ec;
+      auto entry_status = entry.symlink_status(entry_ec);
+      if (entry_ec) continue;
+      if (entry_status.type() != std::filesystem::file_type::symlink) {
+        ClearReadOnlyAttributeWHelper(entry.path().c_str());
+      }
+    }
+  }
+
+  if (file_status.type() != std::filesystem::file_type::symlink) {
+    ClearReadOnlyAttributeWHelper(path.c_str());
+  }
+}
+#endif
+
 static void RmSync(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   Isolate* isolate = env->isolate();
@@ -1796,6 +1831,9 @@ static void RmSync(const FunctionCallbackInfo<Value>& args) {
   };
 
   int i = 1;
+#ifdef _WIN32
+  bool cleared_readonly = false;
+#endif
 
   while (maxRetries >= 0) {
     if (recursive) {
@@ -1803,6 +1841,22 @@ static void RmSync(const FunctionCallbackInfo<Value>& args) {
     } else {
       std::filesystem::remove(file_path, error);
     }
+
+#ifdef _WIN32
+    // On Windows, libc++ does not clear the read-only attribute before
+    // removing a file (unlike MSVC STL which does). Attempt to clear it
+    // manually when we get EPERM (operation_not_permitted) so that read-only
+    // files can be deleted, matching the behavior of official Node.js builds.
+    if (error == std::errc::operation_not_permitted && !cleared_readonly) {
+      cleared_readonly = true;
+      ClearReadOnlyAttributeW(file_path, recursive);
+      if (recursive) {
+        std::filesystem::remove_all(file_path, error);
+      } else {
+        std::filesystem::remove(file_path, error);
+      }
+    }
+#endif  // _WIN32
 
     if (!error || error == std::errc::no_such_file_or_directory) {
       return;
@@ -1824,7 +1878,7 @@ static void RmSync(const FunctionCallbackInfo<Value>& args) {
   }
 
   // On Windows path::c_str() returns wide char, convert to std::string first.
-  std::string file_path_str = file_path.string();
+  std::string file_path_str = ConvertPathToUTF8(file_path);
   const char* path_c_str = file_path_str.c_str();
 #ifdef _WIN32
   int permission_denied_error = EPERM;
@@ -1833,14 +1887,14 @@ static void RmSync(const FunctionCallbackInfo<Value>& args) {
 #endif  // !_WIN32
 
   if (error == std::errc::operation_not_permitted) {
-    std::string message = "Operation not permitted: " + file_path_str;
+    std::string message = "Operation not permitted:";
     return env->ThrowErrnoException(EPERM, "rm", message.c_str(), path_c_str);
   } else if (error == std::errc::directory_not_empty) {
-    std::string message = "Directory not empty: " + file_path_str;
+    std::string message = "Directory not empty:";
     return env->ThrowErrnoException(
         ENOTEMPTY, "rm", message.c_str(), path_c_str);
   } else if (error == std::errc::not_a_directory) {
-    std::string message = "Not a directory: " + file_path_str;
+    std::string message = "Not a directory:";
     return env->ThrowErrnoException(ENOTDIR, "rm", message.c_str(), path_c_str);
 #ifdef _AIX
   } else if (error == std::errc::permission_denied ||
@@ -1851,7 +1905,7 @@ static void RmSync(const FunctionCallbackInfo<Value>& args) {
 #else
   } else if (error == std::errc::permission_denied) {
 #endif
-    std::string message = "Permission denied: " + file_path_str;
+    std::string message = "Permission denied:";
     return env->ThrowErrnoException(
         permission_denied_error, "rm", message.c_str(), path_c_str);
   }
@@ -3797,6 +3851,7 @@ static void CpSyncCopyDir(const FunctionCallbackInfo<Value>& args) {
   auto dest_path = dest.ToPath();
 
   std::error_code error;
+  const bool dest_existed = std::filesystem::exists(dest_path, error);
   std::filesystem::create_directories(dest_path, error);
   if (error) {
     return env->ThrowStdErrException(error, "cp", *dest);
@@ -3916,10 +3971,27 @@ static void CpSyncCopyDir(const FunctionCallbackInfo<Value>& args) {
         }
       } else if (dir_entry.is_directory()) {
         auto entry_dir_path = src / dir_entry.path().filename();
-        std::filesystem::create_directory(dest_file_path);
+        const bool created =
+            std::filesystem::create_directory(dest_file_path, error);
+        if (error) {
+          env->ThrowStdErrException(
+              error, "cp", ConvertPathToUTF8(dest_file_path).c_str());
+          return false;
+        }
         auto success = copy_dir_contents(entry_dir_path, dest_file_path);
         if (!success) {
           return false;
+        }
+        // A directory created by the copy gets the mode of its source once
+        // its contents are in (the source may be read-only).
+        if (created) {
+          std::filesystem::permissions(
+              dest_file_path, dir_entry.status().permissions(), error);
+          if (error) {
+            env->ThrowStdErrException(
+                error, "cp", ConvertPathToUTF8(dest_file_path).c_str());
+            return false;
+          }
         }
       } else if (dir_entry.is_regular_file()) {
         std::filesystem::copy_file(
@@ -3945,7 +4017,13 @@ static void CpSyncCopyDir(const FunctionCallbackInfo<Value>& args) {
     return true;
   };
 
-  copy_dir_contents(src_path, dest_path);
+  if (copy_dir_contents(src_path, dest_path) && !dest_existed) {
+    std::filesystem::permissions(
+        dest_path, std::filesystem::status(src_path).permissions(), error);
+    if (error) {
+      return env->ThrowStdErrException(error, "cp", *dest);
+    }
+  }
 }
 
 BindingData::FilePathIsFileReturnType BindingData::FilePathIsFile(

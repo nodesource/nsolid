@@ -250,6 +250,14 @@ does not exist, the wildcard will not be added, and access will be limited to
 yet, make sure to explicitly include the wildcard:
 `/my-path/folder-do-not-exist/*`.
 
+Some `node:fs` operations act on an already-open file descriptor rather than a
+path, so they cannot be tied to a `--allow-fs-read` or `--allow-fs-write` grant.
+When the permission model is enabled these operations are disabled and throw
+`ERR_ACCESS_DENIED`, regardless of how the descriptor was obtained. This applies
+both to the top-level `node:fs` functions and to the equivalent
+`FileHandle` methods, and currently includes `fsync`/`fdatasync`,
+`fchmod`, and `fchown` (and their synchronous variants).
+
 #### Configuration file support
 
 In addition to passing permission flags on the command line, they can also be
@@ -333,6 +341,14 @@ There are constraints you need to know before using this system:
   to read files before environment initialization. As a result, such flags are
   not subject to the rules of the Permission Model. The same applies for V8
   flags that can be set via runtime through `v8.setFlagsFromString`.
+* Files that Node.js itself creates, writes, or reads at a location selected
+  by an operator flag may not be consistently checked against the Permission
+  Model, in particular when the flag accepts a template or pattern that
+  expands to several paths. For example, trace files rotated by
+  `--trace-event-file-pattern` (`${rotation}`) can be written even when the
+  expanded path is not covered by `--allow-fs-write`. Because the location is
+  chosen by the operator, gaps like this are treated as regular bugs rather
+  than vulnerabilities. Please report them through the regular issue tracker.
 * OpenSSL engines cannot be requested at runtime when the Permission
   Model is enabled, affecting the built-in crypto, https, and tls modules.
 * Run-Time Loadable Extensions cannot be loaded when the Permission Model is

@@ -1087,6 +1087,54 @@ changes:
 The high resolution millisecond timestamp representing the time immediately
 before Node.js receives the first byte of the response from the server.
 
+### `performanceResourceTiming.finalResponseHeadersStart`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* Type: {number}
+
+The high resolution millisecond timestamp representing the time immediately
+after Node.js receives the first byte of the final response,
+as opposed to an interim response.
+
+### `performanceResourceTiming.firstInterimResponseStart`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* Type: {number}
+
+The high resolution millisecond timestamp representing the time immediately
+after Node.js receives the first byte of the first interim response, such as
+a `103 Early Hints` response.
+
+### `performanceResourceTiming.responseStart`
+
+<!-- YAML
+added:
+  - v18.2.0
+  - v16.17.0
+changes:
+  - version: v24.22.0
+    pr-url: https://github.com/nodejs/node/pull/65017
+    description: This property now returns `firstInterimResponseStart`
+                 when it is non-zero.
+  - version: v19.0.0
+    pr-url: https://github.com/nodejs/node/pull/44483
+    description: This property getter must be called with the
+                 `PerformanceResourceTiming` object as the receiver.
+-->
+
+* Type: {number}
+
+The high resolution millisecond timestamp representing the time immediately
+after Node.js receives the first byte of the response from the server. This
+is `firstInterimResponseStart` when it is non-zero, and
+`finalResponseHeadersStart` otherwise.
+
 ### `performanceResourceTiming.responseEnd`
 
 <!-- YAML
@@ -1161,6 +1209,37 @@ changes:
 A number representing the size (in octets) received from the fetch
 (HTTP or cache), of the message body, after removing any applied
 content-codings.
+
+### `performanceResourceTiming.renderBlockingStatus`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* Type: {string}
+
+The render blocking status of the resource. It is either `'blocking'` or `'non-blocking'`.
+
+### `performanceResourceTiming.contentType`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* Type: {string}
+
+The minimized MIME type of the content of the fetched resource, or an empty
+string if it cannot be determined.
+
+### `performanceResourceTiming.contentEncoding`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* Type: {string}
+
+The content encoding of the fetched resource, such as `'gzip'` or `'br'`.
 
 ### `performanceResourceTiming.toJSON()`
 
@@ -1635,6 +1714,89 @@ added:
 
 Returns a {RecordableHistogram}.
 
+## `perf_hooks.createSlidingWindowHistogram(options)`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* `options` {Object}
+  * `chunks` {number} The number of histogram chunks retained. Must be an
+    integer between `1` and `1024`.
+  * `chunkDuration` {number} The duration of each chunk in milliseconds. Must
+    be an integer between `1` and `18_446_744_073_709`. Exactly one of
+    `chunkDuration` and `recordsPerChunk` must be specified.
+  * `recordsPerChunk` {number} The number of calls to `record()` assigned to
+    each chunk. Must be an integer between `1` and `Number.MAX_SAFE_INTEGER`.
+    Exactly one of `chunkDuration` and `recordsPerChunk` must be specified.
+  * `lowest` {number|bigint} The lowest discernible value. Must be an integer
+    value greater than `0`. **Default:** `1`.
+  * `highest` {number|bigint} The highest recordable value. Must be an integer
+    value that is equal to or greater than two times `lowest`.
+    **Default:** `Number.MAX_SAFE_INTEGER`.
+  * `figures` {number} The number of accuracy digits. Must be an integer between
+    `1` and `5`. **Default:** `3`.
+* Returns: {SlidingWindowHistogram}
+
+Creates a {SlidingWindowHistogram} that retains the latest `chunks` histogram
+chunks. Rotation is lazy and does not create a timer. Time-based rotation is
+evaluated when `record()` or `snapshot()` is called. Count-based rotation is
+evaluated when `record()` is called.
+
+One histogram chunk is allocated during construction. Additional chunks are
+allocated lazily. The maximum native memory used by the window scales with
+`chunks` and with the `lowest`, `highest`, and `figures` histogram options.
+
+The window boundary has chunk-level precision. With `N` chunks of duration
+`D`, a recorded value is retained for between `(N - 1) * D` and `N * D`
+milliseconds. Once a count-based window is populated, it retains between
+`(N - 1) * C + 1` and `N * C` recording attempts, where `C` is
+`recordsPerChunk`. Recording attempts which exceed `highest` are included when
+determining count-based rotation.
+
+```js
+const { createSlidingWindowHistogram } = require('node:perf_hooks');
+
+const window = createSlidingWindowHistogram({
+  chunks: 6,
+  chunkDuration: 10_000,
+});
+
+window.record(20_000_000);
+
+// Materialize the current window as an independent Histogram.
+const snapshot = window.snapshot();
+console.log(snapshot.percentile(99));
+```
+
+## `perf_hooks.importHistogram(data)`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* `data` {Uint8Array} A CBOR-encoded histogram previously produced by
+  [`histogram.export()`][].
+* Returns: {RecordableHistogram}
+
+Reconstructs a histogram from a CBOR-encoded `Uint8Array`. The returned
+histogram is a full {RecordableHistogram} with all bucket data, configuration,
+and EWMA state restored. New values can be recorded into it.
+
+```js
+const { createHistogram, importHistogram } = require('node:perf_hooks');
+
+const h = createHistogram();
+for (let i = 1; i <= 1000; i++) h.record(i);
+
+// Serialize and reconstruct
+const data = h.export();
+const h2 = importHistogram(data);
+
+console.log(h2.count);          // 1000
+console.log(h2.percentile(99)); // Same as h.percentile(99)
+```
+
 ## `perf_hooks.eventLoopUtilization([utilization1[, utilization2]])`
 
 <!-- YAML
@@ -1961,6 +2123,43 @@ added:
 The number of times the event loop delay exceeded the maximum 1 hour event
 loop delay threshold.
 
+### `histogram.export()`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* Returns: {Uint8Array}
+
+Serializes the histogram to a [CBOR][]-encoded (RFC 8949) `Uint8Array`
+suitable for transmission or persistent storage. The encoding uses a
+delta-encoded sparse representation of the bucket counts, so the output size
+scales with the number of distinct recorded values rather than the total
+bucket count.
+
+The output includes all histogram configuration, bucket data, and EWMA
+state (when enabled). It can be reconstructed into a new histogram using
+[`perf_hooks.importHistogram()`][].
+
+The CBOR payload is a map with integer keys:
+
+| Key | Type    | Field                                         |
+| --- | ------- | --------------------------------------------- |
+| 0   | uint    | Format version (currently 1)                  |
+| 1   | uint    | Lowest discernible value                      |
+| 2   | uint    | Highest trackable value                       |
+| 3   | uint    | Significant figures                           |
+| 4   | uint    | Total count                                   |
+| 5   | uint    | Min value                                     |
+| 6   | uint    | Max value                                     |
+| 7   | uint    | Normalizing index offset                      |
+| 8   | float64 | Conversion ratio                              |
+| 9   | uint    | Counts array length                           |
+| 10  | array   | Delta-encoded sparse counts `[delta, c, ...]` |
+| 11  | map     | EWMA state (omitted when disabled)            |
+
+Any standard CBOR decoder can parse the output.
+
 ### `histogram.ewmaMean`
 
 <!-- YAML
@@ -2132,6 +2331,41 @@ added: v11.10.0
 
 The mean of the recorded event loop delays.
 
+### `histogram.meanCI([options])`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* `options` {Object}
+  * `confidence` {number} The confidence level for the interval, between
+    0 and 1 (exclusive). **Default:** `0.95`.
+* Returns: {Object}
+  * `mean` {number} The mean estimate, equivalent to `histogram.mean`.
+  * `lower` {number} The lower bound of the confidence interval.
+  * `upper` {number} The upper bound of the confidence interval.
+
+Returns a two-sided confidence interval for the mean using Student's
+t-distribution and the sample standard error. A higher confidence level
+produces a wider interval. This interval assumes that samples are independent
+and approximately normally distributed, although the approximation is robust
+for sufficiently large samples.
+
+The result reflects the histogram's configured precision and is calculated
+from the values represented by its buckets. With fewer than two recorded
+values, `lower` and `upper` are `NaN`. When all recorded values are equal,
+`lower` and `upper` equal `mean`.
+
+```js
+const { createHistogram } = require('node:perf_hooks');
+
+const h = createHistogram();
+for (let i = 1; i <= 100; i++) h.record(i);
+
+const { mean, lower, upper } = h.meanCI();
+console.log(`mean=${mean}, 95% CI=[${lower}, ${upper}]`);
+```
+
 ### `histogram.min`
 
 <!-- YAML
@@ -2247,6 +2481,82 @@ added: v24.21.0
 Returns the values at the specified percentiles, computed in a single
 efficient pass over the histogram data. More efficient than calling
 `histogram.percentile()` multiple times.
+
+### `histogram.qrde([options])`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* `options` {Object}
+  * `bins` {number} The number of equal-probability density bins to return.
+    Must be between 1 and 1000. Cannot be used with `probabilities`.
+    **Default:** `100`.
+  * `probabilities` {number\[]} Custom probability boundaries. The array must
+    contain between 2 and 1001 strictly increasing values, start with `0`, and
+    end with `1`. Cannot be used with `bins`.
+  * `dequantize` {string} Controls whether repeated bucket values are spread
+    deterministically over their equivalent-value ranges. May be `'none'`,
+    `'hdr'`, or `'all'`. **Default:** `'hdr'`.
+  * `cache` {boolean} When `true`, retains the expanded histogram snapshot for
+    reuse by subsequent calls with `cache: true`. The snapshot is invalidated
+    when the histogram is modified. **Default:** `false`.
+* Returns: {Promise} Fulfills with an {Object} containing:
+  * `probabilities` {Float64Array} The probability boundaries used by the
+    estimate.
+  * `quantiles` {Float64Array} The quantiles at the probability boundaries.
+  * `densities` {Float64Array} The density within each quantile interval.
+  * `count` {bigint} The number of values in the histogram snapshot.
+  * `bucketCount` {number} The number of occupied HDR buckets.
+  * `corrections` {number} The number of non-monotonic floating-point results
+    that were clamped to the preceding quantile.
+  * `dequantize` {string} The selected dequantization mode.
+
+Returns a quantile-respectful density estimate based on the Harrell-Davis
+quantile estimator. By default, `bins` generates equal probability boundaries.
+The `probabilities` option can instead focus the estimate on regions such as
+p90, p99, p99.9, and p99.99. The density for interval `i` contains probability
+mass `probabilities[i + 1] - probabilities[i]`. The histogram is snapshotted
+when the method is called. Snapshot expansion and the estimate are calculated
+in the libuv thread pool. Highly concentrated beta weights use a second-order
+asymptotic approximation to avoid numerical convergence loss at large sample
+counts.
+
+Setting `cache` to `true` avoids repeating snapshot capture and expansion when
+several estimates are requested from an unchanged histogram. The retained
+snapshot uses memory proportional to the number of occupied HDR buckets and is
+released when the histogram is next modified.
+
+QRDE temporarily uses approximately one additional HDR count array plus 32
+bytes per occupied bucket. With `cache: true`, the expanded 32-byte-per-bucket
+snapshot remains allocated. The following estimates use `lowest: 1` and
+`highest: Number.MAX_SAFE_INTEGER` and exclude allocator and JavaScript object
+overhead:
+
+| `figures` | Histogram | Maximum expanded snapshot | Peak cache-miss QRDE |
+| --------- | --------: | ------------------------: | -------------------: |
+| 1         |   6.3 KiB |                    25 KiB |               31 KiB |
+| 2         |    47 KiB |                   188 KiB |              235 KiB |
+| 3         |   352 KiB |                   1.4 MiB |              1.7 MiB |
+| 4         |   5.0 MiB |                    20 MiB |               25 MiB |
+| 5         |    37 MiB |                   148 MiB |              185 MiB |
+
+The maximum snapshot column assumes every representable bucket is occupied.
+Lower `highest` values reduce histogram and temporary copy sizes. Concurrent
+calls that miss the cache each require their own temporary copy and expanded
+snapshot.
+
+HDR histograms aggregate observations into equivalent-value buckets. The
+`'hdr'` dequantization mode models repeated values in buckets wider than one
+unit as a continuous uniform distribution over the bucket resolution. This
+reduces density artifacts introduced by HDR quantization while preserving
+repeated unit-resolution values as point masses. The `'all'` mode also
+dequantizes repeated unit-resolution values. Use `'none'` to calculate the
+grouped Harrell-Davis estimator using bucket midpoints directly.
+
+An empty histogram returns the requested `probabilities` but produces empty
+`quantiles` and `densities` arrays. A non-dequantized interval whose quantile
+boundaries are equal has an infinite density.
 
 ### `histogram.reset()`
 
@@ -2421,6 +2731,54 @@ added: v24.21.0
 Subtracts the values of `other` from this histogram. Both histograms should
 have compatible configurations. Bucket counts that would become negative
 are clamped to zero.
+
+## Class: `SlidingWindowHistogram`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+Records values into a lazily rotated ring of histogram chunks. Instances are
+created using [`perf_hooks.createSlidingWindowHistogram()`][] and cannot be
+constructed directly. A `SlidingWindowHistogram` does not extend {Histogram};
+call `snapshot()` to materialize the current window as a {Histogram}.
+
+`SlidingWindowHistogram` instances cannot be cloned or transferred through a
+{MessagePort}.
+
+### `slidingWindowHistogram.record(val)`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* `val` {number|bigint} The amount to record.
+
+Records `val` in the current chunk. For a count-based window, every call that
+reaches the native histogram counts toward rotation, including values which
+exceed the configured `highest` value.
+
+### `slidingWindowHistogram.reset()`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+Invalidates all chunks in the current window. Allocated chunks are reset
+lazily when reused.
+
+### `slidingWindowHistogram.snapshot()`
+
+<!-- YAML
+added: v24.22.0
+-->
+
+* Returns: {Histogram}
+
+Materializes the current window as a new, independent {Histogram}. Values
+recorded or expired after this method returns do not change the returned
+histogram. Materialization allocates one histogram and merges every retained
+chunk.
 
 ## Histogram analysis examples
 
@@ -2836,6 +3194,7 @@ dns.promises.resolve('localhost');
 ```
 
 [Async Hooks]: async_hooks.md
+[CBOR]: https://www.rfc-editor.org/rfc/rfc8949
 [Cliff's delta]: https://en.wikipedia.org/wiki/Effect_size#Cliff's_delta
 [Cohen's d]: https://en.wikipedia.org/wiki/Effect_size#Cohen's_d
 [Fetch Response Body Info]: https://fetch.spec.whatwg.org/#response-body-info
@@ -2850,7 +3209,10 @@ dns.promises.resolve('localhost');
 [Worker threads]: worker_threads.md#worker-threads
 [`'exit'`]: process.md#event-exit
 [`child_process.spawnSync()`]: child_process.md#child_processspawnsynccommand-args-options
+[`histogram.export()`]: #histogramexport
+[`perf_hooks.createSlidingWindowHistogram()`]: #perf_hookscreateslidingwindowhistogramoptions
 [`perf_hooks.eventLoopUtilization()`]: #perf_hookseventlooputilizationutilization1-utilization2
+[`perf_hooks.importHistogram()`]: #perf_hooksimporthistogramdata
 [`perf_hooks.monitorEventLoopDelay()`]: #perf_hooksmonitoreventloopdelayoptions
 [`perf_hooks.timerify()`]: #perf_hookstimerifyfn-options
 [`process.hrtime()`]: process.md#processhrtimetime

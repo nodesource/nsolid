@@ -86,6 +86,7 @@ const customTypesMap = {
   'Hash': 'crypto.html#class-hash',
   'Hmac': 'crypto.html#class-hmac',
   'KeyObject': 'crypto.html#class-keyobject',
+  'Mac': 'crypto.html#class-mac',
   'Sign': 'crypto.html#class-sign',
   'Verify': 'crypto.html#class-verify',
   'crypto.constants': 'crypto.html#cryptoconstants',
@@ -225,6 +226,8 @@ const customTypesMap = {
     'perf_hooks.html#class-performanceobserver',
   'PerformanceObserverEntryList':
     'perf_hooks.html#class-performanceobserverentrylist',
+  'SlidingWindowHistogram':
+    'perf_hooks.html#class-slidingwindowhistogram',
 
   'readline.Interface':
     'readline.html#class-readlineinterface',

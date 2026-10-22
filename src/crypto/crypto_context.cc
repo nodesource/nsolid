@@ -2,12 +2,14 @@
 #include "base_object-inl.h"
 #include "crypto/crypto_bio.h"
 #include "crypto/crypto_common.h"
+#include "crypto/crypto_pkcs12.h"
 #include "crypto/crypto_util.h"
 #include "env-inl.h"
 #include "memory_tracker-inl.h"
 #include "ncrypto.h"
 #include "node.h"
 #include "node_buffer.h"
+#include "node_mutex.h"
 #include "node_options.h"
 #include "util.h"
 #include "v8.h"
@@ -15,9 +17,10 @@
 #ifdef NODE_OPENSSL_HAS_CERT_COMP
 #include <openssl/comp.h>
 #endif
-#include <openssl/pkcs12.h>
+#include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #ifdef __APPLE__
 #include <Security/Security.h>
 #endif
@@ -27,6 +30,8 @@
 #include <wincrypt.h>
 #endif
 
+#include <array>
+#include <cstring>
 #include <set>
 
 namespace node {
@@ -41,6 +46,7 @@ using ncrypto::Digest;
 using ncrypto::EnginePointer;
 #endif  // !OPENSSL_NO_ENGINE
 using ncrypto::EVPKeyPointer;
+using ncrypto::KeyAlgorithm;
 using ncrypto::MarkPopErrorOnReturn;
 using ncrypto::SSLPointer;
 using ncrypto::StackOfX509;
@@ -1420,6 +1426,250 @@ Local<FunctionTemplate> SecureContext::GetConstructorTemplate(
   return tmpl;
 }
 
+namespace {
+
+constexpr size_t kSpkiHashLength = 32;  // SHA-256
+using SpkiHash = std::array<uint8_t, kSpkiHashLength>;
+
+// SHA-256 hashes of SubjectPublicKeyInfos that must never appear in a
+// verified chain, regardless of what the trust store says. Each entry is
+// the digest of the DER-encoded SPKI (what i2d_X509_PUBKEY produces).
+//
+// These are the eMudhra/emSign intermediates whose private keys were
+// reported compromised in October 2026. Node.js has no equivalent of the
+// browsers' CRLSet/OneCRL and no default online revocation checking, so a
+// chain through one of these keys would otherwise still verify as long as
+// it reaches a bundled root. The same list is shipped by Go
+// (CVE-2026-111943, golang/go#82345) and Electron (electron/electron#55126).
+// Each entry is annotated with the certificate fingerprint and subject from
+// the public revocation records, for cross-referencing with CCADB.
+constexpr SpkiHash kBlockedSPKIs[] = {
+    // 0164d7ceae5bb909c272af151ff44b1177ae9b47d9424b94f1d9558c30934d19
+    // C=US, O=eMudhra Inc, CN=EM DV TLS CA - G3C
+    {0x49, 0xdd, 0x35, 0x3d, 0xc2, 0xb9, 0x19, 0xa3, 0x77, 0x06, 0x45,
+     0x11, 0x7d, 0x0e, 0x60, 0xc1, 0x61, 0x15, 0xe7, 0xd1, 0xbc, 0x25,
+     0x9e, 0xef, 0xe7, 0x34, 0xb0, 0x0e, 0xa4, 0x34, 0xfe, 0x5f},
+    // 432ec25f0d28de9006d97bf752f17bbb2cd41f669933fcb072d9a1148d0261f3
+    // C=US, O=eMudhra Inc, CN=EM EV TLS CA - G3C
+    {0x5c, 0x06, 0x60, 0xa2, 0xb1, 0x64, 0x91, 0x0d, 0x8f, 0xf5, 0x89,
+     0xc1, 0x8e, 0x14, 0x55, 0x2e, 0x9e, 0x0e, 0xc2, 0x37, 0xdc, 0xef,
+     0xe2, 0xcb, 0x73, 0x6d, 0x41, 0xa4, 0x81, 0x1f, 0x81, 0xa0},
+    // cb6e15165ac802e9b3f993f16c25d41f4e81c21ebde71ae1b012ac00bf9c7c3f
+    // C=US, O=eMudhra Inc, CN=EM OV TLS CA - G3C
+    {0x63, 0xec, 0xef, 0xee, 0x43, 0x1d, 0x49, 0x52, 0x3b, 0xc1, 0x13,
+     0x6c, 0x4e, 0x72, 0xd0, 0x20, 0x6a, 0x47, 0x70, 0x86, 0xca, 0xf6,
+     0x06, 0xcd, 0x5c, 0xf0, 0x25, 0x68, 0x6c, 0x10, 0x9c, 0xf8},
+    // 4b2460a466f95fd40113bcdcca2ceb29b3b093921de45474da7df48874c630b1
+    // C=US, O=eMudhra Inc, CN=EM OV CS CA - G3C
+    {0x92, 0xc0, 0x63, 0xd6, 0x7e, 0x8f, 0x14, 0xdb, 0x71, 0xd2, 0x88,
+     0xe1, 0x12, 0x66, 0xff, 0xda, 0xf6, 0x9c, 0xbf, 0x11, 0x5f, 0x7b,
+     0xab, 0x14, 0xf3, 0xbc, 0x2f, 0x68, 0xd2, 0x5e, 0x0e, 0x30},
+    // 42c4accd12c4f59597925e1a08a7a90102608543809308d50ec427e118ba1493
+    // C=NL, O=eMudhra BV, CN=EM DV TLS CA - G3B
+    {0xeb, 0xed, 0x64, 0x75, 0xc2, 0xc2, 0xd8, 0x0f, 0xcb, 0x19, 0x9f,
+     0x3f, 0xe8, 0xdd, 0x6e, 0x6b, 0x3c, 0xe6, 0x0b, 0x77, 0xeb, 0x15,
+     0xd4, 0xe4, 0x2c, 0x3d, 0xec, 0x0c, 0x6f, 0x5b, 0x51, 0x05},
+    // 9e39de2881273acc225a149c72ba3e0f51424963669ab633ee1dc7df5db067b4
+    // C=NL, O=eMudhra BV, CN=EM OV CS CA - G3B
+    {0xec, 0x4f, 0xfa, 0x1a, 0xd0, 0xac, 0x88, 0x08, 0x13, 0x14, 0xb7,
+     0xaa, 0xff, 0xef, 0x6a, 0x91, 0xf9, 0x7c, 0xd5, 0x72, 0x91, 0xbb,
+     0x5b, 0xa6, 0x86, 0xc5, 0x41, 0x5f, 0x5e, 0xb4, 0xf6, 0xb6},
+    // 98b896625c0c230adeec3eb2cf6aad5001ecf9156a68644e82374ce5833bc25b
+    // C=NL, O=eMudhra BV, CN=EM OV TLS CA - G3B
+    {0x43, 0xbf, 0xfa, 0x19, 0xd6, 0xef, 0x65, 0x14, 0x51, 0xf6, 0x84,
+     0x1e, 0x01, 0x99, 0x31, 0xe9, 0x6f, 0x6f, 0x2e, 0xae, 0xff, 0x28,
+     0xab, 0x4b, 0x6f, 0x1c, 0xe4, 0x57, 0x6d, 0xe2, 0x71, 0x7b},
+    // e7568fe6e12331f4fd7de61da4c7559d0f8eb192a218d4741a3ba75184333838
+    // C=NL, O=eMudhra BV, CN=EM EV TLS CA - G3B
+    {0xe0, 0x25, 0x4c, 0x7f, 0xcd, 0xc2, 0x65, 0xe2, 0xf0, 0xf8, 0xa4,
+     0x28, 0xda, 0xbb, 0x75, 0xab, 0x4a, 0xe0, 0x39, 0xb4, 0x87, 0x2d,
+     0x62, 0xf5, 0xee, 0x57, 0xf0, 0x87, 0x7d, 0x5a, 0x8a, 0x41},
+};
+
+// Extra entries registered by the test-only hooks on the crypto binding.
+// The list is process-wide and TLS handshakes may run on worker threads, so
+// every access goes through the mutex.
+Mutex& BlockedSPKIsForTestingMutex() {
+  static Mutex mutex;
+  return mutex;
+}
+
+std::vector<SpkiHash>& BlockedSPKIsForTesting() {
+  static std::vector<SpkiHash> list;
+  return list;
+}
+
+bool IsBlockedSPKIForTesting(const SpkiHash& digest) {
+  Mutex::ScopedLock lock(BlockedSPKIsForTestingMutex());
+  for (const auto& blocked : BlockedSPKIsForTesting()) {
+    if (digest == blocked) return true;
+  }
+  return false;
+}
+
+enum class SpkiCheck { kAllowed, kBlocked, kError };
+
+// Hashes the DER-encoded SubjectPublicKeyInfo of `cert` and looks it up in
+// the blocklist. A failure to encode or hash is reported as kError rather
+// than kAllowed so that it cannot be used to slip past the check.
+SpkiCheck CheckSPKI(X509* cert) {
+  if (cert == nullptr) return SpkiCheck::kAllowed;
+  uint8_t* spki = nullptr;
+  int spki_len = i2d_X509_PUBKEY(X509_get_X509_PUBKEY(cert), &spki);
+  if (spki_len <= 0) return SpkiCheck::kError;
+  SpkiHash digest;
+  unsigned int digest_len = 0;
+  int ok = EVP_Digest(spki,
+                      static_cast<size_t>(spki_len),
+                      digest.data(),
+                      &digest_len,
+                      Digest::SHA256,
+                      nullptr);
+  OPENSSL_free(spki);
+  if (ok != 1 || digest_len != digest.size()) return SpkiCheck::kError;
+  for (const auto& blocked : kBlockedSPKIs) {
+    if (digest == blocked) return SpkiCheck::kBlocked;
+  }
+  if (IsBlockedSPKIForTesting(digest)) return SpkiCheck::kBlocked;
+  return SpkiCheck::kAllowed;
+}
+
+// Checks every certificate in `certs`. On kBlocked or kError, `*offender`
+// points at the certificate the result applies to and `*depth` is its index
+// in `certs`.
+SpkiCheck CheckSPKIs(const STACK_OF(X509) * certs,
+                     X509** offender,
+                     int* depth) {
+  if (certs == nullptr) return SpkiCheck::kAllowed;
+  for (int i = 0; i < sk_X509_num(certs); i++) {
+    X509* cert = sk_X509_value(certs, i);
+    SpkiCheck result = CheckSPKI(cert);
+    if (result != SpkiCheck::kAllowed) {
+      *offender = cert;
+      *depth = i;
+      return result;
+    }
+  }
+  return SpkiCheck::kAllowed;
+}
+
+// Installed with SSL_CTX_set_cert_verify_callback on every SSL_CTX Node.js
+// creates. It wraps X509_verify_cert so that a chain through a blocked
+// public key is reported as X509_V_ERR_CERT_REVOKED even when the trust
+// store would accept it. The built chain is always checked; when
+// verification did not fully succeed (TLSWrap's per-certificate callback
+// continues past errors so JS can apply rejectUnauthorized, leaving the
+// error set on the context), the leaf and every peer-sent certificate are
+// checked too, so the blocklist takes precedence over the original error.
+//
+// A hit is reported like any other X509_verify_cert error: the error and
+// offending certificate are recorded on the context and the per-certificate
+// verify callback, if any, decides whether the handshake continues. OpenSSL
+// reads the error back into the verify result either way, so
+// socket.authorizationError reports CERT_REVOKED.
+//
+// This is the only cert-verify callback Node.js installs; keep any other
+// per-chain adjustments here, since a second registration would replace it.
+int CertVerifyCallback(X509_STORE_CTX* ctx, void*) {
+#if !defined(OPENSSL_IS_BORINGSSL) && OPENSSL_VERSION_PREREQ(4, 1)
+  X509_VERIFY_PARAM* param = X509_STORE_CTX_get0_param(ctx);
+  const unsigned int flags = X509_VERIFY_PARAM_get_hostflags(param);
+  if (!(flags & (X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT |
+                 X509_CHECK_FLAG_NEVER_CHECK_SUBJECT))) {
+    // tls.checkServerIdentity() falls back to the CN when no DNS SAN exists.
+    // OpenSSL 4.1 requires this flag to apply name constraints to that CN.
+    ncrypto::DeleteFnPtr<GENERAL_NAMES, GENERAL_NAMES_free> names(
+        static_cast<GENERAL_NAMES*>(
+            X509_get_ext_d2i(X509_STORE_CTX_get0_cert(ctx),
+                             NID_subject_alt_name,
+                             nullptr,
+                             nullptr)));
+    bool has_dns_san = false;
+    for (int i = 0; names && i < sk_GENERAL_NAME_num(names.get()); i++) {
+      if (sk_GENERAL_NAME_value(names.get(), i)->type == GEN_DNS) {
+        has_dns_san = true;
+        break;
+      }
+    }
+    if (!has_dns_san) {
+      X509_VERIFY_PARAM_set_hostflags(
+          param, flags | X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT);
+    }
+  }
+#endif
+
+  int ok = X509_verify_cert(ctx) > 0 ? 1 : 0;
+  const bool verified = ok == 1 && X509_STORE_CTX_get_error(ctx) == X509_V_OK;
+
+  // The depth is the offender's index in the built chain (0 = leaf), as
+  // X509_verify_cert would report it. For certificates found only in the
+  // peer-sent stack their index there is the closest equivalent.
+  X509* offender = nullptr;
+  int depth = 0;
+  SpkiCheck result =
+      CheckSPKIs(X509_STORE_CTX_get0_chain(ctx), &offender, &depth);
+  if (result == SpkiCheck::kAllowed && !verified) {
+    X509* leaf = X509_STORE_CTX_get0_cert(ctx);
+    result = CheckSPKI(leaf);
+    if (result != SpkiCheck::kAllowed) {
+      offender = leaf;
+      depth = 0;
+    } else {
+      result =
+          CheckSPKIs(X509_STORE_CTX_get0_untrusted(ctx), &offender, &depth);
+    }
+  }
+  if (result == SpkiCheck::kAllowed) return ok;
+
+  X509_STORE_CTX_set_error(ctx,
+                           result == SpkiCheck::kBlocked
+                               ? X509_V_ERR_CERT_REVOKED
+                               : X509_V_ERR_UNSPECIFIED);
+#ifdef OPENSSL_IS_BORINGSSL
+  // BoringSSL has no setters for the error depth and current certificate.
+  // Node.js' own verify callbacks do not read them, so only the error is
+  // recorded there.
+  (void)depth;
+  (void)offender;
+#else
+  X509_STORE_CTX_set_error_depth(ctx, depth);
+  X509_STORE_CTX_set_current_cert(ctx, offender);
+#endif
+  // The per-certificate callback is the one carried by the SSL object; it is
+  // what the library installs on the store context before calling this hook.
+  SSL* ssl = static_cast<SSL*>(
+      X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx()));
+  auto verify_cb = ssl != nullptr ? SSL_get_verify_callback(ssl) : nullptr;
+  if (verify_cb == nullptr) return 0;
+  return verify_cb(0, ctx) ? 1 : 0;
+}
+
+}  // namespace
+
+void InstallCertVerifyCallback(SSL_CTX* ctx) {
+  SSL_CTX_set_cert_verify_callback(ctx, CertVerifyCallback, nullptr);
+}
+
+void SecureContext::AddBlockedSPKIForTesting(
+    const FunctionCallbackInfo<Value>& args) {
+  Environment* env = Environment::GetCurrent(args);
+  THROW_AND_RETURN_IF_NOT_BUFFER(env, args[0], "SPKI hash");
+  ArrayBufferOrViewContents<uint8_t> hash(args[0]);
+  if (hash.size() != kSpkiHashLength) {
+    return THROW_ERR_OUT_OF_RANGE(env, "SPKI hash must be 32 bytes");
+  }
+  SpkiHash entry;
+  memcpy(entry.data(), hash.data(), entry.size());
+  Mutex::ScopedLock lock(BlockedSPKIsForTestingMutex());
+  BlockedSPKIsForTesting().push_back(entry);
+}
+
+void SecureContext::ClearBlockedSPKIsForTesting(
+    const FunctionCallbackInfo<Value>& args) {
+  Mutex::ScopedLock lock(BlockedSPKIsForTestingMutex());
+  BlockedSPKIsForTesting().clear();
+}
+
 void SecureContext::Initialize(Environment* env, Local<Object> target) {
   Local<Context> context = env->context();
   SetConstructorFunction(context,
@@ -1447,6 +1697,12 @@ void SecureContext::Initialize(Environment* env, Local<Object> target) {
                         target,
                         "getCertificateCompressionAlgorithms",
                         GetCertificateCompressionAlgorithms);
+  SetMethod(
+      context, target, "addBlockedSPKIForTesting", AddBlockedSPKIForTesting);
+  SetMethod(context,
+            target,
+            "clearBlockedSPKIsForTesting",
+            ClearBlockedSPKIsForTesting);
 }
 
 void SecureContext::RegisterExternalReferences(
@@ -1494,6 +1750,8 @@ void SecureContext::RegisterExternalReferences(
   registry->Register(GetUserRootCertificates);
   registry->Register(StartLoadingCertificatesOffThread);
   registry->Register(GetCertificateCompressionAlgorithms);
+  registry->Register(AddBlockedSPKIForTesting);
+  registry->Register(ClearBlockedSPKIsForTesting);
 }
 
 SecureContext* SecureContext::Create(Environment* env) {
@@ -1630,6 +1888,7 @@ void SecureContext::Init(const FunctionCallbackInfo<Value>& args) {
 
   env->external_memory_accounter()->Increase(env->isolate(), kExternalSize);
   SSL_CTX_set_app_data(sc->ctx_.get(), sc);
+  InstallCertVerifyCallback(sc->ctx_.get());
 
   // OpenSSL populates cert_comp_prefs with all available algorithms by
   // default when compression libraries are linked. Clear them so that
@@ -1687,6 +1946,14 @@ SSLPointer SecureContext::CreateSSL() {
 
 void SecureContext::SetNewSessionCallback(NewSessionCb cb) {
   SSL_CTX_sess_set_new_cb(ctx_.get(), cb);
+}
+
+void SecureContext::SetClientHelloCallback(ClientHelloCb cb) {
+#ifdef OPENSSL_IS_BORINGSSL
+  SSL_CTX_set_select_certificate_cb(ctx_.get(), cb);
+#else
+  SSL_CTX_set_client_hello_cb(ctx_.get(), cb, nullptr);
+#endif
 }
 
 void SecureContext::SetGetSessionCallback(GetSessionCb cb) {
@@ -2024,7 +2291,7 @@ void SecureContext::SetDHParam(const FunctionCallbackInfo<Value>& args) {
 
 #if NCRYPTO_USE_OPENSSL3_PROVIDER
     EVPKeyPointer params(PEM_read_bio_Parameters(bio.get(), nullptr));
-    if (params && params.id() == EVP_PKEY_DH) dh.reset(params.release());
+    if (params && params.isA(KeyAlgorithm::DH)) dh.reset(params.release());
 #else
     dh.reset(PEM_read_bio_DHparams(bio.get(), nullptr, nullptr, nullptr));
 #endif
@@ -2261,12 +2528,29 @@ void SecureContext::Close(const FunctionCallbackInfo<Value>& args) {
   sc->Reset();
 }
 
+namespace {
+// The historical error shape for the TLS `pfx` option: the OpenSSL reason
+// string, except for OpenSSL 3's bare "unsupported" error, which on its own
+// says nothing useful.
+// TODO(@jasnell): Should this use ThrowCryptoError?
+// NOLINTNEXTLINE(runtime/int) -- matches ERR_get_error()
+void ThrowPFXError(Environment* env, unsigned long err) {
+#if OPENSSL_VERSION_MAJOR >= 3
+  if (ERR_GET_REASON(err) == ERR_R_UNSUPPORTED) {
+    return THROW_ERR_CRYPTO_UNSUPPORTED_OPERATION(
+        env, "Unsupported PKCS12 PFX data");
+  }
+#endif
+
+  const char* str = ERR_reason_error_string(err);
+  str = str != nullptr ? str : "Unknown error";
+  env->ThrowError(str);
+}
+}  // namespace
+
 // Takes .pfx or .p12 and password in string or buffer format
 void SecureContext::LoadPKCS12(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
-
-  std::vector<char> pass;
-  bool ret = false;
 
   SecureContext* sc;
   ASSIGN_OR_RETURN_UNWRAP(&sc, args.This());
@@ -2282,66 +2566,55 @@ void SecureContext::LoadPKCS12(const FunctionCallbackInfo<Value>& args) {
         env, "Unable to load PFX certificate");
   }
 
+  // PKCS12_parse() takes a NUL-terminated C string; a view is not one, so copy
+  // the bytes out. A passphrase is optional; nullptr means none was given.
+  std::vector<char> pass_storage;
+  const char* pass = nullptr;
   if (args.Length() >= 2) {
     THROW_AND_RETURN_IF_NOT_BUFFER(env, args[1], "Pass phrase");
     Local<ArrayBufferView> abv = args[1].As<ArrayBufferView>();
     size_t passlen = abv->ByteLength();
-    pass.resize(passlen + 1);
-    abv->CopyContents(pass.data(), passlen);
-    pass[passlen] = '\0';
+    pass_storage.resize(passlen + 1);
+    abv->CopyContents(pass_storage.data(), passlen);
+    pass_storage[passlen] = '\0';
+    pass = pass_storage.data();
   }
 
   // Free previous certs
   sc->issuer_.reset();
   sc->cert_.reset();
 
-  DeleteFnPtr<PKCS12, PKCS12_free> p12;
-  EVPKeyPointer pkey;
-  X509Pointer cert;
-  StackOfX509 extra_certs;
-
-  PKCS12* p12_ptr = nullptr;
-  EVP_PKEY* pkey_ptr = nullptr;
-  X509* cert_ptr = nullptr;
-  STACK_OF(X509)* extra_certs_ptr = nullptr;
-
-  if (!d2i_PKCS12_bio(in.get(), &p12_ptr)) {
-    goto done;
+  auto parsed = ParsePKCS12Bundle(in, pass);
+  if (!parsed) {
+    // Every parse failure carries the OpenSSL error that caused it, which is
+    // all this path needs: ThrowPFXError() derives the same message it always
+    // has, the UNSUPPORTED_ALGORITHM case included.
+    return ThrowPFXError(env, parsed.openssl_error.value_or(0));
   }
 
-  // Move ownership to the smart pointer:
-  p12.reset(p12_ptr);
-
-  if (!PKCS12_parse(
-          p12.get(), pass.data(), &pkey_ptr, &cert_ptr, &extra_certs_ptr)) {
-    goto done;
-  }
-
-  // Move ownership of the parsed data:
-  pkey.reset(pkey_ptr);
-  cert.reset(cert_ptr);
-  extra_certs.reset(extra_certs_ptr);
-
-  if (!pkey) {
+  // Unlike crypto.parsePKCS12(), TLS needs both halves of the pair.
+  if (!parsed.value.key) {
     return THROW_ERR_CRYPTO_OPERATION_FAILED(
         env, "Unable to load private key from PFX data");
   }
 
-  if (!cert) {
+  if (!parsed.value.cert) {
     return THROW_ERR_CRYPTO_OPERATION_FAILED(
         env, "Unable to load certificate from PFX data");
   }
 
+  const StackOfX509& extra_certs = parsed.value.ca;
+
   if (!SSL_CTX_use_certificate_chain(sc->ctx_.get(),
-                                     std::move(cert),
+                                     std::move(parsed.value.cert),
                                      extra_certs.get(),
                                      &sc->cert_,
                                      &sc->issuer_)) {
-    goto done;
+    return ThrowPFXError(env, ERR_get_error());
   }
 
-  if (!SSL_CTX_use_PrivateKey(sc->ctx_.get(), pkey.get())) {
-    goto done;
+  if (!SSL_CTX_use_PrivateKey(sc->ctx_.get(), parsed.value.key.get())) {
+    return ThrowPFXError(env, ERR_get_error());
   }
 
   // Add CA certs too
@@ -2350,27 +2623,6 @@ void SecureContext::LoadPKCS12(const FunctionCallbackInfo<Value>& args) {
 
     X509_STORE_add_cert(sc->GetCertStoreOwnedByThisSecureContext(), ca);
     CHECK_EQ(1, SSL_CTX_add_client_CA(sc->ctx_.get(), ca));
-  }
-  ret = true;
-
-done:
-  if (!ret) {
-    // TODO(@jasnell): Should this use ThrowCryptoError?
-    unsigned long err = ERR_get_error();  // NOLINT(runtime/int)
-
-#if OPENSSL_VERSION_MAJOR >= 3
-    if (ERR_GET_REASON(err) == ERR_R_UNSUPPORTED) {
-      // OpenSSL's "unsupported" error without any context is very
-      // common and not very helpful, so we override it:
-      return THROW_ERR_CRYPTO_UNSUPPORTED_OPERATION(
-          env, "Unsupported PKCS12 PFX data");
-    }
-#endif
-
-    const char* str = ERR_reason_error_string(err);
-    str = str != nullptr ? str : "Unknown error";
-
-    return env->ThrowError(str);
   }
 }
 
@@ -2575,9 +2827,11 @@ int SecureContext::TicketKeyCallback(SSL* ssl,
 
   ArrayBufferViewContents<unsigned char> aes_key(aes.As<ArrayBufferView>());
   if (enc) {
-    EVP_EncryptInit_ex(ectx, Cipher::AES_128_CBC, nullptr, aes_key.data(), iv);
+    EVP_EncryptInit_ex(
+        ectx, Cipher::AES_128_CBC(), nullptr, aes_key.data(), iv);
   } else {
-    EVP_DecryptInit_ex(ectx, Cipher::AES_128_CBC, nullptr, aes_key.data(), iv);
+    EVP_DecryptInit_ex(
+        ectx, Cipher::AES_128_CBC(), nullptr, aes_key.data(), iv);
   }
 
   return r;
@@ -2600,7 +2854,8 @@ int SecureContext::TicketCompatibilityCallback(SSL* ssl,
     memcpy(name, sc->ticket_key_name_, sizeof(sc->ticket_key_name_));
     if (!ncrypto::CSPRNG(iv, 16) ||
         EVP_EncryptInit_ex(
-            ectx, Cipher::AES_128_CBC, nullptr, sc->ticket_key_aes_, iv) <= 0 ||
+            ectx, Cipher::AES_128_CBC(), nullptr, sc->ticket_key_aes_, iv) <=
+            0 ||
         !InitTicketHmac(
             hctx, sc->ticket_key_hmac_, sizeof(sc->ticket_key_hmac_))) {
       return -1;
@@ -2614,7 +2869,7 @@ int SecureContext::TicketCompatibilityCallback(SSL* ssl,
   }
 
   if (EVP_DecryptInit_ex(
-          ectx, Cipher::AES_128_CBC, nullptr, sc->ticket_key_aes_, iv) <= 0 ||
+          ectx, Cipher::AES_128_CBC(), nullptr, sc->ticket_key_aes_, iv) <= 0 ||
       !InitTicketHmac(
           hctx, sc->ticket_key_hmac_, sizeof(sc->ticket_key_hmac_))) {
     return -1;

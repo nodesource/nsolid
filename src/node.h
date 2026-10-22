@@ -239,8 +239,10 @@ enum Flags : uint32_t {
   kNoICU = 1 << 3,
   // Do not modify stdio file descriptor or TTY state.
   kNoStdioInitialization = 1 << 4,
-  // Do not register Node.js-specific signal handlers
-  // and reset other signal handlers to default state.
+  // Do not register Node.js-specific signal handlers, reset other signal
+  // handlers to default state, or replace the calling thread's signal mask
+  // (without this flag, POSIX builds with the inspector set it to block
+  // SIGUSR1 and nothing else).
   kNoDefaultSignalHandling = 1 << 5,
   // Do not perform V8 initialization.
   kNoInitializeV8 = 1 << 6,
@@ -884,6 +886,9 @@ NODE_EXTERN v8::MaybeLocal<v8::Value> LoadEnvironment(
     const ModuleData* entry_point,
     EmbedderPreloadCallback preload = nullptr);
 
+// Runs `env`'s event loop until its handles have closed, with JavaScript
+// execution disallowed on the isolate; see doc/api/embedding.md if that loop
+// is shared with other Environments.
 NODE_EXTERN void FreeEnvironment(Environment* env);
 
 // Set a callback that is called when process.exit() is called from JS,
@@ -1019,6 +1024,9 @@ class NODE_EXTERN CommonEnvironmentSetup {
   // will be empty.
   // env_args will be passed through as arguments to CreateEnvironment(), after
   // `isolate_data` and `context`.
+  // `snapshot_data` has to stay alive as long as the setup created from it,
+  // and every setup in a process has to use the same snapshot: all isolates
+  // are created from the blob the first one used.
   template <typename... EnvironmentArgs>
   static std::unique_ptr<CommonEnvironmentSetup> Create(
       MultiIsolatePlatform* platform,

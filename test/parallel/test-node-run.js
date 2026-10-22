@@ -5,8 +5,11 @@ common.requireNoPackageJSONAbove();
 
 const { it, describe } = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const fixtures = require('../common/fixtures');
+const tmpdir = require('../common/tmpdir');
 const envSuffix = common.isWindows ? '-windows' : '';
 
 describe('node --run [command]', { concurrency: !process.env.TEST_PARALLEL }, () => {
@@ -223,6 +226,45 @@ describe('node --run [command]', { concurrency: !process.env.TEST_PARALLEL }, ()
     assert.strictEqual(child.code, 0);
   });
 
+  it('handles package paths outside the active Windows code page',
+     { skip: !common.isWindows }, async () => {
+       tmpdir.refresh();
+
+       const projectDir = path.join(tmpdir.path, 'node-run-\u{20BB7}');
+       const packageJsonPath = path.join(projectDir, 'package.json');
+       const nodeModulesBin = path.join(projectDir, 'node_modules', '.bin');
+       const checkScript = path.join(projectDir, 'check.js');
+
+       fs.mkdirSync(nodeModulesBin, { recursive: true });
+       fs.writeFileSync(packageJsonPath, JSON.stringify({
+         scripts: {
+           unicode: `"${process.execPath}" check.js`,
+         },
+       }));
+       fs.writeFileSync(checkScript, `
+         'use strict';
+         console.log(JSON.stringify({
+           cwd: process.cwd(),
+           packageJsonPath: process.env.NODE_RUN_PACKAGE_JSON_PATH,
+           path: process.env.PATH,
+         }));
+       `);
+
+       const child = await common.spawnPromisified(
+         process.execPath,
+         [ '--run', 'unicode'],
+         { cwd: projectDir },
+       );
+
+       assert.strictEqual(child.stderr, '');
+       assert.strictEqual(child.code, 0);
+
+       const output = JSON.parse(child.stdout);
+       assert.strictEqual(output.cwd, projectDir);
+       assert.strictEqual(output.packageJsonPath, packageJsonPath);
+       assert.strictEqual(output.path.split(path.delimiter)[0], nodeModulesBin);
+     });
+
   it('returns error on unparsable file', async () => {
     const child = await common.spawnPromisified(
       process.execPath,
@@ -258,5 +300,40 @@ describe('node --run [command]', { concurrency: !process.env.TEST_PARALLEL }, ()
         "Arguments: '%PAYLOAD% $PAYLOAD'\nThe total number of arguments is: 2\n");
     assert.strictEqual(child.stderr, '');
     assert.strictEqual(child.code, 0);
+  });
+
+  it('lists available scripts when no command is given', async () => {
+    const child = await common.spawnPromisified(
+      process.execPath,
+      [ '--run'],
+      { cwd: fixtures.path('run-script') },
+    );
+    assert.match(child.stderr, /Available scripts are:/);
+    assert.match(child.stderr, /test: echo "Error: no test specified" && exit 1/);
+    assert.strictEqual(child.stdout, '');
+    assert.strictEqual(child.code, 9);
+  });
+
+  it('does not consume a following flag as the script name', async () => {
+    // `--run` followed by a flag lists scripts rather than treating the flag
+    // as a script name.
+    const child = await common.spawnPromisified(
+      process.execPath,
+      [ '--run', '--no-warnings'],
+      { cwd: fixtures.path('run-script') },
+    );
+    assert.match(child.stderr, /Available scripts are:/);
+    assert.strictEqual(child.code, 9);
+  });
+
+  it('errors when listing scripts without a package.json', async () => {
+    const child = await common.spawnPromisified(
+      process.execPath,
+      [ '--run'],
+      { cwd: __dirname },
+    );
+    assert.match(child.stderr, /Can't find package\.json/);
+    assert.strictEqual(child.stdout, '');
+    assert.strictEqual(child.code, 1);
   });
 });

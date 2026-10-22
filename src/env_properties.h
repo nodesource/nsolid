@@ -105,35 +105,9 @@
   V(code_string, "code")                                                       \
   V(config_string, "config")                                                   \
   V(constants_string, "constants")                                             \
-  V(crypto_dh_string, "dh")                                                    \
-  V(crypto_dsa_string, "dsa")                                                  \
-  V(crypto_ec_string, "ec")                                                    \
-  V(crypto_ed25519_string, "ed25519")                                          \
-  V(crypto_ed448_string, "ed448")                                              \
-  V(crypto_ml_dsa_44_string, "ml-dsa-44")                                      \
-  V(crypto_ml_dsa_65_string, "ml-dsa-65")                                      \
-  V(crypto_ml_dsa_87_string, "ml-dsa-87")                                      \
-  V(crypto_ml_kem_512_string, "ml-kem-512")                                    \
-  V(crypto_ml_kem_768_string, "ml-kem-768")                                    \
-  V(crypto_ml_kem_1024_string, "ml-kem-1024")                                  \
-  V(crypto_slh_dsa_sha2_128f_string, "slh-dsa-sha2-128f")                      \
-  V(crypto_slh_dsa_sha2_128s_string, "slh-dsa-sha2-128s")                      \
-  V(crypto_slh_dsa_sha2_192f_string, "slh-dsa-sha2-192f")                      \
-  V(crypto_slh_dsa_sha2_192s_string, "slh-dsa-sha2-192s")                      \
-  V(crypto_slh_dsa_sha2_256f_string, "slh-dsa-sha2-256f")                      \
-  V(crypto_slh_dsa_sha2_256s_string, "slh-dsa-sha2-256s")                      \
-  V(crypto_slh_dsa_shake_128f_string, "slh-dsa-shake-128f")                    \
-  V(crypto_slh_dsa_shake_128s_string, "slh-dsa-shake-128s")                    \
-  V(crypto_slh_dsa_shake_192f_string, "slh-dsa-shake-192f")                    \
-  V(crypto_slh_dsa_shake_192s_string, "slh-dsa-shake-192s")                    \
-  V(crypto_slh_dsa_shake_256f_string, "slh-dsa-shake-256f")                    \
-  V(crypto_slh_dsa_shake_256s_string, "slh-dsa-shake-256s")                    \
-  V(crypto_x25519_string, "x25519")                                            \
-  V(crypto_x448_string, "x448")                                                \
-  V(crypto_rsa_string, "rsa")                                                  \
-  V(crypto_rsa_pss_string, "rsa-pss")                                          \
   V(cwd_string, "cwd")                                                         \
   V(data_string, "data")                                                       \
+  V(database_string, "database")                                               \
   V(default_is_true_string, "defaultIsTrue")                                   \
   V(defensive_string, "defensive")                                             \
   V(deserialize_info_string, "deserializeInfo")                                \
@@ -230,12 +204,15 @@
   V(jwk_n_string, "n")                                                         \
   V(jwk_oct_string, "oct")                                                     \
   V(jwk_okp_string, "OKP")                                                     \
+  V(jwk_oth_string, "oth")                                                     \
   V(jwk_p_string, "p")                                                         \
   V(jwk_priv_string, "priv")                                                   \
   V(jwk_pub_string, "pub")                                                     \
   V(jwk_q_string, "q")                                                         \
   V(jwk_qi_string, "qi")                                                       \
+  V(jwk_r_string, "r")                                                         \
   V(jwk_rsa_string, "RSA")                                                     \
+  V(jwk_t_string, "t")                                                         \
   V(jwk_x_string, "x")                                                         \
   V(jwk_y_string, "y")                                                         \
   V(kill_signal_string, "killSignal")                                          \
@@ -348,6 +325,7 @@
   V(source_map_url_string, "sourceMapURL")                                     \
   V(source_url_string, "sourceURL")                                            \
   V(specifier_string, "specifier")                                             \
+  V(sql_string, "sql")                                                         \
   V(stack_string, "stack")                                                     \
   V(start_string, "start")                                                     \
   V(state_string, "state")                                                     \
@@ -391,6 +369,7 @@
   V(writable_string, "writable")                                               \
   V(write_host_object_string, "_writeHostObject")                              \
   V(write_queue_size_string, "writeQueueSize")                                 \
+  V(write_status_string, "writeStatus")                                        \
   V(zlib_string, "zlib")                                                       \
   V(zstd_string, "zstd")
 
@@ -422,6 +401,7 @@
   V(fd_constructor_template, v8::ObjectTemplate)                               \
   V(fdclose_constructor_template, v8::ObjectTemplate)                          \
   V(filehandlereadwrap_template, v8::ObjectTemplate)                           \
+  V(fips_indicator_event_template, v8::DictionaryTemplate)                     \
   V(free_list_statistics_template, v8::DictionaryTemplate)                     \
   V(fsreqpromise_constructor_template, v8::ObjectTemplate)                     \
   V(handle_wrap_ctor_template, v8::FunctionTemplate)                           \
@@ -488,6 +468,7 @@
   V(async_hooks_promise_resolve_function, v8::Function)                        \
   V(buffer_prototype_object, v8::Object)                                       \
   V(crypto_internal_cryptokey_constructor, v8::Function)                       \
+  V(crypto_internal_x509_certificate_constructor, v8::Function)                \
   V(crypto_key_object_private_constructor, v8::Function)                       \
   V(crypto_key_object_public_constructor, v8::Function)                        \
   V(crypto_key_object_secret_constructor, v8::Function)                        \

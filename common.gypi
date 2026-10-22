@@ -42,7 +42,7 @@
 
     # Reset this number to 0 on major V8 upgrades.
     # Increment by one for each non-official patch applied to deps/v8.
-    'v8_embedder_string': '-node.53',
+    'v8_embedder_string': '-node.58',
 
     ##### V8 defaults for Node.js #####
 
@@ -74,6 +74,9 @@
 
     # Disable v8 hugepage by default.
     'v8_enable_hugepage%': 0,
+
+    # Disabled by configure --v8-lite-mode.
+    'v8_enable_webassembly%': 1,
 
     # This is more of a V8 dev setting
     # https://github.com/nodejs/node/pull/22920/files#r222779926
@@ -512,6 +515,9 @@
       ['v8_enable_v8_checks == 1', {
         'defines': ['V8_ENABLE_CHECKS'],
       }],
+      ['v8_enable_webassembly == 1', {
+        'defines': ['V8_ENABLE_WEBASSEMBLY'],
+      }],
       ['v8_enable_pointer_compression == 1', {
         'defines': ['V8_COMPRESS_POINTERS'],
       }],
@@ -619,6 +625,10 @@
                 'cflags': [ '-m64', '-march=z196' ],
                 'ldflags': [ '-m64', '-march=z196' ],
               }],
+              [ 'host_arch=="riscv64" and OS=="linux"', {
+                'cflags': [ '-march=rv64gc' ],
+                'ldflags': [ '-march=rv64gc' ],
+              }],
             ],
           }],
           ['_toolset=="target"', {
@@ -643,6 +653,10 @@
               [ 'target_arch=="s390x" and OS=="linux"', {
                 'cflags': [ '-m64', '-march=z196' ],
                 'ldflags': [ '-m64', '-march=z196' ],
+              }],
+              [ 'target_arch=="riscv64" and OS=="linux"', {
+                'cflags': [ '-march=rv64gc' ],
+                'ldflags': [ '-march=rv64gc' ],
               }],
             ],
           }],

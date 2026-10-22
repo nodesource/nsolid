@@ -294,6 +294,21 @@ async function testEndSignalAbortWhileDraining() {
   assert.strictEqual(await completedEnd, 5);
 }
 
+async function testFactorySignalAbortWhileDraining() {
+  const controller = new AbortController();
+  const reason = new Error('stream aborted while draining');
+  const { writer, readable } = push({ signal: controller.signal });
+
+  writer.writeSync('hello');
+  const end = writer.end();
+  const endRejected = assert.rejects(end, (error) => error === reason);
+  controller.abort(reason);
+
+  await endRejected;
+  await assert.rejects(text(readable), (error) => error === reason);
+  await assert.rejects(writer.end(), (error) => error === reason);
+}
+
 async function testEndAfterEndSyncWaitsForDrain() {
   const { writer, readable } = push();
   writer.writeSync('hello');
@@ -424,6 +439,20 @@ async function testConsumerReturnResolvesPendingRead() {
   assert.strictEqual(readResult.done, true);
 }
 
+async function testEndRejectsAfterConsumerReturn() {
+  const { writer, readable } = push();
+  writer.writeSync('data');
+  const iter = readable[Symbol.asyncIterator]();
+
+  await iter.return();
+
+  await assert.rejects(
+    writer.end({ signal: AbortSignal.timeout(common.platformTimeout(100)) }),
+    { code: 'ERR_INVALID_STATE' },
+  );
+  assert.strictEqual((await iter.next()).done, true);
+}
+
 // iterator.throw() rejects a pending read with the thrown error
 async function testConsumerThrowRejectsPendingRead() {
   const { readable } = push();
@@ -500,6 +529,23 @@ async function testAsyncDispose() {
   } catch {
     // Expected - reader sees the error
   }
+}
+
+async function testAsyncDisposeWaitsAfterEndSync() {
+  const { writer, readable } = push({ budget: 16384 });
+  writer.writeSync('hello');
+  assert.strictEqual(writer.endSync(), -1);
+
+  let disposed = false;
+  const disposal = writer[Symbol.asyncDispose]().then(() => {
+    disposed = true;
+  });
+  await Promise.resolve();
+  assert.strictEqual(disposed, false);
+
+  assert.strictEqual(await text(readable), 'hello');
+  await disposal;
+  assert.strictEqual(disposed, true);
 }
 
 async function testSyncDispose() {
@@ -589,6 +635,7 @@ Promise.all([
   testEndAsyncReturnValue(),
   testEndWithPreAbortedSignal(),
   testEndSignalAbortWhileDraining(),
+  testFactorySignalAbortWhileDraining(),
   testEndAfterEndSyncWaitsForDrain(),
   testWriteUint8Array(),
   testOndrainWaitsForDrain(),
@@ -599,10 +646,12 @@ Promise.all([
   testFailRejectsFutureReadWithFalsyReason(),
   testFailRejectsPendingReadWithFalsyReason(),
   testConsumerReturnResolvesPendingRead(),
+  testEndRejectsAfterConsumerReturn(),
   testConsumerThrowRejectsPendingRead(),
   testEndRejectsPendingWrites(),
   testEndIdempotentWhenClosed(),
   testEndRejectsWhenErrored(),
   testAsyncDispose(),
+  testAsyncDisposeWaitsAfterEndSync(),
   testSyncDispose(),
 ]).then(common.mustCall());

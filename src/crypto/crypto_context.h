@@ -27,6 +27,12 @@ X509_STORE* NewRootCertStore(Environment* env);
 
 X509_STORE* GetOrCreateRootCertStore(Environment* env);
 
+// Installs the certificate verification callback that applies the SPKI
+// blocklist (and, on OpenSSL 4.1+, the CN name-constraint handling) to every
+// chain verified through `ctx`. Must be called for every SSL_CTX Node.js
+// creates, since SSL_CTX_set_cert_verify_callback replaces any earlier hook.
+void InstallCertVerifyCallback(SSL_CTX* ctx);
+
 ncrypto::BIOPointer LoadBIO(Environment* env, v8::Local<v8::Value> v);
 
 class SecureContext final : public BaseObject {
@@ -35,6 +41,11 @@ class SecureContext final : public BaseObject {
   using KeylogCb = void (*)(const SSL*, const char*);
   using NewSessionCb = int (*)(SSL*, SSL_SESSION*);
   using SelectSNIContextCb = int (*)(SSL*, int*, void*);
+#ifdef OPENSSL_IS_BORINGSSL
+  using ClientHelloCb = ssl_select_cert_result_t (*)(const SSL_CLIENT_HELLO*);
+#else
+  using ClientHelloCb = int (*)(SSL*, int*, void*);
+#endif
 
   ~SecureContext() override;
 
@@ -74,6 +85,7 @@ class SecureContext final : public BaseObject {
 
   ncrypto::SSLPointer CreateSSL();
 
+  void SetClientHelloCallback(ClientHelloCb cb);
   void SetGetSessionCallback(GetSessionCb cb);
   void SetKeylogCallback(KeylogCb cb);
   void SetNewSessionCallback(NewSessionCb cb);
@@ -153,6 +165,15 @@ class SecureContext final : public BaseObject {
 
   template <bool primary>
   static void GetCertificate(const v8::FunctionCallbackInfo<v8::Value>& args);
+
+  // Test-only hooks for the SPKI blocklist that every SSL_CTX applies
+  // during certificate verification. Reachable through
+  // internalBinding('crypto') with --expose-internals. The argument is the
+  // SHA-256 of a DER-encoded SubjectPublicKeyInfo.
+  static void AddBlockedSPKIForTesting(
+      const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void ClearBlockedSPKIsForTesting(
+      const v8::FunctionCallbackInfo<v8::Value>& args);
 
   static int TicketKeyCallback(SSL* ssl,
                                unsigned char* name,

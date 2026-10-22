@@ -413,25 +413,26 @@
       'src/crypto/crypto_kem.cc',
       'src/crypto/crypto_hmac.cc',
       'src/crypto/crypto_kmac.cc',
+      'src/crypto/crypto_mac.cc',
       'src/crypto/crypto_turboshake.cc',
       'src/crypto/crypto_random.cc',
       'src/crypto/crypto_rsa.cc',
       'src/crypto/crypto_spkac.cc',
       'src/crypto/crypto_util.cc',
-      'src/crypto/crypto_clienthello.cc',
       'src/crypto/crypto_dh.cc',
       'src/crypto/crypto_hash.cc',
       'src/crypto/crypto_keys.cc',
       'src/crypto/crypto_keygen.cc',
+      'src/crypto/crypto_pkcs12.cc',
       'src/crypto/crypto_scrypt.cc',
       'src/crypto/crypto_tls.cc',
       'src/crypto/crypto_x509.cc',
       'src/crypto/crypto_argon2.h',
       'src/crypto/crypto_bio.h',
-      'src/crypto/crypto_clienthello-inl.h',
       'src/crypto/crypto_dh.h',
       'src/crypto/crypto_hmac.h',
       'src/crypto/crypto_kmac.h',
+      'src/crypto/crypto_mac.h',
       'src/crypto/crypto_turboshake.h',
       'src/crypto/crypto_rsa.h',
       'src/crypto/crypto_spkac.h',
@@ -442,9 +443,9 @@
       'src/crypto/crypto_hash.h',
       'src/crypto/crypto_keys.h',
       'src/crypto/crypto_keygen.h',
+      'src/crypto/crypto_pkcs12.h',
       'src/crypto/crypto_scrypt.h',
       'src/crypto/crypto_tls.h',
-      'src/crypto/crypto_clienthello.h',
       'src/crypto/crypto_context.h',
       'src/crypto/crypto_ec.h',
       'src/crypto/crypto_pqc.h',
@@ -573,7 +574,6 @@
       'deps/nsuv/include/nsuv-inl.h',
     ],
     'node_cctest_openssl_sources': [
-      'test/cctest/test_crypto_clienthello.cc',
       'test/cctest/test_node_crypto.cc',
       'test/cctest/test_node_crypto_env.cc',
     ],
@@ -1353,54 +1353,6 @@
         }],
       ],
     }, # fuzz_env
-    { # fuzz_ClientHelloParser.cc
-      'target_name': 'fuzz_ClientHelloParser',
-      'type': 'executable',
-      'dependencies': [
-        '<(node_lib_target_name)',
-      ],
-      'includes': [
-        'node.gypi'
-      ],
-      'include_dirs': [
-        'src',
-        'tools/msvs/genfiles',
-        'deps/v8/include',
-        'deps/cares/include',
-        'deps/uv/include',
-        'test/cctest',
-      ],
-      'defines': [
-        'NODE_ARCH="<(target_arch)"',
-        'NODE_PLATFORM="<(OS)"',
-        'NODE_WANT_INTERNALS=1',
-      ],
-      'sources': [
-        'test/fuzzers/fuzz_ClientHelloParser.cc',
-      ],
-      'conditions': [
-        [ 'node_shared_hdr_histogram=="false"', {
-          'dependencies': [
-            'deps/histogram/histogram.gyp:histogram',
-          ],
-        }],
-        [ 'node_shared_uvwasi=="false"', {
-          'dependencies': [ 'deps/uvwasi/uvwasi.gyp:uvwasi' ],
-          'include_dirs': [ 'deps/uvwasi/include' ],
-        }],
-        ['OS=="linux" or OS=="openharmony"', {
-          'ldflags': [ '-fsanitize=fuzzer' ]
-        }],
-        # Ensure that ossfuzz flag has been set and that we are on Linux
-        [ 'OS not in "linux openharmony" or ossfuzz!="true"', {
-          'type': 'none',
-        }],
-        # Avoid excessive LTO
-        ['enable_lto=="true"', {
-          'ldflags': [ '-fno-lto' ],
-        }],
-      ],
-    }, # fuzz_ClientHelloParser.cc
     { # fuzz_strings
       'target_name': 'fuzz_strings',
       'type': 'executable',

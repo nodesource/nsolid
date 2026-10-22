@@ -27,6 +27,12 @@ static void at_exit_callback_ordered2(void* arg);
 static void at_exit_js(void* arg);
 static std::string cb_1_arg;  // NOLINT(runtime/string)
 
+struct SelfRemovingCleanupHookState {
+  v8::Isolate* isolate;
+  bool ran = false;
+};
+static void self_removing_cleanup_hook(void* arg);
+
 class EnvironmentTest : public EnvironmentTestFixture {
  private:
   void TearDown() override {
@@ -309,12 +315,32 @@ TEST_F(EnvironmentTest, AtExitRunsJS) {
   EXPECT_TRUE(called_at_exit_js);
 }
 
+// A cleanup hook that removes itself while the environment cleanup queue is
+// being drained must not cause a use-after-free. This registers such a hook
+// directly rather than through node::ObjectWrap, whose destructor removes
+// its own hook and is what makes this reachable for addons since #63642.
+// The use-after-free is silent in ordinary builds; it is caught by the
+// ASan/Valgrind CI, which is also how the original assertion (#63923)
+// surfaced. Regression test for https://github.com/nodejs/node/issues/65195.
+TEST_F(EnvironmentTest, RemoveEnvironmentCleanupHookDuringCleanup) {
+  const v8::HandleScope handle_scope(isolate_);
+  const Argv argv;
+  SelfRemovingCleanupHookState state{isolate_};
+  {
+    Env env{handle_scope, argv};
+    node::AddEnvironmentCleanupHook(
+        isolate_, self_removing_cleanup_hook, &state);
+    // Destroying `env` runs FreeEnvironment() -> RunCleanup(), which drains
+    // the cleanup queue and invokes CleanupHookThunkRun() for the hook above.
+  }
+  EXPECT_TRUE(state.ran);
+}
+
 TEST_F(EnvironmentTest, MultipleEnvironmentsPerIsolate) {
   const v8::HandleScope handle_scope(isolate_);
   const Argv argv;
-  // Only one of the Environments can have default flags and own the inspector.
   Env env1 {handle_scope, argv};
-  Env env2 {handle_scope, argv, node::EnvironmentFlags::kNoFlags};
+  Env env2{handle_scope, argv};
 
   AtExit(*env1, at_exit_callback1, nullptr);
   AtExit(*env2, at_exit_callback2, nullptr);
@@ -324,6 +350,39 @@ TEST_F(EnvironmentTest, MultipleEnvironmentsPerIsolate) {
 
   RunAtExit(*env2);
   EXPECT_TRUE(called_cb_2);
+}
+
+TEST_F(EnvironmentTest, WorkerInEnvironmentWithoutSnapshot) {
+  const v8::HandleScope handle_scope(isolate_);
+  const Argv argv;
+  Env env{handle_scope, argv};
+  CHECK_NULL(isolate_data_->snapshot_data());
+  node::LoadEnvironment(*env,
+                        "const { Worker } = require('worker_threads');"
+                        "new Worker('process.exit(0)', { eval: true });")
+      .ToLocalChecked();
+  EXPECT_EQ(node::SpinEventLoop(*env).FromJust(), 0);
+}
+
+TEST_F(EnvironmentTest, StopFromExitHandlerDoesNotLeakIntoNextEnvironment) {
+  const v8::HandleScope handle_scope(isolate_);
+  const Argv argv;
+  {
+    Env env{handle_scope, argv};
+    node::SetProcessExitHandler(
+        *env, [](node::Environment* env_, int) { node::Stop(env_); });
+    // The uncaught exception runs the exit handler from C++ and does not
+    // re-enter JS afterwards, so nothing consumes the termination request.
+    EXPECT_TRUE(
+        node::LoadEnvironment(*env, "throw new Error('uncaught')").IsEmpty());
+    EXPECT_TRUE(node::SpinEventLoop(*env).IsNothing());
+  }
+  {
+    Env env{handle_scope, argv, node::EnvironmentFlags::kNoCreateInspector};
+    v8::Local<v8::Value> result =
+        node::LoadEnvironment(*env, "return 42;").ToLocalChecked();
+    EXPECT_EQ(result->Int32Value(env.context()).FromJust(), 42);
+  }
 }
 
 TEST_F(EnvironmentTest, NoEnvironmentSanity) {
@@ -390,6 +449,19 @@ static void at_exit_js(void* arg) {
   EXPECT_FALSE(obj.IsEmpty());  // Assert VM is still alive.
   EXPECT_TRUE(obj->IsObject());
   called_at_exit_js = true;
+}
+
+// Reproduces the sequence node::ObjectWrap performs since
+// https://github.com/nodejs/node/pull/63642, without using ObjectWrap
+// itself: the hook removes its own environment cleanup hook. When that runs
+// while the cleanup queue is being drained, CleanupHookThunkRun() must not
+// read the CleanupHookThunk after invoking the hook -- the hook has already
+// erased and freed it. See https://github.com/nodejs/node/issues/65195.
+static void self_removing_cleanup_hook(void* arg) {
+  auto* state = static_cast<SelfRemovingCleanupHookState*>(arg);
+  state->ran = true;
+  node::RemoveEnvironmentCleanupHook(
+      state->isolate, self_removing_cleanup_hook, state);
 }
 
 TEST_F(EnvironmentTest, SetImmediateCleanup) {
@@ -593,6 +665,34 @@ TEST_F(EnvironmentTest, InspectorMultipleEmbeddedEnvironments) {
   CHECK_EQ(data.extracted_value, 42);
   CHECK_EQ(from_inspector->IntegerValue(context).FromJust(), 42);
 }
+
+TEST_F(EnvironmentTest, InspectorWithoutPlatform) {
+  const v8::HandleScope handle_scope(isolate_);
+  const Argv argv;
+  node::IsolateData* isolate_data = node::CreateIsolateData(
+      isolate_, &NodeTestFixture::current_loop, nullptr);
+  v8::Local<v8::Context> context = node::NewContext(isolate_);
+  v8::Context::Scope context_scope(context);
+  std::vector<std::string> args(*argv, *argv + 1);
+  node::Environment* env =
+      node::CreateEnvironment(isolate_data, context, args, args);
+  CHECK_NOT_NULL(env);
+
+  v8::Local<v8::Value> result =
+      node::LoadEnvironment(env,
+                            "const { Session } = require('inspector');\n"
+                            "const session = new Session();\n"
+                            "session.connect();\n"
+                            "console.time('t'); console.timeEnd('t');\n"
+                            "session.disconnect();\n"
+                            "return 42;")
+          .ToLocalChecked();
+  EXPECT_EQ(result->Int32Value(context).FromJust(), 42);
+
+  node::FreeEnvironment(env);
+  node::FreeIsolateData(isolate_data);
+}
+
 #endif  // HAVE_INSPECTOR
 
 TEST_F(EnvironmentTest, ExitHandlerTest) {

@@ -458,6 +458,12 @@ or errored, this is a no-op. Unlike `write()` and `end()`, `fail()` is
 unconditionally synchronous because failing a writer is a pure state
 transition with no async work to perform.
 
+#### `writer[Symbol.asyncDispose]()`
+
+If the writer is open, calls `writer.fail()`. If the writer is closing after
+`end()` or `endSync()`, waits for buffered data to drain. If the writer is
+already closed or errored, resolves immediately.
+
 #### `writer.write(chunk[, options])`
 
 * `chunk` {Uint8Array|string}
@@ -531,7 +537,8 @@ added: v24.20.0
 
 Create an async byte stream from the given input. Strings are UTF-8 encoded.
 `ArrayBuffer` and `ArrayBufferView` values are wrapped as `Uint8Array`. Arrays
-and iterables in `input` are recursively flattened and normalized.
+and iterables in `input` are recursively flattened and normalized. Flattened
+values may be split across implementation-defined bounded batches.
 
 Objects implementing `Symbol.for('Stream.toAsyncStreamable')` or
 `Symbol.for('Stream.toStreamable')` are converted via those protocols. The
@@ -599,7 +606,8 @@ added: v24.20.0
 * `...transforms` {Function|Object} Zero or more transforms to apply.
 * `writer` {Object} Destination with `write(chunk)` method.
 * `options` {Object}
-  * `signal` {AbortSignal} Abort the pipeline.
+  * `signal` {AbortSignal} Abort the pipeline. Aborting fails the destination
+    writer unless `preventFail` is `true`.
   * `preventClose` {boolean} If `true`, do not call `writer.end()` when
     the source ends. **Default:** `false`.
   * `preventFail` {boolean} If `true`, do not call `writer.fail()` on
@@ -678,8 +686,10 @@ added: v24.20.0
   * `signal` {AbortSignal} Abort the pipeline.
 * Returns: {AsyncIterable} whose chunks fulfill with {Uint8Array\[]}
 
-Create a lazy async pipeline. Data is not read from `source` until the
-returned iterable is consumed. Transforms are applied in order.
+Create a lazy async pipeline. Source conversion and streamable protocol
+dispatch occur when `pull()` is called, but data is not read from `source`
+until the returned iterable is consumed. A signal that is already aborted is
+thrown synchronously after source conversion. Transforms are applied in order.
 
 ```mjs
 import { from, pull, text } from 'node:stream/iter';
@@ -747,7 +757,8 @@ added: v24.20.0
 * `...transforms` {Function|Object} Zero or more sync transforms.
 * Returns: {Iterable} whose chunks return {Uint8Array\[]}
 
-Synchronous version of [`pull()`][]. All transforms must be synchronous.
+Synchronous version of [`pull()`][]. Source conversion and streamable protocol
+dispatch occur when `pullSync()` is called. All transforms must be synchronous.
 
 ## Push streams
 
@@ -765,7 +776,9 @@ added: v24.20.0
     **Default:** `16384`.
   * `backpressure` {string} Backpressure policy: `'strict'`, `'unbounded'`,
     `'drop-oldest'`, or `'drop-newest'`. **Default:** `'strict'`.
-  * `signal` {AbortSignal} Abort the stream.
+  * `signal` {AbortSignal} Abort the stream. The signal remains active while
+    buffered data drains after `writer.end()`; aborting during that time fails
+    the writer and rejects the pending `end()` promise.
 * Returns: {Object}
   * `writer` {Writable} The writer side.
   * `readable` {AsyncIterable} whose chunks fulfill with {Uint8Array\[]}

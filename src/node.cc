@@ -788,8 +788,10 @@ static ExitCode ProcessGlobalArgsInternal(std::vector<std::string>* args,
     v8_args.emplace_back("--js-source-phase-imports");
   }
 
+#if V8_ENABLE_WEBASSEMBLY
   // WebAssembly JS Promise Integration
   v8_args.emplace_back("--experimental-wasm-jspi");
+#endif  // V8_ENABLE_WEBASSEMBLY
 
 #ifdef __POSIX__
   // Block SIGPROF signals when sleeping in epoll_wait/kevent/etc.  Avoids the
@@ -1146,7 +1148,8 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
     }
   }
 
-  if (!per_process::cli_options->run.empty()) {
+  // A bare `--run` (empty value) lists the available scripts; a value runs it.
+  if (per_process::cli_options->has_run) {
     auto positional_args = task_runner::GetPositionalArgs(args);
     result->early_return_ = true;
     task_runner::RunTask(
@@ -1241,6 +1244,7 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
     }
 
     OPENSSL_INIT_SETTINGS* settings = OPENSSL_INIT_new();
+    CHECK_NOT_NULL(settings);
     OPENSSL_INIT_set_config_filename(settings, conf_file);
     OPENSSL_INIT_set_config_appname(settings, conf_section_name);
     OPENSSL_INIT_set_config_file_flags(settings,
@@ -1270,6 +1274,7 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
       result->errors_.emplace_back(std::move(*fips_error));
       return result;
     }
+    crypto::InstallFipsIndicatorCallback();
 
     // Ensure CSPRNG is properly seeded.
     CHECK(ncrypto::CSPRNG(nullptr, 0));

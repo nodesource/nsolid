@@ -95,7 +95,7 @@ BUILD_RELEASE_FLAGS ?= $(BUILD_DOWNLOAD_FLAGS) $(BUILD_INTL_FLAGS)
 
 # Default to quiet/pretty builds.
 # To do verbose builds, run `make V=1` or set the V environment variable.
-V ?= 0
+V ?=
 
 # Use -e to double check in case it's a broken link
 available-node = \
@@ -1412,7 +1412,8 @@ LINT_JS_TARGETS = eslint.config.mjs benchmark doc lib test tools \
 		  agents/*/lib
 
 run-lint-js = tools/eslint/node_modules/eslint/bin/eslint.js --cache \
-	--max-warnings=0 --report-unused-disable-directives $(LINT_JS_TARGETS)
+	--max-warnings=0 --report-unused-disable-directives \
+	--concurrency auto $(LINT_JS_TARGETS)
 run-lint-js-fix = $(run-lint-js) --fix
 
 tools/eslint/node_modules/eslint/bin/eslint.js: tools/eslint/package-lock.json
@@ -1439,7 +1440,7 @@ jslint: lint-js
 
 run-lint-js-ci = tools/eslint/node_modules/eslint/bin/eslint.js \
   --max-warnings=0 --report-unused-disable-directives -f tap \
-	-o test-eslint.tap $(LINT_JS_TARGETS)
+  --concurrency auto -o test-eslint.tap $(LINT_JS_TARGETS)
 
 .PHONY: lint-js-ci
 # On the CI the output is emitted in the TAP format.

@@ -1,4 +1,7 @@
+import { getFips } from 'node:crypto';
+
 const { subtle } = globalThis.crypto;
+const RSA_MINIMUM_MODULUS_LENGTH = getFips() === 1 ? 2048 : 512;
 
 const RSA_KEY_GEN = {
   modulusLength: 2048,
@@ -9,8 +12,6 @@ const [ECDH, X25519] = await Promise.all([
   subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits', 'deriveKey']),
   subtle.generateKey('X25519', false, ['deriveBits', 'deriveKey']),
 ]);
-
-const boringSSL = process.features.openssl_is_boringssl;
 
 export const vectors = {
   'encrypt': [
@@ -66,6 +67,30 @@ export const vectors = {
     [true, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256', ...RSA_KEY_GEN }],
     [true, { name: 'RSA-PSS', hash: 'SHA-256', ...RSA_KEY_GEN }],
     [true, { name: 'RSA-OAEP', hash: 'SHA-256', ...RSA_KEY_GEN }],
+    [true, {
+      name: 'RSA-PSS',
+      hash: 'SHA-256',
+      modulusLength: RSA_MINIMUM_MODULUS_LENGTH,
+      publicExponent: new Uint8Array([1, 0, 1]),
+    }],
+    [false, {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+      modulusLength: RSA_MINIMUM_MODULUS_LENGTH - 1,
+      publicExponent: new Uint8Array([1, 0, 1]),
+    }],
+    [false, {
+      name: 'RSA-PSS',
+      hash: 'SHA-256',
+      ...RSA_KEY_GEN,
+      publicExponent: new Uint8Array([2]),
+    }],
+    [false, {
+      name: 'RSA-OAEP',
+      hash: 'SHA-256',
+      ...RSA_KEY_GEN,
+      publicExponent: new Uint8Array([1, 0, 0, 0, 1]),
+    }],
     [true, { name: 'ECDSA', namedCurve: 'P-256' }],
     [false, { name: 'ECDSA', namedCurve: 'X25519' }],
     [true, { name: 'AES-CTR', length: 128 }],
@@ -97,6 +122,9 @@ export const vectors = {
     [true,
      { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 1 },
      { name: 'HMAC', hash: 'SHA-256' }],
+    [false,
+     { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 2 ** 31 },
+     { name: 'AES-CBC', length: 128 }],
     [false,
      { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 1 },
      'HKDF'],
@@ -146,6 +174,8 @@ export const vectors = {
   'deriveBits': [
     [true, { name: 'HKDF', hash: 'SHA-256', salt: Buffer.alloc(0), info: Buffer.alloc(0) }, 8],
     [true, { name: 'HKDF', hash: 'SHA-256', salt: Buffer.alloc(0), info: Buffer.alloc(0) }, 0],
+    [true, { name: 'HKDF', hash: 'SHA-256', salt: Buffer.alloc(0), info: Buffer.alloc(0) }, 65280],
+    [false, { name: 'HKDF', hash: 'SHA-256', salt: Buffer.alloc(0), info: Buffer.alloc(0) }, 65288],
     [false, { name: 'HKDF', hash: 'SHA-256', salt: Buffer.alloc(0), info: Buffer.alloc(0) }, null],
     [false, { name: 'HKDF', hash: 'SHA-256', salt: Buffer.alloc(0), info: Buffer.alloc(0) }, 7],
     [false, { name: 'HKDF', hash: 'Invalid', salt: Buffer.alloc(0), info: Buffer.alloc(0) }, 8],
@@ -154,6 +184,7 @@ export const vectors = {
     [true, { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 1 }, 8],
     [true, { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 1 }, 0],
     [false, { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 0 }, 8],
+    [false, { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 2 ** 31 }, 8],
     [false, { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 1 }, null],
     [false, { name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.alloc(0), iterations: 1 }, 7],
     [false, { name: 'PBKDF2', hash: 'Invalid', salt: Buffer.alloc(0), iterations: 1 }, 8],
@@ -233,5 +264,8 @@ export const vectors = {
   ],
   'get key length': [
     [false, { name: 'HMAC', hash: 'SHA-256' }],
+  ],
+  'get shared key length': [
+    [false, 'ML-KEM-768'],
   ],
 };
