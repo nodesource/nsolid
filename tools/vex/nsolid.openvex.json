@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-87d27318a5db31c4518158233f83c3df210ab531a0978e064fde42bf31b6b750",
+  "@id": "https://openvex.dev/docs/public/vex-9087614cd0c42071bceb3fceb15e7af9277914b2279cce55824fa5081b031c5d",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-09-22T08:59:57.668030Z",
+  "timestamp": "2026-10-22T11:02:55.861449Z",
   "statements": [
     {
       "vulnerability": {
@@ -56,6 +56,36 @@
       ],
       "status": "fixed",
       "action_statement": "Upstream fix backported; vulnerable regex replaced with linear indexOf()/slice() logic. Upstream fix: https://github.com/npm/pacote/commit/627a7dc1a214d857472a13b48e42559c75288c9e"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-93687",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-93687"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
+              "subcomponents": [
+                {
+                  "@id": "pkg:npm/fast-glob@3.3.3"
+                },
+                {
+                  "@id": "pkg:npm/micromatch@4.0.8"
+                },
+                {
+                  "@id": "pkg:npm/braces@3.0.3"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The stack-exhaustion denial of service (CVE-2026-93687, GHSA-vfj7-8cjw-p6xm) requires evaluating deeply nested, attacker-controlled brace-expansion patterns. The braces maintainer considers the advisory only exploitable when an application passes user-supplied patterns to braces: hitting a nesting depth of 5,000 already requires more than 10,000 characters of input, and input-length limits (maxLength) are a sufficient, already-supported mitigation (https://github.com/micromatch/braces/issues/70). In N|Solid, braces reaches the runtime only inside the ncm-ng agent through fast-glob -> micromatch -> braces, and every glob pattern ncm-ng evaluates is hardcoded (workers/certifyNG/install-scripts.js and workers/general/getLocalModuleFilePaths.js match fixed patterns such as '**/*.js' under the user's own working directory), so adversarial brace patterns cannot reach braces through N|Solid. braces has no patched release (every version <= 3.0.3 is affected), so an exemption is the only available remediation. npm audit surfaces this single advisory in deps/ncm-ng as three findings (braces directly, plus the micromatch and fast-glob chain findings), tracked in https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2934, https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2935 and https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2936."
     }
   ]
 }
