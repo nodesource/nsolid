@@ -35,6 +35,12 @@ struct HookHolder {
   std::map<uint64_t, Global<Function>> js_callback_per_thread;
 };
 
+struct ExitHookHolder {
+  node::nsolid::SharedEnvInst envinst;
+  std::unique_ptr<CodeEventHook, CustomDeleter> hook;
+};
+
+ExitHookHolder exit_hook;
 std::vector<std::shared_ptr<HookHolder>> hooks;
 nsuv::ns_mutex hooks_mutex_;
 std::atomic<bool> self_disposing_hook_completed{false};
@@ -111,6 +117,14 @@ void RegisterCodeEventHook(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(static_cast<int>(hooks.size() - 1));
 }
 
+void RegisterExitCodeEventHook(const FunctionCallbackInfo<Value>& args) {
+  // Keep the environment alive past isolate disposal, as queued samples can.
+  exit_hook.envinst = node::nsolid::GetLocalEnvInst(args.GetIsolate());
+  exit_hook.hook.reset(node::nsolid::AddCodeEventHook(
+      [](node::nsolid::SharedEnvInst, const node::nsolid::CodeEventInfo&) {}));
+  assert(exit_hook.hook);
+}
+
 void UnregisterCodeEventHook(const FunctionCallbackInfo<Value>& args) {
   assert(args[0]->IsUint32());
   uint32_t index = args[0].As<Uint32>()->Value();
@@ -166,6 +180,7 @@ NODE_MODULE_INIT(/* exports, module, context */) {
                   "registerJSCodeEventCallback",
                   RegisterJSCodeEventCallback);
   NODE_SET_METHOD(exports, "registerCodeEventHook", RegisterCodeEventHook);
+  NODE_SET_METHOD(exports, "registerExitCodeEventHook", RegisterExitCodeEventHook);
   NODE_SET_METHOD(exports, "unregisterCodeEventHook", UnregisterCodeEventHook);
   NODE_SET_METHOD(exports, "triggerCodeEvent", TriggerCodeEvent);
   NODE_SET_METHOD(exports, "registerSelfDisposingCodeEventHook",

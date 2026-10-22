@@ -1397,6 +1397,9 @@ void EnvList::RemoveEnv(Environment* env) {
   EnvInst::Scope lock(envinst_sp);
   CHECK(lock.Success());
 
+  // EnvInst references can outlive the isolate that owns this listener.
+  envinst_sp->disable_code_event_handler();
+
   // Don't reset isolate_ or event_loop_ because those are returned as constexpr
   // and only accessed from another thread if the env still exists and has been
   // Scope locked.
@@ -1881,6 +1884,9 @@ void EnvList::DoExit(bool on_signal) {
     int r2 = nsolid::Snapshot::StopTrackingHeapObjectsSync(envinst);
     int r3 = nsolid::Snapshot::StopSamplingSync(envinst);
     profile_stopped = r1 == 0 || r2 == 0 || r3 == 0;
+    // process.exit() skips cleanup; release the code-event queue owner here.
+    if (envinst != nullptr)
+      envinst->disable_code_event_handler();
   }
 
   at_exit_hook_list_.for_each([&on_signal,
