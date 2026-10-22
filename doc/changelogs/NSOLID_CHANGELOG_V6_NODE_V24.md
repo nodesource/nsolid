@@ -2,6 +2,38 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-10-22, Version 24.22.1-nsolid-v6.3.9 'Krypton'
+
+### Commits
+
+* \[[`34af19803d`](https://github.com/nodesource/nsolid/commit/34af19803d)] - Merge tag 'v24.22.1' into node-v24.22.1-nsolid-v6.3.9-release (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`70dcaf2615`](https://github.com/nodesource/nsolid/commit/70dcaf2615)] - **agents**: avoid empty strings in StatsD sends (Santiago Gimeno) [#603](https://github.com/nodesource/nsolid/pull/603)
+* \[[`f2cfa7949a`](https://github.com/nodesource/nsolid/commit/f2cfa7949a)] - **agents**: fix StatsD worker bindings (Santiago Gimeno) [#603](https://github.com/nodesource/nsolid/pull/603)
+* \[[`0cc95b5258`](https://github.com/nodesource/nsolid/commit/0cc95b5258)] - **agents**: correct gRPC size limit comment (Santiago Gimeno) [#602](https://github.com/nodesource/nsolid/pull/602)
+* \[[`39d3ea7fd0`](https://github.com/nodesource/nsolid/commit/39d3ea7fd0)] - **agents**: bound StatsD UDP address retries (Santiago Gimeno) [#599](https://github.com/nodesource/nsolid/pull/599)
+* \[[`10f67887c5`](https://github.com/nodesource/nsolid/commit/10f67887c5)] - **(CVE-2026-93748)** **deps**: update npm http-cache-semantics\@4.3.0 (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`4420106867`](https://github.com/nodesource/nsolid/commit/4420106867)] - **deps**: update npm postcss-selector-parser\@7.1.7 (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`35f074141a`](https://github.com/nodesource/nsolid/commit/35f074141a)] - **deps**: update npm ip-address\@10.7.4 (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`fdfb09f9fe`](https://github.com/nodesource/nsolid/commit/fdfb09f9fe)] - **deps**: update npm undici\@6.29.1 (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`f2e50cad68`](https://github.com/nodesource/nsolid/commit/f2e50cad68)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#572](https://github.com/nodesource/nsolid/pull/572)
+* \[[`2ddab74e39`](https://github.com/nodesource/nsolid/commit/2ddab74e39)] - **deps**: update opentelemetry-cpp to 1.29.0 (Santiago Gimeno) [#572](https://github.com/nodesource/nsolid/pull/572)
+* \[[`f116217e0b`](https://github.com/nodesource/nsolid/commit/f116217e0b)] - **deps**: update grpc to 1.84.0 (Santiago Gimeno) [#567](https://github.com/nodesource/nsolid/pull/567)
+* \[[`144d177d13`](https://github.com/nodesource/nsolid/commit/144d177d13)] - **deps**: update to protobuf 36.2 (Santiago Gimeno) [#568](https://github.com/nodesource/nsolid/pull/568)
+* \[[`ad0fef02cc`](https://github.com/nodesource/nsolid/commit/ad0fef02cc)] - **doc**: document missing N|Solid environment vars (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`40c20707a8`](https://github.com/nodesource/nsolid/commit/40c20707a8)] - **http**: fix server span completion on socket close (Santiago Gimeno) [#563](https://github.com/nodesource/nsolid/pull/563)
+* \[[`f1e87140a1`](https://github.com/nodesource/nsolid/commit/f1e87140a1)] - **lib**: initialize worker tracing diagnostics (Santiago Gimeno) [#605](https://github.com/nodesource/nsolid/pull/605)
+* \[[`35ba2f9be0`](https://github.com/nodesource/nsolid/commit/35ba2f9be0)] - **lib**: defer loading the OTEL context manager (Santiago Gimeno) [#571](https://github.com/nodesource/nsolid/pull/571)
+* \[[`a2332dd77d`](https://github.com/nodesource/nsolid/commit/a2332dd77d)] - **lib,src**: align continuous profiling defaults (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`8b50e4a772`](https://github.com/nodesource/nsolid/commit/8b50e4a772)] - **lib,test**: fix N|Solid environment handling (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`078ed0c744`](https://github.com/nodesource/nsolid/commit/078ed0c744)] - **module**: fix package lookup for child tracking (Santiago Gimeno) [#608](https://github.com/nodesource/nsolid/pull/608)
+* \[[`f242f3b098`](https://github.com/nodesource/nsolid/commit/f242f3b098)] - **src**: fix average event loop task metrics (Santiago Gimeno) [#595](https://github.com/nodesource/nsolid/pull/595)
+* \[[`5948cb2b56`](https://github.com/nodesource/nsolid/commit/5948cb2b56)] - **src**: fix event loop metric time units (Santiago Gimeno) [#594](https://github.com/nodesource/nsolid/pull/594)
+* \[[`11b35b0a5a`](https://github.com/nodesource/nsolid/commit/11b35b0a5a)] - **src**: avoid accessing EnvInst on Env destruction (Santiago Gimeno) [#468](https://github.com/nodesource/nsolid/pull/468)
+* \[[`be978e1c10`](https://github.com/nodesource/nsolid/commit/be978e1c10)] - **src**: index pending spans by their OTel ID (Santiago Gimeno) [#605](https://github.com/nodesource/nsolid/pull/605)
+* \[[`d609505d82`](https://github.com/nodesource/nsolid/commit/d609505d82)] - **test**: fix test-bootstrap-modules (Santiago Gimeno) [#607](https://github.com/nodesource/nsolid/pull/607)
+* \[[`9caee02cb8`](https://github.com/nodesource/nsolid/commit/9caee02cb8)] - **test**: wait for tracing flags before acknowledging (Santiago Gimeno) [#606](https://github.com/nodesource/nsolid/pull/606)
+* \[[`c15008ac6d`](https://github.com/nodesource/nsolid/commit/c15008ac6d)] - **(CVE-2026-93687)** **vex**: exempt ncm-ng braces advisory (CVE-2026-93687) (Minwoo Jung) [#615](https://github.com/nodesource/nsolid/pull/615)
+
 ## 2026-09-30, Version 24.21.0-nsolid-v6.3.8 'Krypton'
 
 ### Commits
