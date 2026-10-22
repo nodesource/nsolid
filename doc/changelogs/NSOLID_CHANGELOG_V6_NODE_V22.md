@@ -2,6 +2,35 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-10-22, Version 22.23.4-nsolid-v6.3.9 'Jod'
+
+### Commits
+
+* \[[`08c6a4edd0`](https://github.com/nodesource/nsolid/commit/08c6a4edd0)] - Merge tag 'v22.23.4' into node-v22.23.4-nsolid-v6.3.9-release (Santiago Gimeno) [#617](https://github.com/nodesource/nsolid/pull/617)
+* \[[`f7398bc92b`](https://github.com/nodesource/nsolid/commit/f7398bc92b)] - **agents**: avoid empty strings in StatsD sends (Santiago Gimeno) [#603](https://github.com/nodesource/nsolid/pull/603)
+* \[[`1d34c90205`](https://github.com/nodesource/nsolid/commit/1d34c90205)] - **agents**: fix StatsD worker bindings (Santiago Gimeno) [#603](https://github.com/nodesource/nsolid/pull/603)
+* \[[`3bbbf06813`](https://github.com/nodesource/nsolid/commit/3bbbf06813)] - **agents**: correct gRPC size limit comment (Santiago Gimeno) [#602](https://github.com/nodesource/nsolid/pull/602)
+* \[[`fce51b4167`](https://github.com/nodesource/nsolid/commit/fce51b4167)] - **agents**: bound StatsD UDP address retries (Santiago Gimeno) [#599](https://github.com/nodesource/nsolid/pull/599)
+* \[[`4747e27d94`](https://github.com/nodesource/nsolid/commit/4747e27d94)] - **(CVE-2026-93748)** **deps**: update npm http-cache-semantics\@4.3.0 (Santiago Gimeno) [#617](https://github.com/nodesource/nsolid/pull/617)
+* \[[`a3abdb1919`](https://github.com/nodesource/nsolid/commit/a3abdb1919)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#572](https://github.com/nodesource/nsolid/pull/572)
+* \[[`37049d9d90`](https://github.com/nodesource/nsolid/commit/37049d9d90)] - **deps**: update opentelemetry-cpp to 1.29.0 (Santiago Gimeno) [#572](https://github.com/nodesource/nsolid/pull/572)
+* \[[`3ae867497d`](https://github.com/nodesource/nsolid/commit/3ae867497d)] - **deps**: update grpc to 1.84.0 (Santiago Gimeno) [#567](https://github.com/nodesource/nsolid/pull/567)
+* \[[`7b80d97b97`](https://github.com/nodesource/nsolid/commit/7b80d97b97)] - **deps**: update to protobuf 36.2 (Santiago Gimeno) [#568](https://github.com/nodesource/nsolid/pull/568)
+* \[[`93bedefc1e`](https://github.com/nodesource/nsolid/commit/93bedefc1e)] - **doc**: document missing N|Solid environment vars (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`ed9494a5b7`](https://github.com/nodesource/nsolid/commit/ed9494a5b7)] - **http**: fix server span completion on socket close (Santiago Gimeno) [#563](https://github.com/nodesource/nsolid/pull/563)
+* \[[`56cb49a815`](https://github.com/nodesource/nsolid/commit/56cb49a815)] - **lib**: initialize worker tracing diagnostics (Santiago Gimeno) [#605](https://github.com/nodesource/nsolid/pull/605)
+* \[[`6d304c9cfb`](https://github.com/nodesource/nsolid/commit/6d304c9cfb)] - **lib**: defer loading the OTEL context manager (Santiago Gimeno) [#571](https://github.com/nodesource/nsolid/pull/571)
+* \[[`2b71d00568`](https://github.com/nodesource/nsolid/commit/2b71d00568)] - **lib,src**: align continuous profiling defaults (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`21bb35d189`](https://github.com/nodesource/nsolid/commit/21bb35d189)] - **lib,test**: fix N|Solid environment handling (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`9a2b1a448f`](https://github.com/nodesource/nsolid/commit/9a2b1a448f)] - **module**: fix package lookup for child tracking (Santiago Gimeno) [#608](https://github.com/nodesource/nsolid/pull/608)
+* \[[`4e80bd93e5`](https://github.com/nodesource/nsolid/commit/4e80bd93e5)] - **src**: fix average event loop task metrics (Santiago Gimeno) [#595](https://github.com/nodesource/nsolid/pull/595)
+* \[[`eb8684fb3b`](https://github.com/nodesource/nsolid/commit/eb8684fb3b)] - **src**: fix event loop metric time units (Santiago Gimeno) [#594](https://github.com/nodesource/nsolid/pull/594)
+* \[[`2d96b11ddd`](https://github.com/nodesource/nsolid/commit/2d96b11ddd)] - **src**: avoid accessing EnvInst on Env destruction (Santiago Gimeno) [#468](https://github.com/nodesource/nsolid/pull/468)
+* \[[`8b3fe21980`](https://github.com/nodesource/nsolid/commit/8b3fe21980)] - **src**: index pending spans by their OTel ID (Santiago Gimeno) [#605](https://github.com/nodesource/nsolid/pull/605)
+* \[[`b147155e59`](https://github.com/nodesource/nsolid/commit/b147155e59)] - **test**: fix test-bootstrap-modules (Santiago Gimeno) [#607](https://github.com/nodesource/nsolid/pull/607)
+* \[[`02f3b6ec02`](https://github.com/nodesource/nsolid/commit/02f3b6ec02)] - **test**: wait for tracing flags before acknowledging (Santiago Gimeno) [#606](https://github.com/nodesource/nsolid/pull/606)
+* \[[`02028fbeb4`](https://github.com/nodesource/nsolid/commit/02028fbeb4)] - **(CVE-2026-93687)** **vex**: exempt ncm-ng braces advisory (CVE-2026-93687) (Minwoo Jung) [#615](https://github.com/nodesource/nsolid/pull/615)
+
 ## 2026-09-30, Version 22.23.3-nsolid-v6.3.8 'Jod'
 
 ### Commits
