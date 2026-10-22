@@ -6,6 +6,9 @@
 
 #define PF_KTHREAD 0x00200000
 
+const volatile __u64 pid_ns_dev;
+const volatile __u64 pid_ns_ino;
+
 struct {
   __uint(type, BPF_MAP_TYPE_RINGBUF);
   __uint(max_entries, 256 * 1024);
@@ -58,10 +61,11 @@ static inline void submit_stack_trace(void* ctx, int pid, int tid) {
 
 SEC("perf_event")
 int on_cpu_sample(struct bpf_perf_event_data* ctx) {
-  u64 id = bpf_get_current_pid_tgid();
-  u32 pid = id >> 32;
-  u32 tid = id;
-  submit_stack_trace(ctx, pid, tid);
+  struct bpf_pidns_info ids;
+  if (bpf_get_ns_current_pid_tgid(pid_ns_dev, pid_ns_ino,
+                                 &ids, sizeof(ids)) != 0)
+    return 0;
+  submit_stack_trace(ctx, ids.tgid, ids.pid);
   return 0;
 }
 
@@ -71,15 +75,29 @@ int BPF_PROG(handle_fork, const struct task_struct* parent,
   if (BPF_CORE_READ(child, flags) & PF_KTHREAD)
     return 0;
 
+  struct bpf_pidns_info ids;
+  if (bpf_get_ns_current_pid_tgid(pid_ns_dev, pid_ns_ino,
+                                 &ids, sizeof(ids)) != 0)
+    return 0;
+
+  // Read the child's PID at the parent's namespace level, including CLONE_NEWPID.
+  struct pid* parent_pid = BPF_CORE_READ(parent, thread_pid);
+  struct pid* child_pid = BPF_CORE_READ(child, thread_pid);
+  u32 level;
+  struct upid child_id;
+  if (parent_pid == 0 || child_pid == 0 ||
+      BPF_CORE_READ_INTO(&level, parent_pid, level) != 0 || level > 32 ||
+      bpf_core_read(&child_id, sizeof(child_id),
+                    &child_pid->numbers[level]) != 0 || child_id.nr <= 0)
+    return 0;
+
   struct profiler_event* event = bpf_ringbuf_reserve(&rb, sizeof(*event), 0);
   if (event == 0)
     return 0;
 
-  u32 parent_pid = bpf_get_current_pid_tgid() >> 32;
-  u32 child_pid = BPF_CORE_READ(child, pid);
   event->type = EVENT_THREAD;
-  event->pid = parent_pid;
-  event->tid = child_pid;
+  event->pid = ids.tgid;
+  event->tid = child_id.nr;
   event->thread.type = THREAD_FORK;
   bpf_ringbuf_submit(event, 0);
   return 0;
@@ -87,16 +105,18 @@ int BPF_PROG(handle_fork, const struct task_struct* parent,
 
 SEC("tp_btf/sched_process_exit")
 int BPF_PROG(handle_exit, const struct task_struct* task) {
+  struct bpf_pidns_info ids;
+  if (bpf_get_ns_current_pid_tgid(pid_ns_dev, pid_ns_ino,
+                                 &ids, sizeof(ids)) != 0)
+    return 0;
+
   struct profiler_event* event = bpf_ringbuf_reserve(&rb, sizeof(*event), 0);
   if (event == 0)
     return 0;
 
-  u64 id = bpf_get_current_pid_tgid();
-  u32 pid = id >> 32;
-  u32 tid = id;
   event->type = EVENT_THREAD;
-  event->pid = pid;
-  event->tid = tid;
+  event->pid = ids.tgid;
+  event->tid = ids.pid;
   event->thread.type = THREAD_EXIT;
   bpf_ringbuf_submit(event, 0);
   return 0;

@@ -3,7 +3,10 @@
 #include "grpc/src/ebpf_profile_bucket.h"
 
 #include <fcntl.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 #include <algorithm>
+#include <atomic>
 #include <cstdio>
 #include <filesystem>
 
@@ -393,6 +396,63 @@ TEST_F(NodeZeroIsolateTestFixture, EBPFProfilerDuplicateThreadAttachment) {
   EXPECT_EQ(PerfEventFds().size(), baseline + 1);
   EXPECT_TRUE(envlist->ConfigureEBPFProfiling(false));
   EXPECT_EQ(PerfEventFds().size(), baseline);
+}
+
+// Also run under unshare --pid --fork --mount-proc to exercise PID translation.
+TEST_F(NodeZeroIsolateTestFixture, EBPFProfilerSamplesUseLocalThreadIds) {
+  auto* envlist = node::nsolid::EnvList::Inst();
+  ASSERT_TRUE(envlist->ConfigureEBPFProfiling(false));
+  if (!envlist->ConfigureEBPFProfiling(true))
+    GTEST_SKIP() << "eBPF profiling is unsupported or unavailable";
+
+  auto profiler = envlist->GetEBPFProfiler();
+  struct State {
+    node::nsolid::EBPFProfiler* profiler;
+    uint32_t main_tid;
+    std::atomic<uint32_t> worker_tid{0};
+    std::atomic<size_t> main_samples{0};
+    std::atomic<size_t> worker_samples{0};
+    std::atomic<size_t> unexpected_samples{0};
+    bool attached = false;
+    uv_sem_t ready = {};
+  } state{profiler.get(), static_cast<uint32_t>(syscall(SYS_gettid))};
+  std::unique_ptr<node::nsolid::StackHook> hook(
+      profiler->AddStackTraceHook([&state](Stack stack) {
+        if (stack.tid == state.main_tid)
+          ++state.main_samples;
+        else if (stack.tid == state.worker_tid.load())
+          ++state.worker_samples;
+        else
+          ++state.unexpected_samples;
+      }));
+
+  ASSERT_EQ(uv_sem_init(&state.ready, 0), 0);
+  uv_thread_t worker;
+  const int err = uv_thread_create(&worker, [](void* data) {
+    auto* state = static_cast<State*>(data);
+    state->worker_tid = static_cast<uint32_t>(syscall(SYS_gettid));
+    state->attached = state->profiler->AddThread(state->worker_tid);
+    uv_sem_post(&state->ready);
+    const uint64_t deadline = uv_hrtime() + 1000000000;
+    while (uv_hrtime() < deadline) {}
+  }, &state);
+  if (err == 0) {
+    uv_sem_wait(&state.ready);
+    const uint64_t deadline = uv_hrtime() + 1000000000;
+    while (uv_hrtime() < deadline) {}
+    EXPECT_EQ(uv_thread_join(&worker), 0);
+    profiler->RemoveThread(state.worker_tid);
+    // Allow queued samples to pass the symbolization reorder window.
+    uv_sleep(100);
+  }
+  EXPECT_TRUE(envlist->ConfigureEBPFProfiling(false));
+  hook.reset();
+  uv_sem_destroy(&state.ready);
+  ASSERT_EQ(err, 0);
+  EXPECT_TRUE(state.attached);
+  EXPECT_GT(state.main_samples.load(), 0U);
+  EXPECT_GT(state.worker_samples.load(), 0U);
+  EXPECT_EQ(state.unexpected_samples.load(), 0U);
 }
 
 TEST_F(NodeZeroIsolateTestFixture, EBPFProfilerDescriptorsCloseOnExec) {

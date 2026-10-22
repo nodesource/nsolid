@@ -24,9 +24,25 @@ typedef __u64 uint64_t;
 #define BPF_MAP_TYPE_RINGBUF 27
 #define BPF_F_USER_STACK (1ULL << 8)
 
+struct bpf_pidns_info {
+  __u32 pid;
+  __u32 tgid;
+};
+
+struct upid {
+  int nr;
+  struct pid_namespace* ns;
+};
+
+struct pid {
+  unsigned int level;
+  struct upid numbers[1];
+};
+
 struct task_struct {
   unsigned int flags;
   int pid;
+  struct pid* thread_pid;
 };
 
 #endif  // SRC_EBPF_PROFILER_VMLINUX_H_
