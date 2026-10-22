@@ -50,5 +50,6 @@ security reporting process above.
 
 Maintainers add reviewed exceptions to `tools/vex/exceptions.json` and
 regenerate the document with `make install` (or `python3 tools/vex/generate.py`)
-when preparing a release. Each exception must include a CVE ID and a valid
-OpenVEX justification.
+when preparing a release. Each exception must include a vulnerability reference
+(a CVE ID, or a `vulnerability` override with `name` and `@id` for findings that
+have no CVE, such as npm audit ids) and a valid OpenVEX justification.

@@ -1,1 +1,77 @@
-[]
+[
+  {
+    "vulnerability": {
+      "name": "npm-1240992",
+      "@id": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+    },
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/braces@3.0.3"
+            }
+          ]
+        }
+      ]
+    },
+    "status": "not_affected",
+    "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+    "impact_statement": "The stack-exhaustion denial of service (CVE-2026-93687) requires evaluating deeply nested, attacker-controlled brace-expansion patterns. braces reaches N|Solid only inside the ncm-ng agent through fast-glob, and every glob pattern ncm-ng evaluates is hardcoded (workers/certifyNG/install-scripts.js and workers/general/getLocalModuleFilePaths.js match fixed patterns such as '**/*.js' under the user's own working directory). Adversarial brace patterns cannot reach braces through N|Solid, and braces has no patched release (every version <= 3.0.3 is affected), so an exemption is the only available remediation. Tracked in https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2934."
+  },
+  {
+    "vulnerability": {
+      "name": "npm-braces",
+      "@id": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+    },
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/micromatch@4.0.8"
+            },
+            {
+              "@id": "pkg:npm/braces@3.0.3"
+            }
+          ]
+        }
+      ]
+    },
+    "status": "not_affected",
+    "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+    "impact_statement": "npm audit flags micromatch only because its braces dependency is covered by CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm: the same advisory surfaced one level up the ncm-ng chain (micromatch -> braces). Exempted with the same rationale as the braces statement. Tracked in https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2936."
+  },
+  {
+    "vulnerability": {
+      "name": "npm-micromatch",
+      "@id": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+    },
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/fast-glob@3.3.3"
+            },
+            {
+              "@id": "pkg:npm/micromatch@4.0.8"
+            },
+            {
+              "@id": "pkg:npm/braces@3.0.3"
+            }
+          ]
+        }
+      ]
+    },
+    "status": "not_affected",
+    "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+    "impact_statement": "npm audit flags fast-glob only because its micromatch dependency pulls braces, which is covered by CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm: the same advisory surfaced two levels up the ncm-ng chain (fast-glob -> micromatch -> braces). Exempted with the same rationale as the braces statement. Tracked in https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2935."
+  }
+]

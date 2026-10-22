@@ -76,6 +76,40 @@ class GenerateVEXTest(unittest.TestCase):
           'justification': 'vulnerable_code_not_present',
       }])
 
+  def test_vulnerability_override(self):
+    document = generate_document([{
+        'vulnerability': {
+            'name': 'npm-braces',
+            '@id': 'https://github.com/advisories/GHSA-vfj7-8cjw-p6xm',
+        },
+        'justification': 'vulnerable_code_not_present',
+    }], '2026-01-01T00:00:00Z')
+    statement = document['statements'][0]
+    self.assertEqual(statement['vulnerability']['name'], 'npm-braces')
+    self.assertEqual(statement['vulnerability']['@id'],
+                     'https://github.com/advisories/GHSA-vfj7-8cjw-p6xm')
+
+  def test_invalid_vulnerability_override_type(self):
+    with self.assertRaisesRegex(ValueError, 'Invalid vulnerability override'):
+      generate_document([{'vulnerability': 'npm-braces',
+                          'justification': 'vulnerable_code_not_present'}])
+
+  def test_invalid_vulnerability_name(self):
+    with self.assertRaisesRegex(ValueError, 'Invalid vulnerability name'):
+      generate_document([{'vulnerability': {'name': '', '@id': 'https://github.com/advisories/x'},
+                          'justification': 'vulnerable_code_not_present'}])
+
+  def test_invalid_vulnerability_id(self):
+    with self.assertRaisesRegex(ValueError, 'Invalid vulnerability @id'):
+      generate_document([{'vulnerability': {'name': 'npm-braces', '@id': ''},
+                          'justification': 'vulnerable_code_not_present'}])
+
+  def test_cve_and_vulnerability_override_error(self):
+    with self.assertRaisesRegex(ValueError, 'Use either a CVE ID or a vulnerability override'):
+      generate_document([{'cve': 'CVE-2099-0001',
+                          'vulnerability': {'name': 'npm-braces', '@id': 'https://github.com/advisories/x'},
+                          'justification': 'vulnerable_code_not_present'}])
+
 
 
 if __name__ == '__main__':

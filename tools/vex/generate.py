@@ -43,12 +43,24 @@ def make_product(product):
 
 def validate_exception(exception):
   cve = exception.get('cve')
+  vulnerability = exception.get('vulnerability')
   status = exception.get('status', 'not_affected')
   justification = exception.get('justification')
   product = exception.get('product')
   impact_statement = exception.get('impact_statement')
   action_statement = exception.get('action_statement')
-  if not isinstance(cve, str) or not CVE_PATTERN.fullmatch(cve):
+  if vulnerability is not None:
+    if not isinstance(vulnerability, dict):
+      raise ValueError(f'Invalid vulnerability override: {vulnerability!r}')
+    if cve is not None:
+      raise ValueError('Use either a CVE ID or a vulnerability override, not both')
+    name = vulnerability.get('name')
+    vid = vulnerability.get('@id')
+    if not isinstance(name, str) or not name:
+      raise ValueError(f'Invalid vulnerability name: {name!r}')
+    if not isinstance(vid, str) or not vid:
+      raise ValueError(f'Invalid vulnerability @id: {vid!r}')
+  elif not isinstance(cve, str) or not CVE_PATTERN.fullmatch(cve):
     raise ValueError(f'Invalid CVE ID: {cve!r}')
   if status not in STATUSES:
     raise ValueError(f'Invalid OpenVEX status: {status!r}')
@@ -71,10 +83,17 @@ def generate_document(exceptions, timestamp=None):
     validate_exception(exception)
   statements = []
   for exception in exceptions:
+    vulnerability = exception.get('vulnerability')
+    if vulnerability is not None:
+      name = vulnerability['name']
+      vid = vulnerability['@id']
+    else:
+      name = exception['cve']
+      vid = f"https://www.cve.org/CVERecord?id={exception['cve']}"
     statement = {
         'vulnerability': {
-            'name': exception['cve'],
-            '@id': f"https://www.cve.org/CVERecord?id={exception['cve']}",
+            'name': name,
+            '@id': vid,
         },
         'products': [make_product(exception.get('product'))],
         'status': exception.get('status', 'not_affected'),
