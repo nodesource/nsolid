@@ -126,6 +126,20 @@ class NSolidService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> PrepareAsyncExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(PrepareAsyncExportStartupTimesRaw(context, request, cq));
     }
+    virtual ::grpc::Status ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpcagent::EventResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> AsyncExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(AsyncExportPermissionAuditRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> PrepareAsyncExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(PrepareAsyncExportPermissionAuditRaw(context, request, cq));
+    }
+    virtual ::grpc::Status ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpcagent::EventResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> AsyncExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(AsyncExportPermissionAuditLimitRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>> PrepareAsyncExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>>(PrepareAsyncExportPermissionAuditLimitRaw(context, request, cq));
+    }
     class async_interface {
      public:
       virtual ~async_interface() {}
@@ -150,6 +164,10 @@ class NSolidService final {
       virtual void ExportSourceCode(::grpc::ClientContext* context, const ::grpcagent::SourceCodeEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void ExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void ExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
@@ -182,6 +200,10 @@ class NSolidService final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportSourceCodeRaw(::grpc::ClientContext* context, const ::grpcagent::SourceCodeEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportStartupTimesRaw(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportStartupTimesRaw(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportPermissionAuditRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportPermissionAuditRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* AsyncExportPermissionAuditLimitRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::grpcagent::EventResponse>* PrepareAsyncExportPermissionAuditLimitRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -276,6 +298,20 @@ class NSolidService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> PrepareAsyncExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(PrepareAsyncExportStartupTimesRaw(context, request, cq));
     }
+    ::grpc::Status ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpcagent::EventResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> AsyncExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(AsyncExportPermissionAuditRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> PrepareAsyncExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(PrepareAsyncExportPermissionAuditRaw(context, request, cq));
+    }
+    ::grpc::Status ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpcagent::EventResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> AsyncExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(AsyncExportPermissionAuditLimitRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>> PrepareAsyncExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>>(PrepareAsyncExportPermissionAuditLimitRaw(context, request, cq));
+    }
     class async final :
       public StubInterface::async_interface {
      public:
@@ -300,6 +336,10 @@ class NSolidService final {
       void ExportSourceCode(::grpc::ClientContext* context, const ::grpcagent::SourceCodeEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void ExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
       void ExportStartupTimes(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
+      void ExportPermissionAudit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response, std::function<void(::grpc::Status)>) override;
+      void ExportPermissionAuditLimit(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -338,6 +378,10 @@ class NSolidService final {
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportSourceCodeRaw(::grpc::ClientContext* context, const ::grpcagent::SourceCodeEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportStartupTimesRaw(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportStartupTimesRaw(::grpc::ClientContext* context, const ::grpcagent::StartupTimesEvent& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportPermissionAuditRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportPermissionAuditRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditEvent& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* AsyncExportPermissionAuditLimitRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::grpcagent::EventResponse>* PrepareAsyncExportPermissionAuditLimitRaw(::grpc::ClientContext* context, const ::grpcagent::PermissionAuditLimitEvent& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_Command_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportAsset_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportContinuousProfile_;
@@ -350,6 +394,8 @@ class NSolidService final {
     const ::grpc::internal::RpcMethod rpcmethod_ExportReconfigure_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportSourceCode_;
     const ::grpc::internal::RpcMethod rpcmethod_ExportStartupTimes_;
+    const ::grpc::internal::RpcMethod rpcmethod_ExportPermissionAudit_;
+    const ::grpc::internal::RpcMethod rpcmethod_ExportPermissionAuditLimit_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -369,6 +415,8 @@ class NSolidService final {
     virtual ::grpc::Status ExportReconfigure(::grpc::ServerContext* context, const ::grpcagent::ReconfigureEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportSourceCode(::grpc::ServerContext* context, const ::grpcagent::SourceCodeEvent* request, ::grpcagent::EventResponse* response);
     virtual ::grpc::Status ExportStartupTimes(::grpc::ServerContext* context, const ::grpcagent::StartupTimesEvent* request, ::grpcagent::EventResponse* response);
+    virtual ::grpc::Status ExportPermissionAudit(::grpc::ServerContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response);
+    virtual ::grpc::Status ExportPermissionAuditLimit(::grpc::ServerContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_Command : public BaseClass {
@@ -610,7 +658,47 @@ class NSolidService final {
       ::grpc::Service::RequestAsyncUnary(11, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_Command<WithAsyncMethod_ExportAsset<WithAsyncMethod_ExportContinuousProfile<WithAsyncMethod_ExportExit<WithAsyncMethod_ExportInfo<WithAsyncMethod_ExportMetrics<WithAsyncMethod_ExportPackages<WithAsyncMethod_ExportBlockedLoop<WithAsyncMethod_ExportUnblockedLoop<WithAsyncMethod_ExportReconfigure<WithAsyncMethod_ExportSourceCode<WithAsyncMethod_ExportStartupTimes<Service > > > > > > > > > > > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_ExportPermissionAudit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_ExportPermissionAudit() {
+      ::grpc::Service::MarkMethodAsync(12);
+    }
+    ~WithAsyncMethod_ExportPermissionAudit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAudit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestExportPermissionAudit(::grpc::ServerContext* context, ::grpcagent::PermissionAuditEvent* request, ::grpc::ServerAsyncResponseWriter< ::grpcagent::EventResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(12, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_ExportPermissionAuditLimit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_ExportPermissionAuditLimit() {
+      ::grpc::Service::MarkMethodAsync(13);
+    }
+    ~WithAsyncMethod_ExportPermissionAuditLimit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAuditLimit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditLimitEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestExportPermissionAuditLimit(::grpc::ServerContext* context, ::grpcagent::PermissionAuditLimitEvent* request, ::grpc::ServerAsyncResponseWriter< ::grpcagent::EventResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(13, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_Command<WithAsyncMethod_ExportAsset<WithAsyncMethod_ExportContinuousProfile<WithAsyncMethod_ExportExit<WithAsyncMethod_ExportInfo<WithAsyncMethod_ExportMetrics<WithAsyncMethod_ExportPackages<WithAsyncMethod_ExportBlockedLoop<WithAsyncMethod_ExportUnblockedLoop<WithAsyncMethod_ExportReconfigure<WithAsyncMethod_ExportSourceCode<WithAsyncMethod_ExportStartupTimes<WithAsyncMethod_ExportPermissionAudit<WithAsyncMethod_ExportPermissionAuditLimit<Service > > > > > > > > > > > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_Command : public BaseClass {
    private:
@@ -921,7 +1009,61 @@ class NSolidService final {
     virtual ::grpc::ServerUnaryReactor* ExportStartupTimes(
       ::grpc::CallbackServerContext* /*context*/, const ::grpcagent::StartupTimesEvent* /*request*/, ::grpcagent::EventResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_Command<WithCallbackMethod_ExportAsset<WithCallbackMethod_ExportContinuousProfile<WithCallbackMethod_ExportExit<WithCallbackMethod_ExportInfo<WithCallbackMethod_ExportMetrics<WithCallbackMethod_ExportPackages<WithCallbackMethod_ExportBlockedLoop<WithCallbackMethod_ExportUnblockedLoop<WithCallbackMethod_ExportReconfigure<WithCallbackMethod_ExportSourceCode<WithCallbackMethod_ExportStartupTimes<Service > > > > > > > > > > > > CallbackService;
+  template <class BaseClass>
+  class WithCallbackMethod_ExportPermissionAudit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_ExportPermissionAudit() {
+      ::grpc::Service::MarkMethodCallback(12,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpcagent::PermissionAuditEvent, ::grpcagent::EventResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpcagent::PermissionAuditEvent* request, ::grpcagent::EventResponse* response) { return this->ExportPermissionAudit(context, request, response); }));}
+    void SetMessageAllocatorFor_ExportPermissionAudit(
+        ::grpc::MessageAllocator< ::grpcagent::PermissionAuditEvent, ::grpcagent::EventResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(12);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::grpcagent::PermissionAuditEvent, ::grpcagent::EventResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_ExportPermissionAudit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAudit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* ExportPermissionAudit(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpcagent::PermissionAuditEvent* /*request*/, ::grpcagent::EventResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_ExportPermissionAuditLimit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_ExportPermissionAuditLimit() {
+      ::grpc::Service::MarkMethodCallback(13,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpcagent::PermissionAuditLimitEvent, ::grpcagent::EventResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpcagent::PermissionAuditLimitEvent* request, ::grpcagent::EventResponse* response) { return this->ExportPermissionAuditLimit(context, request, response); }));}
+    void SetMessageAllocatorFor_ExportPermissionAuditLimit(
+        ::grpc::MessageAllocator< ::grpcagent::PermissionAuditLimitEvent, ::grpcagent::EventResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(13);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::grpcagent::PermissionAuditLimitEvent, ::grpcagent::EventResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_ExportPermissionAuditLimit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAuditLimit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditLimitEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* ExportPermissionAuditLimit(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpcagent::PermissionAuditLimitEvent* /*request*/, ::grpcagent::EventResponse* /*response*/)  { return nullptr; }
+  };
+  typedef WithCallbackMethod_Command<WithCallbackMethod_ExportAsset<WithCallbackMethod_ExportContinuousProfile<WithCallbackMethod_ExportExit<WithCallbackMethod_ExportInfo<WithCallbackMethod_ExportMetrics<WithCallbackMethod_ExportPackages<WithCallbackMethod_ExportBlockedLoop<WithCallbackMethod_ExportUnblockedLoop<WithCallbackMethod_ExportReconfigure<WithCallbackMethod_ExportSourceCode<WithCallbackMethod_ExportStartupTimes<WithCallbackMethod_ExportPermissionAudit<WithCallbackMethod_ExportPermissionAuditLimit<Service > > > > > > > > > > > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_Command : public BaseClass {
@@ -1123,6 +1265,40 @@ class NSolidService final {
     }
     // disable synchronous version of this method
     ::grpc::Status ExportStartupTimes(::grpc::ServerContext* /*context*/, const ::grpcagent::StartupTimesEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_ExportPermissionAudit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_ExportPermissionAudit() {
+      ::grpc::Service::MarkMethodGeneric(12);
+    }
+    ~WithGenericMethod_ExportPermissionAudit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAudit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_ExportPermissionAuditLimit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_ExportPermissionAuditLimit() {
+      ::grpc::Service::MarkMethodGeneric(13);
+    }
+    ~WithGenericMethod_ExportPermissionAuditLimit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAuditLimit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditLimitEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1365,6 +1541,46 @@ class NSolidService final {
     }
     void RequestExportStartupTimes(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(11, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_ExportPermissionAudit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_ExportPermissionAudit() {
+      ::grpc::Service::MarkMethodRaw(12);
+    }
+    ~WithRawMethod_ExportPermissionAudit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAudit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestExportPermissionAudit(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(12, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_ExportPermissionAuditLimit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_ExportPermissionAuditLimit() {
+      ::grpc::Service::MarkMethodRaw(13);
+    }
+    ~WithRawMethod_ExportPermissionAuditLimit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAuditLimit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditLimitEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestExportPermissionAuditLimit(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(13, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1633,6 +1849,50 @@ class NSolidService final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
+  class WithRawCallbackMethod_ExportPermissionAudit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_ExportPermissionAudit() {
+      ::grpc::Service::MarkMethodRawCallback(12,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ExportPermissionAudit(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_ExportPermissionAudit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAudit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* ExportPermissionAudit(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_ExportPermissionAuditLimit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_ExportPermissionAuditLimit() {
+      ::grpc::Service::MarkMethodRawCallback(13,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ExportPermissionAuditLimit(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_ExportPermissionAuditLimit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status ExportPermissionAuditLimit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditLimitEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* ExportPermissionAuditLimit(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_ExportExit : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
@@ -1875,9 +2135,63 @@ class NSolidService final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedExportStartupTimes(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::grpcagent::StartupTimesEvent,::grpcagent::EventResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_ExportExit<WithStreamedUnaryMethod_ExportInfo<WithStreamedUnaryMethod_ExportMetrics<WithStreamedUnaryMethod_ExportPackages<WithStreamedUnaryMethod_ExportBlockedLoop<WithStreamedUnaryMethod_ExportUnblockedLoop<WithStreamedUnaryMethod_ExportReconfigure<WithStreamedUnaryMethod_ExportSourceCode<WithStreamedUnaryMethod_ExportStartupTimes<Service > > > > > > > > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_ExportPermissionAudit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_ExportPermissionAudit() {
+      ::grpc::Service::MarkMethodStreamed(12,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::grpcagent::PermissionAuditEvent, ::grpcagent::EventResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::grpcagent::PermissionAuditEvent, ::grpcagent::EventResponse>* streamer) {
+                       return this->StreamedExportPermissionAudit(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_ExportPermissionAudit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status ExportPermissionAudit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedExportPermissionAudit(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::grpcagent::PermissionAuditEvent,::grpcagent::EventResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_ExportPermissionAuditLimit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_ExportPermissionAuditLimit() {
+      ::grpc::Service::MarkMethodStreamed(13,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::grpcagent::PermissionAuditLimitEvent, ::grpcagent::EventResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::grpcagent::PermissionAuditLimitEvent, ::grpcagent::EventResponse>* streamer) {
+                       return this->StreamedExportPermissionAuditLimit(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_ExportPermissionAuditLimit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status ExportPermissionAuditLimit(::grpc::ServerContext* /*context*/, const ::grpcagent::PermissionAuditLimitEvent* /*request*/, ::grpcagent::EventResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedExportPermissionAuditLimit(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::grpcagent::PermissionAuditLimitEvent,::grpcagent::EventResponse>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_ExportExit<WithStreamedUnaryMethod_ExportInfo<WithStreamedUnaryMethod_ExportMetrics<WithStreamedUnaryMethod_ExportPackages<WithStreamedUnaryMethod_ExportBlockedLoop<WithStreamedUnaryMethod_ExportUnblockedLoop<WithStreamedUnaryMethod_ExportReconfigure<WithStreamedUnaryMethod_ExportSourceCode<WithStreamedUnaryMethod_ExportStartupTimes<WithStreamedUnaryMethod_ExportPermissionAudit<WithStreamedUnaryMethod_ExportPermissionAuditLimit<Service > > > > > > > > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_ExportExit<WithStreamedUnaryMethod_ExportInfo<WithStreamedUnaryMethod_ExportMetrics<WithStreamedUnaryMethod_ExportPackages<WithStreamedUnaryMethod_ExportBlockedLoop<WithStreamedUnaryMethod_ExportUnblockedLoop<WithStreamedUnaryMethod_ExportReconfigure<WithStreamedUnaryMethod_ExportSourceCode<WithStreamedUnaryMethod_ExportStartupTimes<Service > > > > > > > > > StreamedService;
+  typedef WithStreamedUnaryMethod_ExportExit<WithStreamedUnaryMethod_ExportInfo<WithStreamedUnaryMethod_ExportMetrics<WithStreamedUnaryMethod_ExportPackages<WithStreamedUnaryMethod_ExportBlockedLoop<WithStreamedUnaryMethod_ExportUnblockedLoop<WithStreamedUnaryMethod_ExportReconfigure<WithStreamedUnaryMethod_ExportSourceCode<WithStreamedUnaryMethod_ExportStartupTimes<WithStreamedUnaryMethod_ExportPermissionAudit<WithStreamedUnaryMethod_ExportPermissionAuditLimit<Service > > > > > > > > > > > StreamedService;
 };
 
 }  // namespace grpcagent
