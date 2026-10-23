@@ -126,7 +126,7 @@ if (process.argv[2] === 'child') {
           }
           assert.deepStrictEqual(span.events.map((e) => e.name),
                                  ['cache-miss', 'date', 'hrtime', 'exception', 'default',
-                                   'performance-now', 'exception',
+                                  'performance-now', 'exception',
                                   ...invalidAttributes.map(() => 'invalid-attributes')]);
           assert.strictEqual(BigInt(span.events[0].timeUnixNano), BigInt(time) * 1000000n);
           assert.strictEqual(span.events[1].timeUnixNano, span.events[0].timeUnixNano);
