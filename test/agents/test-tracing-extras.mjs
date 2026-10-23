@@ -19,7 +19,17 @@ if (process.argv[2] === 'child') {
   nsolid.start({ pauseMetrics: true });
   const api = require(require.resolve('@opentelemetry/api', { paths: [fixtures.fixturesDir] }));
   nsolid.otel.register(api);
-  const span = api.trace.getTracer('extras').startSpan('with-extras', {
+  const tracer = api.trace.getTracer('extras');
+  const attrs = Object.fromEntries(Array.from({ length: 129 }, (_, i) => [`key${i}`, i]));
+  const limited = tracer.startSpan('limits', {
+    attributes: attrs,
+    links: Array.from({ length: 129 }, () => ({
+      context: { traceId, spanId, traceFlags: 0 }, attributes: attrs,
+    })),
+  });
+  for (let i = 0; i < 129; i++) limited.addEvent(`event${i}`, attrs, time);
+  limited.end();
+  const span = tracer.startSpan('with-extras', {
     links: [{
       context: {
         traceId, spanId, traceFlags: 1, isRemote: true,
@@ -85,12 +95,24 @@ if (process.argv[2] === 'child') {
         }
         const child = fork(fileURLToPath(import.meta.url), ['child'], { env });
         let checked = false;
+        const received = new Map();
         server.on('spans', mustCallAtLeast((data) => {
           if (checked) return;
           const spans = data.resourceSpans.flatMap((rs) => rs.scopeSpans.flatMap((ss) => ss.spans));
-          const span = spans.find((s) => s.name === 'with-extras');
-          if (!span) return;
+          for (const span of spans) received.set(span.name, span);
+          const span = received.get('with-extras');
+          const limited = received.get('limits');
+          if (!span || !limited) return;
           checked = true;
+          assert.strictEqual(limited.attributes.length, 131);
+          assert.strictEqual(limited.events.length, 128);
+          assert.strictEqual(limited.droppedEventsCount, 1);
+          assert.strictEqual(limited.links.length, 128);
+          assert.strictEqual(limited.droppedLinksCount, 1);
+          for (const item of [...limited.events, ...limited.links]) {
+            assert.strictEqual(item.attributes.length, 128);
+            assert.strictEqual(item.droppedAttributesCount, 1);
+          }
           assert.deepStrictEqual(span.events.map((e) => e.name),
                                  ['cache-miss', 'date', 'hrtime', 'exception', 'default',
                                   ...invalidAttributes.map(() => 'invalid-attributes')]);
