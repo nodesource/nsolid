@@ -62,6 +62,35 @@ tests.push({
   },
 });
 
+tests.push({
+  name: 'should reject malformed commands and remain alive',
+  test: async (playground) => {
+    const agentId = await new Promise((resolve) => {
+      playground.bootstrap(mustSucceed(resolve));
+    });
+    const messages = [
+      '{', 'null', '[]',
+      JSON.stringify({ command: 'ping', version: 4 }),
+      JSON.stringify({ requestId: 'invalid', version: 4 }),
+      JSON.stringify({ command: 42, requestId: 'invalid', version: 4 }),
+      JSON.stringify({ command: 'ping', requestId: 42, version: 4 }),
+      JSON.stringify({ command: 'ping', requestId: 'invalid', version: '4' }),
+      JSON.stringify({ command: 'ping', requestId: 'invalid', version: 4, cancel: 'yes' }),
+    ];
+    for (const message of messages) {
+      console.log(`Malformed ZMQ command: ${message}`);
+      playground.zmqAgentBus.server.command.socket.send([`id:${agentId}`, message]);
+      await new Promise((resolve) => {
+        const requestId = playground.zmqAgentBus.agentPingRequest(
+          agentId, mustSucceed((ping) => {
+            checkPingData(ping, requestId, agentId);
+            resolve();
+          }));
+      });
+    }
+  },
+});
+
 const config = {
   commandBindAddr: 'tcp://*:9001',
   dataBindAddr: 'tcp://*:9002',
