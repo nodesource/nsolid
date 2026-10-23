@@ -1,12 +1,20 @@
 #include "nsolid_bpf.h"
+#include "debug_utils.h"
 
 #include <sys/stat.h>
+#include <cstdio>
 
 namespace node {
 namespace nsolid {
 namespace EbpfLoader {
 
 profiler_bpf* LoadProfiler(EbpfLoadStatus& status) {
+  libbpf_set_print([](libbpf_print_level, const char* format, va_list args) {
+    if (!per_process::enabled_debug_list.enabled(DebugCategory::NSOLID_EBPF))
+      return 0;
+    return vfprintf(stderr, format, args);
+  });
+
   struct stat pid_ns;
   if (stat("/proc/self/ns/pid", &pid_ns) != 0) {
     status = EbpfLoadStatus::LOAD_ERROR;

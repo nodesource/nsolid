@@ -12,7 +12,8 @@ const pkgJson = path.join(__dirname,
 
 function runWithEnv(envVars) {
   const filteredEnv = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith('NSOLID_')),
+    Object.entries(process.env).filter(([key]) =>
+      !key.startsWith('NSOLID_') && key !== 'NODE_DEBUG_NATIVE'),
   );
 
   const result = spawnSync(process.execPath, [script], {
@@ -25,6 +26,12 @@ function runWithEnv(envVars) {
 
   if (result.status !== 0) {
     throw new Error(result.stderr || `Script failed with status ${result.status}`);
+  }
+
+  if (envVars.NODE_DEBUG_NATIVE === 'nsolid_ebpf') {
+    assert.match(result.stderr, /libbpf:/);
+  } else {
+    assert.doesNotMatch(result.stderr, /libbpf:/);
   }
 
   return JSON.parse(result.stdout.trim());
@@ -45,6 +52,14 @@ function assertEbpfProfiling(config, enabled) {
 {
   const config = runWithEnv({
     NSOLID_EBPF_PROFILING: 'true',
+  });
+  assertEbpfProfiling(config, true);
+}
+
+if (process.platform === 'linux') {
+  const config = runWithEnv({
+    NSOLID_EBPF_PROFILING: 'true',
+    NODE_DEBUG_NATIVE: 'nsolid_ebpf',
   });
   assertEbpfProfiling(config, true);
 }
