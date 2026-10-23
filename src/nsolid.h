@@ -967,6 +967,7 @@ class NODE_EXTERN Tracer {
     std::string attrs;
     std::vector<std::string> extra_attrs;
     std::vector<std::string> events;
+    std::vector<std::string> links;
   };
 
   using tracer_proxy_sig = void(*)(Tracer*, const SpanStor&, void*);
