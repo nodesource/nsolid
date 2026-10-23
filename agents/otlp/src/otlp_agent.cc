@@ -565,7 +565,8 @@ void OTLPAgent::config_otlp_endpoint(const json& config) {
     setup_trace_otlp_exporter(opts);
   } else {
     exporter::otlp::OtlpGrpcExporterOptions opts;
-    opts.endpoint = trace_url;
+    opts.endpoint = url;
+    opts.use_ssl_credentials = url.compare(0, 8, "https://") == 0;
     setup_trace_grpc_otlp_exporter(opts);
   }
 
