@@ -7,7 +7,12 @@ import protoLoader from '@grpc/proto-loader';
 import fixtures from '../fixtures.js';
 
 const options = {
-  tls: {
+  'tls': {
+    type: 'boolean',
+    default: false,
+  },
+  // Take exit events but never answer them, as a console that is reached but stuck.
+  'hang-exit': {
     type: 'boolean',
     default: false,
   },
@@ -163,7 +168,9 @@ async function startServer(cb) {
       // Extract data from the request object
       console.dir(call.request, { depth: null });
       console.dir(call.metadata, { depth: null });
-      callback(null, {});
+      if (!args.values['hang-exit']) {
+        callback(null, {});
+      }
       process.send({ type: 'exit', data: { msg: call.request, metadata: call.metadata } });
     },
     ExportInfo: (call, callback) => {
