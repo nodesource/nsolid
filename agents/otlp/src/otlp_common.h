@@ -4,7 +4,9 @@
 #include <memory>
 
 #include "nsolid.h"
+#include "nsolid/nsolid_metrics.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
+#include "opentelemetry/sdk/metrics/data/point_data.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
 // Class pre-declaration
@@ -64,6 +66,15 @@ void fill_proc_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
 void fill_env_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
                       const ThreadMetrics::MetricsStor& stor,
                       bool use_snake_case = true);
+
+void fill_http_histograms(
+    std::vector<opentelemetry::sdk::metrics::MetricData>&,
+    const ThreadMetrics::MetricsStor& stor,
+    SharedPointDataAttributes http_client_points,
+    SharedPointDataAttributes http_server_points,
+    bool use_snake_case = true,
+    uint64_t start_timestamp_ms = 0,
+    uint64_t end_timestamp_ms = 0);
 
 void fill_log_recordable(OPENTELEMETRY_NAMESPACE::sdk::logs::Recordable*,
                          const LogWriteInfo&);

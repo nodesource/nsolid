@@ -62,7 +62,7 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
-using ThreadMetricsMap = std::map<uint64_t, ThreadMetrics::MetricsStor>;
+using CachedThreadMetricsMap = std::map<uint64_t, CachedThreadMetrics>;
 
 constexpr uint64_t span_timer_interval = 1000;
 constexpr size_t span_msg_q_min_size = 1000;
@@ -278,7 +278,7 @@ void PopulateInfoEvent(grpcagent::InfoEvent* info_event,
 
 void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
                           const ProcessMetrics::MetricsStor& proc_metrics,
-                          const ThreadMetricsMap& env_metrics,
+                          const CachedThreadMetricsMap& env_metrics,
                           const char* req_id) {
   // Fill in the fields of the MetricsResponse.
   PopulateCommon(metrics_event->mutable_common(), "metrics", req_id);
@@ -290,8 +290,19 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
 
   // As this is the cached we're sending, we pass the same value for prev_stor.
   otlp::fill_proc_metrics(metrics, proc_metrics, proc_metrics, false);
-  for (const auto& [env_id, env_metrics_stor] : env_metrics) {
+  for (const auto& [env_id, cached_metrics] : env_metrics) {
+    const auto& env_metrics_stor = cached_metrics.stor;
+
     otlp::fill_env_metrics(metrics, env_metrics_stor, false);
+    // Add exponential histogram metrics for HTTP latency.
+    otlp::fill_http_histograms(
+      metrics,
+      env_metrics_stor,
+      cached_metrics.http_client_points,
+      cached_metrics.http_server_points,
+      false,
+      cached_metrics.hist_start_ts_ms,
+      cached_metrics.hist_end_ts_ms);
   }
 
   data.scope_metric_data_ =
@@ -899,14 +910,17 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     EnvInst::Scope scp(envinst);
     if (scp.Success()) {
       bool creation = std::get<1>(tup);
+      uint64_t thread_id = GetThreadId(envinst);
       if (creation) {
         auto pair = agent->env_metrics_map_.emplace(
           std::piecewise_construct,
-          std::forward_as_tuple(GetThreadId(envinst)),
+          std::forward_as_tuple(thread_id),
           std::forward_as_tuple(envinst));
         ASSERT(pair.second);
       } else {
-        agent->env_metrics_map_.erase(GetThreadId(envinst));
+        agent->env_metrics_map_.erase(thread_id);
+        agent->thr_metrics_hist_prev_end_ts_ms_.erase(thread_id);
+        agent->thr_metrics_cache_.erase(thread_id);
       }
     }
   }
@@ -973,17 +987,73 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   auto resource = otlp::GetMetricsResource();
   data.resource_ = resource.get();
   std::vector<MetricData> metrics;
+  auto export_metrics = [&agent](std::vector<MetricData>&& metrics) {
+    if (metrics.empty()) return;
+    ResourceMetrics data;
+    auto resource = otlp::GetMetricsResource();
+    data.resource_ = resource.get();
+    data.scope_metric_data_ =
+      std::vector<ScopeMetrics>{{otlp::GetScope(), std::move(metrics)}};
+    auto result = agent->metrics_exporter_->Export(data);
+    Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+  };
 
-  ThreadMetricsStor stor;
-  while (agent->thr_metrics_msg_q_.dequeue(stor)) {
+  ExtMetricsStor ext_stor;
+  while (agent->thr_metrics_msg_q_.dequeue(ext_stor)) {
+    auto& stor = ext_stor.stor;
     otlp::fill_env_metrics(metrics, stor, false);
-    agent->thr_metrics_cache_.insert_or_assign(stor.thread_id, std::move(stor));
+    uint64_t thread_id = stor.thread_id;
+    uint64_t start_ts_ms = 0;
+    auto prev_it = agent->thr_metrics_hist_prev_end_ts_ms_.find(thread_id);
+    if (prev_it != agent->thr_metrics_hist_prev_end_ts_ms_.end()) {
+      start_ts_ms = prev_it->second;
+    }
+    for (const auto& snapshot : ext_stor.http_histogram_snapshots) {
+      std::vector<MetricData> histogram_metrics;
+      otlp::fill_http_histograms(
+        histogram_metrics,
+        stor,
+        snapshot.client_points,
+        snapshot.server_points,
+        false,
+        snapshot.start_timestamp_ms,
+        snapshot.end_timestamp_ms);
+      export_metrics(std::move(histogram_metrics));
+    }
+    agent->thr_metrics_hist_prev_end_ts_ms_.insert_or_assign(
+      thread_id,
+      stor.timestamp);
+    const auto& latest = ext_stor.http_histogram_snapshots;
+    uint64_t hist_start_ts_ms = start_ts_ms;
+    uint64_t hist_end_ts_ms = 0;
+    SharedPointDataAttributes client_points;
+    SharedPointDataAttributes server_points;
+    if (!latest.empty()) {
+      hist_start_ts_ms = latest.back().start_timestamp_ms;
+      hist_end_ts_ms = latest.back().end_timestamp_ms;
+      client_points = latest.back().client_points;
+      server_points = latest.back().server_points;
+    } else {
+      auto cached = agent->thr_metrics_cache_.find(thread_id);
+      if (cached != agent->thr_metrics_cache_.end()) {
+        hist_start_ts_ms = cached->second.hist_start_ts_ms;
+        hist_end_ts_ms = cached->second.hist_end_ts_ms;
+        client_points = cached->second.http_client_points;
+        server_points = cached->second.http_server_points;
+      }
+    }
+    agent->thr_metrics_cache_.insert_or_assign(
+      thread_id,
+      CachedThreadMetrics{
+        stor,
+        hist_start_ts_ms,
+        hist_end_ts_ms,
+        std::move(client_points),
+        std::move(server_points)
+      });
   }
 
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
-  auto result = agent->metrics_exporter_->Export(data);
-  Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+  export_metrics(std::move(metrics));
 }
 
 /*static*/void GrpcAgent::metrics_timer_cb_(nsuv::ns_timer*,
@@ -1026,8 +1096,17 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->thr_metrics_msg_q_.enqueue(metrics->Get()) == 1) {
-    ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
+  uint64_t thread_id = metrics->thread_id();
+  auto envinst_sp = EnvInst::GetInst(thread_id);
+  if (envinst_sp != nullptr) {
+    ExtMetricsStor ext_stor{
+      metrics->Get(),
+      envinst_sp->TakeHttpHistogramSnapshots()
+    };
+
+    if (agent->thr_metrics_msg_q_.enqueue(std::move(ext_stor)) == 1) {
+      ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
+    }
   }
 }
 
@@ -1330,6 +1409,8 @@ void GrpcAgent::do_stop() {
   if (!unauthorized_ && nsolid_service_stub_) {
     send_exit();
   }
+
+  EnvList::Inst()->SetHttpHistogramConsumerActive(false);
 
   log_exporter_.reset();
   metrics_exporter_.reset();
@@ -2119,15 +2200,19 @@ void GrpcAgent::setup_blocked_loop_hooks() {
 
 int GrpcAgent::setup_metrics_timer(uint64_t period) {
   if (period == 0) {
+    thr_metrics_hist_prev_end_ts_ms_.clear();
+    EnvList::Inst()->SetHttpHistogramConsumerActive(false);
     return metrics_timer_.stop();
   }
 
   // There's no need to stop the timer previously as uv_timer_start() stops the
   // timer if active.
-  return metrics_timer_.start(metrics_timer_cb_,
-                              period,
-                              period,
-                              weak_from_this());
+  int er = metrics_timer_.start(metrics_timer_cb_,
+                                period,
+                                period,
+                                weak_from_this());
+  EnvList::Inst()->SetHttpHistogramConsumerActive(er == 0);
+  return er;
 }
 
 ErrorType GrpcAgent::do_start_prof_init(

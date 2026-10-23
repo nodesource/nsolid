@@ -1,10 +1,14 @@
 #include "nsolid/lru_map.h"
+#include "nsolid/nsolid_metrics.h"
 
 #include "gtest/gtest.h"
 
 #define NANOS_PER_SEC 1000000000
 
 using node::nsolid::LRUMap;
+using node::nsolid::MergeHttpHistogramPoints;
+using node::nsolid::PointDataAttributesVector;
+using node::nsolid::SharedPointDataAttributes;
 
 static int count = 0;
 
@@ -64,4 +68,45 @@ TEST(LRUMapTest, Basic) {
   EXPECT_EQ(map.size(), 0U);
   EXPECT_TRUE(map.begin() == map.end());
   EXPECT_EQ(count, 3);
+}
+
+static opentelemetry::sdk::metrics::PointDataAttributes makeHttpHistogramPoint(
+    const char* address) {
+  using opentelemetry::sdk::metrics::Base2ExponentialHistogramAggregation;
+  using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
+  using opentelemetry::sdk::metrics::MetricAttributes;
+  Base2ExponentialHistogramAggregation aggregation;
+  aggregation.Aggregate(1.0);
+  auto point = aggregation.ToPoint();
+  auto* histogram =
+      opentelemetry::nostd::get_if<Base2ExponentialHistogramPointData>(&point);
+  MetricAttributes attributes;
+  attributes.insert({"server.address", address});
+  return {attributes, std::move(*histogram)};
+}
+
+TEST(NsolidHttpHistogramMergeTest, LimitsDisjointAttributesAcrossWindows) {
+  using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
+  using opentelemetry::sdk::metrics::GetOverflowAttributes;
+  SharedPointDataAttributes accumulated =
+      std::make_shared<PointDataAttributesVector>();
+
+  for (const char* address : {"one", "two", "three", "four", "five", "six"}) {
+    auto next = std::make_shared<PointDataAttributesVector>();
+    next->push_back(makeHttpHistogramPoint(address));
+    MergeHttpHistogramPoints(accumulated, next, 2);
+  }
+
+  ASSERT_EQ(accumulated->size(), 3U);
+  uint64_t total_count = 0;
+  bool has_overflow = false;
+  for (const auto& point : *accumulated) {
+    const auto* histogram = opentelemetry::nostd::get_if<
+        Base2ExponentialHistogramPointData>(&point.point_data);
+    ASSERT_NE(histogram, nullptr);
+    total_count += histogram->count_;
+    has_overflow |= point.attributes == GetOverflowAttributes();
+  }
+  EXPECT_EQ(total_count, 6U);
+  EXPECT_TRUE(has_overflow);
 }

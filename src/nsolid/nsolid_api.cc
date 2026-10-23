@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 
 #if defined(__linux__)
 #include <sys/utsname.h>
@@ -34,6 +35,8 @@
 #define SPAN_ID_Q_REFILL_ITEMS    20
 #define TRACE_ID_Q_MIN_THRESHOLD  10
 #define TRACE_ID_Q_REFILL_ITEMS   20
+
+constexpr size_t kHttpHistogramSnapshotQueueLimit = 2;
 
 namespace node {
 namespace nsolid {
@@ -80,17 +83,24 @@ using v8::WeakCallbackInfo;
 using v8::WeakCallbackType;
 
 
+using opentelemetry::sdk::metrics::Aggregation;
+using opentelemetry::sdk::metrics::AttributesHashMap;
+using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
+using opentelemetry::sdk::metrics::MetricAttributes;
+using opentelemetry::sdk::metrics::PointDataAttributes;
+
 static void calculateHttpDnsPtiles(
     std::vector<double>& bucket,  // NOLINT(runtime/references)
     std::atomic<double>& median,  // NOLINT(runtime/references)
     std::atomic<double>& ptile);  // NOLINT(runtime/references)
 static void calculatePtiles(std::vector<double>* vals, double* med, double* nn);
+static void harvestHttpHistogram(UniqueAttributesHashMap& hashmap,
+                                 SharedPointDataAttributes& points);
 
 // EnvList runs a timer every blocked_loop_interval milliseconds to check if
 // any thread have been blocked longer than the threadshold passed to
 // OnBlockedLoopHook().
 constexpr uint64_t blocked_loop_interval = 100;
-uint64_t gen_ptiles_interval = 5000;
 constexpr uint64_t datapoints_q_interval = 100;
 constexpr size_t datapoints_q_max_size = 100;
 
@@ -138,6 +148,8 @@ EnvInst::EnvInst(Environment* env)
   er = info_lock_.init(true);
   CHECK_EQ(er, 0);
   er = startup_times_lock_.init(true);
+  CHECK_EQ(er, 0);
+  er = http_histogram_snapshots_lock_.init(true);
   CHECK_EQ(er, 0);
   er = scope_lock_.init_recursive(true);
   CHECK_EQ(er, 0);
@@ -218,13 +230,19 @@ int EnvInst::RunCommand(SharedEnvInst envinst_sp,
 
 
 
-void EnvInst::PushClientBucket(double value) {
-  send_datapoint(MetricsStream::Type::kHttpClient, value);
+void EnvInst::PushClientBucket(double value,
+                               MetricsStream::HttpDatapointAttrs&& attrs) {
+  send_datapoint(MetricsStream::Type::kHttpClient,
+                 value,
+                 std::move(attrs));
 }
 
 
-void EnvInst::PushServerBucket(double value) {
-  send_datapoint(MetricsStream::Type::kHttpServer, value);
+void EnvInst::PushServerBucket(double value,
+                               MetricsStream::HttpDatapointAttrs&& attrs) {
+  send_datapoint(MetricsStream::Type::kHttpServer,
+                 value,
+                 std::move(attrs));
 }
 
 
@@ -313,6 +331,16 @@ void EnvInst::GetThreadMetrics(ThreadMetrics::MetricsStor* stor) {
   get_heap_stats_(this, stor);
   get_gc_stats_(this, stor);
   get_http_dns_stats_(this, stor);
+}
+
+
+std::vector<HttpHistogramSnapshot> EnvInst::TakeHttpHistogramSnapshots() {
+  ns_mutex::scoped_lock lock(http_histogram_snapshots_lock_);
+  std::vector<HttpHistogramSnapshot> snapshots(
+      std::make_move_iterator(http_histogram_snapshots_.begin()),
+      std::make_move_iterator(http_histogram_snapshots_.end()));
+  http_histogram_snapshots_.clear();
+  return snapshots;
 }
 
 
@@ -874,7 +902,7 @@ EnvList::EnvList(): info_(nlohmann::json()) {
   CHECK_EQ(er, 0);
   er = blocked_loop_timer_.init(&thread_loop_);
   CHECK_EQ(er, 0);
-  er = gen_ptiles_timer_.init(&thread_loop_);
+  er = metrics_window_timer_.init(&thread_loop_);
   CHECK_EQ(er, 0);
   er = map_lock_.init(true);
   CHECK_EQ(er, 0);
@@ -1265,6 +1293,14 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
       update_continuous_profiler(contCpuProfile, contCpuProfileInterval);
     }
 
+    it = config.find("interval");
+    if (it != config.end() && !it->is_null()) {
+      uint64_t interval = it->get<uint64_t>();
+      metrics_window_interval_.store(interval, std::memory_order_relaxed);
+      int er = QueueCallback(update_metrics_window_timer_, nullptr);
+      CHECK_EQ(er, 0);
+    }
+
     it = config.find("otlp");
     if (it != config.end() && !it->is_null()) {
       otlp::OTLPAgent::Inst()->start();
@@ -1313,6 +1349,18 @@ void EnvList::UpdateConfig(const std::string& config_s) {
   auto config = nlohmann::json::parse(config_s, nullptr, false);
   CHECK(!config.is_discarded());
   UpdateConfig(config);
+}
+
+
+void EnvList::SetHttpHistogramConsumerActive(bool active) {
+  http_histogram_consumer_active_.store(active, std::memory_order_release);
+  if (!active) {
+    getAllEnvInst([](SharedEnvInst envinst_sp) {
+      ns_mutex::scoped_lock lock(
+          envinst_sp->http_histogram_snapshots_lock_);
+      envinst_sp->http_histogram_snapshots_.clear();
+    });
+  }
 }
 
 
@@ -1531,7 +1579,7 @@ void EnvList::datapoint_cb_(std::queue<MetricsStream::Datapoint>&& q) {
     MetricsStream::Datapoint& dp = q.front();
     auto envinst_sp = EnvInst::GetInst(dp.thread_id);
     if (envinst_sp != nullptr)
-      envinst_sp->add_metric_datapoint_(dp.type, dp.value);
+      envinst_sp->add_metric_datapoint_(dp.type, dp.value, dp.attrs);
 
     bucket.emplace_back(std::move(dp));
     q.pop();
@@ -1551,14 +1599,16 @@ void EnvList::datapoint_cb_(std::queue<MetricsStream::Datapoint>&& q) {
 
 
 void EnvInst::send_datapoint(MetricsStream::Type type,
-                             double value) {
+                             double value,
+                             MetricsStream::DatapointAttrs attrs) {
   double ts = 0;
   if (has_metrics_stream_hooks_) {
     ts = (PERFORMANCE_NOW() - env()->time_origin()) / 1e6 +
          env()->time_origin_timestamp() / 1e3;
   }
 
-  EnvList::Inst()->datapoints_q_.Enqueue({ thread_id_, ts, type, value });
+  EnvList::Inst()->datapoints_q_.Enqueue(
+      { thread_id_, ts, type, value, std::move(attrs) });
 }
 
 
@@ -1759,7 +1809,7 @@ void EnvList::removed_env_cb_(ns_async*, EnvList* envlist) {
   envlist->log_written_msg_.close();
   envlist->fill_tracing_ids_msg_.close();
   envlist->blocked_loop_timer_.close();
-  envlist->gen_ptiles_timer_.close();
+  envlist->metrics_window_timer_.close();
 }
 
 
@@ -1769,11 +1819,13 @@ void EnvList::env_list_routine_(ns_thread*, EnvList* envlist) {
   er = envlist->blocked_loop_timer_.start(
       blocked_loop_timer_cb_, blocked_loop_interval, blocked_loop_interval);
   CHECK_EQ(er, 0);
-  er = envlist->gen_ptiles_timer_.start(
-      gen_ptiles_cb_, gen_ptiles_interval, gen_ptiles_interval);
+  er = envlist->metrics_window_timer_.start(
+      metrics_window_cb_,
+      envlist->metrics_window_interval_.load(std::memory_order_relaxed),
+      envlist->metrics_window_interval_.load(std::memory_order_relaxed));
   CHECK_EQ(er, 0);
   envlist->blocked_loop_timer_.unref();
-  envlist->gen_ptiles_timer_.unref();
+  envlist->metrics_window_timer_.unref();
   envlist->fill_span_id_q();
   envlist->fill_trace_id_q();
   // We initialize from the N|Solid thread and not the EnvList constructor as
@@ -1855,10 +1907,9 @@ void EnvList::blocked_loop_timer_cb_(ns_timer*) {
 }
 
 
-// This is a dirty simple percentile tracker. Since we support streaming metrics
-// a better solution is to stream them all and do more advanced percentile
-// calculations where it won't affect the process.
-void EnvList::gen_ptiles_cb_(ns_timer*) {
+// Close each metrics window by calculating percentiles and harvesting
+// HTTP histograms for exporters.
+void EnvList::metrics_window_cb_(ns_timer* timer) {
   EnvList* envlist = EnvList::Inst();
   decltype(EnvList::env_map_) env_map;
 
@@ -1868,9 +1919,10 @@ void EnvList::gen_ptiles_cb_(ns_timer*) {
     env_map = envlist->env_map_;
   }
 
-  // Generate percentiles for all EnvInst that are alive.
+  // Close the metrics window for each live EnvInst.
   for (auto entry : env_map) {
     auto envinst_sp = entry.second;
+    const uint64_t window_end_ms = utils::ms_since_epoch();
     calculateHttpDnsPtiles(envinst_sp->dns_bucket_,
                            envinst_sp->dns_median_,
                            envinst_sp->dns99_ptile_);
@@ -1880,7 +1932,60 @@ void EnvList::gen_ptiles_cb_(ns_timer*) {
     calculateHttpDnsPtiles(envinst_sp->server_bucket_,
                            envinst_sp->http_server_median_,
                            envinst_sp->http_server99_ptile_);
+
+    harvestHttpHistogram(envinst_sp->http_client_hashmap_,
+                         envinst_sp->http_client_hist_points_);
+    harvestHttpHistogram(envinst_sp->http_server_hashmap_,
+                         envinst_sp->http_server_hist_points_);
+    envlist->update_http_histogram_snapshots_(envinst_sp.get(), window_end_ms);
   }
+}
+
+
+// Queue completed HTTP histogram windows for exporters, merging old windows
+// when the queue is full. Discard snapshots without an active consumer, but
+// always advance the boundary so future windows start at the latest harvest.
+void EnvList::update_http_histogram_snapshots_(EnvInst* envinst,
+                                               uint64_t window_end_ms) {
+  ns_mutex::scoped_lock lock(envinst->http_histogram_snapshots_lock_);
+  if (http_histogram_consumer_active_.load(std::memory_order_acquire)) {
+    if (envinst->http_histogram_snapshots_.size() >=
+        kHttpHistogramSnapshotQueueLimit) {
+      // Merge the oldest windows to bound the queue without losing
+      // observations when the consumer falls behind.
+      auto first = envinst->http_histogram_snapshots_.begin();
+      auto second = std::next(first);
+      MergeHttpHistogramPoints(first->client_points, second->client_points);
+      MergeHttpHistogramPoints(first->server_points, second->server_points);
+      first->end_timestamp_ms = second->end_timestamp_ms;
+      envinst->http_histogram_snapshots_.erase(second);
+    }
+    envinst->http_histogram_snapshots_.push_back({
+      envinst->http_histogram_window_end_ms_,
+      window_end_ms,
+      envinst->http_client_hist_points_,
+      envinst->http_server_hist_points_
+    });
+  } else {
+    envinst->http_histogram_snapshots_.clear();
+  }
+  envinst->http_histogram_window_end_ms_ = window_end_ms;
+}
+
+
+void EnvList::update_metrics_window_timer_(void*) {
+  EnvList* envlist = EnvList::Inst();
+  uint64_t interval =
+      envlist->metrics_window_interval_.load(std::memory_order_relaxed);
+  auto* timer = reinterpret_cast<uv_timer_t*>(
+      envlist->metrics_window_timer_.base_handle());
+  if (uv_is_active(reinterpret_cast<uv_handle_t*>(timer)) &&
+      uv_timer_get_repeat(timer) == interval) {
+    return;
+  }
+  int er = envlist->metrics_window_timer_.start(
+      metrics_window_cb_, interval, interval);
+  CHECK_EQ(er, 0);
 }
 
 
@@ -2089,7 +2194,9 @@ void EnvInst::CustomCommandReqWeakCallback(
 }
 
 
-void EnvInst::add_metric_datapoint_(MetricsStream::Type type, double value) {
+void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
+                                    double value,
+                                    MetricsStream::DatapointAttrs attrs) {
   DCHECK(utils::are_threads_equal(uv_thread_self(), EnvList::Inst()->thread()));
   switch (type) {
     case MetricsStream::Type::kDns:
@@ -2100,11 +2207,25 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type, double value) {
     case MetricsStream::Type::kHttpClient:
     {
       client_bucket_.push_back(value);
+      auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
+      if (http) {
+        AggregateHttpHistogram(
+            http_client_hashmap_.get(),
+            value,
+            BuildMetricAttributes(*http, type));
+      }
     }
     break;
     case MetricsStream::Type::kHttpServer:
     {
       server_bucket_.push_back(value);
+      auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
+      if (http) {
+        AggregateHttpHistogram(
+            http_server_hashmap_.get(),
+            value,
+            BuildMetricAttributes(*http, type));
+      }
     }
     break;
     case MetricsStream::Type::kGcForced:
@@ -2190,6 +2311,25 @@ void EnvInst::get_heap_stats_(EnvInst* envinst,
   stor->peak_malloced_memory = s.peak_malloced_memory();
   stor->number_of_native_contexts = s.number_of_native_contexts();
   stor->number_of_detached_contexts = s.number_of_detached_contexts();
+}
+
+
+void harvestHttpHistogram(UniqueAttributesHashMap& hashmap,
+                          SharedPointDataAttributes& points) {
+  auto new_points = std::make_shared<PointDataAttributesVector>();
+  hashmap->GetAllEntries(
+      [&new_points](const MetricAttributes& attrs, Aggregation& agg) -> bool {
+        auto point = agg.ToPoint();
+        auto* hist = opentelemetry::nostd::get_if<
+            Base2ExponentialHistogramPointData>(&point);
+        if (hist) {
+          new_points->push_back({ attrs, std::move(*hist) });
+        }
+        return true;
+      });
+  points = std::move(new_points);
+  // Reset for the next interval.
+  hashmap = std::make_unique<AttributesHashMap>(kHttpHistogramCardinalityLimit);
 }
 
 
@@ -2377,19 +2517,66 @@ static void WriteLog(const FunctionCallbackInfo<Value>& args) {
 void BindingData::SlowPushClientBucket(
     const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsNumber());
+  DCHECK(args[1]->IsUint32());
+  DCHECK(args[2]->IsUint32());
+  DCHECK(args[3]->IsString());
+  DCHECK(args[4]->IsUint32());
+  DCHECK(args[5]->IsUint32());
+  Utf8Value server_address(args.GetIsolate(), args[3]);
+  std::string error_type;
+  if (args.Length() > 6 && args[6]->IsString()) {
+    Utf8Value error(args.GetIsolate(), args[6]);
+    error_type.assign(*error, error.length());
+  }
   PushClientBucketImpl(PrincipalRealm::GetBindingData<BindingData>(args),
-                       args[0].As<Number>()->Value());
+                       args[0].As<Number>()->Value(),
+                       args[1].As<Uint32>()->Value(),
+                       args[2].As<Uint32>()->Value(),
+                       std::string(*server_address, server_address.length()),
+                       args[4].As<Uint32>()->Value(),
+                       args[5].As<Uint32>()->Value(), error_type);
 }
 
 
-void BindingData::FastPushClientBucket(v8::Local<v8::Object> receiver,
-                                       double val) {
-  PushClientBucketImpl(FromJSObject<BindingData>(receiver), val);
+void BindingData::FastPushClientBucket(
+    v8::Local<v8::Object> receiver,
+    double val,
+    uint32_t method,
+    uint32_t status_code,
+    const v8::FastOneByteString& server_address,
+    uint32_t server_port,
+    uint32_t protocol_version) {
+  PushClientBucketImpl(
+      FromJSObject<BindingData>(receiver),
+      val,
+      method,
+      status_code,
+      OneByteToUtf8(server_address),
+      server_port,
+      protocol_version,
+      std::string());
 }
 
 
-void BindingData::PushClientBucketImpl(BindingData* data, double val) {
-  data->env()->envinst_->PushClientBucket(val);
+void BindingData::PushClientBucketImpl(BindingData* data,
+                                       double val,
+                                       uint32_t method,
+                                       uint32_t status_code,
+                                       const std::string& server_address,
+                                       uint32_t server_port,
+                                       uint32_t protocol_version,
+                                       const std::string& error_type) {
+  MetricsStream::HttpDatapointAttrs attrs{
+    static_cast<MetricsStream::HttpMethod>(method),
+    static_cast<uint16_t>(status_code),
+    server_address,
+    static_cast<uint16_t>(server_port),
+    MetricsStream::HttpUrlScheme::kOther,
+    static_cast<MetricsStream::HttpProtocolVersion>(protocol_version),
+    std::string(),
+    error_type
+  };
+  data->env()->envinst_->PushClientBucket(val, std::move(attrs));
 }
 
 
@@ -2415,19 +2602,71 @@ void BindingData::PushDnsBucketImpl(BindingData* data, double val) {
 void BindingData::SlowPushServerBucket(
     const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsNumber());
+  DCHECK(args[1]->IsUint32());
+  DCHECK(args[2]->IsUint32());
+  DCHECK(args[3]->IsUint32());
+  DCHECK(args[4]->IsUint32());
+  Isolate* isolate = args.GetIsolate();
+  std::string route;
+  if (args[5]->IsString()) {
+    Local<String> route_s = args[5].As<String>();
+    route = *node::Utf8Value(isolate, route_s);
+  }
+  std::string error_type;
+  if (args.Length() > 6 && args[6]->IsString()) {
+    Utf8Value error(isolate, args[6]);
+    error_type.assign(*error, error.length());
+  }
   PushServerBucketImpl(PrincipalRealm::GetBindingData<BindingData>(args),
-                       args[0].As<Number>()->Value());
+                       args[0].As<Number>()->Value(),
+                       args[1].As<Uint32>()->Value(),
+                       args[2].As<Uint32>()->Value(),
+                       args[3].As<Uint32>()->Value(),
+                       args[4].As<Uint32>()->Value(),
+                       route,
+                       error_type);
 }
 
 
-void BindingData::FastPushServerBucket(v8::Local<v8::Object> receiver,
-                                       double val) {
-  PushServerBucketImpl(FromJSObject<BindingData>(receiver), val);
+void BindingData::FastPushServerBucket(
+    v8::Local<v8::Object> receiver,
+    double val,
+    uint32_t method,
+    uint32_t status_code,
+    uint32_t url_scheme,
+    uint32_t protocol_version,
+    const FastOneByteString& route) {
+  PushServerBucketImpl(
+      FromJSObject<BindingData>(receiver),
+      val,
+      method,
+      status_code,
+      url_scheme,
+      protocol_version,
+      OneByteToUtf8(route),
+      std::string());
 }
 
 
-void BindingData::PushServerBucketImpl(BindingData* data, double val) {
-  data->env()->envinst_->PushServerBucket(val);
+void BindingData::PushServerBucketImpl(BindingData* data,
+                                       double val,
+                                       uint32_t method,
+                                       uint32_t status_code,
+                                       uint32_t url_scheme,
+                                       uint32_t protocol_version,
+                                       const std::string& route,
+                                       const std::string& error_type) {
+  MetricsStream::HttpDatapointAttrs attrs{
+    static_cast<MetricsStream::HttpMethod>(method),
+    static_cast<uint16_t>(status_code),
+    "",
+    0,
+    static_cast<MetricsStream::HttpUrlScheme>(url_scheme),
+    static_cast<MetricsStream::HttpProtocolVersion>(protocol_version),
+    route,
+    error_type
+  };
+  data->env()->envinst_->PushServerBucket(val, std::move(attrs));
 }
 
 
@@ -2997,13 +3236,6 @@ static void ResumeMetrics(const FunctionCallbackInfo<Value>& args) {
 }
 
 
-static void SetMetricsInterval(const FunctionCallbackInfo<Value>& args) {
-  CHECK(args[0]->IsNumber());
-  double interval = args[0].As<Number>()->Value();
-  gen_ptiles_interval = static_cast<uint64_t>(interval);
-}
-
-
 static void OnCustomCommand(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   CHECK(args[0]->IsFunction());
@@ -3428,7 +3660,6 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "getKernelVersion", GetKernelVersion);
   SetMethod(context, target, "pauseMetrics", PauseMetrics);
   SetMethod(context, target, "resumeMetrics", ResumeMetrics);
-  SetMethod(context, target, "setMetricsInterval", SetMetricsInterval);
   SetMethod(context, target, "onCustomCommand", OnCustomCommand);
   SetMethod(context, target, "customCommandResponse", CustomCommandResponse);
   SetMethod(context,
@@ -3486,6 +3717,44 @@ void BindingData::Initialize(Local<Object> target,
   NSOLID_SPAN_ATTRS(V)
 #undef V
 
+#define NSOLID_EXPORT_CONST(Name, ValueExpr)                                   \
+  consts_enum->Set(context,                                                    \
+                   OneByteString(isolate, #Name),                              \
+                   Integer::New(isolate,                                       \
+                                static_cast<int>(ValueExpr))).Check();
+
+#define NSOLID_HTTP_METHOD_CONSTS(V)                                           \
+  V(kHttpMethodGet, MetricsStream::HttpMethod::kGet)                           \
+  V(kHttpMethodHead, MetricsStream::HttpMethod::kHead)                         \
+  V(kHttpMethodPost, MetricsStream::HttpMethod::kPost)                         \
+  V(kHttpMethodPut, MetricsStream::HttpMethod::kPut)                           \
+  V(kHttpMethodDelete, MetricsStream::HttpMethod::kDelete)                     \
+  V(kHttpMethodConnect, MetricsStream::HttpMethod::kConnect)                   \
+  V(kHttpMethodOptions, MetricsStream::HttpMethod::kOptions)                   \
+  V(kHttpMethodTrace, MetricsStream::HttpMethod::kTrace)                       \
+  V(kHttpMethodPatch, MetricsStream::HttpMethod::kPatch)                       \
+  V(kHttpMethodOther, MetricsStream::HttpMethod::kOther)
+
+#define NSOLID_HTTP_VERSION_CONSTS(V)                                          \
+  V(kHttpVersion10, MetricsStream::HttpProtocolVersion::k10)                   \
+  V(kHttpVersion11, MetricsStream::HttpProtocolVersion::k11)                   \
+  V(kHttpVersion2, MetricsStream::HttpProtocolVersion::k2)                     \
+  V(kHttpVersionOther, MetricsStream::HttpProtocolVersion::kOther)
+
+#define NSOLID_HTTP_SCHEME_CONSTS(V)                                           \
+  V(kHttpSchemeHttp, MetricsStream::HttpUrlScheme::kHttp)                      \
+  V(kHttpSchemeHttps, MetricsStream::HttpUrlScheme::kHttps)                    \
+  V(kHttpSchemeOther, MetricsStream::HttpUrlScheme::kOther)
+
+  NSOLID_HTTP_METHOD_CONSTS(NSOLID_EXPORT_CONST)
+  NSOLID_HTTP_VERSION_CONSTS(NSOLID_EXPORT_CONST)
+  NSOLID_HTTP_SCHEME_CONSTS(NSOLID_EXPORT_CONST)
+
+#undef NSOLID_HTTP_SCHEME_CONSTS
+#undef NSOLID_HTTP_VERSION_CONSTS
+#undef NSOLID_HTTP_METHOD_CONSTS
+#undef NSOLID_EXPORT_CONST
+
   consts_enum->Set(context,
                    OneByteString(isolate, "kTraceFieldCount"),
                    Integer::New(isolate, EnvInst::kFieldCount)).Check();
@@ -3514,6 +3783,18 @@ void BindingData::Initialize(Local<Object> target,
       OneByteString(isolate, "nsolid_span_id_s"),
       Symbol::New(
         isolate, OneByteString(isolate, "nsolid_span_id"))).Check();
+
+  target->Set(
+      context,
+      OneByteString(isolate, "nsolid_route_s"),
+      Symbol::New(
+        isolate, OneByteString(isolate, "nsolid_route"))).Check();
+
+  target->Set(
+      context,
+      OneByteString(isolate, "nsolid_net_prot_s"),
+      Symbol::New(
+        isolate, OneByteString(isolate, "nsolid_net_prot"))).Check();
 }
 
 
@@ -3565,7 +3846,6 @@ void BindingData::RegisterExternalReferences(
   registry->Register(GetKernelVersion);
   registry->Register(PauseMetrics);
   registry->Register(ResumeMetrics);
-  registry->Register(SetMetricsInterval);
   registry->Register(OnCustomCommand);
   registry->Register(CustomCommandResponse);
   registry->Register(AttachRequestToCustomCommand);
