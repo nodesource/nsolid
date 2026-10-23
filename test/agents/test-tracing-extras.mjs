@@ -3,6 +3,7 @@ import { mustCall, mustCallAtLeast, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { fork } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import nsolid from 'nsolid';
 import { GRPCServer } from '../common/nsolid-grpc-agent/index.js';
@@ -12,7 +13,8 @@ const require = createRequire(import.meta.url);
 const fixtures = require('../common/fixtures');
 const traceId = '0123456789abcdef0123456789abcdef';
 const spanId = '0123456789abcdef';
-const time = 1700000000000;
+// Numeric epoch input must be later than the process time origin.
+const time = Date.UTC(2100, 0, 1);
 const invalidAttributes = [null, false, 1, 'invalid', ['invalid']];
 
 if (process.argv[2] === 'child') {
@@ -56,6 +58,9 @@ if (process.argv[2] === 'child') {
   span.addEvent('hrtime', [time / 1000, 123456789]);
   span.recordException(new Error('boom'), time);
   span.addEvent('default');
+  const relativeTime = performance.now();
+  span.addEvent('performance-now', {}, relativeTime);
+  span.recordException(new Error('relative boom'), relativeTime);
   for (const name of [undefined, null, false, 1, [], {}]) {
     span.addEvent(name, {}, time);
   }
@@ -115,6 +120,7 @@ if (process.argv[2] === 'child') {
           }
           assert.deepStrictEqual(span.events.map((e) => e.name),
                                  ['cache-miss', 'date', 'hrtime', 'exception', 'default',
+                                   'performance-now', 'exception',
                                   ...invalidAttributes.map(() => 'invalid-attributes')]);
           assert.strictEqual(BigInt(span.events[0].timeUnixNano), BigInt(time) * 1000000n);
           assert.strictEqual(span.events[1].timeUnixNano, span.events[0].timeUnixNano);
@@ -132,7 +138,13 @@ if (process.argv[2] === 'child') {
           const defaultTime = BigInt(span.events[4].timeUnixNano);
           assert.ok(defaultTime >= BigInt(span.startTimeUnixNano));
           assert.ok(defaultTime <= BigInt(Date.now()) * 1000000n);
-          for (const event of span.events.slice(5)) {
+          const relativeTime = BigInt(span.events[5].timeUnixNano);
+          assert.ok(relativeTime >= BigInt(span.startTimeUnixNano));
+          assert.ok(relativeTime <= BigInt(Date.now()) * 1000000n);
+          assert.strictEqual(span.events[5].timeUnixNano, span.events[6].timeUnixNano);
+          const relativeException = attributes(span.events[6].attributes);
+          assert.strictEqual(relativeException['exception.message'].stringValue, 'relative boom');
+          for (const event of span.events.slice(7)) {
             assert.strictEqual(event.attributes?.length || 0, 0);
           }
           assert.strictEqual(span.links.length, 2 + invalidAttributes.length);
