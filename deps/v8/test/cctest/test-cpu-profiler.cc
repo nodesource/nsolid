@@ -4865,6 +4865,8 @@ TEST(CpuProfileJSONSerialization) {
 
   TestJSONStream stream;
   profile->Serialize(&stream, v8::CpuProfile::kJSON);
+  const int64_t start_time = profile->GetStartTime();
+  const int64_t end_time = profile->GetEndTime();
   profile->Delete();
   cpu_profiler->Dispose();
   CHECK_GT(stream.size(), 0);
@@ -4901,14 +4903,16 @@ TEST(CpuProfileJSONSerialization) {
             .ToLocalChecked()
             ->IsArray());
 
-  CHECK(profile_obj->Get(env.local(), v8_str("startTime"))
-            .ToLocalChecked()
-            .As<v8::Number>()
-            ->Value() > 0);
-  CHECK(profile_obj->Get(env.local(), v8_str("endTime"))
-            .ToLocalChecked()
-            .As<v8::Number>()
-            ->Value() > 0);
+  CHECK_EQ(static_cast<double>(start_time),
+           profile_obj->Get(env.local(), v8_str("startTime"))
+               .ToLocalChecked()
+               .As<v8::Number>()
+               ->Value());
+  CHECK_EQ(static_cast<double>(end_time),
+           profile_obj->Get(env.local(), v8_str("endTime"))
+               .ToLocalChecked()
+               .As<v8::Number>()
+               ->Value());
 }
 
 }  // namespace test_cpu_profiler
