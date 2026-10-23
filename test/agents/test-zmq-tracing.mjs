@@ -105,8 +105,8 @@ function validateSpan(span, spanType, threadId) {
       assert.strictEqual(span.name, 'HTTP GET');
       assert.strictEqual(span.attributes['http.method'], 'GET');
       assert.strictEqual(span.attributes['http.status_code'], 200);
-      assert.strictEqual(span.attributes['http.status_text'], 'OK');
-      assert.ok(span.attributes['http.url'].startsWith('http://127.0.0.1:'));
+      assert.strictEqual(span.attributes['http.status_text'], 'OK "quoted" \\status');
+      assert.strictEqual(span.attributes['http.url'], 'http://quoted"host\\name/');
       break;
     case 'http_client':
       assert.strictEqual(span.kind, 2);
@@ -114,8 +114,8 @@ function validateSpan(span, spanType, threadId) {
       assert.strictEqual(span.name, 'HTTP GET');
       assert.strictEqual(span.attributes['http.method'], 'GET');
       assert.strictEqual(span.attributes['http.status_code'], 200);
-      assert.strictEqual(span.attributes['http.status_text'], 'OK');
-      assert.ok(span.attributes['http.url'].startsWith('http://127.0.0.1:'));
+      assert.strictEqual(span.attributes['http.status_text'], 'OK "quoted" \\status');
+      assert.strictEqual(span.attributes['http.url'], 'http://quoted"host\\name/');
       break;
     case 'dns_lookup':
       assert.strictEqual(span.kind, 2);
@@ -144,8 +144,9 @@ function validateSpan(span, spanType, threadId) {
       break;
     case 'custom':
       assert.strictEqual(span.kind, 2);
+      assert.strictEqual(span.status.message, 'my"message\\\n\t');
       assert.strictEqual(span.type, 16);
-      assert.strictEqual(span.name, 'initial_name');
+      assert.strictEqual(span.name, 'initial"name\\\n\t');
       assert.strictEqual(span.attributes.a, 1);
       assert.strictEqual(span.attributes.b, 2);
       assert.strictEqual(span.attributes.c, 3);
@@ -178,7 +179,7 @@ function testHttpTransactions(playground) {
       opts: {
         env: {
           NSOLID_TRACING_ENABLED: 1,
-          NSOLID_APPNAME: 'myapp',
+          NSOLID_APPNAME: 'my "app"\\\n\t',
         },
       },
     };
@@ -188,7 +189,7 @@ function testHttpTransactions(playground) {
     }), mustCallAtLeast((eventType, agentId, data) => {
       console.log(`${eventType}, ${agentId}`);
       assert.strictEqual(eventType, 'agent-tracing');
-      checkTracingData(data, null, agentId, threadId, 'myapp');
+      checkTracingData(data, null, agentId, threadId, 'my "app"\\\n\t');
       const spanTypes = [ 'http_server', 'http_client'];
       for (const span of data.body.spans) {
         validateSpan(span, spanTypes[totalSpans], threadId);
@@ -209,7 +210,7 @@ function testHttpTransactionsOnStartup(playground) {
       opts: {
         env: {
           NSOLID_TRACING_ENABLED: 1,
-          NSOLID_APPNAME: 'myapp',
+          NSOLID_APPNAME: 'my "app"\\\n\t',
         },
       },
     };
@@ -218,7 +219,7 @@ function testHttpTransactionsOnStartup(playground) {
     }), mustCallAtLeast((eventType, agentId, data) => {
       console.log(`${eventType}, ${agentId}`);
       assert.strictEqual(eventType, 'agent-tracing');
-      checkTracingData(data, null, agentId, threadId, 'myapp');
+      checkTracingData(data, null, agentId, threadId, 'my "app"\\\n\t');
       const spanTypes = [ 'http_server', 'http_client'];
       for (const span of data.body.spans) {
         validateSpan(span, spanTypes[totalSpans], threadId);
@@ -240,7 +241,7 @@ function testHttpTransactionsOnWorker(playground) {
       opts: {
         env: {
           NSOLID_TRACING_ENABLED: 1,
-          NSOLID_APPNAME: 'myapp',
+          NSOLID_APPNAME: 'my "app"\\\n\t',
         },
       },
     };
@@ -252,7 +253,7 @@ function testHttpTransactionsOnWorker(playground) {
     }), mustCallAtLeast((eventType, agentId, data) => {
       console.log(`${eventType}, ${agentId}`);
       assert.strictEqual(eventType, 'agent-tracing');
-      checkTracingData(data, null, agentId, wid, 'myapp');
+      checkTracingData(data, null, agentId, wid, 'my "app"\\\n\t');
       const spanTypes = [ 'http_server', 'http_client'];
       for (const span of data.body.spans) {
         validateSpan(span, spanTypes[totalSpans], wid);
@@ -272,7 +273,7 @@ function testDnsTransactions(playground) {
       opts: {
         env: {
           NSOLID_TRACING_ENABLED: 1,
-          NSOLID_APPNAME: 'myapp',
+          NSOLID_APPNAME: 'my "app"\\\n\t',
         },
       },
     };
@@ -282,7 +283,7 @@ function testDnsTransactions(playground) {
     }), mustCallAtLeast((eventType, agentId, data) => {
       console.log(`${eventType}, ${agentId}`);
       assert.strictEqual(eventType, 'agent-tracing');
-      checkTracingData(data, null, agentId, threadId, 'myapp');
+      checkTracingData(data, null, agentId, threadId, 'my "app"\\\n\t');
       const spanTypes = [ 'dns_lookup', 'dns_lookup_service', 'dns_resolve'];
       for (const span of data.body.spans) {
         validateSpan(span, spanTypes[totalSpans], threadId);
@@ -304,7 +305,7 @@ function testDnsTransactionsOnWorker(playground) {
       opts: {
         env: {
           NSOLID_TRACING_ENABLED: 1,
-          NSOLID_APPNAME: 'myapp',
+          NSOLID_APPNAME: 'my "app"\\\n\t',
         },
       },
     };
@@ -316,7 +317,7 @@ function testDnsTransactionsOnWorker(playground) {
     }), mustCallAtLeast((eventType, agentId, data) => {
       console.log(`${eventType}, ${agentId}`);
       assert.strictEqual(eventType, 'agent-tracing');
-      checkTracingData(data, null, agentId, wid, 'myapp');
+      checkTracingData(data, null, agentId, wid, 'my "app"\\\n\t');
       const spanTypes = [ 'dns_lookup', 'dns_lookup_service', 'dns_resolve'];
       for (const span of data.body.spans) {
         validateSpan(span, spanTypes[totalSpans], wid);
@@ -335,18 +336,18 @@ function testCustomTracesChangingAppName(playground) {
       opts: {
         env: {
           NSOLID_TRACING_ENABLED: 1,
-          NSOLID_APPNAME: 'myapp',
+          NSOLID_APPNAME: 'my "app"\\\n\t',
         },
       },
     };
 
     playground.bootstrap(opts, mustSucceed(async (agentId) => {
-      await playground.client.config({ app: 'myotherapp' });
+      await playground.client.config({ app: 'my "other app"\\\n\t' });
       await playground.client.tracing('custom', threadId);
     }), mustCall((eventType, agentId, data) => {
       console.log(`${eventType}, ${agentId}`);
       assert.strictEqual(eventType, 'agent-tracing');
-      checkTracingData(data, null, agentId, threadId, 'myotherapp');
+      checkTracingData(data, null, agentId, threadId, 'my "other app"\\\n\t');
       assert.strictEqual(data.body.spans.length, 1);
       validateSpan(data.body.spans[0], 'custom', threadId);
       resolve();
@@ -362,7 +363,7 @@ function testCustomTracesOnWorker(playground) {
       opts: {
         env: {
           NSOLID_TRACING_ENABLED: 1,
-          NSOLID_APPNAME: 'myapp',
+          NSOLID_APPNAME: 'my "app"\\\n\t',
         },
       },
     };
@@ -374,7 +375,7 @@ function testCustomTracesOnWorker(playground) {
     }), mustCall((eventType, agentId, data) => {
       console.log(`${eventType}, ${agentId}`);
       assert.strictEqual(eventType, 'agent-tracing');
-      checkTracingData(data, null, agentId, wid, 'myapp');
+      checkTracingData(data, null, agentId, wid, 'my "app"\\\n\t');
       assert.strictEqual(data.body.spans.length, 1);
       validateSpan(data.body.spans[0], 'custom', wid);
       resolve();
@@ -390,7 +391,7 @@ function testTracingEnabledToggle(playground) {
       opts: {
         env: {
           NSOLID_TRACING_ENABLED: 1,
-          NSOLID_APPNAME: 'myapp',
+          NSOLID_APPNAME: 'my "app"\\\n\t',
         },
       },
     };
@@ -406,7 +407,7 @@ function testTracingEnabledToggle(playground) {
       assert.notStrictEqual(phase, 'disabled');
 
       if (phase === 'initial') {
-        checkTracingData(data, null, agentId, threadId, 'myapp');
+        checkTracingData(data, null, agentId, threadId, 'my "app"\\\n\t');
         const spanTypes = [ 'http_server', 'http_client'];
         for (const span of data.body.spans) {
           validateSpan(span, spanTypes[totalSpans], threadId);
@@ -424,7 +425,7 @@ function testTracingEnabledToggle(playground) {
           await playground.client.tracing('http', threadId);
         }
       } else if (phase === 'reenabled') {
-        checkTracingData(data, null, agentId, threadId, 'myapp');
+        checkTracingData(data, null, agentId, threadId, 'my "app"\\\n\t');
         const spanTypes = [ 'http_server', 'http_client'];
         for (const span of data.body.spans) {
           validateSpan(span, spanTypes[totalSpans], threadId);

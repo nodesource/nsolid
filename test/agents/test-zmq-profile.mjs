@@ -321,7 +321,7 @@ function testProfileAlreadyRunningWorker(playground) {
   });
 }
 
-function testProfileEndsBeforeExit(playground) {
+function testProfileEndsBeforeExit(playground, withError = false) {
   return new Promise((resolve) => {
     let events = 0;
     let profile = '';
@@ -339,7 +339,13 @@ function testProfileEndsBeforeExit(playground) {
       console.dir(data, { depth: null });
       if (eventType === 'agent-exit') {
         assert.strictEqual(gotExit, false);
-        checkExitData(data, { exit_code: 0, error: null });
+        assert.strictEqual(data.profile, requestId);
+        if (withError) {
+          assert.strictEqual(data.exit_code, 1);
+          assert.strictEqual(data.error.message, 'error');
+        } else {
+          checkExitData(data, { exit_code: 0, error: null });
+        }
         gotExit = true;
         if (gotProfile && processExited) {
           resolve();
@@ -370,11 +376,17 @@ function testProfileEndsBeforeExit(playground) {
     }
 
     playground.bootstrap(mustSucceed((agentId) => {
-      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      requestId = playground.zmqAgentBus._sendCB({
+        id: agentId,
+        command: 'profile',
+        args: options,
+        requestId: `profile"\\\n\t-${withError}`,
+      });
       setTimeout(mustCall(async () => {
-        const exit = await playground.client.shutdown(0);
+        const exit = await (withError ?
+          playground.client.exception('error') : playground.client.shutdown(0));
         assert.ok(exit);
-        assert.strictEqual(exit.code, 0);
+        assert.strictEqual(exit.code, withError ? 1 : 0);
         assert.strictEqual(exit.signal, null);
         if (gotProfile && gotExit) {
           resolve();
@@ -434,6 +446,11 @@ tests.push({
 tests.push({
   name: 'should end an ongoing profile before exiting',
   test: testProfileEndsBeforeExit,
+});
+
+tests.push({
+  name: 'should include the profile request ID when exiting with an error',
+  test: (playground) => testProfileEndsBeforeExit(playground, true),
 });
 
 
