@@ -246,8 +246,9 @@ void EnvInst::PushServerBucket(double value,
 }
 
 
-void EnvInst::PushDnsBucket(double value) {
-  send_datapoint(MetricsStream::Type::kDns, value);
+void EnvInst::PushDnsBucket(double value,
+                            MetricsStream::DnsDatapointAttrs&& attrs) {
+  send_datapoint(MetricsStream::Type::kDns, value, std::move(attrs));
 }
 
 
@@ -334,12 +335,14 @@ void EnvInst::GetThreadMetrics(ThreadMetrics::MetricsStor* stor) {
 }
 
 
-std::vector<HttpHistogramSnapshot> EnvInst::TakeHttpHistogramSnapshots() {
+std::vector<HttpHistogramSnapshot> EnvInst::TakeHttpHistogramSnapshots(
+    bool otlp) {
   ns_mutex::scoped_lock lock(http_histogram_snapshots_lock_);
+  auto& pending = otlp ? otlp_histogram_snapshots_ : http_histogram_snapshots_;
   std::vector<HttpHistogramSnapshot> snapshots(
-      std::make_move_iterator(http_histogram_snapshots_.begin()),
-      std::make_move_iterator(http_histogram_snapshots_.end()));
-  http_histogram_snapshots_.clear();
+      std::make_move_iterator(pending.begin()),
+      std::make_move_iterator(pending.end()));
+  pending.clear();
   return snapshots;
 }
 
@@ -767,7 +770,9 @@ void EnvInst::v8_gc_epilogue_cb_(Isolate* isolate,
     rm_type = MetricsStream::Type::kGcForced;
   }
 
-  envinst->send_datapoint(rm_type, gc_dur);
+  envinst->send_datapoint(
+      rm_type, gc_dur,
+      MetricsStream::GcDatapointAttrs{static_cast<uint8_t>(type)});
   envinst->gc_ring_.push_back(gc_dur);
 }
 
@@ -1352,13 +1357,16 @@ void EnvList::UpdateConfig(const std::string& config_s) {
 }
 
 
-void EnvList::SetHttpHistogramConsumerActive(bool active) {
-  http_histogram_consumer_active_.store(active, std::memory_order_release);
+void EnvList::SetHttpHistogramConsumerActive(bool active, bool otlp) {
+  auto& consumer = otlp ? otlp_histogram_consumer_active_ :
+                          http_histogram_consumer_active_;
+  consumer.store(active, std::memory_order_release);
   if (!active) {
-    getAllEnvInst([](SharedEnvInst envinst_sp) {
-      ns_mutex::scoped_lock lock(
-          envinst_sp->http_histogram_snapshots_lock_);
-      envinst_sp->http_histogram_snapshots_.clear();
+    getAllEnvInst([otlp](SharedEnvInst envinst_sp) {
+      ns_mutex::scoped_lock lock(envinst_sp->http_histogram_snapshots_lock_);
+      auto& pending = otlp ? envinst_sp->otlp_histogram_snapshots_ :
+                             envinst_sp->http_histogram_snapshots_;
+      pending.clear();
     });
   }
 }
@@ -1908,7 +1916,7 @@ void EnvList::blocked_loop_timer_cb_(ns_timer*) {
 
 
 // Close each metrics window by calculating percentiles and harvesting
-// HTTP histograms for exporters.
+// Latency histograms for exporters.
 void EnvList::metrics_window_cb_(ns_timer* timer) {
   EnvList* envlist = EnvList::Inst();
   decltype(EnvList::env_map_) env_map;
@@ -1937,38 +1945,46 @@ void EnvList::metrics_window_cb_(ns_timer* timer) {
                          envinst_sp->http_client_hist_points_);
     harvestHttpHistogram(envinst_sp->http_server_hashmap_,
                          envinst_sp->http_server_hist_points_);
-    envlist->update_http_histogram_snapshots_(envinst_sp.get(), window_end_ms);
+    harvestHttpHistogram(envinst_sp->dns_hashmap_,
+                         envinst_sp->dns_hist_points_);
+    harvestHttpHistogram(envinst_sp->gc_hashmap_, envinst_sp->gc_hist_points_);
+    envlist->update_http_histogram_snapshots_(envinst_sp.get(),
+                                             window_end_ms);
   }
 }
 
 
-// Queue completed HTTP histogram windows for exporters, merging old windows
+// Queue completed histogram windows for exporters, merging old windows
 // when the queue is full. Discard snapshots without an active consumer, but
 // always advance the boundary so future windows start at the latest harvest.
 void EnvList::update_http_histogram_snapshots_(EnvInst* envinst,
                                                uint64_t window_end_ms) {
   ns_mutex::scoped_lock lock(envinst->http_histogram_snapshots_lock_);
-  if (http_histogram_consumer_active_.load(std::memory_order_acquire)) {
-    if (envinst->http_histogram_snapshots_.size() >=
-        kHttpHistogramSnapshotQueueLimit) {
-      // Merge the oldest windows to bound the queue without losing
-      // observations when the consumer falls behind.
-      auto first = envinst->http_histogram_snapshots_.begin();
+  auto update = [&](std::deque<HttpHistogramSnapshot>& snapshots, bool active) {
+    if (!active) {
+      snapshots.clear();
+      return;
+    }
+    if (snapshots.size() >= kHttpHistogramSnapshotQueueLimit) {
+      auto first = snapshots.begin();
       auto second = std::next(first);
       MergeHttpHistogramPoints(first->client_points, second->client_points);
       MergeHttpHistogramPoints(first->server_points, second->server_points);
+      MergeHttpHistogramPoints(first->dns_points, second->dns_points);
+      MergeHttpHistogramPoints(first->gc_points, second->gc_points);
       first->end_timestamp_ms = second->end_timestamp_ms;
-      envinst->http_histogram_snapshots_.erase(second);
+      snapshots.erase(second);
     }
-    envinst->http_histogram_snapshots_.push_back({
-      envinst->http_histogram_window_end_ms_,
-      window_end_ms,
-      envinst->http_client_hist_points_,
-      envinst->http_server_hist_points_
+    snapshots.push_back({
+      envinst->http_histogram_window_end_ms_, window_end_ms,
+      envinst->http_client_hist_points_, envinst->http_server_hist_points_,
+      envinst->dns_hist_points_, envinst->gc_hist_points_
     });
-  } else {
-    envinst->http_histogram_snapshots_.clear();
-  }
+  };
+  update(envinst->http_histogram_snapshots_,
+         http_histogram_consumer_active_.load(std::memory_order_acquire));
+  update(envinst->otlp_histogram_snapshots_,
+         otlp_histogram_consumer_active_.load(std::memory_order_acquire));
   envinst->http_histogram_window_end_ms_ = window_end_ms;
 }
 
@@ -2202,6 +2218,18 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
     case MetricsStream::Type::kDns:
     {
       dns_bucket_.push_back(value);
+      auto* dns = std::get_if<MetricsStream::DnsDatapointAttrs>(&attrs);
+      if (dns) {
+        opentelemetry::sdk::metrics::MetricAttributes metric_attrs;
+        if (!dns->question_name.empty()) {
+          metric_attrs.insert({"dns.question.name", dns->question_name});
+        }
+        if (!dns->error_type.empty()) {
+          metric_attrs.insert({"error.type", dns->error_type});
+        }
+        AggregateHistogram(dns_hashmap_.get(), value / 1000,
+                           std::move(metric_attrs));
+      }
     }
     break;
     case MetricsStream::Type::kHttpClient:
@@ -2209,9 +2237,9 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
       client_bucket_.push_back(value);
       auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
       if (http) {
-        AggregateHttpHistogram(
+        AggregateHistogram(
             http_client_hashmap_.get(),
-            value,
+            value / 1000,
             BuildMetricAttributes(*http, type));
       }
     }
@@ -2221,9 +2249,9 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
       server_bucket_.push_back(value);
       auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
       if (http) {
-        AggregateHttpHistogram(
+        AggregateHistogram(
             http_server_hashmap_.get(),
-            value,
+            value / 1000,
             BuildMetricAttributes(*http, type));
       }
     }
@@ -2233,6 +2261,21 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
     case MetricsStream::Type::kGcMajor:
     case MetricsStream::Type::kGcRegular:
     case MetricsStream::Type::kGc:
+    {
+      auto* gc = std::get_if<MetricsStream::GcDatapointAttrs>(&attrs);
+      if (!gc) break;
+      const char* gc_type;
+      switch (gc->type) {
+        case v8::kGCTypeScavenge:
+        case v8::kGCTypeMinorMarkSweep: gc_type = "minor"; break;
+        case v8::kGCTypeMarkSweepCompact: gc_type = "major"; break;
+        case v8::kGCTypeIncrementalMarking: gc_type = "incremental"; break;
+        case v8::kGCTypeProcessWeakCallbacks: gc_type = "weakcb"; break;
+        default: return;
+      }
+      AggregateHistogram(gc_hashmap_.get(), value / 1e6,
+                         {{"v8js.gc.type", std::string(gc_type)}});
+    }
     break;
   }
 }
@@ -2583,19 +2626,25 @@ void BindingData::PushClientBucketImpl(BindingData* data,
 void BindingData::SlowPushDnsBucket(
     const FunctionCallbackInfo<Value>& args) {
   DCHECK(args[0]->IsNumber());
-  PushDnsBucketImpl(PrincipalRealm::GetBindingData<BindingData>(args),
-                    args[0].As<Number>()->Value());
+  DCHECK(args[1]->IsString());
+  DCHECK(args[2]->IsString());
+  Utf8Value name(args.GetIsolate(), args[1]);
+  Utf8Value error(args.GetIsolate(), args[2]);
+  auto* data = PrincipalRealm::GetBindingData<BindingData>(args);
+  data->env()->envinst_->PushDnsBucket(
+      args[0].As<Number>()->Value(),
+      {std::string(*name, name.length()), std::string(*error, error.length())});
 }
 
 
-void BindingData::FastPushDnsBucket(v8::Local<v8::Object> receiver,
-                                    double val) {
-  PushDnsBucketImpl(FromJSObject<BindingData>(receiver), val);
-}
-
-
-void BindingData::PushDnsBucketImpl(BindingData* data, double val) {
-  data->env()->envinst_->PushDnsBucket(val);
+void BindingData::FastPushDnsBucket(
+    v8::Local<v8::Object> receiver,
+    double val,
+    const v8::FastOneByteString& name,
+    const v8::FastOneByteString& error) {
+  auto* data = FromJSObject<BindingData>(receiver);
+  data->env()->envinst_->PushDnsBucket(
+      val, {OneByteToUtf8(name), OneByteToUtf8(error)});
 }
 
 

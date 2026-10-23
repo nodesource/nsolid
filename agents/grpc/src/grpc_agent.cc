@@ -294,12 +294,14 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
     const auto& env_metrics_stor = cached_metrics.stor;
 
     otlp::fill_env_metrics(metrics, env_metrics_stor, false);
-    // Add exponential histogram metrics for HTTP latency.
+    // Add exponential histograms for HTTP, DNS and GC latency.
     otlp::fill_http_histograms(
       metrics,
       env_metrics_stor,
       cached_metrics.http_client_points,
       cached_metrics.http_server_points,
+      cached_metrics.dns_points,
+      cached_metrics.gc_points,
       false,
       cached_metrics.hist_start_ts_ms,
       cached_metrics.hist_end_ts_ms);
@@ -1015,6 +1017,8 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
         stor,
         snapshot.client_points,
         snapshot.server_points,
+        snapshot.dns_points,
+        snapshot.gc_points,
         false,
         snapshot.start_timestamp_ms,
         snapshot.end_timestamp_ms);
@@ -1028,11 +1032,15 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     uint64_t hist_end_ts_ms = 0;
     SharedPointDataAttributes client_points;
     SharedPointDataAttributes server_points;
+    SharedPointDataAttributes dns_points;
+    SharedPointDataAttributes gc_points;
     if (!latest.empty()) {
       hist_start_ts_ms = latest.back().start_timestamp_ms;
       hist_end_ts_ms = latest.back().end_timestamp_ms;
       client_points = latest.back().client_points;
       server_points = latest.back().server_points;
+      dns_points = latest.back().dns_points;
+      gc_points = latest.back().gc_points;
     } else {
       auto cached = agent->thr_metrics_cache_.find(thread_id);
       if (cached != agent->thr_metrics_cache_.end()) {
@@ -1040,6 +1048,8 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
         hist_end_ts_ms = cached->second.hist_end_ts_ms;
         client_points = cached->second.http_client_points;
         server_points = cached->second.http_server_points;
+        dns_points = cached->second.dns_points;
+        gc_points = cached->second.gc_points;
       }
     }
     agent->thr_metrics_cache_.insert_or_assign(
@@ -1049,7 +1059,9 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
         hist_start_ts_ms,
         hist_end_ts_ms,
         std::move(client_points),
-        std::move(server_points)
+        std::move(server_points),
+        std::move(dns_points),
+        std::move(gc_points)
       });
   }
 

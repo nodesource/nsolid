@@ -85,9 +85,9 @@ MetricAttributes BuildMetricAttributes(
 }
 
 
-void AggregateHttpHistogram(AttributesHashMap* hashmap,
-                            double value,
-                            MetricAttributes&& metric_attrs) {
+void AggregateHistogram(AttributesHashMap* hashmap,
+                         double value_seconds,
+                         MetricAttributes&& metric_attrs) {
   using opentelemetry::sdk::metrics::Aggregation;
   using opentelemetry::sdk::metrics::Base2ExponentialHistogramAggregation;
 
@@ -95,7 +95,7 @@ void AggregateHttpHistogram(AttributesHashMap* hashmap,
     return std::make_unique<Base2ExponentialHistogramAggregation>();
   };
   auto* agg = hashmap->GetOrSetDefault(std::move(metric_attrs), factory);
-  agg->Aggregate(value / 1000);
+  agg->Aggregate(value_seconds);
 }
 
 
@@ -113,6 +113,11 @@ void MergeHttpHistogramPoints(
   if (!next || next->empty()) return;
   if (!accumulated) {
     accumulated = std::make_shared<PointDataAttributesVector>();
+  }
+
+  // Each exporter retains its own view of the completed windows.
+  if (accumulated.use_count() > 1) {
+    accumulated = std::make_shared<PointDataAttributesVector>(*accumulated);
   }
 
   const auto& overflow_attributes = GetOverflowAttributes();

@@ -26,6 +26,8 @@ struct HttpHistogramSnapshot {
   uint64_t end_timestamp_ms;
   SharedPointDataAttributes client_points;
   SharedPointDataAttributes server_points;
+  SharedPointDataAttributes dns_points;
+  SharedPointDataAttributes gc_points;
 };
 
 // Type alias for attributes hashmap (used for metric aggregation)
@@ -41,9 +43,9 @@ opentelemetry::sdk::metrics::MetricAttributes BuildMetricAttributes(
     const MetricsStream::HttpDatapointAttrs& http,
     MetricsStream::Type type);
 
-void AggregateHttpHistogram(
+void AggregateHistogram(
     AttributesHashMap* hashmap,
-    double value,
+    double value_seconds,
     opentelemetry::sdk::metrics::MetricAttributes&& metric_attrs);
 
 void MergeHttpHistogramPoints(SharedPointDataAttributes& accumulated,

@@ -17,6 +17,7 @@
 #include "opentelemetry/semconv/incubating/thread_attributes.h"
 #include "opentelemetry/metrics/sync_instruments.h"
 #include "opentelemetry/semconv/http_metrics.h"
+#include "opentelemetry/semconv/incubating/dns_metrics.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/logs/recordable.h"
 #include "opentelemetry/sdk/trace/recordable.h"
@@ -570,6 +571,8 @@ void fill_http_histograms(
     const ThreadMetrics::MetricsStor& stor,
     SharedPointDataAttributes http_client_points,
     SharedPointDataAttributes http_server_points,
+    SharedPointDataAttributes dns_points,
+    SharedPointDataAttributes gc_points,
     bool use_snake_case,
     uint64_t start_timestamp_ms,
     uint64_t end_timestamp_ms) {
@@ -622,6 +625,8 @@ void fill_http_histograms(
   emit(kMetricHttpServerRequestDuration,
        unitMetricHttpServerRequestDuration,
        http_server_points);
+  emit(opentelemetry::semconv::dns::kMetricDnsLookupDuration, "s", dns_points);
+  emit("v8js.gc.duration", "s", gc_points);
 }
 
 void fill_log_recordable(LogsRecordable* recordable,

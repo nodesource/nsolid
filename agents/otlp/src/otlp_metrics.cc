@@ -124,14 +124,28 @@ void OTLPMetrics::got_thr_metrics(
   data.resource_ = resource.get();
   std::vector<MetricData> metrics;
 
+  auto export_metrics = [&](std::vector<MetricData>&& points) {
+    if (points.empty()) return;
+    data.scope_metric_data_ =
+        std::vector<ScopeMetrics>{{scope_, std::move(points)}};
+    auto result = otlp_metric_exporter_->Export(data);
+    Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+  };
+
   for (const auto& tm : thr_metrics) {
     fill_env_metrics(metrics, tm.stor);
+    for (const auto& snapshot : tm.histogram_snapshots) {
+      std::vector<MetricData> histogram_metrics;
+      fill_http_histograms(histogram_metrics, tm.stor,
+                           snapshot.client_points, snapshot.server_points,
+                           snapshot.dns_points, snapshot.gc_points, true,
+                           snapshot.start_timestamp_ms,
+                           snapshot.end_timestamp_ms);
+      export_metrics(std::move(histogram_metrics));
+    }
   }
 
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{scope_, metrics}};
-  auto result = otlp_metric_exporter_->Export(data);
-  Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+  export_metrics(std::move(metrics));
 }
 }  // namespace otlp
 }  // namespace nsolid
