@@ -70,7 +70,7 @@ if (process.argv[2] === 'child') {
   for (const name of [undefined, null, false, 1, [], {}]) {
     span.addEvent(name, {}, time);
   }
-  for (const invalidTime of ['invalid', true, Infinity, NaN, -1,
+  for (const invalidTime of ['invalid', true, Infinity, NaN, -1, {}, new Date(NaN),
                              Number.MAX_VALUE, [], [0], [0, '1'],
                              [-1, 0], [0, -1], [0, 1e9], [1e20, 0], [0, 1.5]]) {
     span.addEvent('invalid-time', {}, invalidTime);
