@@ -169,5 +169,5 @@ setTimeout(common.mustCall(() => {
         }));
       }), 100);
     }));
-  }), 500);
+  }), 2 * 5000); // To make sure all the retries are done
 }), 100);
