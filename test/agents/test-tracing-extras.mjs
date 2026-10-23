@@ -42,6 +42,12 @@ if (process.argv[2] === 'child') {
       context: { traceId, spanId, traceFlags: 0 },
     }, {
       context: api.INVALID_SPAN_CONTEXT,
+    }, null, undefined, {}, { context: null }, {
+      context: api.trace.getSpanContext(api.ROOT_CONTEXT),
+    }, {
+      context: { traceId, spanId, traceFlags: 0, traceState: 'invalid' },
+    }, {
+      context: { traceId, spanId, traceFlags: 0, traceState: { serialize: 1 } },
     }, ...invalidAttributes.map((attributes) => ({
       context: { traceId, spanId, traceFlags: 0 }, attributes,
     })), ...[
