@@ -807,6 +807,19 @@ Use insecure gRPC transport (1). TLS is enabled by default.
 .It Ev NSOLID_GRPC_CERTS
 Path of the gRPC CA certificate bundle.
 .
+.It Ev NSOLID_GRPC_CLIENT_CERT
+Path of the PEM certificate the gRPC agent presents to the N|Solid and OTLP endpoints.
+Needs
+.Ev NSOLID_GRPC_CLIENT_KEY .
+.
+.It Ev NSOLID_GRPC_CLIENT_KEY
+Path of the PEM private key for
+.Ev NSOLID_GRPC_CLIENT_CERT .
+.
+.It Ev NSOLID_GRPC_CLIENT_CERT_REFRESH_INTERVAL
+Seconds between reads of the client certificate and key files, so a renewed certificate is used without a restart.
+Default: 60.
+.
 .It Ev NSOLID_GRPC_KEYLOG
 Path of the gRPC TLS key log file.
 .
