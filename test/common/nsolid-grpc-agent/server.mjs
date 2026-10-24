@@ -7,9 +7,17 @@ import protoLoader from '@grpc/proto-loader';
 import fixtures from '../fixtures.js';
 
 const options = {
-  tls: {
+  'tls': {
     type: 'boolean',
     default: false,
+  },
+  // With --tls: require a client certificate issued by this CA (a file in
+  // test/fixtures/keys).
+  'client-ca': {
+    type: 'string',
+  },
+  'port': {
+    type: 'string',
   },
 };
 
@@ -55,6 +63,9 @@ async function startServer(cb) {
     Export: (data, callback) => {
       // console.dir(data, { depth: null });
       console.log('Metrics received');
+      if (args.values['client-ca']) {
+        data.request.peer = data.getAuthContext().sslPeerCertificate?.subject?.CN ?? null;
+      }
       callback(null, { message: 'Metrics received' });
       cb(null, 'metrics', data.request);
     },
@@ -86,7 +97,9 @@ async function startServer(cb) {
         commandCallMap.delete(agentId);
       });
 
-      process.send({ type: 'command', data: { agentId, metadata: call.metadata } });
+      // The common name of the verified client certificate, if any.
+      const peer = call.getAuthContext().sslPeerCertificate?.subject?.CN ?? null;
+      process.send({ type: 'command', data: { agentId, metadata: call.metadata, peer } });
     },
     ExportAsset: async (call) => {
       const asset = {
@@ -223,16 +236,25 @@ async function startServer(cb) {
       fixtures.readKey(path.join('selfsigned-no-keycertsign', 'key.pem'));
     const cert =
       fixtures.readKey(path.join('selfsigned-no-keycertsign', 'cert.pem'));
-    credentials = grpc.ServerCredentials.createSsl(null, [{
-      cert_chain: cert,
-      private_key: key,
-    }], false); // False means no client-side authentication
+    const clientCa = args.values['client-ca'];
+    credentials = grpc.ServerCredentials.createSsl(
+      clientCa ? fixtures.readKey(clientCa) : null,
+      [{
+        cert_chain: cert,
+        private_key: key,
+      }],
+      // True: every client must present a certificate issued by clientCa.
+      Boolean(clientCa));
   } else {
     credentials = grpc.ServerCredentials.createInsecure();
   }
 
   return new Promise((resolve, reject) => {
-    server.bindAsync('localhost:0', credentials, (err, port) => {
+    server.bindAsync(`localhost:${args.values.port || 0}`, credentials, (err, port) => {
+      if (err) {
+        reject(err);
+        return;
+      }
       server.start();
       resolve({ server, port });
     });
