@@ -204,7 +204,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void command_stream_closed(const ::grpc::Status& s);
 
-  int config(const nlohmann::json& config);
+  int config(const nlohmann::json& config, bool reset_grpc_clients = false);
 
   void do_start();
 
@@ -257,6 +257,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   void handle_command_request(CommandRequestStor&& req);
 
   void parse_saas_token(const std::string& token);
+
+  void setup_client_identity();
 
   static GrpcMetadata BuildRpcMetadata(const std::string& agent_id,
                                        const std::string& saas);
@@ -350,6 +352,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   nsuv::ns_timer auth_timer_;
   int auth_retries_;
   bool unauthorized_;
+  std::atomic<bool> grpc_reconnect_in_progress_;
+  std::atomic<bool> reset_grpc_clients_on_retry_;
 
   // For the Logging API
   nsuv::ns_async log_msg_;
@@ -378,6 +382,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   std::string cacert_;
   std::string custom_certs_;
   std::string tls_keylog_file_;
+  // The client certificate (NSOLID_GRPC_CLIENT_CERT and NSOLID_GRPC_CLIENT_KEY)
+  // for mutual TLS, shared by the N|Solid service and the OTLP exporters.
+  ClientIdentityProvider client_identity_;
 
   // For the gRPC server
   nsuv::ns_async command_msg_;
