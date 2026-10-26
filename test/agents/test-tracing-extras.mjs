@@ -17,11 +17,20 @@ const spanId = '0123456789abcdef';
 const time = Date.UTC(2100, 0, 1);
 const invalidAttributes = [null, false, 1, 'invalid', ['invalid']];
 
+const fallbackTimes = ['invalid', true, Infinity, NaN, {}, new Date(NaN),
+                       Number.MAX_VALUE, [], [0], [0, '1'], [-1, 0],
+                       [0, -1], [0, 1e9], [1e20, 0], [0, 1.5]];
+
 if (process.argv[2] === 'child') {
   nsolid.start({ pauseMetrics: true });
   const api = require(require.resolve('@opentelemetry/api', { paths: [fixtures.fixturesDir] }));
   nsolid.otel.register(api);
   const tracer = api.trace.getTracer('extras');
+  for (const [name, time] of [['epoch-zero-date', new Date(0)],
+                              ['epoch-zero-hrtime', [0, 0]]]) {
+    tracer.startSpan(name, { startTime: time }).end(time);
+  }
+  tracer.startSpan('negative-duration', { startTime: time }).end(new Date(0));
   const attrs = Object.fromEntries(Array.from({ length: 129 }, (_, i) => [`key${i}`, i]));
   const limited = tracer.startSpan('limits', {
     attributes: attrs,
@@ -70,9 +79,8 @@ if (process.argv[2] === 'child') {
   for (const name of [undefined, null, false, 1, [], {}]) {
     span.addEvent(name, {}, time);
   }
-  for (const invalidTime of ['invalid', true, Infinity, NaN, -1, {}, new Date(NaN),
-                             Number.MAX_VALUE, [], [0], [0, '1'],
-                             [-1, 0], [0, -1], [0, 1e9], [1e20, 0], [0, 1.5]]) {
+  span.addEvent('before-origin', {}, -1);
+  for (const invalidTime of fallbackTimes) {
     span.addEvent('invalid-time', {}, invalidTime);
   }
   for (const attrs of invalidAttributes) {
@@ -113,8 +121,17 @@ if (process.argv[2] === 'child') {
           for (const span of spans) received.set(span.name, span);
           const span = received.get('with-extras');
           const limited = received.get('limits');
-          if (!span || !limited) return;
+          const zeroDate = received.get('epoch-zero-date');
+          const zeroHrtime = received.get('epoch-zero-hrtime');
+          const negativeDuration = received.get('negative-duration');
+          if (!span || !limited || !zeroDate || !zeroHrtime || !negativeDuration) return;
           checked = true;
+          for (const zero of [zeroDate, zeroHrtime]) {
+            assert.strictEqual(BigInt(zero.startTimeUnixNano ?? 0), 0n);
+            assert.strictEqual(BigInt(zero.endTimeUnixNano ?? 0), 0n);
+          }
+          assert.strictEqual(BigInt(negativeDuration.startTimeUnixNano), BigInt(time) * 1000000n);
+          assert.strictEqual(negativeDuration.endTimeUnixNano, negativeDuration.startTimeUnixNano);
           assert.strictEqual(limited.attributes.length, 131);
           assert.strictEqual(limited.events.length, 128);
           assert.strictEqual(limited.droppedEventsCount, 1);
@@ -126,12 +143,14 @@ if (process.argv[2] === 'child') {
           }
           assert.deepStrictEqual(span.events.map((e) => e.name),
                                  ['cache-miss', 'date', 'hrtime', 'exception', 'default',
-                                  'performance-now', 'exception',
+                                  'performance-now', 'exception', 'before-origin',
+                                  ...fallbackTimes.map(() => 'invalid-time'),
                                   ...invalidAttributes.map(() => 'invalid-attributes')]);
           assert.strictEqual(BigInt(span.events[0].timeUnixNano), BigInt(time) * 1000000n);
           assert.strictEqual(span.events[1].timeUnixNano, span.events[0].timeUnixNano);
           const hrtime = BigInt(span.events[2].timeUnixNano);
-          assert.strictEqual(hrtime, BigInt(time) * 1000000n + 123456789n);
+          // TimeInput is normalized through double-precision milliseconds.
+          assert.strictEqual(hrtime, BigInt(Math.trunc((time + 123.456789) * 1e6)));
           const event = attributes(span.events[0].attributes);
           assert.strictEqual(event.key.stringValue, 'user:42');
           assert.strictEqual(event.retries.intValue, '2');
@@ -150,6 +169,13 @@ if (process.argv[2] === 'child') {
           assert.strictEqual(span.events[5].timeUnixNano, span.events[6].timeUnixNano);
           const relativeException = attributes(span.events[6].attributes);
           assert.strictEqual(relativeException['exception.message'].stringValue, 'relative boom');
+          const beforeOrigin = BigInt(span.events[7].timeUnixNano);
+          assert.ok(beforeOrigin < BigInt(span.startTimeUnixNano));
+          for (const event of span.events.slice(8, 8 + fallbackTimes.length)) {
+            const timestamp = BigInt(event.timeUnixNano);
+            assert.ok(timestamp >= BigInt(span.startTimeUnixNano));
+            assert.ok(timestamp <= BigInt(Date.now()) * 1000000n);
+          }
           for (const event of span.events.slice(7)) {
             assert.strictEqual(event.attributes?.length || 0, 0);
           }
