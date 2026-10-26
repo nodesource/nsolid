@@ -28,6 +28,7 @@ namespace tracing {
 
 #define NSOLID_SPAN_PROP_TYPES_STRINGS(V)                                      \
   V(kSpanCustomAttrs)                                                          \
+  V(kSpanLink)                                                                 \
   V(kSpanEvent)                                                                \
   V(kSpanName)                                                                 \
   V(kSpanParentSpanId)                                                         \
