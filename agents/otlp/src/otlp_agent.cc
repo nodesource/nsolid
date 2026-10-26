@@ -32,6 +32,7 @@ namespace resource = sdk::resource;
 namespace instrumentationscope = sdk::instrumentationscope;
 namespace detail = trace::propagation::detail;
 using resource::ResourceAttributes;
+using sdk::trace::SpanLimits;
 using opentelemetry::semconv::service::kServiceName;
 using opentelemetry::semconv::service::kServiceInstanceId;
 using opentelemetry::semconv::service::kServiceVersion;
@@ -587,6 +588,10 @@ void OTLPAgent::got_proc_metrics() {
 
 void OTLPAgent::setup_trace_otlp_exporter(
     exporter::otlp::OtlpHttpExporterOptions& opts) {
+  opts.max_events = SpanLimits::kDefaultEventCountLimit;
+  opts.max_links = SpanLimits::kDefaultLinkCountLimit;
+  opts.max_attributes_per_event = SpanLimits::kDefaultEventAttributeCountLimit;
+  opts.max_attributes_per_link = SpanLimits::kDefaultLinkAttributeCountLimit;
   opts.content_type  = exporter::otlp::HttpRequestContentType::kBinary;
   opts.console_debug = true;
   opts.ssl_ca_cert_string = cacert_;
@@ -596,6 +601,10 @@ void OTLPAgent::setup_trace_otlp_exporter(
 
 void OTLPAgent::setup_trace_grpc_otlp_exporter(
     exporter::otlp::OtlpGrpcExporterOptions& opts) {
+  opts.max_events = SpanLimits::kDefaultEventCountLimit;
+  opts.max_links = SpanLimits::kDefaultLinkCountLimit;
+  opts.max_attributes_per_event = SpanLimits::kDefaultEventAttributeCountLimit;
+  opts.max_attributes_per_link = SpanLimits::kDefaultLinkAttributeCountLimit;
   opts.ssl_credentials_cacert_as_string = cacert_;
   otlp_exporter_.reset(new exporter::otlp::OtlpGrpcExporter(opts));
 }
