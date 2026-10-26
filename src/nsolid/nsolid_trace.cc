@@ -187,8 +187,7 @@ void TracerImpl::addSpanItem(const SpanItem& item) {
 
   Span& span = it->second;
   span.add_prop(*item.prop);
-  if (span.stor_.end != 0) {
-    DCHECK(item.prop->type() == Span::kSpanEnd);
+  if (item.prop->type() == Span::kSpanEnd) {
     span.stor_.attrs.pop_back();
     span.stor_.attrs += "}";
     trace_hook_list_.for_each([&](auto& stor) {
