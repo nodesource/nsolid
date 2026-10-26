@@ -42,6 +42,7 @@ using opentelemetry::sdk::metrics::ScopeMetrics;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::sdk::trace::Recordable;
+using opentelemetry::sdk::trace::SpanLimits;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClient;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientFactory;
 using opentelemetry::v1::exporter::otlp::OtlpGrpcClientOptions;
@@ -1122,6 +1123,12 @@ int GrpcAgent::config(const json& config) {
 
       {
         OtlpGrpcExporterOptions options;
+        options.max_events = SpanLimits::kDefaultEventCountLimit;
+        options.max_links = SpanLimits::kDefaultLinkCountLimit;
+        options.max_attributes_per_event =
+            SpanLimits::kDefaultEventAttributeCountLimit;
+        options.max_attributes_per_link =
+            SpanLimits::kDefaultLinkAttributeCountLimit;
         options.compression = "gzip";
         options.endpoint = endpoint;
         options.metadata = rpc_metadata();
