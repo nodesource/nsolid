@@ -85,3 +85,11 @@ function runWithEnv(envVars) {
   });
   assert.strictEqual(config.interval, 3000);
 }
+
+for (const interval of ['0.5', '1.5', '9007199254740992']) {
+  const config = runWithEnv({
+    NSOLID_PACKAGE_JSON: pkgJson,
+    NSOLID_INTERVAL: interval,
+  });
+  assert.strictEqual(config.interval, 3000);
+}

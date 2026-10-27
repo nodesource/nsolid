@@ -1201,7 +1201,15 @@ void EnvList::validate_trace_sample_rate(nlohmann::json* config) {
 
 void EnvList::validate_config(nlohmann::json* config) {
   validate_trace_sample_rate(config);
-  auto it = config->find("contCpuProfileInterval");
+  auto it = config->find("interval");
+  if (it != config->end() &&
+      (!it->is_number() || it->get<double>() < 1 ||
+       it->get<double>() > 9007199254740991.0 ||
+       std::floor(it->get<double>()) != it->get<double>())) {
+    config->erase(it);
+  }
+
+  it = config->find("contCpuProfileInterval");
   if (it != config->end() &&
       (!it->is_number_integer() || it->get<double>() <= 0 ||
        it->get<double>() > 9007199254740991.0)) {
@@ -1264,8 +1272,8 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
       update_continuous_profiler(contCpuProfile, contCpuProfileInterval);
     }
 
-    it = config.find("interval");
-    if (it != config.end() && !it->is_null()) {
+    it = curr.find("interval");
+    if (it != curr.end()) {
       // If interval changes, next timer cb the timer is reset.
       uint64_t interval = it->get<uint64_t>();
       gen_ptiles_interval_.store(interval, std::memory_order_relaxed);
