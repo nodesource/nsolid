@@ -1,4 +1,6 @@
 #include "nsolid_api.h"
+#include "nsolid_otel_metrics_store.h"
+#include "nsolid_otel_metrics_types.h"
 #include "nsolid/nsolid_heap_snapshot.h"
 #include "nsolid_bindings.h"
 #include "node_buffer.h"
@@ -111,6 +113,7 @@ EnvInst::EnvInst(Environment* env)
     : count_fields(),
       gc_fields(),
       tmetrics(env->thread_id()),
+      otel_metrics(std::make_unique<OtelMetrics>()),
       env_(env),
       isolate_(env->isolate()),
       event_loop_(env->event_loop()),
@@ -137,6 +140,8 @@ EnvInst::EnvInst(Environment* env)
   CHECK_EQ(er, 0);
   er = info_lock_.init(true);
   CHECK_EQ(er, 0);
+  er = otel_metrics_snapshot_lock_.init(true);
+  CHECK_EQ(er, 0);
   er = startup_times_lock_.init(true);
   CHECK_EQ(er, 0);
   er = scope_lock_.init_recursive(true);
@@ -153,8 +158,12 @@ EnvInst::EnvInst(Environment* env)
   CHECK_EQ(er, 0);
 }
 
+EnvInst::~EnvInst() = default;
+
 
 void EnvInst::CloseInstHandles() {
+  ClearOtelCallbacks();
+  CancelOtelCollection();
   auto close_and_finish = [&](uv_handle_t* handle) {
     env()->CloseHandle(handle, [](uv_handle_t* handle) {
 #ifdef DEBUG
@@ -166,6 +175,189 @@ void EnvInst::CloseInstHandles() {
   close_and_finish(eloop_cmds_msg_.base_handle());
   close_and_finish(interrupt_msg_.base_handle());
   close_and_finish(metrics_handle_.base_handle());
+}
+
+
+void EnvInst::RegisterOtelCallback(Local<Function> callback) {
+  CHECK(utils::are_threads_equal(uv_thread_self(), creation_thread_));
+  otel_callback_.Reset(isolate_, callback);
+}
+
+
+void EnvInst::RemoveOtelCallback() {
+  CHECK(utils::are_threads_equal(uv_thread_self(), creation_thread_));
+  otel_callback_.Reset();
+}
+
+
+void EnvInst::ClearOtelCallbacks() {
+  otel_callback_.Reset();
+}
+
+
+void EnvInst::CancelOtelCollection() {
+  otel_collection_callback_ = nullptr;
+  collecting_otel_callbacks_ = false;
+  otel_collection_waiters_.clear();
+  otel_collection_pending_.store(false);
+}
+
+
+void EnvInst::CollectOtelCallbacks(std::function<void()> callback) {
+  Environment* current_env = env();
+  if (current_env == nullptr) {
+    callback();
+    return;
+  }
+  CHECK(utils::are_threads_equal(uv_thread_self(), creation_thread_));
+  if (collecting_otel_callbacks_) {
+    otel_collection_waiters_.push_back(std::move(callback));
+    return;
+  }
+  if (otel_callback_.IsEmpty()) {
+    otel_metrics->ClearObservableValues();
+    callback();
+    return;
+  }
+  if (!can_call_into_js()) {
+    callback();
+    return;
+  }
+  collecting_otel_callbacks_ = true;
+  otel_collection_callback_ = std::move(callback);
+  otel_metrics->ClearObservableValues();
+  HandleScope handle_scope(isolate_);
+  Local<Context> context = current_env->context();
+  v8::TryCatch try_catch(isolate_);
+  if (otel_callback_.Get(isolate_)
+           ->Call(context, v8::Undefined(isolate_), 0, nullptr)
+           .IsEmpty()) {
+    try_catch.Reset();
+    CompleteOtelCollection();
+  }
+}
+
+
+void EnvInst::CompleteOtelCollection() {
+  if (!collecting_otel_callbacks_) return;
+  collecting_otel_callbacks_ = false;
+  std::function<void()> callback = std::move(otel_collection_callback_);
+  callback();
+  auto waiters = std::move(otel_collection_waiters_);
+  for (auto& waiter : waiters) {
+    waiter();
+  }
+}
+
+
+void EnvInst::RequestOtelMetricsCollection() {
+  SharedEnvInst envinst = GetInst(thread_id_);
+  if (envinst == nullptr || envinst.get() != this) return;
+
+  bool expected = false;
+  if (!otel_collection_pending_.compare_exchange_strong(expected, true)) {
+    return;
+  }
+
+  const int er = RunCommand(
+      envinst,
+      [](SharedEnvInst envinst, void* data) {
+        EnvInst* requested_envinst = static_cast<EnvInst*>(data);
+        CHECK_EQ(envinst.get(), requested_envinst);
+        if (!requested_envinst->otel_collection_pending_.load()) return;
+
+        std::weak_ptr<EnvInst> envinst_wp = envinst;
+        envinst->CollectOtelCallbacks([envinst_wp]() {
+          SharedEnvInst envinst = envinst_wp.lock();
+          if (envinst != nullptr) {
+            envinst->complete_otel_metrics_collection_();
+          }
+        });
+      },
+      this,
+      CommandType::EventLoop);
+  if (er != 0) {
+    otel_collection_pending_.store(false);
+  }
+}
+
+
+void EnvInst::CollectOtelMetrics() {
+  SharedEnvInst envinst = GetInst(thread_id_);
+  if (envinst == nullptr || envinst.get() != this) return;
+
+  bool expected = false;
+  if (!otel_collection_pending_.compare_exchange_strong(expected, true)) {
+    return;
+  }
+
+  std::weak_ptr<EnvInst> envinst_wp = envinst;
+  CollectOtelCallbacks([envinst_wp]() {
+    SharedEnvInst envinst = envinst_wp.lock();
+    if (envinst != nullptr) {
+      envinst->complete_otel_metrics_collection_();
+    }
+  });
+}
+
+
+void EnvInst::DisableOtelMetrics() {
+  otel_metrics->Disable();
+  clear_otel_metrics_snapshot_();
+  otel_collection_pending_.store(false);
+  CompleteOtelCollection();
+  ClearOtelCallbacks();
+}
+
+
+void EnvInst::complete_otel_metrics_collection_() {
+  const OtelMetrics::InstrumentsStor& instruments = otel_metrics->Get();
+  OtelMetricsStor snapshot;
+  size_t count = 0;
+  for (const auto& instrument : instruments) {
+    count += instrument.values.size();
+  }
+  snapshot.reserve(count);
+  for (const auto& instrument : instruments) {
+    for (const auto& value : instrument.values) {
+      OtelMetricStor metric;
+      metric.meter_name = instrument.meter_name;
+      metric.meter_version = instrument.meter_version;
+      metric.meter_schema_url = instrument.meter_schema_url;
+      metric.name = instrument.name;
+      metric.unit = instrument.unit;
+      metric.description = instrument.description;
+      metric.value = value.value;
+      metric.attributes = value.attributes;
+      metric.type = instrument.type;
+      if (value.histogram != nullptr) {
+        const auto point = value.histogram->ToPoint();
+        metric.histogram_point_data = opentelemetry::nostd::get<
+            opentelemetry::sdk::metrics::HistogramPointData>(point);
+      }
+      snapshot.push_back(std::move(metric));
+    }
+  }
+
+  otel_metrics_snapshot_lock_.lock();
+  otel_metrics_snapshot_ = std::move(snapshot);
+  otel_metrics_snapshot_lock_.unlock();
+  otel_collection_pending_.store(false);
+}
+
+
+void EnvInst::clear_otel_metrics_snapshot_() {
+  otel_metrics_snapshot_lock_.lock();
+  otel_metrics_snapshot_.clear();
+  otel_metrics_snapshot_lock_.unlock();
+}
+
+
+OtelMetricsStor EnvInst::GetOtelMetrics() const {
+  otel_metrics_snapshot_lock_.lock();
+  OtelMetricsStor snapshot = otel_metrics_snapshot_;
+  otel_metrics_snapshot_lock_.unlock();
+  return snapshot;
 }
 
 

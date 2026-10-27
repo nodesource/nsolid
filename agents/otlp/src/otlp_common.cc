@@ -30,6 +30,7 @@ using time_point = std::chrono::system_clock::time_point;
 using std::chrono::microseconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
+using std::chrono::system_clock;
 
 using opentelemetry::common::SystemTimestamp;
 using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
@@ -325,17 +326,44 @@ static void add_counter(std::vector<MetricData>& metrics,
                         const char* unit,
                         InstrumentValueType type,
                         ValueType value,
-                        PointAttributes attrs = {}) {
+                        PointAttributes attrs = {},
+                        const char* description = "",
+                        InstrumentType instrument_type =
+                            InstrumentType::kCounter,
+                        bool is_monotonic = true) {
   SumPointData sum_point_data;
   sum_point_data.value_ = value;
+  sum_point_data.is_monotonic_ = is_monotonic;
   MetricData metric_data{
-    InstrumentDescriptor{ name, "", unit, InstrumentType::kCounter, type},
+    InstrumentDescriptor{
+      name, description, unit, instrument_type, type},
     AggregationTemporality::kCumulative,
     SystemTimestamp{ start },
     SystemTimestamp{ end },
     std::vector<PointDataAttributes>{{ attrs, sum_point_data }}
   };
   metrics.push_back(metric_data);
+}
+
+// NOLINTNEXTLINE(runtime/references)
+static void add_histogram(std::vector<MetricData>& metrics,
+                          const time_point& start,
+                          const time_point& end,
+                          const char* name,
+                          const char* unit,
+                          const char* description,
+                          const opentelemetry::sdk::metrics::HistogramPointData&
+                              point_data,
+                          PointAttributes attrs = {}) {
+  metrics.push_back({ InstrumentDescriptor{
+                         name, description, unit,
+                         InstrumentType::kHistogram,
+                         InstrumentValueType::kDouble },
+                       AggregationTemporality::kCumulative,
+                       SystemTimestamp{ start },
+                       SystemTimestamp{ end },
+                       std::vector<PointDataAttributes>{
+                           { attrs, point_data }} });
 }
 
 // NOLINTNEXTLINE(runtime/references)
@@ -346,12 +374,15 @@ static void add_gauge(std::vector<MetricData>& metrics,
                       const char* unit,
                       InstrumentValueType type,
                       ValueType value,
-                      PointAttributes attrs = {}) {
+                      PointAttributes attrs = {},
+                      const char* description = "",
+                      InstrumentType instrument_type =
+                          InstrumentType::kObservableGauge) {
   opentelemetry::sdk::metrics::LastValuePointData lv_point_data;
   lv_point_data.value_ = value;
   MetricData metric_data{
     InstrumentDescriptor{
-      name, "", unit, InstrumentType::kObservableGauge, type },
+      name, description, unit, instrument_type, type },
     AggregationTemporality::kCumulative,
     SystemTimestamp{ start },
     SystemTimestamp{ end },
@@ -558,6 +589,166 @@ NSOLID_ENV_METRICS_NUMBERS(V)
               {{ 0.5, stor.http_server_median },
                { 0.99, stor.http_server99_ptile }},
               attrs);
+}
+
+
+void fill_otel_instruments(
+    OtelMetricsMap& metrics,
+    const OtelMetricsStor& instruments) {
+  const time_point end = system_clock::now();
+
+  for (const auto& instrument : instruments) {
+    CHECK(instrument.type == OtelMetricType::kCounter ||
+          instrument.type == OtelMetricType::kGauge ||
+          instrument.type == OtelMetricType::kHistogram ||
+          instrument.type == OtelMetricType::kUpDownCounter ||
+          instrument.type == OtelMetricType::kObservableCounter ||
+          instrument.type == OtelMetricType::kObservableGauge ||
+          instrument.type == OtelMetricType::kObservableUpDownCounter);
+    InstrumentType type = InstrumentType::kCounter;
+    switch (instrument.type) {
+      case OtelMetricType::kCounter:
+        type = InstrumentType::kCounter;
+        break;
+      case OtelMetricType::kGauge:
+        type = InstrumentType::kGauge;
+        break;
+      case OtelMetricType::kHistogram:
+        type = InstrumentType::kHistogram;
+        break;
+      case OtelMetricType::kUpDownCounter:
+        type = InstrumentType::kUpDownCounter;
+        break;
+      case OtelMetricType::kObservableCounter:
+        type = InstrumentType::kObservableCounter;
+        break;
+      case OtelMetricType::kObservableGauge:
+        type = InstrumentType::kObservableGauge;
+        break;
+      case OtelMetricType::kObservableUpDownCounter:
+        type = InstrumentType::kObservableUpDownCounter;
+        break;
+    }
+    auto& scope_metrics =
+        metrics[{ instrument.meter_name,
+                  instrument.meter_version,
+                  instrument.meter_schema_url }];
+    PointAttributes attrs;
+    const json attributes = json::parse(instrument.attributes, nullptr, false);
+    CHECK(attributes.is_object());
+    for (const auto& [key, value] : attributes.items()) {
+      if (value.is_boolean()) {
+        attrs.SetAttribute(key, value.get<bool>());
+      } else if (value.is_number_unsigned()) {
+        attrs.SetAttribute(key, value.get<uint64_t>());
+      } else if (value.is_number_integer()) {
+        attrs.SetAttribute(key, value.get<int64_t>());
+      } else if (value.is_number_float()) {
+        attrs.SetAttribute(key, value.get<double>());
+      } else if (value.is_string()) {
+        const std::string string_value = value.get<std::string>();
+        attrs.SetAttribute(key,
+                           opentelemetry::nostd::string_view(string_value));
+      } else if (value.is_array()) {
+        const bool strings = value.empty() || value[0].is_string();
+        const bool booleans = !value.empty() && value[0].is_boolean();
+        const bool numbers = !value.empty() && value[0].is_number();
+        if (strings) {
+          std::vector<opentelemetry::nostd::string_view> values;
+          values.reserve(value.size());
+          for (const auto& item : value) {
+            const auto& string_value = item.get_ref<const std::string&>();
+            values.emplace_back(string_value);
+          }
+          attrs.SetAttribute(
+              key,
+              opentelemetry::nostd::span<
+                  const opentelemetry::nostd::string_view>(
+                  values.data(), values.size()));
+        } else if (booleans) {
+          std::unique_ptr<bool[]> values(new bool[value.size()]);
+          for (size_t i = 0; i < value.size(); i++) {
+            values[i] = value[i].get<bool>();
+          }
+          attrs.SetAttribute(key,
+                             opentelemetry::nostd::span<const bool>(
+                                 values.get(), value.size()));
+        } else if (numbers) {
+          std::vector<double> values = value.get<std::vector<double>>();
+          attrs.SetAttribute(key,
+                             opentelemetry::nostd::span<const double>(
+                                 values.data(), values.size()));
+        }
+      }
+    }
+    auto metric = std::find_if(scope_metrics.begin(),
+                               scope_metrics.end(),
+                               [&instrument, type](const MetricData& data) {
+                                 return data.instrument_descriptor.name_ ==
+                                     instrument.name &&
+                                     data.instrument_descriptor.type_ ==
+                                         type;
+                               });
+    // Create the metric for its first attribute set; later sets append points.
+    if (metric == scope_metrics.end()) {
+      if (instrument.type == OtelMetricType::kGauge ||
+          instrument.type == OtelMetricType::kObservableGauge) {
+        add_gauge(scope_metrics,
+                  process_start,
+                  end,
+                  instrument.name.c_str(),
+                  instrument.unit.c_str(),
+                  InstrumentValueType::kDouble,
+                  instrument.value,
+                  std::move(attrs),
+                  instrument.description.c_str(),
+                  type);
+      } else if (instrument.type == OtelMetricType::kHistogram) {
+        CHECK(instrument.histogram_point_data.has_value());
+        add_histogram(scope_metrics,
+                      process_start,
+                      end,
+                      instrument.name.c_str(),
+                      instrument.unit.c_str(),
+                      instrument.description.c_str(),
+                      *instrument.histogram_point_data,
+                      std::move(attrs));
+      } else {
+        add_counter(scope_metrics,
+                    process_start,
+                    end,
+                    instrument.name.c_str(),
+                    instrument.unit.c_str(),
+                    InstrumentValueType::kDouble,
+                    instrument.value,
+                    std::move(attrs),
+                    instrument.description.c_str(),
+                    type,
+                    instrument.type == OtelMetricType::kCounter ||
+                        instrument.type == OtelMetricType::kObservableCounter);
+      }
+    } else {
+      PointDataAttributes point_data;
+      point_data.attributes = std::move(attrs);
+      if (instrument.type == OtelMetricType::kGauge ||
+          instrument.type == OtelMetricType::kObservableGauge) {
+        opentelemetry::sdk::metrics::LastValuePointData value;
+        value.value_ = instrument.value;
+        point_data.point_data = value;
+      } else if (instrument.type == OtelMetricType::kHistogram) {
+        CHECK(instrument.histogram_point_data.has_value());
+        point_data.point_data = *instrument.histogram_point_data;
+      } else {
+        SumPointData value;
+        value.value_ = instrument.value;
+        value.is_monotonic_ = instrument.type == OtelMetricType::kCounter ||
+            instrument.type == OtelMetricType::kObservableCounter;
+        point_data.point_data = value;
+      }
+      metric->point_data_attr_.push_back(std::move(point_data));
+      metric->end_ts = SystemTimestamp{ end };
+    }
+  }
 }
 
 void fill_log_recordable(LogsRecordable* recordable,

@@ -1,8 +1,9 @@
 #ifndef AGENTS_GRPC_SRC_GRPC_AGENT_H_
 #define AGENTS_GRPC_SRC_GRPC_AGENT_H_
 
-#include <nsolid.h>
 #include <nsolid/async_ts_queue.h>
+#include <nsolid/nsolid_api.h>
+#include <nsolid/nsolid_otel_metrics_types.h>
 #include <nsolid/thread_safe.h>
 #include <memory>
 #include "grpcpp/grpcpp.h"
@@ -300,6 +301,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   void update_tracer(uint32_t flags);
 
  private:
+  struct ThreadMetricsSnapshot {
+    ThreadMetrics::MetricsStor metrics;
+    OtelMetricsStor otel_metrics;
+  };
+
   uv_loop_t loop_;
   nsuv::ns_thread thread_;
   nsuv::ns_async shutdown_;
@@ -333,7 +339,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   ProcessMetrics::MetricsStor proc_prev_stor_;
   std::map<uint64_t, JSThreadMetrics> env_metrics_map_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
+  TSQueue<ThreadMetricsSnapshot> thr_metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter>
     metrics_exporter_;

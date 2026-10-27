@@ -380,14 +380,36 @@ class TestClient {
   }
 
   async block(threadId, duration) {
-    return new Promise((resolve) => {
-      if (this.#child) {
-        this.#child.send({ type: 'block', threadId, duration }, () => {
+    if (threadId === 0) {
+      return new Promise((resolve) => {
+        if (this.#child) {
+          this.#child.send({ type: 'block', threadId, duration }, resolve);
+        } else {
           resolve();
-        });
-      } else {
+        }
+      });
+    }
+    return this.#sendAndWait({
+      type: 'block',
+      payload: { threadId, duration },
+      expect: 'block_started',
+      map: (msg) => msg.callbackCount,
+    });
+  }
+
+  async waitForWorkerBlock(threadId) {
+    return new Promise((resolve) => {
+      if (!this.#child) {
         resolve();
+        return;
       }
+      const onMessage = (msg) => {
+        if (msg.type === 'block_finished' && msg.threadId === threadId) {
+          this.#child.off('message', onMessage);
+          resolve(msg.callbackCount);
+        }
+      };
+      this.#child.on('message', onMessage);
     });
   }
 
@@ -584,6 +606,74 @@ class TestClient {
         resolve(null);
       }
     });
+  }
+
+  async registerApiMetrics() {
+    return this.#sendAndWait({ type: 'register_api_metrics' });
+  }
+
+  async addCounter(name) {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({ type: 'counter', payload: { name } });
+  }
+
+  async removeObservableCallback(name) {
+    await this.#sendAndWait({
+      type: 'remove_observable_callback',
+      payload: { name },
+    });
+  }
+
+  async workerCounter(threadId, value) {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({
+      type: 'worker_counter',
+      payload: { threadId, value },
+    });
+  }
+
+  async disableWorkerMetrics(threadId) {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({
+      type: 'worker_disable_metrics',
+      payload: { threadId },
+    });
+  }
+
+  async terminateWorker(threadId) {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({
+      type: 'worker_terminate',
+      payload: { threadId },
+    });
+  }
+
+  async validateMetrics() {
+    if (!this.#child)
+      return [];
+    return this.#sendAndWait({
+      type: 'validate_metrics',
+      map: (msg) => msg.errors,
+    });
+  }
+
+  async unsupportedMetrics() {
+    if (!this.#child)
+      return [];
+    return this.#sendAndWait({
+      type: 'unsupported_metrics',
+      map: (msg) => msg.errors,
+    });
+  }
+
+  async disableMetrics() {
+    if (!this.#child)
+      return;
+    await this.#sendAndWait({ type: 'disable_metrics' });
   }
 
   async profile(duration) {

@@ -1,5 +1,7 @@
 #include "grpc_agent.h"
 
+#include <algorithm>
+
 #include "asserts-cpp/asserts.h"
 #include "nsolid/nsolid_api.h"
 #include "nsolid/continuous_profiler.h"
@@ -39,6 +41,7 @@ using LogsRecordable = opentelemetry::sdk::logs::Recordable;
 using opentelemetry::sdk::metrics::MetricData;
 using opentelemetry::sdk::metrics::ResourceMetrics;
 using opentelemetry::sdk::metrics::ScopeMetrics;
+using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
 using opentelemetry::sdk::resource::Resource;
 using opentelemetry::sdk::resource::ResourceAttributes;
 using opentelemetry::sdk::trace::Recordable;
@@ -296,8 +299,7 @@ void PopulateMetricsEvent(grpcagent::MetricsEvent* metrics_event,
     otlp::fill_env_metrics(metrics, env_metrics_stor, false);
   }
 
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
+  data.scope_metric_data_.push_back({otlp::GetScope(), std::move(metrics)});
   OtlpMetricUtils::PopulateResourceMetrics(
     data, metrics_event->mutable_body()->mutable_resource_metrics()->Add());
 }
@@ -910,18 +912,19 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   std::tuple<SharedEnvInst, bool> tup;
   while (agent->env_msg_q_.dequeue(tup)) {
     SharedEnvInst envinst = std::get<0>(tup);
-    EnvInst::Scope scp(envinst);
-    if (scp.Success()) {
-      bool creation = std::get<1>(tup);
-      if (creation) {
+    const bool creation = std::get<1>(tup);
+    const uint64_t thread_id = GetThreadId(envinst);
+    if (creation) {
+      EnvInst::Scope scp(envinst);
+      if (scp.Success()) {
         auto pair = agent->env_metrics_map_.emplace(
           std::piecewise_construct,
-          std::forward_as_tuple(GetThreadId(envinst)),
+          std::forward_as_tuple(thread_id),
           std::forward_as_tuple(envinst));
         ASSERT(pair.second);
-      } else {
-        agent->env_metrics_map_.erase(GetThreadId(envinst));
       }
+    } else {
+      agent->env_metrics_map_.erase(thread_id);
     }
   }
 }
@@ -983,21 +986,31 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  ResourceMetrics data;
   auto resource = otlp::GetMetricsResource();
-  data.resource_ = resource.get();
-  std::vector<MetricData> metrics;
+  ThreadMetricsSnapshot snapshot;
+  while (agent->thr_metrics_msg_q_.dequeue(snapshot)) {
+    ResourceMetrics data;
+    data.resource_ = resource.get();
+    std::vector<MetricData> metrics;
+    otlp::fill_env_metrics(metrics, snapshot.metrics, false);
+    data.scope_metric_data_.push_back({otlp::GetScope(), std::move(metrics)});
 
-  ThreadMetricsStor stor;
-  while (agent->thr_metrics_msg_q_.dequeue(stor)) {
-    otlp::fill_env_metrics(metrics, stor, false);
-    agent->thr_metrics_cache_.insert_or_assign(stor.thread_id, std::move(stor));
+    // Each environment owns an independent provider and export batch.
+    otlp::OtelMetricsMap otel_metrics;
+    otlp::fill_otel_instruments(otel_metrics, snapshot.otel_metrics);
+    std::vector<std::unique_ptr<InstrumentationScope>> scopes;
+    for (auto& [identity, scope_metrics] : otel_metrics) {
+      scopes.push_back(InstrumentationScope::Create(std::get<0>(identity),
+                                                    std::get<1>(identity),
+                                                    std::get<2>(identity)));
+      data.scope_metric_data_.push_back({ scopes.back().get(),
+                                          std::move(scope_metrics) });
+    }
+    auto result = agent->metrics_exporter_->Export(data);
+    Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+    agent->thr_metrics_cache_.insert_or_assign(snapshot.metrics.thread_id,
+                                               std::move(snapshot.metrics));
   }
-
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
-  auto result = agent->metrics_exporter_->Export(data);
-  Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
 
 /*static*/void GrpcAgent::metrics_timer_cb_(nsuv::ns_timer*,
@@ -1040,7 +1053,16 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     return;
   }
 
-  if (agent->thr_metrics_msg_q_.enqueue(metrics->Get()) == 1) {
+  OtelMetricsStor otel_metrics;
+  SharedEnvInst envinst = EnvInst::GetInst(metrics->thread_id());
+  if (envinst != nullptr) {
+    otel_metrics = envinst->GetOtelMetrics();
+  }
+  ThreadMetricsSnapshot snapshot = {
+    metrics->Get(),
+    std::move(otel_metrics),
+  };
+  if (agent->thr_metrics_msg_q_.enqueue(std::move(snapshot)) == 1) {
     ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
   }
 }
@@ -1440,8 +1462,7 @@ void GrpcAgent::got_proc_metrics() {
   ResourceMetrics data;
   auto resource = otlp::GetMetricsResource();
   data.resource_ = resource.get();
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
+  data.scope_metric_data_.push_back({otlp::GetScope(), std::move(metrics)});
   auto result = metrics_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
   proc_prev_stor_ = stor;

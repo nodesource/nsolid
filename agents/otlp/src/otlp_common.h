@@ -1,9 +1,13 @@
 #ifndef AGENTS_OTLP_SRC_OTLP_COMMON_H_
 #define AGENTS_OTLP_SRC_OTLP_COMMON_H_
 
+#include <map>
 #include <memory>
+#include <tuple>
 
 #include "nsolid.h"
+#include "nsolid/nsolid_api.h"
+#include "nsolid/nsolid_otel_metrics_types.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/resource/resource.h"
 
@@ -41,6 +45,10 @@ namespace node {
 namespace nsolid {
 namespace otlp {
 
+using OtelMetricsMap = std::map<
+    std::tuple<std::string, std::string, std::string>,
+    std::vector<opentelemetry::sdk::metrics::MetricData>>;
+
 OPENTELEMETRY_NAMESPACE::sdk::instrumentationscope::InstrumentationScope*
     GetScope();
 
@@ -64,6 +72,11 @@ void fill_proc_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
 void fill_env_metrics(std::vector<opentelemetry::sdk::metrics::MetricData>&,
                       const ThreadMetrics::MetricsStor& stor,
                       bool use_snake_case = true);
+
+// Convert one provider's snapshot; do not share the map between providers.
+void fill_otel_instruments(
+    OtelMetricsMap&,
+    const OtelMetricsStor& instruments);
 
 void fill_log_recordable(OPENTELEMETRY_NAMESPACE::sdk::logs::Recordable*,
                          const LogWriteInfo&);

@@ -37,6 +37,7 @@
         'sdk/src/logs/exporter.cc',
         'sdk/src/logs/readable_log_record.cc',
         'sdk/src/metrics/data/circular_buffer.cc',
+        'sdk/src/metrics/aggregation/histogram_aggregation.cc',
         'sdk/src/resource/resource.cc',
         'sdk/src/resource/resource_detector.cc',
         'sdk/src/resource/detail/percent_decode.cc',

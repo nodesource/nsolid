@@ -22,6 +22,8 @@ const binding = require(bindingPath);
 const nsolid = require('nsolid');
 const api = require(require.resolve('@opentelemetry/api',
                                     { paths: [fixtures.fixturesDir] }));
+const metrics = require(require.resolve('@opentelemetry/api-metrics',
+                                        { paths: [fixtures.fixturesDir] })).metrics;
 
 const expectedTraces = [
   {
@@ -53,9 +55,20 @@ const expectedTraces = [
 checkTracesOnExit(binding, expectedTraces);
 
 setupNSolid(common.mustCall(() => {
-  if (!nsolid.otel.register(api)) {
+  let meterProviderWarning = false;
+  process.on('warning', (warning) => {
+    if (warning.code === 'NSOLID_OTEL_METER_PROVIDER_ALREADY_REGISTERED') {
+      meterProviderWarning = true;
+    }
+  });
+
+  const externalMeterProvider = { getMeter() {} };
+  metrics.setGlobalMeterProvider(externalMeterProvider);
+
+  if (!nsolid.otel.register({ ...api, metrics })) {
     throw new Error('Error registering api');
   }
+  assert.strictEqual(metrics.getMeterProvider(), externalMeterProvider);
 
   const tracer = api.trace.getTracer('test');
 
@@ -87,5 +100,7 @@ setupNSolid(common.mustCall(() => {
   }));
 
   // Give a little time to reach out to the nsolid thread.
-  setTimeout(() => {}, 100);
+  setTimeout(common.mustCall(() => {
+    assert.ok(meterProviderWarning);
+  }), 100);
 }));

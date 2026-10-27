@@ -10,6 +10,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -32,6 +33,11 @@
 
 namespace node {
 namespace nsolid {
+
+enum class OtelMetricType;
+struct OtelMetricStor;
+class OtelMetrics;
+using OtelMetricsStor = std::vector<OtelMetricStor>;
 
 #define NSOLID_JS_METRICS_COUNTERS(V)                                          \
   V(kHttpClientCount)                                                          \
@@ -218,6 +224,16 @@ class EnvInst {
   std::map<std::string, uint64_t> GetStartupTimes() const;
 
   void GetThreadMetrics(ThreadMetrics::MetricsStor* stor);
+  void RegisterOtelCallback(v8::Local<v8::Function> callback);
+  void RemoveOtelCallback();
+  void ClearOtelCallbacks();
+  void CancelOtelCollection();
+  void CollectOtelCallbacks(std::function<void()> callback);
+  void CompleteOtelCollection();
+  void RequestOtelMetricsCollection();
+  void CollectOtelMetrics();
+  void DisableOtelMetrics();
+  OtelMetricsStor GetOtelMetrics() const;
 
   void SetModuleInfo(const char* path, const char* module);
   void SetStartupTime(const char* name, uint64_t ts = uv_hrtime());
@@ -289,6 +305,7 @@ class EnvInst {
   // recalculated in JS.
   ThreadMetrics tmetrics;
   ProcessMetrics pmetrics;
+  std::unique_ptr<OtelMetrics> otel_metrics;
 
  private:
   friend class Metrics;
@@ -303,7 +320,7 @@ class EnvInst {
   };
 
   explicit EnvInst(Environment* env);
-  ~EnvInst() = default;
+  ~EnvInst();
 
   static void run_event_loop_cmds_(nsuv::ns_async*, EnvInst*);
   static void run_interrupt_msg_(nsuv::ns_async*, EnvInst*);
@@ -339,6 +356,8 @@ class EnvInst {
                             ThreadMetrics::MetricsStor* stor);
   static void get_http_dns_stats_(EnvInst* envinst,
                                   ThreadMetrics::MetricsStor* stor);
+  void complete_otel_metrics_collection_();
+  void clear_otel_metrics_snapshot_();
 
   std::atomic<Environment*> env_;
   v8::Isolate* isolate_;
@@ -346,6 +365,14 @@ class EnvInst {
   uint64_t thread_id_ = UINT64_MAX;
   uv_thread_t creation_thread_;
   bool is_main_thread_;
+  bool collecting_otel_callbacks_ = false;
+  std::atomic<bool> otel_collection_pending_ = { false };
+  v8::Global<v8::Function> otel_callback_;
+  std::function<void()> otel_collection_callback_;
+  // Nested metrics reads wait for the active observable collection.
+  std::vector<std::function<void()>> otel_collection_waiters_;
+  mutable nsuv::ns_mutex otel_metrics_snapshot_lock_;
+  OtelMetricsStor otel_metrics_snapshot_;
   nsuv::ns_async interrupt_msg_;
   // This is what's used to queue commands that run on the Worker's event loop.
   nsuv::ns_async eloop_cmds_msg_;

@@ -41,7 +41,7 @@ inline void (*fn2void(Fn (*fn)(Args...)))() {
 }
 
 
-inline bool are_threads_equal(uv_thread_t&& t1, uv_thread_t&& t2) {
+inline bool are_threads_equal(uv_thread_t t1, uv_thread_t t2) {
   return uv_thread_equal(&t1, &t2);
 }
 
