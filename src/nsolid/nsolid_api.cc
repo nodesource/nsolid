@@ -266,6 +266,17 @@ void EnvInst::RequestOtelMetricsCollection() {
         CHECK_EQ(envinst.get(), requested_envinst);
         if (!requested_envinst->otel_collection_pending_.load()) return;
 
+        Environment* current_env = envinst->env();
+        if (current_env == nullptr) {
+          envinst->complete_otel_metrics_collection_();
+          return;
+        }
+        HandleScope handle_scope(envinst->isolate());
+        Context::Scope context_scope(current_env->context());
+        // Complete collection microtasks before leaving this event-loop task.
+        InternalCallbackScope callback_scope(
+            current_env, current_env->process_object(), {0, 0});
+
         std::weak_ptr<EnvInst> envinst_wp = envinst;
         envinst->CollectOtelCallbacks([envinst_wp]() {
           SharedEnvInst envinst = envinst_wp.lock();

@@ -22,6 +22,9 @@ std::atomic<int> cb_cntr = { 0 };
 std::atomic<int> cb_void_cntr = { 0 };
 std::atomic<int> cmd_cntr = { 0 };
 std::atomic<int> cmd_void_cntr = { 0 };
+std::atomic<int> otel_requested = { 0 };
+std::atomic<int> otel_observed = { 0 };
+std::atomic<int> otel_checked = { 0 };
 
 struct TmpStor {
   TmpStor* self_ptr;
@@ -33,6 +36,7 @@ static void at_exit(void*) {
   assert(run_cntr == cb_void_cntr);
   assert(run_cntr == cmd_cntr);
   assert(run_cntr == cmd_void_cntr);
+  assert(otel_requested == otel_checked);
 }
 
 static void cb_fn(TmpStor* ts) {
@@ -77,8 +81,26 @@ static void RunEventLoop(const FunctionCallbackInfo<Value>& args) {
   run_cntr++;
 }
 
+static void ObserveOtelMetric(const FunctionCallbackInfo<Value>& args) {
+  otel_observed++;
+}
+
+static void CollectOtelMetrics(const FunctionCallbackInfo<Value>& args) {
+  auto envinst = node::nsolid::GetLocalEnvInst(args.GetIsolate());
+  otel_requested++;
+  envinst->RequestOtelMetricsCollection();
+  assert(0 == node::nsolid::RunCommand(
+      envinst, EventLoop, [](node::nsolid::SharedEnvInst) {
+        // This runs before Node's check phase can drain pending microtasks.
+        assert(otel_observed == 1);
+        otel_checked++;
+      }));
+}
+
 NODE_MODULE_INIT(/* exports, module, context */) {
   NODE_SET_METHOD(exports, "runEventLoop", RunEventLoop);
+  NODE_SET_METHOD(exports, "collectOtelMetrics", CollectOtelMetrics);
+  NODE_SET_METHOD(exports, "observeOtelMetric", ObserveOtelMetric);
   // While NODE_MODULE_INIT will run for every Worker, the first execution
   // won't run in parallel with another. So this won't cause a race condition.
   node::nsolid::SharedEnvInst envinst = node::nsolid::GetLocalEnvInst(context);
