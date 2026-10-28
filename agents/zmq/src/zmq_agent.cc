@@ -1192,8 +1192,11 @@ int ZmqAgent::config_message(const json& message) {
 
 void ZmqAgent::command_handler(const std::string& cmd) {
   json message = json::parse(cmd, nullptr, false);
-  if (message.is_discarded() && data_handle_ != nullptr) {
-    return send_error_message("unable to parse json", 500);
+  if (message.is_discarded() || !message.is_object()) {
+    Debug("Rejecting invalid command JSON\n");
+    if (data_handle_ != nullptr)
+      send_error_message("invalid command", 400);
+    return;
   }
 
   DebugJSON("Command Received:\n%s\n", message);
@@ -1207,6 +1210,11 @@ void ZmqAgent::command_handler(const std::string& cmd) {
   }
 
   auto it = message.find(kVersion);
+  if (it != message.end() && !it->is_number_integer()) {
+    Debug("Rejecting invalid command version\n");
+    send_error_message("invalid command", 400);
+    return;
+  }
   int version = it == message.end() ? 3 : it->get<int>();
   // This should almost never happen, only if the runtime was already connected
   // to a console in relay mode and the end-console changed versions. Take that
@@ -1215,13 +1223,7 @@ void ZmqAgent::command_handler(const std::string& cmd) {
     version_ = version;
   }
 
-  it_config = message.find(kCommand);
-  if (it_config != message.end()) {
-    command_message(message);
-    return;
-  }
-
-  // Unhandled command message. Log about it.
+  command_message(message);
 }
 
 int ZmqAgent::handshake_failed() {
@@ -1380,10 +1382,18 @@ int ZmqAgent::config(const json& config) {
 }
 
 int ZmqAgent::command_message(const json& message) {
-  const std::string type = message[kCommand];
+  auto command = message.find(kCommand);
   auto it = message.find(kRequestId);
-  ASSERT(it != message.end());
-  const std::string req_id = *it;
+  auto cancel_it = message.find("cancel");
+  if (command == message.end() || !command->is_string() ||
+      it == message.end() || !it->is_string() ||
+      (cancel_it != message.end() && !cancel_it->is_boolean())) {
+    Debug("Rejecting command with invalid command, requestId or cancel\n");
+    send_error_message("invalid command", 400);
+    return UV_EINVAL;
+  }
+  const std::string type = command->get<std::string>();
+  const std::string req_id = it->get<std::string>();
 
   // The cancel request only makes sense for asynchronous ops.
   // In the nsolid 3.x agent only "packages" and profiling commands were
