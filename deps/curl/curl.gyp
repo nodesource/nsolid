@@ -222,10 +222,6 @@
         'CURL_DISABLE_WEBSOCKETS',
         "USE_OPENSSL=1",
       ],
-      'dependencies': [
-        '../openssl/openssl.gyp:openssl',
-        '../zlib/zlib.gyp:zlib',
-      ],
       'direct_dependent_settings': {
         'defines': [
           'CURL_STATICLIB',
@@ -251,6 +247,16 @@
         'GCC_SYMBOLS_PRIVATE_EXTERN': 'YES',  # -fvisibility=hidden
       },
       'conditions': [
+        ['node_shared_openssl=="false"', {
+          'dependencies': [
+            '../openssl/openssl.gyp:openssl',
+          ],
+        }],
+        ['node_shared_zlib=="false"', {
+          'dependencies': [
+            '../zlib/zlib.gyp:zlib',
+          ],
+        }],
         ['OS == "win"', {
           'defines': [
             "__STDC_VERSION__=199901L",

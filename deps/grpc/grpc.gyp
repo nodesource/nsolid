@@ -77,17 +77,29 @@
     {
       'target_name': 'grpc',
       'type': 'static_library',
-      'defines': [
-        'CARES_STATICLIB',
-      ],
       'dependencies': [
         '../protobuf/abseil.gyp:abseil_proto',
         'address_sorting',
         'upb',
         're2',
-        '../cares/cares.gyp:cares',
-        '../openssl/openssl.gyp:openssl',
-        '../zlib/zlib.gyp:zlib',
+      ],
+      'conditions': [
+        ['node_shared_cares=="false"', {
+          'dependencies': [
+            '../cares/cares.gyp:cares',
+          ],
+          'defines': [ 'CARES_STATICLIB' ],
+        }],
+        ['node_shared_openssl=="false"', {
+          'dependencies': [
+            '../openssl/openssl.gyp:openssl',
+          ],
+        }],
+        ['node_shared_zlib=="false"', {
+          'dependencies': [
+            '../zlib/zlib.gyp:zlib',
+          ],
+        }],
       ],
       'direct_dependent_settings': {
         'include_dirs': [
@@ -1076,7 +1088,13 @@
         'upb',
         '../protobuf/abseil.gyp:abseil_proto',
         '../protobuf/utf8_range.gyp:utf8_range',
-        '../openssl/openssl.gyp:openssl',
+      ],
+      'conditions': [
+        ['node_shared_openssl=="false"', {
+          'dependencies': [
+            '../openssl/openssl.gyp:openssl',
+          ],
+        }],
       ],
       'direct_dependent_settings': {
         'include_dirs': [
