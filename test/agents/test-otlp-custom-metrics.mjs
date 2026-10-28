@@ -84,7 +84,7 @@ function sourceOf(exported) {
                    'source')?.stringValue;
 }
 
-function checkInitial(exported, id, sharedValue) {
+function checkInitial(exported, id, sharedValue, registration) {
   const resource = exported.resourceMetrics[0];
   assert.strictEqual(resource.resource.attributes.find((item) =>
     item.key === 'service.instance.id').value.stringValue, id);
@@ -125,6 +125,12 @@ function checkInitial(exported, id, sharedValue) {
   assert.strictEqual(points(getMetric(scope, 'observed-value'))[0].asDouble, 42);
   for (const metric of scope.metrics) {
     for (const point of points(metric)) {
+      const start = BigInt(point.startTimeUnixNano);
+      assert.ok(start >= BigInt(registration.before) * 1000000n);
+      assert.ok(start < BigInt(registration.after + 1) * 1000000n);
+      assert.ok(start <= BigInt(point.timeUnixNano));
+      assert.strictEqual(point.startTimeUnixNano,
+                         points(metric)[0].startTimeUnixNano);
       assert.strictEqual(point.timeUnixNano, first.timeUnixNano);
       assert.ok(!attribute(point, 'thread.id'));
       assert.ok(!attribute(point, 'thread.name'));
@@ -132,14 +138,27 @@ function checkInitial(exported, id, sharedValue) {
   }
 }
 
+function checkStarts(exported, initial) {
+  for (const metric of getScope(exported).metrics) {
+    const previous = getMetric(getScope(initial), metric.name);
+    for (const point of points(metric)) {
+      assert.strictEqual(point.startTimeUnixNano,
+                         points(previous)[0].startTimeUnixNano);
+    }
+  }
+}
+
 for (const protocol of ['http', 'grpc']) {
   const live = await startChild(protocol, 'nsolid-otel-metrics-otlp.js');
   try {
-    const { id } = await live.message('ready');
+    const registration = await live.message('ready');
+    const { id } = registration;
+    const initialSnapshots = new Map();
     for (const [source, shared] of [['main', 4], ['worker', 6]]) {
       const initial = await live.exported((data) => sourceOf(data) === source &&
         points(getMetric(getScope(data), 'observed-value')).length === 1, 0);
-      checkInitial(initial, id, shared);
+      checkInitial(initial, id, shared, registration[source]);
+      initialSnapshots.set(source, initial);
     }
     live.child.send({ type: 'hold' });
     await live.message('pending');
@@ -156,13 +175,45 @@ for (const protocol of ['http', 'grpc']) {
       points(getMetric(getScope(data), 'observed-value'))[0]?.asDouble === 84);
     assert.ok(BigInt(points(getMetric(getScope(released), 'requests'))[0].timeUnixNano) >
       BigInt(points(getMetric(getScope(held), 'requests'))[0].timeUnixNano));
+    checkStarts(released, initialSnapshots.get('main'));
     live.child.send({ type: 'finish_worker' });
-    await live.exported((data) => sourceOf(data) === 'worker' &&
+    const finalWorker = await live.exported((data) => sourceOf(data) === 'worker' &&
       points(getMetric(getScope(data), 'shared'))[0]?.asDouble === 7);
+    checkStarts(finalWorker, initialSnapshots.get('worker'));
     assert.strictEqual((await live.message('worker_exit')).code, 0);
+
+    const replacementStart = live.exports.length;
+    live.child.send({ type: 'restart_worker' });
+    const replacementRegistration = await live.message(
+      'ready', (message) => message.generation === 2);
+    const previousPoint = points(getMetric(getScope(finalWorker), 'shared'))[0];
+    const replacement = await live.exported((data) => {
+      if (sourceOf(data) !== 'worker') return false;
+      const point = points(getMetric(getScope(data), 'shared'))[0];
+      return point?.asDouble === 6 &&
+        point.startTimeUnixNano !== previousPoint.startTimeUnixNano &&
+        points(getMetric(getScope(data), 'observed-value')).length === 1;
+    }, replacementStart);
+    checkInitial(replacement, id, 6, replacementRegistration.worker);
+    const replacementPoint = points(getMetric(getScope(replacement), 'shared'))[0];
+    assert.ok(BigInt(replacementPoint.startTimeUnixNano) >
+      BigInt(previousPoint.timeUnixNano));
+    assert.deepStrictEqual(replacement.resourceMetrics[0].resource,
+                           finalWorker.resourceMetrics[0].resource);
+    live.child.send({ type: 'finish_worker' });
+    const finalReplacement = await live.exported((data) => {
+      const point = points(getMetric(getScope(data), 'shared'))[0];
+      return sourceOf(data) === 'worker' && point?.asDouble === 7 &&
+        point.startTimeUnixNano === replacementPoint.startTimeUnixNano;
+    });
+    checkStarts(finalReplacement, replacement);
+    const replacementExit = await live.message(
+      'worker_exit', (message) => message.generation === 2);
+    assert.strictEqual(replacementExit.code, 0);
     live.child.send({ type: 'finish_main' });
-    await live.exported((data) => sourceOf(data) === 'main' &&
+    const finalMain = await live.exported((data) => sourceOf(data) === 'main' &&
       points(getMetric(getScope(data), 'shared'))[0]?.asDouble === 5);
+    checkStarts(finalMain, initialSnapshots.get('main'));
     assert.deepStrictEqual(await live.exited, [0, null]);
   } finally {
     await live.close();

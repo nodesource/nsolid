@@ -693,7 +693,7 @@ void fill_otel_instruments(
       if (instrument.type == OtelMetricType::kGauge ||
           instrument.type == OtelMetricType::kObservableGauge) {
         add_gauge(scope_metrics,
-                  process_start,
+                  instrument.started_at,
                   end,
                   instrument.name.c_str(),
                   instrument.unit.c_str(),
@@ -705,7 +705,7 @@ void fill_otel_instruments(
       } else if (instrument.type == OtelMetricType::kHistogram) {
         CHECK(instrument.histogram_point_data.has_value());
         add_histogram(scope_metrics,
-                      process_start,
+                      instrument.started_at,
                       end,
                       instrument.name.c_str(),
                       instrument.unit.c_str(),
@@ -714,7 +714,7 @@ void fill_otel_instruments(
                       std::move(attrs));
       } else {
         add_counter(scope_metrics,
-                    process_start,
+                    instrument.started_at,
                     end,
                     instrument.name.c_str(),
                     instrument.unit.c_str(),

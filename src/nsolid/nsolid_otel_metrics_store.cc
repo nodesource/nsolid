@@ -63,6 +63,7 @@ int OtelMetrics::RegisterInstrument(std::string meter_name,
                            std::move(unit),
                            std::move(description),
                            type,
+                           std::chrono::system_clock::now(),
                            std::move(histogram_boundaries),
                            {},
                            {} });

@@ -351,6 +351,7 @@ void EnvInst::complete_otel_metrics_collection_() {
       metric.value = value.value;
       metric.attributes = value.attributes;
       metric.type = instrument.type;
+      metric.started_at = instrument.started_at;
       metric.collected_at = collected_at;
       if (value.histogram != nullptr) {
         const auto point = value.histogram->ToPoint();

@@ -19,6 +19,8 @@
  * Observable callbacks have a 30-second timeout. Observations are committed
  * only when their callback succeeds; failures and timeouts discard that
  * callback's observations. Disabling metrics cancels pending collection waits.
+ * Custom metric start timestamps identify instrument registration time and
+ * remain unchanged across cumulative collections within that environment.
  * @returns {boolean} Whether active tracing registration succeeded; true if
  * tracing registration is disabled or runtime tracing is not active.
  */

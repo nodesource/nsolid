@@ -6,6 +6,7 @@ const api = require('@opentelemetry/api');
 const { metrics } = require('@opentelemetry/api-metrics');
 
 nsolid.otel.register({ ...api, metrics }, { traces: false, metrics: true });
+const registeredBefore = Date.now();
 const meter = metrics.getMeter('custom-otlp', '1.2.3', {
   schemaUrl: 'https://example.com/metrics',
 });
@@ -54,11 +55,23 @@ meter.createObservableGauge('observed-value').addCallback(async (result) => {
   await Promise.resolve();
   result.observe(value, attributes);
 });
+const registration = { before: registeredBefore, after: Date.now() };
 
 if (isMainThread) {
-  const worker = new Worker(__filename);
-  worker.once('message', () => process.send({ type: 'ready', id: nsolid.id }));
-  worker.on('exit', (code) => process.send({ type: 'worker_exit', code }));
+  let worker;
+  let generation = 0;
+  const startWorker = () => {
+    const currentGeneration = ++generation;
+    worker = new Worker(__filename);
+    worker.once('message', (workerRegistration) => process.send({
+      type: 'ready', id: nsolid.id, generation: currentGeneration,
+      main: registration, worker: workerRegistration,
+    }));
+    worker.on('exit', (code) => process.send({
+      type: 'worker_exit', code, generation: currentGeneration,
+    }));
+  };
+  startWorker();
   process.on('message', ({ type }) => {
     if (type === 'hold') {
       held = new Promise((resolve) => { release = resolve; });
@@ -68,15 +81,17 @@ if (isMainThread) {
       release();
     } else if (type === 'finish_worker') {
       worker.postMessage('finish');
+    } else if (type === 'restart_worker') {
+      startWorker();
     } else if (type === 'finish_main') {
-      shared.add(1);
+      meter.createCounter('shared').add(1);
       process.disconnect();
     }
   });
 } else {
   parentPort.once('message', () => {
-    shared.add(1);
+    meter.createCounter('shared').add(1);
     parentPort.close();
   });
-  parentPort.postMessage('ready');
+  parentPort.postMessage(registration);
 }

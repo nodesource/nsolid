@@ -225,7 +225,10 @@ try {
   }, exports.length, 'cumulative histogram update');
   await sendToClient('api_metrics_contract_update_histogram',
                      'api_metrics_contract_histogram_updated');
-  await updatedHistogram;
+  const histogramUpdate = await updatedHistogram;
+  assert.strictEqual(getMetric(getScope(histogramUpdate, 'api-contract'),
+                               'cumulative-histogram')
+    .histogram.dataPoints[0].startTimeUnixNano, cumulative.startTimeUnixNano);
 
   const firstStarted = waitForClientMessage('api_metrics_async_first_started');
   const secondStarted = waitForClientMessage('api_metrics_async_second_started');
@@ -272,6 +275,11 @@ try {
     return individual.length === 2 && batch.length === 1;
   }, exports.length, 'completed async callbacks');
   const completedScope = getScope(completedExport, 'api-contract');
+  assert.strictEqual(getMetric(completedScope, 'integer-value-type')
+    .sum.dataPoints[0].startTimeUnixNano,
+                     integerValueType.sum.dataPoints[0].startTimeUnixNano);
+  assert.strictEqual(getPoint(getMetric(completedScope, 'batch-second'))[0]
+    .startTimeUnixNano, batchSecond.startTimeUnixNano);
   const completedTimes = getCollectionTimes(completedExport);
   assert.strictEqual(new Set(completedTimes).size, 1);
   assert.ok(BigInt(completedTimes[0]) > BigInt(pendingTimes[0]));

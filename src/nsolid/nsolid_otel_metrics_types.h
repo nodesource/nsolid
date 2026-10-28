@@ -31,6 +31,7 @@ struct OtelMetricStor {
   double value;
   std::string attributes;
   OtelMetricType type = OtelMetricType::kCounter;
+  std::chrono::system_clock::time_point started_at;
   std::chrono::system_clock::time_point collected_at;
   std::optional<opentelemetry::sdk::metrics::HistogramPointData>
       histogram_point_data;

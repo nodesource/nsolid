@@ -2,6 +2,7 @@
 #define SRC_NSOLID_NSOLID_OTEL_METRICS_STORE_H_
 
 #include <stdint.h>
+#include <chrono>
 #include <memory>
 #include <optional>
 #include <string>
@@ -36,6 +37,7 @@ class OtelMetrics {
     std::string unit;
     std::string description;
     OtelMetricType type{};
+    std::chrono::system_clock::time_point started_at;
     std::optional<std::vector<double>> histogram_boundaries;
     std::vector<Value> values;
     // Retained only for one observable collection to replace overflowed sets.
