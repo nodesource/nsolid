@@ -12,13 +12,16 @@ import {
   OTLPGRPCServer,
 } from '../common/nsolid-otlp-agent/index.js';
 
+const escapedHost = 'quoted"host\\name';
+const escapedStatus = 'OK "quoted" \\status';
+
 const __filename = fileURLToPath(import.meta.url);
 
 if (process.argv[2] === 'child') {
 
   async function execHttpTransaction() {
     const server = http.createServer(mustCall((req, res) => {
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.writeHead(200, escapedStatus, { 'Content-Type': 'text/plain' });
       res.end('Hello World\n');
     }));
 
@@ -30,6 +33,7 @@ if (process.argv[2] === 'child') {
           port: httpPort,
           method: 'GET',
           path: '/',
+          headers: { Host: `${escapedHost}:${httpPort}` },
         }, (res) => {
           res.on('data', () => {
           });
@@ -166,10 +170,10 @@ if (process.argv[2] === 'child') {
     assert.strictEqual(serverSpan.attributes[1].key, 'http.status_code');
     assert.strictEqual(serverSpan.attributes[1].value.intValue, '200');
     assert.strictEqual(serverSpan.attributes[2].key, 'http.status_text');
-    assert.strictEqual(serverSpan.attributes[2].value.stringValue, 'OK');
+    assert.strictEqual(serverSpan.attributes[2].value.stringValue, escapedStatus);
     assert.strictEqual(serverSpan.attributes[3].key, 'http.url');
     assert.strictEqual(serverSpan.attributes[3].value.stringValue,
-                       `http://127.0.0.1:${port}/`);
+                       `http://${escapedHost}:${port}/`);
     assert.strictEqual(serverSpan.attributes[4].key, 'network.protocol.version');
     assert.strictEqual(serverSpan.attributes[4].value.stringValue, '1.1');
     assert.strictEqual(serverSpan.attributes[5].key, 'thread.id');
@@ -193,10 +197,10 @@ if (process.argv[2] === 'child') {
     assert.strictEqual(clientSpan.attributes[1].key, 'http.status_code');
     assert.strictEqual(clientSpan.attributes[1].value.intValue, '200');
     assert.strictEqual(clientSpan.attributes[2].key, 'http.status_text');
-    assert.strictEqual(clientSpan.attributes[2].value.stringValue, 'OK');
+    assert.strictEqual(clientSpan.attributes[2].value.stringValue, escapedStatus);
     assert.strictEqual(clientSpan.attributes[3].key, 'http.url');
     assert.strictEqual(clientSpan.attributes[3].value.stringValue,
-                       `http://127.0.0.1:${port}/`);
+                       `http://${escapedHost}:${port}/`);
     assert.strictEqual(serverSpan.attributes[4].key, 'network.protocol.version');
     assert.strictEqual(serverSpan.attributes[4].value.stringValue, '1.1');
     assert.strictEqual(clientSpan.attributes[5].key, 'thread.id');

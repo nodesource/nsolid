@@ -715,13 +715,15 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
 
   recordable->SetSpanKind(static_cast<SpanKind>(s.kind));
 
-  json attrs = json::parse(s.attrs);
-  ASSERT(!attrs.is_discarded());
+  json attrs = json::parse(s.attrs, nullptr, false);
+  if (!attrs.is_object()) {
+    attrs = json::object();
+  }
   for (const std::string& a : s.extra_attrs) {
     json attr = json::parse(a, nullptr, false);
-    // a must always be a valid JSON
-    ASSERT(!attr.is_discarded());
-    attrs.merge_patch(attr);
+    if (attr.is_object()) {
+      attrs.merge_patch(attr);
+    }
   }
 
   JsonAttributes(attrs).ForEachKeyValue([recordable](

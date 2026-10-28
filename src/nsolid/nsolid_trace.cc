@@ -128,7 +128,7 @@ void Span::add_attribute(const SpanPropBase& prop) {
 #define V(Enum, Type, CName, JSName)                                           \
     case Enum:                                                                 \
       stor_.attrs += "\""#JSName"\":";                                         \
-      stor_.attrs += "\"" + prop.val<Type>() + "\"" ;                          \
+      stor_.attrs += json(prop.val<Type>()).dump();                            \
     break;
   NSOLID_SPAN_ATTRS_STRINGS(V)
 #undef V
