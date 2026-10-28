@@ -371,7 +371,6 @@ int ThreadMetrics::Update(v8::Isolate* isolate) {
     return UV_EBUSY;
   }
 
-  envinst->CollectOtelMetrics();
   uv_mutex_lock(&stor_lock_);
   envinst->GetThreadMetrics(&stor_);
   uv_mutex_unlock(&stor_lock_);

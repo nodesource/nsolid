@@ -46,6 +46,7 @@ class Metrics: public BaseObject {
       const v8::FunctionCallbackInfo<v8::Value>& args);
   static void CollectionDone(
       const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void Collect(const v8::FunctionCallbackInfo<v8::Value>& args);
   static void RegisterInstrument(
       const v8::FunctionCallbackInfo<v8::Value>& args,
       nsolid::OtelMetricType type);

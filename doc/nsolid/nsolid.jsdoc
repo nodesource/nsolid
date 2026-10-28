@@ -15,6 +15,7 @@
  * @param {boolean} [options.metrics=false] - Install N|Solid's meter provider.
  * Custom metrics are exported by the gRPC agent and generic OTLP HTTP/gRPC
  * exporters. Tracing changes do not register or disable the meter provider.
+ * Calling nsolid.metrics() neither collects nor returns custom OTel metrics.
  * @returns {boolean} Whether active tracing registration succeeded; true if
  * tracing registration is disabled or runtime tracing is not active.
  */

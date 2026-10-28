@@ -118,6 +118,13 @@ void Metrics::RemoveObservableCallback(
   envinst->RemoveOtelCallback();
 }
 
+void Metrics::Collect(const FunctionCallbackInfo<Value>& args) {
+  nsolid::EnvInst* envinst =
+      nsolid::EnvInst::GetEnvLocalInst(args.GetIsolate());
+  CHECK_NOT_NULL(envinst);
+  envinst->CollectOtelMetrics();
+}
+
 void Metrics::CollectionDone(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   if (args.Length() != 0) {
@@ -238,6 +245,7 @@ void Metrics::Initialize(Local<Object> target,
   SetProtoMethod(isolate, metrics, "removeObservableCallback",
                  RemoveObservableCallback);
   SetProtoMethod(isolate, metrics, "collectionDone", CollectionDone);
+  SetProtoMethod(isolate, metrics, "collect", Collect);
   SetConstructorFunction(context, target, "Metrics", metrics);
 
   target->Set(context,
@@ -259,6 +267,7 @@ void Metrics::RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(Metrics::RegisterObservableCallback);
   registry->Register(Metrics::RemoveObservableCallback);
   registry->Register(Metrics::CollectionDone);
+  registry->Register(Metrics::Collect);
 }
 
 }  // namespace metrics

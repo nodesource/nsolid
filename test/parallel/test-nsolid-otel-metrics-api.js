@@ -1,9 +1,16 @@
+// Flags: --expose-internals
 'use strict';
 
 const common = require('../common');
 const assert = require('assert');
 const nsolid = require('nsolid');
+const { internalBinding } = require('internal/test/binding');
+const metricsUtil = require('../common/nsolid-metrics-util');
+const { Metrics } = internalBinding('metrics');
+const binding = new Metrics();
 
+common.expectWarning('internal/test/binding',
+                     'These APIs are for internal testing only. Do not use them.');
 common.expectWarning('Warning',
                      'Invalid OpenTelemetry metric input was ignored.',
                      'NSOLID_OTEL_INVALID_METRIC');
@@ -138,22 +145,38 @@ pending.addCallback(async () => {
 
 (async () => {
   const collectionComplete = () => new Promise((resolve) => setImmediate(resolve));
-  nsolid.metrics();
+  metricsUtil.checkMetrics(nsolid.metrics());
+  await new Promise((resolve) => {
+    nsolid.metrics(common.mustSucceed((snapshot) => {
+      metricsUtil.checkMetrics(snapshot);
+      resolve();
+    }));
+  });
+  assert.strictEqual(individualCalls, 0);
+  assert.strictEqual(batchCalls, 0);
+  assert.strictEqual(remainingBatchCalls, 0);
+  assert.strictEqual(duplicateInstrumentCalls, 0);
+  assert.strictEqual(pendingCalls, 0);
+
+  binding.collect();
   assert.strictEqual(individualCalls, 1);
   assert.strictEqual(batchCalls, 2);
   assert.strictEqual(remainingBatchCalls, 1);
   assert.strictEqual(duplicateInstrumentCalls, 1);
   assert.strictEqual(pendingCalls, 2);
   nsolid.metrics();
+  binding.collect();
   assert.strictEqual(pendingCalls, 2);
   resolveFirst();
   await collectionComplete();
   nsolid.metrics();
+  binding.collect();
   assert.strictEqual(pendingCalls, 2);
   metrics.disable();
   resolveSecond();
   await collectionComplete();
   nsolid.metrics();
+  binding.collect();
   assert.strictEqual(pendingCalls, 2);
 })().catch((error) => {
   setImmediate(() => { throw error; });
