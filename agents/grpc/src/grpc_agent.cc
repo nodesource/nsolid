@@ -576,7 +576,6 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
         }
 
         agent->stop();
-        delete agent.get();
       }, weak_from_this());
       return;
     }
