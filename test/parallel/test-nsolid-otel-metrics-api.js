@@ -1,8 +1,12 @@
 'use strict';
 
-require('../common');
+const common = require('../common');
 const assert = require('assert');
 const nsolid = require('nsolid');
+
+common.expectWarning('Warning',
+                     'Invalid OpenTelemetry metric input was ignored.',
+                     'NSOLID_OTEL_INVALID_METRIC');
 
 const metrics = nsolid.otel.api.metrics;
 const meter = metrics.getMeter('api-contract', '1.0', {
@@ -54,10 +58,18 @@ for (const boundaries of [
   [ Infinity ],
   [ '1' ],
 ]) {
-  assert.throws(() => meter.createHistogram(`invalid-${String(boundaries)}`, {
+  // Invalid advice falls back to default boundaries without throwing.
+  meter.createHistogram(`invalid-${String(boundaries)}`, {
     advice: { explicitBucketBoundaries: boundaries },
-  }), { name: 'TypeError' });
+  }).record(1);
 }
+
+// Invalid metadata still produces usable instruments.
+metrics.getMeter(null, 42, { schemaUrl: false })
+  .createCounter(null, { unit: {}, description: 42 }).add(1);
+meter.createHistogram('unserializable-advice', {
+  advice: { explicitBucketBoundaries: [ 1n ] },
+}).record(1);
 
 const observable = meter.createObservableGauge('deduplicated-callback');
 assert.throws(() => observable.addCallback(null), {

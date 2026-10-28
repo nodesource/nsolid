@@ -484,18 +484,16 @@ if (isMainThread) {
       statusHistogram.record(8, { status: 500 });
       const validationHistogram = meter.createHistogram('validation-histogram');
       validationHistogram.record(Number.MAX_VALUE);
-      assert.throws(() => validationHistogram.record(Number.MAX_VALUE),
-                    { name: 'TypeError' });
-      assert.throws(() => validationHistogram.record(Infinity),
-                    { name: 'TypeError' });
-      assert.throws(() => validationHistogram.record(NaN),
-                    { name: 'TypeError' });
+      // Invalid measurements must not throw or change the histogram.
+      validationHistogram.record(Number.MAX_VALUE);
+      validationHistogram.record(Infinity);
+      validationHistogram.record(NaN);
       const advisedHistogram = meter.createHistogram('advised-histogram', {
         advice: { explicitBucketBoundaries: [ 0.1, 1, 10 ] },
       });
-      assert.throws(() => meter.createHistogram('invalid-histogram', {
+      meter.createHistogram('invalid-histogram', {
         advice: { explicitBucketBoundaries: [ 1, 1 ] },
-      }), { name: 'TypeError' });
+      }).record(0);
       advisedHistogram.record(0.05);
       advisedHistogram.record(0.1);
       advisedHistogram.record(0.2);
@@ -654,12 +652,20 @@ if (isMainThread) {
     } else if (msg.type === 'validate_metrics') {
       const meter = nsolid.otel.api.metrics.getMeter('validation', '1.0');
       const counter = meter.createCounter('valid-updates');
+      const circular = {};
+      circular.self = circular;
       const errors = [
         () => counter.add(-1),
         () => counter.add(NaN),
         () => counter.add(Infinity),
         () => counter.add(-Infinity),
         () => counter.add(1, { invalid: null }),
+        () => counter.add(1, { invalid: {} }),
+        () => counter.add(1, { invalid: [ 1, 'two' ] }),
+        () => counter.add(1, circular),
+        () => counter.add(1, { invalid: 1n }),
+        () => counter.add(1, { toJSON() { throw new Error('invalid'); } }),
+        () => counter.add('1'),
       ].map((update) => {
         try {
           update();
@@ -695,6 +701,13 @@ if (isMainThread) {
       } catch {
         errors.push(true);
       }
+      const observable = meter.createObservableCounter('valid-observations');
+      observable.addCallback((result) => {
+        result.observe(NaN);
+        result.observe(-1);
+        result.observe(1, circular);
+        result.observe(7);
+      });
       process.send({ type: 'validate_metrics', errors });
     } else if (msg.type === 'disable_metrics') {
       const metrics = nsolid.otel.api.metrics;

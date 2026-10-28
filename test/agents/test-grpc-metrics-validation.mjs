@@ -21,7 +21,8 @@ await new Promise((resolve) => {
             item.scope.version === '1.0');
         if (!scope || !scope.metrics.some((metric) =>
           metric.name === 'valid-updates') || !scope.metrics.some((metric) =>
-          metric.name === 'cumulative-overflow')) {
+          metric.name === 'cumulative-overflow') || !scope.metrics.some(
+          (metric) => metric.name === 'valid-observations')) {
           grpcServer.once('metrics', onMetrics);
           return;
         }
@@ -31,7 +32,7 @@ await new Promise((resolve) => {
     });
 
     assert.deepStrictEqual(await child.validateMetrics(),
-                           Array(9).fill(true));
+                           Array(15).fill(false));
     const metrics = await exportedMetrics;
     const validUpdates = metrics.find((metric) =>
       metric.name === 'valid-updates');
@@ -54,6 +55,10 @@ await new Promise((resolve) => {
     assert.strictEqual(cumulativeOverflow.sum.dataPoints.length, 1);
     assert.strictEqual(cumulativeOverflow.sum.dataPoints[0].asDouble,
                        Number.MAX_VALUE);
+    const observable = metrics.find((metric) =>
+      metric.name === 'valid-observations');
+    assert.strictEqual(observable.sum.dataPoints.length, 1);
+    assert.strictEqual(observable.sum.dataPoints[0].asDouble, 7);
 
     await child.shutdown(0);
     grpcServer.close();

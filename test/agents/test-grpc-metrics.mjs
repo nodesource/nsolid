@@ -403,6 +403,13 @@ async function runTest({ getEnv }) {
         assert.strictEqual(zeroPoint.max, 0);
         assert.strictEqual(zeroPoint.bucketCounts.reduce(
           (sum, count) => sum + Number(count), 0), 1);
+        const fallbackHistogram = testMeter.metrics.find(
+          (metric) => metric.name === 'invalid-histogram');
+        const fallbackPoint = fallbackHistogram.histogram.dataPoints[0];
+        assert.deepStrictEqual(fallbackPoint.explicitBounds,
+                               zeroPoint.explicitBounds);
+        assert.strictEqual(fallbackPoint.count, '1');
+        assert.strictEqual(fallbackPoint.sum, 0);
         const statusHistogram = testMeter.metrics.find(
           (metric) => metric.name === 'histogram-status');
         assert.strictEqual(
