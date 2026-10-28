@@ -2,6 +2,8 @@
 #define AGENTS_OTLP_SRC_OTLP_METRICS_H_
 
 
+#include <chrono>
+
 #include "metrics_exporter.h"
 #include "opentelemetry/version.h"
 
@@ -49,6 +51,8 @@ class OTLPMetrics final: public MetricsExporter {
   virtual void got_thr_metrics(
       const std::vector<MetricsExporter::ThrMetricsStor>&);
 
+  void got_otel_metrics(const OtelMetricsStor&) override;
+
  private:
   std::unique_ptr<OPENTELEMETRY_NAMESPACE::sdk::metrics::PushMetricExporter>
     otlp_metric_exporter_;
@@ -56,6 +60,7 @@ class OTLPMetrics final: public MetricsExporter {
     scope_;
   std::string key_;
   std::string url_;
+  std::chrono::system_clock::duration timeout_;
 };
 
 }  // namespace otlp

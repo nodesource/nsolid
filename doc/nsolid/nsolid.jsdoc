@@ -13,8 +13,8 @@
  * tracing changes. When false, leave tracing providers and instrumentation
  * enable/disable methods untouched.
  * @param {boolean} [options.metrics=false] - Install N|Solid's meter provider.
- * Custom metric export currently requires the gRPC agent. Tracing changes do
- * not register or disable the meter provider.
+ * Custom metrics are exported by the gRPC agent and generic OTLP HTTP/gRPC
+ * exporters. Tracing changes do not register or disable the meter provider.
  * @returns {boolean} Whether active tracing registration succeeded; true if
  * tracing registration is disabled or runtime tracing is not active.
  */

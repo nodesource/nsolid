@@ -51,7 +51,7 @@ class OTLPAgent {
 
   int start();
 
-  int stop();
+  int stop(OtelMetricsStor final_metrics = {});
 
   int config(const nlohmann::json& config);
 
@@ -64,6 +64,7 @@ class OTLPAgent {
   static void run_(nsuv::ns_thread*, OTLPAgent*);
 
   static void shutdown_cb_(nsuv::ns_async*, OTLPAgent*);
+  static void at_exit_cb_(bool, bool, OTLPAgent*);
 
   static void config_agent_cb_(std::string, OTLPAgent*);
 
@@ -86,6 +87,7 @@ class OTLPAgent {
   void do_start();
 
   void do_stop();
+  void drain_metrics_();
 
   void config_datadog(const nlohmann::json& config);
 
@@ -120,6 +122,7 @@ class OTLPAgent {
 
   // For otlp thread start synchronization
   std::atomic<bool> ready_;
+  std::atomic<bool> stopping_ = { false };
   uv_cond_t start_cond_;
   uv_mutex_t start_lock_;
 
@@ -141,7 +144,12 @@ class OTLPAgent {
   ProcessMetrics::MetricsStor proc_prev_stor_;
   std::map<uint64_t, JSThreadMetrics> env_metrics_map_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
+  struct ThreadMetricsSnapshot {
+    ThreadMetrics::MetricsStor metrics;
+    OtelMetricsStor otel_metrics;
+  };
+  TSQueue<ThreadMetricsSnapshot> thr_metrics_msg_q_;
+  TSQueue<OtelMetricsStor> final_otel_metrics_q_;
   nsuv::ns_timer metrics_timer_;
   std::unique_ptr<MetricsExporter> metrics_exporter_;
 

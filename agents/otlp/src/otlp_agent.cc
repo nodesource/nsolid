@@ -120,6 +120,7 @@ OTLPAgent::~OTLPAgent() {
 int OTLPAgent::start() {
   int r = 0;
   if (ready_ == false) {
+    stopping_ = false;
     uv_mutex_lock(&start_lock_);
     r = thread_.create(run_, this);
     if (r == 0) {
@@ -135,21 +136,22 @@ int OTLPAgent::start() {
 }
 
 
-int OTLPAgent::stop() {
+int OTLPAgent::stop(OtelMetricsStor final_metrics) {
   int r = 0;
-  if (ready_ == true) {
+  {
+    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
+    if (!is_running_ || !ready_ || stopping_) return 0;
+    stopping_ = true;
+    if (!final_metrics.empty()) {
+      final_otel_metrics_q_.enqueue(std::move(final_metrics));
+    }
     r = shutdown_.send();
     if (r != 0) {
-      return r;
-    }
-
-    r = thread_.join();
-    if (r != 0) {
+      stopping_ = false;
       return r;
     }
   }
-
-  return r;
+  return thread_.join();
 }
 
 using string_vector = std::vector<std::string>;
@@ -253,12 +255,29 @@ int OTLPAgent::config(const nlohmann::json& config) {
   agent->do_stop();
 }
 
+/*static*/ void OTLPAgent::at_exit_cb_(bool on_signal,
+                                       bool profile_stopped,
+                                       OTLPAgent* agent) {
+  if (on_signal) return;
+  USE(profile_stopped);
+  OtelMetricsStor final_metrics;
+  {
+    nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+    if (!is_running_ || !agent->ready_ || agent->stopping_) return;
+    SharedEnvInst envinst = EnvInst::GetInst(EnvList::Inst()->main_thread_id());
+    if (envinst != nullptr) {
+      final_metrics = envinst->GetOtelMetrics();
+    }
+  }
+  USE(agent->stop(std::move(final_metrics)));
+}
+
 
 /*static*/ void OTLPAgent::config_agent_cb_(std::string config,
                                             OTLPAgent* agent) {
   // Check if the agent is already delete or if it's closing
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
+  if (!is_running_ || !agent->ready_ || agent->stopping_) {
     return;
   }
 
@@ -271,13 +290,13 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 
 /*static*/ void OTLPAgent::config_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
-  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_) {
+  // This runs on the agent thread; config() may stop and lock out producers.
+  if (!is_running_ || !agent->ready_ || agent->stopping_) {
     return;
   }
 
   json config_msg;
-  while (agent->config_msg_q_.dequeue(config_msg)) {
+  while (!agent->stopping_ && agent->config_msg_q_.dequeue(config_msg)) {
     agent->config(config_msg);
   }
 }
@@ -285,25 +304,26 @@ int OTLPAgent::config(const nlohmann::json& config) {
 
 /*static*/ void OTLPAgent::env_msg_cb_(nsuv::ns_async*, OTLPAgent* agent) {
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_) {
+  if (!is_running_ || !agent->ready_) {
     return;
   }
 
   std::tuple<SharedEnvInst, bool> tup;
   while (agent->env_msg_q_.dequeue(tup)) {
     SharedEnvInst envinst = std::get<0>(tup);
-    EnvInst::Scope scp(envinst);
-    if (scp.Success()) {
-      bool creation = std::get<1>(tup);
-      if (creation) {
+    bool creation = std::get<1>(tup);
+    if (creation) {
+      EnvInst::Scope scp(envinst);
+      if (scp.Success()) {
         auto pair = agent->env_metrics_map_.emplace(
           std::piecewise_construct,
           std::forward_as_tuple(GetThreadId(envinst)),
           std::forward_as_tuple(envinst));
         ASSERT(pair.second);
-      } else {
-        agent->env_metrics_map_.erase(GetThreadId(envinst));
       }
+    } else {
+      agent->env_metrics_map_.erase(GetThreadId(envinst));
+      agent->drain_metrics_();
     }
   }
 }
@@ -312,7 +332,7 @@ int OTLPAgent::config(const nlohmann::json& config) {
 /*static*/ void OTLPAgent::on_thread_add_(SharedEnvInst envinst,
                                           OTLPAgent* agent) {
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
+  if (!is_running_ || !agent->ready_ || agent->stopping_) {
     return;
   }
 
@@ -324,10 +344,14 @@ int OTLPAgent::config(const nlohmann::json& config) {
 /*static*/ void OTLPAgent::on_thread_remove_(SharedEnvInst envinst,
                                              OTLPAgent* agent) {
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
+  if (!is_running_ || !agent->ready_ || agent->stopping_) {
     return;
   }
 
+  OtelMetricsStor final_metrics = envinst->GetOtelMetrics();
+  if (!final_metrics.empty()) {
+    agent->final_otel_metrics_q_.enqueue(std::move(final_metrics));
+  }
   agent->env_msg_q_.enqueue({ envinst, false });
   ASSERT_EQ(0, agent->env_msg_.send());
 }
@@ -343,6 +367,7 @@ void OTLPAgent::do_start() {
 
   ready_ = true;
   if (!hooks_init_) {
+    ASSERT_EQ(0, AtExitHook(at_exit_cb_, this));
     ASSERT_EQ(0, OnConfigurationHook(config_agent_cb_, this));
     ASSERT_EQ(0, ThreadAddedHook(on_thread_add_, this));
     ASSERT_EQ(0, ThreadRemovedHook(on_thread_remove_, this));
@@ -355,13 +380,19 @@ void OTLPAgent::do_start() {
 
 
 void OTLPAgent::do_stop() {
-  ready_ = false;
+  {
+    // Wait for producers that passed their readiness check before closing.
+    nsuv::ns_rwlock::scoped_wrlock lock(exit_lock_);
+    stopping_ = true;
+    ready_ = false;
+  }
+  drain_metrics_();
+  metrics_exporter_.reset(nullptr);
   shutdown_.close();
   env_msg_.close();
   metrics_msg_.close();
   metrics_timer_.close();
   config_msg_.close();
-  metrics_exporter_.reset(nullptr);
   span_collector_.reset();
 }
 
@@ -378,7 +409,7 @@ void OTLPAgent::got_spans(const UniqRecordables& recordables) {
 
 /*static*/void OTLPAgent::metrics_timer_cb_(nsuv::ns_timer*, OTLPAgent* agent) {
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
+  if (!is_running_ || !agent->ready_ || agent->stopping_) {
     return;
   }
 
@@ -397,19 +428,34 @@ void OTLPAgent::got_spans(const UniqRecordables& recordables) {
     return;
   }
 
+  agent->drain_metrics_();
+}
+
+void OTLPAgent::drain_metrics_() {
   std::vector<MetricsExporter::ThrMetricsStor> thr_metrics_vector;
-  ThreadMetricsStor stor;
-  while (agent->thr_metrics_msg_q_.dequeue(stor)) {
-    auto it = agent->env_metrics_map_.find(stor.thread_id);
-    if (it != agent->env_metrics_map_.end()) {
+  ThreadMetricsSnapshot snapshot;
+  while (thr_metrics_msg_q_.dequeue(snapshot)) {
+    const ThreadMetricsStor& stor = snapshot.metrics;
+    auto it = env_metrics_map_.find(stor.thread_id);
+    if (it != env_metrics_map_.end()) {
       auto& metrics = it->second;
       thr_metrics_vector.push_back({stor, metrics.prev_, metrics.loop_start_ });
       metrics.prev_ = stor;
+      if (metrics_exporter_ != nullptr && !stopping_ &&
+          EnvInst::GetInst(stor.thread_id) != nullptr) {
+        metrics_exporter_->got_otel_metrics(snapshot.otel_metrics);
+      }
     }
   }
 
-  if (agent->metrics_exporter_) {
-    agent->metrics_exporter_->got_thr_metrics(thr_metrics_vector);
+  if (metrics_exporter_ && !thr_metrics_vector.empty()) {
+    metrics_exporter_->got_thr_metrics(thr_metrics_vector);
+  }
+  OtelMetricsStor final_metrics;
+  while (final_otel_metrics_q_.dequeue(final_metrics)) {
+    if (metrics_exporter_) {
+      metrics_exporter_->got_otel_metrics(final_metrics);
+    }
   }
 }
 
@@ -417,11 +463,16 @@ void OTLPAgent::got_spans(const UniqRecordables& recordables) {
 /*static*/void OTLPAgent::thr_metrics_cb_(SharedThreadMetrics metrics,
                                           OTLPAgent* agent) {
   nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-  if (!is_running_ || !agent->ready_) {
+  if (!is_running_ || !agent->ready_ || agent->stopping_) {
     return;
   }
 
-  agent->thr_metrics_msg_q_.enqueue(metrics->Get());
+  OtelMetricsStor otel_metrics;
+  SharedEnvInst envinst = EnvInst::GetInst(metrics->thread_id());
+  if (envinst != nullptr) {
+    otel_metrics = envinst->GetOtelMetrics();
+  }
+  agent->thr_metrics_msg_q_.enqueue({metrics->Get(), std::move(otel_metrics)});
   ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
 }
 
