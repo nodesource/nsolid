@@ -93,7 +93,8 @@ OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
     otlp_metric_exporter_ = std::make_unique<OtlpHttpMetricExporter>(opts);
   } else {
     OtlpGrpcMetricExporterOptions opts;
-    opts.endpoint = url + "/v1/metrics";
+    opts.endpoint = url;
+    opts.use_ssl_credentials = url.compare(0, 8, "https://") == 0;
     opts.ssl_credentials_cacert_as_string = cacert;
     otlp_metric_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
   }
