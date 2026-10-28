@@ -74,7 +74,13 @@
         '../curl/curl.gyp:curl',
         '../grpc/grpc.gyp:grpc++',
 	'../protobuf/abseil.gyp:abseil_proto',
-        '../zlib/zlib.gyp:zlib',
+      ],
+      'conditions': [
+        ['node_shared_zlib=="false"', {
+          'dependencies': [
+            '../zlib/zlib.gyp:zlib',
+          ],
+        }],
       ],
       'direct_dependent_settings': {
         'defines': [
