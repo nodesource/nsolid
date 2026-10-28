@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+import "google/protobuf/struct.proto";
+
+package grpcagent;
+
+message ProfileArgs {
+  uint64 thread_id = 1;
+  uint64 duration = 2;
+  google.protobuf.Struct metadata = 3;
+  oneof args {
+    CPUProfileArgs cpu_profile = 4;
+    HeapProfileArgs heap_profile = 5;
+    HeapSamplingArgs heap_sampling = 6;
+    HeapSnapshotArgs heap_snapshot = 7;
+  }
+}
+
+message CPUProfileArgs {
+}
+
+message HeapProfileArgs {
+  bool track_allocations = 1;
+  bool redacted = 2;
+}
+
+message HeapSamplingArgs {
+  uint64 sample_interval = 1;
+  uint32 stack_depth = 2;
+  uint32 flags = 3;
+}
+
+message HeapSnapshotArgs {
+  bool redacted = 1;
+}

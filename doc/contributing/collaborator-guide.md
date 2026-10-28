@@ -1,3 +1,7 @@
+> \[!IMPORTANT]
+> This document is from and refers to the upstream Node.js project.
+> See [CONTRIBUTING](../../CONTRIBUTING.md) for specific N|Solid content.
+
 # Node.js collaborator guide
 
 ## Contents

@@ -132,6 +132,7 @@ bool SearchFiles(const std::string& dir,
 constexpr std::string_view kMjsSuffix = ".mjs";
 constexpr std::string_view kJsSuffix = ".js";
 constexpr std::string_view kGypiSuffix = ".gypi";
+constexpr std::string_view agentsPrefix = "agents/";
 constexpr std::string_view depsPrefix = "deps/";
 constexpr std::string_view libPrefix = "lib/";
 
@@ -344,6 +345,9 @@ std::string GetFileId(const std::string& filename) {
     // lib/internal/url.js -> internal/url
     start = libPrefix.size();
     prefix = "";
+  } else if (filename.starts_with(agentsPrefix)) {
+    start = agentsPrefix.size();
+    prefix = "internal/agents/";
   }
 
   return prefix + std::string(filename.begin() + start, filename.begin() + end);

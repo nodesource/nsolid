@@ -1,0 +1,16 @@
+diff --git a/deps/v8/src/profiler/cpu-profiler.cc b/deps/v8/src/profiler/cpu-profiler.cc
+index 8244caf9390..c7279372bd6 100644
+--- a/deps/v8/src/profiler/cpu-profiler.cc
++++ b/deps/v8/src/profiler/cpu-profiler.cc
+@@ -49,6 +49,11 @@ class CpuSampler : public sampler::Sampler {
+           ProfilerStats::Reason::kIsolateNotLocked);
+       return;
+     }
++    // (santigimeno): It prevents a crash when handling a `SIGPROF` signal while
++    // shutting down the profiler.
++    if (!processor_->running()) {
++      return;
++    }
+     TickSample* sample = processor_->StartTickSample();
+     if (sample == nullptr) {
+       ProfilerStats::Instance()->AddReason(

@@ -69,3 +69,8 @@ API
     Copy the current set of event loop metrics to the ``metrics`` pointer.
 
     .. versionadded:: 1.45.0
+
+.. c:function:: void uv_metrics_provider_times(uv_loop_t* loop, uint64_t* entry, uint64_t* exit)
+
+    Retrieve the last entry and exit time of the specified event loop's event
+    provider. This is a thread safe call.
