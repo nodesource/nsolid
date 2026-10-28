@@ -36,11 +36,15 @@ let
       files = [
         ../../common.gypi
         ../../configure.py
+        ../../deps/asserts-cpp
+        ../../deps/json/single_include/nlohmann
+        ../../deps/protobuf/abseil.gyp
         ../../deps/v8
         ../../node.gyp
         ../../node.gypi
         ../../tools/gyp/pylib
         ../../tools/gyp_node.py
+        ../../tools/v8_gypfiles/abseil.gyp
         ../../tools/v8_gypfiles/features.gypi
         ../../tools/v8_gypfiles/ForEachFormat.py
         ../../tools/v8_gypfiles/ForEachReplace.py
@@ -49,7 +53,6 @@ let
         ../../tools/v8_gypfiles/toolchain.gypi
         ../../tools/v8_gypfiles/v8.gyp
       ]
-      ++ lib.optional (!useSharedAbseil) ../../tools/v8_gypfiles/abseil.gyp
       ++ lib.optional (!useSharedHighway) ../../tools/v8_gypfiles/highway.gyp
       ++ lib.optional (!useSharedSimdutf) ../../tools/v8_gypfiles/simdutf.gyp
       ++ lib.optional (
@@ -156,6 +159,10 @@ stdenv.mkDerivation (finalAttrs: {
   '';
   # We need to remove the node_inspector.gypi ref so GYP does not search for it.
   postPatch = ''
+    # N|Solid agent dependencies are not needed for the V8-only targets.
+    for dep in sodium zmq curl protobuf otlp_http_exporter grpc; do
+      substituteInPlace node.gypi --replace-fail "node_shared_$dep==\"false\"" "1==0"
+    done
     substituteInPlace node.gyp --replace-fail "'includes' : [ 'src/inspector/node_inspector.gypi' ]" "'includes' : []"
   ''
   + lib.optionalString (icu == null) ''
