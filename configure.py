@@ -2967,8 +2967,9 @@ configure_library('simdutf', output)
 configure_library('brotli', output, pkgname=['libbrotlidec', 'libbrotlienc'])
 configure_library('cares', output, pkgname='libcares')
 # Only cctest uses gtest; keep it out of the node binary's link line.
-output['variables']['node_shared_gtest_libraries'] = []
-configure_library('gtest', output, 'node_shared_gtest_libraries')
+output['node_shared_gtest_libraries'] = []
+configure_library('gtest', output, libraries_key='node_shared_gtest_libraries')
+output['variables']['node_shared_gtest_libraries'] = output.pop('node_shared_gtest_libraries')
 configure_library('hdr_histogram', output)
 configure_library('highway', output, pkgname='libhwy')
 configure_library('merve', output)
