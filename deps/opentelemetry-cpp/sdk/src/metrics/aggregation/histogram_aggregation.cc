@@ -125,7 +125,7 @@ DoubleHistogramAggregation::DoubleHistogramAggregation(const AggregationConfig *
   point_data_.count_          = 0;
   point_data_.record_min_max_ = record_min_max_;
   point_data_.min_            = (std::numeric_limits<double>::max)();
-  point_data_.max_            = (std::numeric_limits<double>::min)();
+  point_data_.max_            = (std::numeric_limits<double>::lowest)();
 }
 
 DoubleHistogramAggregation::DoubleHistogramAggregation(HistogramPointData &&data)

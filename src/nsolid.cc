@@ -383,26 +383,25 @@ int ThreadMetrics::get_thread_metrics_() {
   // Might need to fire myself for using nested lambdas.
   auto cb = [](SharedEnvInst ei, std::weak_ptr<ThreadMetrics> wp) {
     // This runs from the worker thread.
-    auto ret_proxy = [](std::weak_ptr<ThreadMetrics> wp) {
-      // This runs from the NSolid thread.
-      SharedThreadMetrics tm_sp = wp.lock();
-      if (tm_sp == nullptr) {
-        return;
-      }
-
-      tm_sp->proxy_(tm_sp);
-    };
-
     SharedThreadMetrics tm_sp = wp.lock();
     if (tm_sp == nullptr) {
       return;
     }
 
+    // Native metrics can still be sampled while JavaScript is busy.
     uv_mutex_lock(&tm_sp->stor_lock_);
     ei->GetThreadMetrics(&tm_sp->stor_);
     uv_mutex_unlock(&tm_sp->stor_lock_);
 
+    auto ret_proxy = [](std::weak_ptr<ThreadMetrics> wp) {
+      // This runs from the NSolid thread.
+      SharedThreadMetrics tm_sp = wp.lock();
+      if (tm_sp != nullptr) {
+        tm_sp->proxy_(tm_sp);
+      }
+    };
     QueueCallback(ret_proxy, tm_sp);
+    ei->RequestOtelMetricsCollection();
   };
 
   std::weak_ptr<ThreadMetrics> wp = weak_from_this();

@@ -65,10 +65,12 @@ OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
   const std::string prot = GetOtlpDefaultHttpMetricsProtocol();
   if (prot == "grpc") {
     OtlpGrpcMetricExporterOptions opts;
+    timeout_ = opts.timeout;
     opts.ssl_credentials_cacert_as_string = cacert;
     otlp_metric_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
   } else {
     OtlpHttpMetricExporterOptions opts;
+    timeout_ = opts.timeout;
     opts.console_debug = true;
     opts.ssl_ca_cert_string = cacert;
     otlp_metric_exporter_ = std::make_unique<OtlpHttpMetricExporter>(opts);
@@ -86,6 +88,7 @@ OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
     url_(url) {
   if (is_http) {
     OtlpHttpMetricExporterOptions opts;
+    timeout_ = opts.timeout;
     opts.url = url + "/v1/metrics";
     opts.content_type = HttpRequestContentType::kBinary;
     opts.console_debug = true;
@@ -93,6 +96,7 @@ OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
     otlp_metric_exporter_ = std::make_unique<OtlpHttpMetricExporter>(opts);
   } else {
     OtlpGrpcMetricExporterOptions opts;
+    timeout_ = opts.timeout;
     opts.endpoint = url + "/v1/metrics";
     opts.ssl_credentials_cacert_as_string = cacert;
     otlp_metric_exporter_ = std::make_unique<OtlpGrpcMetricExporter>(opts);
@@ -101,6 +105,7 @@ OTLPMetrics::OTLPMetrics(uv_loop_t* loop,
 
 /*virtual*/
 OTLPMetrics::~OTLPMetrics() {
+  USE(otlp_metric_exporter_->ForceFlush(duration_cast<microseconds>(timeout_)));
 }
 
 /*virtual*/
@@ -111,7 +116,7 @@ void OTLPMetrics::got_proc_metrics(const ProcessMetricsStor& stor,
   ResourceMetrics data;
   auto resource = GetMetricsResource();
   data.resource_ = resource.get();
-  data.scope_metric_data_ = std::vector<ScopeMetrics>{{scope_, metrics}};
+  data.scope_metric_data_.push_back({scope_, std::move(metrics)});
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
 }
@@ -128,10 +133,30 @@ void OTLPMetrics::got_thr_metrics(
     fill_env_metrics(metrics, tm.stor);
   }
 
-  data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{scope_, metrics}};
+  data.scope_metric_data_.push_back({scope_, std::move(metrics)});
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
+}
+
+void OTLPMetrics::got_otel_metrics(const OtelMetricsStor& instruments) {
+  if (instruments.empty()) return;
+
+  // One batch per environment preserves independent meter providers.
+  OtelMetricsMap metrics;
+  fill_otel_instruments(metrics, instruments);
+  auto resource = GetMetricsResource();
+  ResourceMetrics data;
+  data.resource_ = resource.get();
+  std::vector<std::unique_ptr<InstrumentationScope>> scopes;
+  for (auto& [identity, scope_metrics] : metrics) {
+    scopes.push_back(InstrumentationScope::Create(std::get<0>(identity),
+                                                  std::get<1>(identity),
+                                                  std::get<2>(identity)));
+    data.scope_metric_data_.push_back({scopes.back().get(),
+                                      std::move(scope_metrics)});
+  }
+  auto result = otlp_metric_exporter_->Export(data);
+  Debug("# Custom metrics exported. Result: %d\n", static_cast<int>(result));
 }
 }  // namespace otlp
 }  // namespace nsolid

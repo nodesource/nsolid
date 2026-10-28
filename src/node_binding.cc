@@ -80,6 +80,7 @@
   V(nsolid_grpc_agent)                                                         \
   V(nsolid_statsd_agent)                                                       \
   V(nsolid_zmq_agent)                                                          \
+  V(metrics)                                                                \
   V(sea)                                                                       \
   V(serdes)                                                                    \
   V(signal_wrap)                                                               \
