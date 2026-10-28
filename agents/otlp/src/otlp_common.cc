@@ -596,16 +596,18 @@ void fill_otel_instruments(
     OtelMetricsMap& metrics,
     const OtelMetricsStor& instruments) {
   for (const auto& instrument : instruments) {
+    const auto& metadata = instrument.metadata;
+    CHECK_NOT_NULL(metadata);
     const time_point end = instrument.collected_at;
-    CHECK(instrument.type == OtelMetricType::kCounter ||
-          instrument.type == OtelMetricType::kGauge ||
-          instrument.type == OtelMetricType::kHistogram ||
-          instrument.type == OtelMetricType::kUpDownCounter ||
-          instrument.type == OtelMetricType::kObservableCounter ||
-          instrument.type == OtelMetricType::kObservableGauge ||
-          instrument.type == OtelMetricType::kObservableUpDownCounter);
+    CHECK(metadata->type == OtelMetricType::kCounter ||
+          metadata->type == OtelMetricType::kGauge ||
+          metadata->type == OtelMetricType::kHistogram ||
+          metadata->type == OtelMetricType::kUpDownCounter ||
+          metadata->type == OtelMetricType::kObservableCounter ||
+          metadata->type == OtelMetricType::kObservableGauge ||
+          metadata->type == OtelMetricType::kObservableUpDownCounter);
     InstrumentType type = InstrumentType::kCounter;
-    switch (instrument.type) {
+    switch (metadata->type) {
       case OtelMetricType::kCounter:
         type = InstrumentType::kCounter;
         break;
@@ -629,9 +631,9 @@ void fill_otel_instruments(
         break;
     }
     auto& scope_metrics =
-        metrics[{ instrument.meter_name,
-                  instrument.meter_version,
-                  instrument.meter_schema_url }];
+        metrics[{ metadata->meter_name,
+                  metadata->meter_version,
+                  metadata->meter_schema_url }];
     PointAttributes attrs;
     const json attributes = json::parse(instrument.attributes, nullptr, false);
     CHECK(attributes.is_object());
@@ -682,66 +684,66 @@ void fill_otel_instruments(
     }
     auto metric = std::find_if(scope_metrics.begin(),
                                scope_metrics.end(),
-                               [&instrument, type](const MetricData& data) {
+                               [&metadata, type](const MetricData& data) {
                                  return data.instrument_descriptor.name_ ==
-                                     instrument.name &&
+                                     metadata->name &&
                                      data.instrument_descriptor.type_ ==
                                          type;
                                });
     // Create the metric for its first attribute set; later sets append points.
     if (metric == scope_metrics.end()) {
-      if (instrument.type == OtelMetricType::kGauge ||
-          instrument.type == OtelMetricType::kObservableGauge) {
+      if (metadata->type == OtelMetricType::kGauge ||
+          metadata->type == OtelMetricType::kObservableGauge) {
         add_gauge(scope_metrics,
-                  instrument.started_at,
+                  metadata->started_at,
                   end,
-                  instrument.name.c_str(),
-                  instrument.unit.c_str(),
+                  metadata->name.c_str(),
+                  metadata->unit.c_str(),
                   InstrumentValueType::kDouble,
                   instrument.value,
                   std::move(attrs),
-                  instrument.description.c_str(),
+                  metadata->description.c_str(),
                   type);
-      } else if (instrument.type == OtelMetricType::kHistogram) {
+      } else if (metadata->type == OtelMetricType::kHistogram) {
         CHECK(instrument.histogram_point_data.has_value());
         add_histogram(scope_metrics,
-                      instrument.started_at,
+                      metadata->started_at,
                       end,
-                      instrument.name.c_str(),
-                      instrument.unit.c_str(),
-                      instrument.description.c_str(),
+                      metadata->name.c_str(),
+                      metadata->unit.c_str(),
+                      metadata->description.c_str(),
                       *instrument.histogram_point_data,
                       std::move(attrs));
       } else {
         add_counter(scope_metrics,
-                    instrument.started_at,
+                    metadata->started_at,
                     end,
-                    instrument.name.c_str(),
-                    instrument.unit.c_str(),
+                    metadata->name.c_str(),
+                    metadata->unit.c_str(),
                     InstrumentValueType::kDouble,
                     instrument.value,
                     std::move(attrs),
-                    instrument.description.c_str(),
+                    metadata->description.c_str(),
                     type,
-                    instrument.type == OtelMetricType::kCounter ||
-                        instrument.type == OtelMetricType::kObservableCounter);
+                    metadata->type == OtelMetricType::kCounter ||
+                        metadata->type == OtelMetricType::kObservableCounter);
       }
     } else {
       PointDataAttributes point_data;
       point_data.attributes = std::move(attrs);
-      if (instrument.type == OtelMetricType::kGauge ||
-          instrument.type == OtelMetricType::kObservableGauge) {
+      if (metadata->type == OtelMetricType::kGauge ||
+          metadata->type == OtelMetricType::kObservableGauge) {
         opentelemetry::sdk::metrics::LastValuePointData value;
         value.value_ = instrument.value;
         point_data.point_data = value;
-      } else if (instrument.type == OtelMetricType::kHistogram) {
+      } else if (metadata->type == OtelMetricType::kHistogram) {
         CHECK(instrument.histogram_point_data.has_value());
         point_data.point_data = *instrument.histogram_point_data;
       } else {
         SumPointData value;
         value.value_ = instrument.value;
-        value.is_monotonic_ = instrument.type == OtelMetricType::kCounter ||
-            instrument.type == OtelMetricType::kObservableCounter;
+        value.is_monotonic_ = metadata->type == OtelMetricType::kCounter ||
+            metadata->type == OtelMetricType::kObservableCounter;
         point_data.point_data = value;
       }
       metric->point_data_attr_.push_back(std::move(point_data));

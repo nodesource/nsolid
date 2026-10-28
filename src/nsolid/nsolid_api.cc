@@ -342,16 +342,9 @@ void EnvInst::complete_otel_metrics_collection_() {
   for (const auto& instrument : instruments) {
     for (const auto& value : instrument.values) {
       OtelMetricStor metric;
-      metric.meter_name = instrument.meter_name;
-      metric.meter_version = instrument.meter_version;
-      metric.meter_schema_url = instrument.meter_schema_url;
-      metric.name = instrument.name;
-      metric.unit = instrument.unit;
-      metric.description = instrument.description;
+      metric.metadata = instrument.metadata;
       metric.value = value.value;
       metric.attributes = value.attributes;
-      metric.type = instrument.type;
-      metric.started_at = instrument.started_at;
       metric.collected_at = collected_at;
       if (value.histogram != nullptr) {
         const auto point = value.histogram->ToPoint();

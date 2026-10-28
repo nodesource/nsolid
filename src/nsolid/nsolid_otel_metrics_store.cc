@@ -51,14 +51,16 @@ int OtelMetrics::RegisterInstrument(std::string meter_name,
   }
 
   *instrument_id = static_cast<uint32_t>(instruments_.size());
-  instruments_.push_back({ std::move(meter_name),
-                           std::move(meter_version),
-                           std::move(meter_schema_url),
-                           std::move(name),
-                           std::move(unit),
-                           std::move(description),
-                           type,
-                           std::chrono::system_clock::now(),
+  auto metadata = std::make_shared<const OtelInstrumentMetadata>(
+      OtelInstrumentMetadata{ std::move(meter_name),
+                              std::move(meter_version),
+                              std::move(meter_schema_url),
+                              std::move(name),
+                              std::move(unit),
+                              std::move(description),
+                              type,
+                              std::chrono::system_clock::now() });
+  instruments_.push_back({ std::move(metadata),
                            std::move(histogram_boundaries),
                            {},
                            {},
@@ -71,7 +73,7 @@ int OtelMetrics::AddInstrument(uint32_t instrument_id,
                                std::string attributes) {
   AssertThread();
   const OtelMetricType type = instrument_id < instruments_.size() ?
-      instruments_[instrument_id].type :
+      instruments_[instrument_id].metadata->type :
       OtelMetricType::kCounter;
   if (instrument_id >= instruments_.size() || !std::isfinite(value) ||
       ((type == OtelMetricType::kCounter ||
@@ -221,9 +223,10 @@ const OtelMetrics::InstrumentsStor& OtelMetrics::Get() const {
 void OtelMetrics::ClearObservableValues() {
   AssertThread();
   for (auto& instrument : instruments_) {
-    if (instrument.type == OtelMetricType::kObservableCounter ||
-        instrument.type == OtelMetricType::kObservableGauge ||
-        instrument.type == OtelMetricType::kObservableUpDownCounter) {
+    const OtelMetricType type = instrument.metadata->type;
+    if (type == OtelMetricType::kObservableCounter ||
+        type == OtelMetricType::kObservableGauge ||
+        type == OtelMetricType::kObservableUpDownCounter) {
       instrument.values.clear();
       instrument.value_indices.clear();
       std::unordered_map<std::string, double>().swap(

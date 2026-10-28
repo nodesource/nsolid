@@ -2,7 +2,6 @@
 #define SRC_NSOLID_NSOLID_OTEL_METRICS_STORE_H_
 
 #include <stdint.h>
-#include <chrono>
 #include <memory>
 #include <optional>
 #include <string>
@@ -32,14 +31,7 @@ class OtelMetrics {
           histogram;
     };
 
-    std::string meter_name;
-    std::string meter_version;
-    std::string meter_schema_url;
-    std::string name;
-    std::string unit;
-    std::string description;
-    OtelMetricType type{};
-    std::chrono::system_clock::time_point started_at;
+    std::shared_ptr<const OtelInstrumentMetadata> metadata;
     std::optional<std::vector<double>> histogram_boundaries;
     std::vector<Value> values;
     std::unordered_map<std::string, size_t> value_indices;
