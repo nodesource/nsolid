@@ -25,7 +25,9 @@ class OtelMetrics {
   struct Instrument {
     struct Value {
       std::string attributes;
+      // For histograms, value holds the cumulative sum.
       double value = 0;
+      uint64_t histogram_count = 0;
       std::unique_ptr<opentelemetry::sdk::metrics::DoubleHistogramAggregation>
           histogram;
     };

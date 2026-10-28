@@ -1,11 +1,7 @@
 #include "nsolid_api.h"
 #include "nsolid_otel_metrics_store.h"
 
-#include <algorithm>
 #include <cmath>
-
-#include "opentelemetry/nostd/variant.h"
-#include "opentelemetry/sdk/metrics/data/point_data.h"
 
 #include "nsolid_util.h"
 #include "nlohmann/json.hpp"
@@ -15,7 +11,6 @@ namespace nsolid {
 
 using opentelemetry::sdk::metrics::DoubleHistogramAggregation;
 using opentelemetry::sdk::metrics::HistogramAggregationConfig;
-using opentelemetry::sdk::metrics::HistogramPointData;
 
 static constexpr char kOtelMetricOverflowAttributes[] =
     R"({"otel.metric.overflow":true})";
@@ -174,6 +169,8 @@ int OtelMetrics::AddInstrument(uint32_t instrument_id,
               std::make_unique<DoubleHistogramAggregation>(&config);
         }
         new_value.histogram->Aggregate(value);
+        new_value.value = value;
+        new_value.histogram_count = 1;
       } else {
         new_value.value = value;
       }
@@ -196,16 +193,14 @@ int OtelMetrics::AddInstrument(uint32_t instrument_id,
   }
 
   if (type == OtelMetricType::kHistogram) {
-    const auto point = opentelemetry::nostd::get<HistogramPointData>(
-        it->histogram->ToPoint());
-    const size_t bucket = std::lower_bound(point.boundaries_.begin(),
-                                           point.boundaries_.end(),
-                                           value) - point.boundaries_.begin();
-    if (!std::isfinite(opentelemetry::nostd::get<double>(point.sum_) + value) ||
-        point.count_ == UINT64_MAX || point.counts_[bucket] == UINT64_MAX) {
+    const double sum = it->value + value;
+    // A bucket cannot overflow before the total accepted sample count.
+    if (!std::isfinite(sum) || it->histogram_count == UINT64_MAX) {
       return UV_EINVAL;
     }
     it->histogram->Aggregate(value);
+    it->value = sum;
+    it->histogram_count++;
     return 0;
   }
   if (!std::isfinite(it->value + value)) {
