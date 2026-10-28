@@ -54,9 +54,10 @@ replServer.complete("import\t( 'n", common.mustSucceed((data) => {
   assert.strictEqual(completions[lastIndex + 1], '');
   // There is only one Node.js module that starts with n:
   assert.strictEqual(completions[lastIndex + 2], 'net');
-  assert.strictEqual(completions[lastIndex + 3], '');
+  assert.strictEqual(completions[lastIndex + 3], 'nsolid');
+  assert.strictEqual(completions[lastIndex + 4], '');
   // It's possible to pick up non-core modules too
-  for (const completion of completions.slice(lastIndex + 4)) {
+  for (const completion of completions.slice(lastIndex + 5)) {
     assert.match(completion, /^n/);
   }
 }));

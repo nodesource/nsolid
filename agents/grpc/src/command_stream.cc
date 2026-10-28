@@ -1,0 +1,114 @@
+#include "command_stream.h"
+
+#include "asserts-cpp/asserts.h"
+#include "grpc_utils.h"
+
+using grpc::Status;
+using grpcagent::NSolidService;
+
+namespace node {
+namespace nsolid {
+namespace grpc {
+
+CommandStream::CommandStream(NSolidService::StubInterface* stub,
+                             std::weak_ptr<CommandStreamObserver> observer,
+                             const GrpcMetadata& metadata):
+                                observer_(observer) {
+  ASSERT_EQ(0, lock_.init(true));
+  ASSERT_EQ(0, uv_cond_init(&on_done_cond_));
+  GrpcClient::AddMetadata(&context_, metadata);
+  context_.set_wait_for_ready(true);
+  stub->async()->Command(&context_, this);
+  StartRead(&server_request_);
+  AddHold();
+  StartCall();
+}
+
+CommandStream::~CommandStream() {
+  nsuv::ns_mutex::scoped_lock lock(lock_);
+  // try cancel and wait until OnDone is called
+  if (!write_state_.done) {
+    cancelling_for_destruction_ = true;
+    context_.TryCancel();
+    do {
+      uv_cond_wait(&on_done_cond_, lock_.base());
+    } while (!write_state_.done);
+  }
+
+  uv_cond_destroy(&on_done_cond_);
+}
+
+void CommandStream::OnDone(const Status& s) {
+  if (!s.ok()) {
+    Debug("CommandStream::OnDone error: %d. %s:%s\n",
+          s.error_code(),
+          s.error_message().c_str(),
+          s.error_details().c_str());
+  }
+
+  auto obs = observer_.lock();
+  {
+    nsuv::ns_mutex::scoped_lock lock(lock_);
+    write_state_.done = true;
+    uv_cond_signal(&on_done_cond_);
+    if (!obs || cancelling_for_destruction_) {
+      return;
+    }
+  }
+
+  obs->on_command_stream_done(s);
+}
+
+void CommandStream::OnReadDone(bool ok) {
+  if (ok) {
+    auto obs = observer_.lock();
+    if (obs) {
+      obs->on_command_received(std::move(server_request_));
+      StartRead(&server_request_);
+      return;
+    }
+  } else {
+    Debug("CommandStream::OnReadDone not ok\n");
+  }
+
+  {
+    nsuv::ns_mutex::scoped_lock lock(lock_);
+    if (!write_state_.writes_done) {
+      write_state_.writes_done = true;
+      StartWritesDone();
+      RemoveHold();
+    }
+  }
+}
+
+void CommandStream::OnWriteDone(bool ok/*ok*/) {
+  nsuv::ns_mutex::scoped_lock lock(lock_);
+  write_state_.write_done = true;
+  if (!ok) {
+    Debug("CommandStream::OnWriteDone not ok\n");
+    if (!write_state_.writes_done) {
+      write_state_.writes_done = true;
+      StartWritesDone();
+      RemoveHold();
+    }
+  } else {
+    NextWrite();
+  }
+}
+
+void CommandStream::NextWrite() {
+  if (write_state_.write_done && response_q_.dequeue(write_state_.resp)) {
+    StartWrite(&write_state_.resp);
+    write_state_.write_done = false;
+  }
+}
+
+void CommandStream::Write(grpcagent::CommandResponse&& resp) {
+  response_q_.enqueue(std::move(resp));
+  nsuv::ns_mutex::scoped_lock lock(lock_);
+  NextWrite();
+}
+
+}  // namespace grpc
+}  // namespace nsolid
+}  // namespace node

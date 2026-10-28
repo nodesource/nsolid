@@ -6,6 +6,11 @@ const util = require('node:util')
 const undiciDebugLog = util.debuglog('undici')
 const fetchDebuglog = util.debuglog('fetch')
 const websocketDebuglog = util.debuglog('websocket')
+let tracingChannel
+
+if (diagnosticsChannel.tracingChannel) {
+  tracingChannel = diagnosticsChannel.tracingChannel('undici:fetch')
+}
 
 const channels = {
   // Client
@@ -28,7 +33,9 @@ const channels = {
   ping: diagnosticsChannel.channel('undici:websocket:ping'),
   pong: diagnosticsChannel.channel('undici:websocket:pong'),
   // ProxyAgent
-  proxyConnected: diagnosticsChannel.channel('undici:proxy:connected')
+  proxyConnected: diagnosticsChannel.channel('undici:proxy:connected'),
+  // Fetch channels
+  tracingChannel
 }
 
 let isTrackingClientEvents = false

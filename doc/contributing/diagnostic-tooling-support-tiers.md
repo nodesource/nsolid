@@ -1,3 +1,7 @@
+> \[!IMPORTANT]
+> This document is from and refers to the upstream Node.js project.
+> See [CONTRIBUTING](../../CONTRIBUTING.md) for specific N|Solid content.
+
 # Diagnostic tooling support tiers
 
 Diagnostic tooling is important to the consumers of Node.js. It is used both

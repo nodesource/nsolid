@@ -29,6 +29,7 @@
 #include "node_v8_platform-inl.h"
 #include "simdjson.h"
 #include "timers.h"
+#include "nsolid/nsolid_bindings.h"
 
 #if HAVE_INSPECTOR
 #include "inspector/worker_inspector.h"  // ParentInspectorHandle

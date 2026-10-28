@@ -1,0 +1,221 @@
+# N|Solid Changelog
+
+<!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
+
+## 2026-10-22, Version 24.22.1-nsolid-v6.3.9 'Krypton'
+
+### Commits
+
+* \[[`34af19803d`](https://github.com/nodesource/nsolid/commit/34af19803d)] - Merge tag 'v24.22.1' into node-v24.22.1-nsolid-v6.3.9-release (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`70dcaf2615`](https://github.com/nodesource/nsolid/commit/70dcaf2615)] - **agents**: avoid empty strings in StatsD sends (Santiago Gimeno) [#603](https://github.com/nodesource/nsolid/pull/603)
+* \[[`f2cfa7949a`](https://github.com/nodesource/nsolid/commit/f2cfa7949a)] - **agents**: fix StatsD worker bindings (Santiago Gimeno) [#603](https://github.com/nodesource/nsolid/pull/603)
+* \[[`0cc95b5258`](https://github.com/nodesource/nsolid/commit/0cc95b5258)] - **agents**: correct gRPC size limit comment (Santiago Gimeno) [#602](https://github.com/nodesource/nsolid/pull/602)
+* \[[`39d3ea7fd0`](https://github.com/nodesource/nsolid/commit/39d3ea7fd0)] - **agents**: bound StatsD UDP address retries (Santiago Gimeno) [#599](https://github.com/nodesource/nsolid/pull/599)
+* \[[`10f67887c5`](https://github.com/nodesource/nsolid/commit/10f67887c5)] - **(CVE-2026-93748)** **deps**: update npm http-cache-semantics\@4.3.0 (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`4420106867`](https://github.com/nodesource/nsolid/commit/4420106867)] - **deps**: update npm postcss-selector-parser\@7.1.7 (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`35f074141a`](https://github.com/nodesource/nsolid/commit/35f074141a)] - **deps**: update npm ip-address\@10.7.4 (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`fdfb09f9fe`](https://github.com/nodesource/nsolid/commit/fdfb09f9fe)] - **deps**: update npm undici\@6.29.1 (Santiago Gimeno) [#616](https://github.com/nodesource/nsolid/pull/616)
+* \[[`f2e50cad68`](https://github.com/nodesource/nsolid/commit/f2e50cad68)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#572](https://github.com/nodesource/nsolid/pull/572)
+* \[[`2ddab74e39`](https://github.com/nodesource/nsolid/commit/2ddab74e39)] - **deps**: update opentelemetry-cpp to 1.29.0 (Santiago Gimeno) [#572](https://github.com/nodesource/nsolid/pull/572)
+* \[[`f116217e0b`](https://github.com/nodesource/nsolid/commit/f116217e0b)] - **deps**: update grpc to 1.84.0 (Santiago Gimeno) [#567](https://github.com/nodesource/nsolid/pull/567)
+* \[[`144d177d13`](https://github.com/nodesource/nsolid/commit/144d177d13)] - **deps**: update to protobuf 36.2 (Santiago Gimeno) [#568](https://github.com/nodesource/nsolid/pull/568)
+* \[[`ad0fef02cc`](https://github.com/nodesource/nsolid/commit/ad0fef02cc)] - **doc**: document missing N|Solid environment vars (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`40c20707a8`](https://github.com/nodesource/nsolid/commit/40c20707a8)] - **http**: fix server span completion on socket close (Santiago Gimeno) [#563](https://github.com/nodesource/nsolid/pull/563)
+* \[[`f1e87140a1`](https://github.com/nodesource/nsolid/commit/f1e87140a1)] - **lib**: initialize worker tracing diagnostics (Santiago Gimeno) [#605](https://github.com/nodesource/nsolid/pull/605)
+* \[[`35ba2f9be0`](https://github.com/nodesource/nsolid/commit/35ba2f9be0)] - **lib**: defer loading the OTEL context manager (Santiago Gimeno) [#571](https://github.com/nodesource/nsolid/pull/571)
+* \[[`a2332dd77d`](https://github.com/nodesource/nsolid/commit/a2332dd77d)] - **lib,src**: align continuous profiling defaults (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`8b50e4a772`](https://github.com/nodesource/nsolid/commit/8b50e4a772)] - **lib,test**: fix N|Solid environment handling (Santiago Gimeno) [#596](https://github.com/nodesource/nsolid/pull/596)
+* \[[`078ed0c744`](https://github.com/nodesource/nsolid/commit/078ed0c744)] - **module**: fix package lookup for child tracking (Santiago Gimeno) [#608](https://github.com/nodesource/nsolid/pull/608)
+* \[[`f242f3b098`](https://github.com/nodesource/nsolid/commit/f242f3b098)] - **src**: fix average event loop task metrics (Santiago Gimeno) [#595](https://github.com/nodesource/nsolid/pull/595)
+* \[[`5948cb2b56`](https://github.com/nodesource/nsolid/commit/5948cb2b56)] - **src**: fix event loop metric time units (Santiago Gimeno) [#594](https://github.com/nodesource/nsolid/pull/594)
+* \[[`11b35b0a5a`](https://github.com/nodesource/nsolid/commit/11b35b0a5a)] - **src**: avoid accessing EnvInst on Env destruction (Santiago Gimeno) [#468](https://github.com/nodesource/nsolid/pull/468)
+* \[[`be978e1c10`](https://github.com/nodesource/nsolid/commit/be978e1c10)] - **src**: index pending spans by their OTel ID (Santiago Gimeno) [#605](https://github.com/nodesource/nsolid/pull/605)
+* \[[`d609505d82`](https://github.com/nodesource/nsolid/commit/d609505d82)] - **test**: fix test-bootstrap-modules (Santiago Gimeno) [#607](https://github.com/nodesource/nsolid/pull/607)
+* \[[`9caee02cb8`](https://github.com/nodesource/nsolid/commit/9caee02cb8)] - **test**: wait for tracing flags before acknowledging (Santiago Gimeno) [#606](https://github.com/nodesource/nsolid/pull/606)
+* \[[`c15008ac6d`](https://github.com/nodesource/nsolid/commit/c15008ac6d)] - **(CVE-2026-93687)** **vex**: exempt ncm-ng braces advisory (CVE-2026-93687) (Minwoo Jung) [#615](https://github.com/nodesource/nsolid/pull/615)
+
+## 2026-09-30, Version 24.21.0-nsolid-v6.3.8 'Krypton'
+
+### Commits
+
+* \[[`599d7203e6`](https://github.com/nodesource/nsolid/commit/599d7203e6)] - **deps**: update minimatch brace-expansion\@5.0.12 (Santiago Gimeno)
+* \[[`a9a4bb4e74`](https://github.com/nodesource/nsolid/commit/a9a4bb4e74)] - **deps**: update npm brace-expansion\@5.0.12 (Santiago Gimeno)
+* \[[`f1265e0322`](https://github.com/nodesource/nsolid/commit/f1265e0322)] - **deps**: update npm ip-address\@10.7.2 (Santiago Gimeno)
+* \[[`02336c0fae`](https://github.com/nodesource/nsolid/commit/02336c0fae)] - **(CVE-2026-19534)** **deps**: update npm undici\@6.29.0 (Santiago Gimeno)
+
+## 2026-09-24, Version 24.21.0-nsolid-v6.3.7 'Krypton'
+
+### Commits
+
+* \[[`407659eb02`](https://github.com/nodesource/nsolid/commit/407659eb02)] - Merge tag 'v24.21.0' into node-v24.21.0-nsolid-v6.3.7-release (Santiago Gimeno)
+* \[[`c55e21a25f`](https://github.com/nodesource/nsolid/commit/c55e21a25f)] - **build**: package OpenVEX on Windows (Santiago Gimeno) [#540](https://github.com/nodesource/nsolid/pull/540)
+* \[[`e91ee81ca3`](https://github.com/nodesource/nsolid/commit/e91ee81ca3)] - **build**: avoid regenerating VEX during install (Santiago Gimeno) [#540](https://github.com/nodesource/nsolid/pull/540)
+* \[[`a0bd51dd56`](https://github.com/nodesource/nsolid/commit/a0bd51dd56)] - **deps**: support modern Windows curl configuration (Santiago Gimeno) [#542](https://github.com/nodesource/nsolid/pull/542)
+* \[[`01ae0d9221`](https://github.com/nodesource/nsolid/commit/01ae0d9221)] - **deps**: update libcurl to 8.22.0 (Santiago Gimeno) [#529](https://github.com/nodesource/nsolid/pull/529)
+* \[[`cdd4039a2a`](https://github.com/nodesource/nsolid/commit/cdd4039a2a)] - **doc**: update README with runtime observability overview (Estefany Aguilar)
+* \[[`1938e6da6d`](https://github.com/nodesource/nsolid/commit/1938e6da6d)] - **doc**: reword zero overhead as minimal overhead (teffcode)
+* \[[`ff655d0725`](https://github.com/nodesource/nsolid/commit/ff655d0725)] - **doc**: wrap README lines to satisfy markdown lint (teffcode)
+* \[[`e9f06cb6ff`](https://github.com/nodesource/nsolid/commit/e9f06cb6ff)] - **doc**: drop unused query from the npm plugin link (teffcode-ai)
+* \[[`28d37261b8`](https://github.com/nodesource/nsolid/commit/28d37261b8)] - **doc**: use unversioned Windsurf marketplace link (teffcode-ai)
+* \[[`931b397b14`](https://github.com/nodesource/nsolid/commit/931b397b14)] - **doc**: update README with runtime observability overview (teffcode-ai)
+* \[[`ac284120ad`](https://github.com/nodesource/nsolid/commit/ac284120ad)] - **lib**: fix linting errors (Santiago Gimeno)
+* \[[`92fa8c8483`](https://github.com/nodesource/nsolid/commit/92fa8c8483)] - **src**: improve TSList iteration and erase operations (Santiago Gimeno) [#517](https://github.com/nodesource/nsolid/pull/517)
+* \[[`6e44843cb0`](https://github.com/nodesource/nsolid/commit/6e44843cb0)] - **tools**: add N|Solid OpenVEX exceptions (Santiago Gimeno) [#515](https://github.com/nodesource/nsolid/pull/515)
+* \[[`6fca57e028`](https://github.com/nodesource/nsolid/commit/6fca57e028)] - **tools,test**: support versioned OpenVEX statements (Santiago Gimeno) [#528](https://github.com/nodesource/nsolid/pull/528)
+
+## 2026-08-10, Version 24.19.0-nsolid-v6.3.6 'Krypton'
+
+### Commits
+
+* \[[`82a47f2824`](https://github.com/nodesource/nsolid/commit/82a47f2824)] - Merge tag 'v24.19.0' into node-v24.19.0-nsolid-v6.3.6-release (Santiago Gimeno)
+* \[[`63edada534`](https://github.com/nodesource/nsolid/commit/63edada534)] - **deps**: update npm ip-address\@10.5.0 (Santiago Gimeno)
+* \[[`1a8d196250`](https://github.com/nodesource/nsolid/commit/1a8d196250)] - **deps**: update npm undici\@6.28.0 (Santiago Gimeno)
+
+## 2026-07-31, Version 24.18.1-nsolid-v6.3.5 'Krypton'
+
+### Commits
+
+* \[[`d085415e59`](https://github.com/nodesource/nsolid/commit/d085415e59)] - **deps**: update minimatch to 10.2.6 (Santiago Gimeno)
+* \[[`7355a6cf32`](https://github.com/nodesource/nsolid/commit/7355a6cf32)] - **deps**: update npm brace-expansion\@5.0.9 (Santiago Gimeno)
+* \[[`cd1cac70dd`](https://github.com/nodesource/nsolid/commit/cd1cac70dd)] - **deps**: update npm tar\@7.5.22 (Santiago Gimeno)
+
+## 2026-07-29, Version 24.18.1-nsolid-v6.3.4 'Krypton'
+
+### Commits
+
+* \[[`70692695cc`](https://github.com/nodesource/nsolid/commit/70692695cc)] - Merge tag 'v24.18.1' into node-v24.18.1-nsolid-v6.3.4-release (Santiago Gimeno)
+
+## 2026-07-22, Version 24.18.0-nsolid-v6.3.3 'Krypton'
+
+### Commits
+
+* \[[`13c74c037f`](https://github.com/nodesource/nsolid/commit/13c74c037f)] - **agents**: fix statsdTags in reconfigure response (Santiago Gimeno) [#495](https://github.com/nodesource/nsolid/pull/495)
+* \[[`bf7ae9b9d6`](https://github.com/nodesource/nsolid/commit/bf7ae9b9d6)] - **deps**: update libcurl to 8.21.0 (Santiago Gimeno) [#497](https://github.com/nodesource/nsolid/pull/497)
+* \[[`2bd464bd04`](https://github.com/nodesource/nsolid/commit/2bd464bd04)] - **deps**: fix versions of minimatch & brace-expansion (Minwoo Jung)
+* \[[`e5b2a4c557`](https://github.com/nodesource/nsolid/commit/e5b2a4c557)] - **test**: fix test-http-agent-keepalive again (Santiago Gimeno) [#488](https://github.com/nodesource/nsolid/pull/488)
+
+## 2026-06-24, Version 24.18.0-nsolid-v6.3.2 'Krypton'
+
+### Commits
+
+* \[[`76392c1f12`](https://github.com/nodesource/nsolid/commit/76392c1f12)] - Merge tag 'v24.18.0' into node-v24.18.0-nsolid-v6.3.2-release (RafaelGSS)
+
+## 2026-06-18, Version 24.17.0-nsolid-v6.3.1 'Krypton'
+
+### Commits
+
+* \[[`3398eac898`](https://github.com/nodesource/nsolid/commit/3398eac898)] - Merge tag 'v24.17.0' into node-v24.17.0-nsolid-v6.3.1-release (Santiago Gimeno)
+
+## 2026-06-15, Version 24.16.0-nsolid-v6.3.0 'Krypton'
+
+### Commits
+
+* \[[`b5071eddfc`](https://github.com/nodesource/nsolid/commit/b5071eddfc)] - Merge tag 'v24.16.0' into node-v24.16.0-nsolid-v6.3.0-release (Santiago Gimeno)
+* \[[`59aa320eca`](https://github.com/nodesource/nsolid/commit/59aa320eca)] - **agents**: add nsolidVersion attr to metrics (Santiago Gimeno) [#477](https://github.com/nodesource/nsolid/pull/477)
+* \[[`26d106b6b7`](https://github.com/nodesource/nsolid/commit/26d106b6b7)] - **agents**: add nsolid-version and add it to metadata (Santiago Gimeno) [#460](https://github.com/nodesource/nsolid/pull/460)
+* \[[`8aee9af689`](https://github.com/nodesource/nsolid/commit/8aee9af689)] - **agents,lib,src,test**: add traceSampleRate support (Santiago Gimeno) [#430](https://github.com/nodesource/nsolid/pull/430)
+* \[[`ad25589e26`](https://github.com/nodesource/nsolid/commit/ad25589e26)] - **deps**: update grpc to 1.80.0 (Santiago Gimeno) [#471](https://github.com/nodesource/nsolid/pull/471)
+* \[[`7b22f7490c`](https://github.com/nodesource/nsolid/commit/7b22f7490c)] - **deps**: update libcurl to 8.20.0 (Santiago Gimeno) [#470](https://github.com/nodesource/nsolid/pull/470)
+* \[[`5b63c75805`](https://github.com/nodesource/nsolid/commit/5b63c75805)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#422](https://github.com/nodesource/nsolid/pull/422)
+* \[[`1668729c49`](https://github.com/nodesource/nsolid/commit/1668729c49)] - **deps**: update opentelemetry-cpp to 1.27.0 (Santiago Gimeno) [#422](https://github.com/nodesource/nsolid/pull/422)
+* \[[`f65527b88d`](https://github.com/nodesource/nsolid/commit/f65527b88d)] - **deps**: update opentelemetry-cpp to 1.25.0 (Santiago Gimeno) [#422](https://github.com/nodesource/nsolid/pull/422)
+* \[[`1023131c0b`](https://github.com/nodesource/nsolid/commit/1023131c0b)] - **deps**: update grpc to 1.78.1 (Santiago Gimeno) [#434](https://github.com/nodesource/nsolid/pull/434)
+* \[[`740484b910`](https://github.com/nodesource/nsolid/commit/740484b910)] - **deps**: update libcurl to 8.19.0 (Santiago Gimeno) [#435](https://github.com/nodesource/nsolid/pull/435)
+* \[[`1dedb48d9f`](https://github.com/nodesource/nsolid/commit/1dedb48d9f)] - **deps**: update to protobuf v34.0 (Santiago Gimeno) [#433](https://github.com/nodesource/nsolid/pull/433)
+* \[[`c96d57e082`](https://github.com/nodesource/nsolid/commit/c96d57e082)] - **lib**: route saas asset APIs through grpc (Santiago Gimeno) [#460](https://github.com/nodesource/nsolid/pull/460)
+* \[[`d779b5e037`](https://github.com/nodesource/nsolid/commit/d779b5e037)] - **lib,src**: autostart grpc agent for saas configs (Santiago Gimeno) [#460](https://github.com/nodesource/nsolid/pull/460)
+* \[[`8444f6d941`](https://github.com/nodesource/nsolid/commit/8444f6d941)] - **src**: enrich OTLP metrics resource attributes (Santiago Gimeno) [#454](https://github.com/nodesource/nsolid/pull/454)
+* \[[`ccdcd1f132`](https://github.com/nodesource/nsolid/commit/ccdcd1f132)] - **src,test**: add totalMem process metric (Santiago Gimeno) [#469](https://github.com/nodesource/nsolid/pull/469)
+* \[[`ac2544563b`](https://github.com/nodesource/nsolid/commit/ac2544563b)] - **src,test**: preserve Latin1 strings in fastSpan APIs (Santiago Gimeno) [#450](https://github.com/nodesource/nsolid/pull/450)
+* \[[`37f19cd6d3`](https://github.com/nodesource/nsolid/commit/37f19cd6d3)] - **test**: trim noisy grpc asset logging (Santiago Gimeno) [#460](https://github.com/nodesource/nsolid/pull/460)
+
+## 2026-04-30, Version 24.15.0-nsolid-v6.2.4 'Krypton'
+
+### Commits
+
+* \[[`dca18b3a55`](https://github.com/nodesource/nsolid/commit/dca18b3a55)] - **lib**: fix v24.15.0 merge error on present on v6.2.3 (Santiago Gimeno) [#461](https://github.com/nodesource/nsolid/pull/461)
+
+## 2026-04-28, Version 24.15.0-nsolid-v6.2.3 'Krypton'
+
+### Commits
+
+* \[[`4d2ac8ff2d`](https://github.com/nodesource/nsolid/commit/4d2ac8ff2d)] - **deps**: upgrade npm to 11.13.0 (npm team) [#456](https://github.com/nodesource/nsolid/pull/456)
+* \[[`8b6183edd4`](https://github.com/nodesource/nsolid/commit/8b6183edd4)] - **deps**: upgrade npm to 11.12.1 (npm team) [#456](https://github.com/nodesource/nsolid/pull/456)
+* \[[`7d058566cd`](https://github.com/nodesource/nsolid/commit/7d058566cd)] - **deps**: upgrade npm to 11.11.1 (npm team) [#456](https://github.com/nodesource/nsolid/pull/456)
+* \[[`2c871f6549`](https://github.com/nodesource/nsolid/commit/2c871f6549)] - **deps**: bump ncm-ng to 2.9.8 (JungMinu) [#455](https://github.com/nodesource/nsolid/pull/455)
+* \[[`f49f8f9fc4`](https://github.com/nodesource/nsolid/commit/f49f8f9fc4)] - **lib,src,test**: fix race during tracing toggles (Santiago Gimeno) [#441](https://github.com/nodesource/nsolid/pull/441)
+* \[[`2366f19e39`](https://github.com/nodesource/nsolid/commit/2366f19e39)] - **lib,test**: fix JS linting errors (Santiago Gimeno) [#451](https://github.com/nodesource/nsolid/pull/451)
+* \[[`1ff40d7a9f`](https://github.com/nodesource/nsolid/commit/1ff40d7a9f)] - **src**: fix C++ linting issues (Santiago Gimeno) [#451](https://github.com/nodesource/nsolid/pull/451)
+* \[[`20e6cad7e1`](https://github.com/nodesource/nsolid/commit/20e6cad7e1)] - **src**: replace duplicate loop hook regs (Santiago Gimeno) [#444](https://github.com/nodesource/nsolid/pull/444)
+* \[[`1fec452cc9`](https://github.com/nodesource/nsolid/commit/1fec452cc9)] - **test**: fix linting in test-nsolid-file-handle-count (Santiago Gimeno) [#441](https://github.com/nodesource/nsolid/pull/441)
+
+## 2026-03-25, Version 24.14.1-nsolid-v6.2.2 'Krypton'
+
+### Commits
+
+* \[[`6cf69f4539`](https://github.com/nodesource/nsolid/commit/6cf69f4539)] - Merge tag 'v24.14.1' into node-v24.14.1-nsolid-v6.2.2-release (Santiago Gimeno)
+
+## 2026-03-02, Version 24.14.0-nsolid-v6.2.1 'Krypton'
+
+### Commits
+
+* \[[`252ea7fdf1`](https://github.com/nodesource/nsolid/commit/252ea7fdf1)] - Merge tag 'v24.14.0' into node-v24.14.0-nsolid-v6.2.1-release (Santiago Gimeno)
+* \[[`369ce34beb`](https://github.com/nodesource/nsolid/commit/369ce34beb)] - **agents**: fix http\_client percentile calculation (Santiago Gimeno) [#424](https://github.com/nodesource/nsolid/pull/424)
+* \[[`8ad264131c`](https://github.com/nodesource/nsolid/commit/8ad264131c)] - **agents**: fix infinite recursion on \~CommandStream (Santiago Gimeno) [#412](https://github.com/nodesource/nsolid/pull/412)
+* \[[`c491885463`](https://github.com/nodesource/nsolid/commit/c491885463)] - **agents**: on grpc add appVersion field to info msg (Santiago Gimeno) [#413](https://github.com/nodesource/nsolid/pull/413)
+* \[[`2c84a6a5ee`](https://github.com/nodesource/nsolid/commit/2c84a6a5ee)] - **agents**: fix otel-cpp warning when setting creds (Santiago Gimeno)
+* \[[`a9ac92fe61`](https://github.com/nodesource/nsolid/commit/a9ac92fe61)] - **agents**: increase gRPC timeout from 10 to 60 secs (Santiago Gimeno)
+* \[[`c4442b3d98`](https://github.com/nodesource/nsolid/commit/c4442b3d98)] - **build**: avoid try/except inside a loop (Santiago Gimeno) [#419](https://github.com/nodesource/nsolid/pull/419)
+* \[[`9394bd4778`](https://github.com/nodesource/nsolid/commit/9394bd4778)] - **deps**: update libcurl to 8.18.0 (Santiago Gimeno) [#407](https://github.com/nodesource/nsolid/pull/407)
+* \[[`80c4caf393`](https://github.com/nodesource/nsolid/commit/80c4caf393)] - **deps**: update libsodium to 1.0.21 (Santiago Gimeno) [#408](https://github.com/nodesource/nsolid/pull/408)
+* \[[`c9d341d93c`](https://github.com/nodesource/nsolid/commit/c9d341d93c)] - **src**: fix null pointer deref error in SetWeak cb (Santiago Gimeno)
+* \[[`edcd346843`](https://github.com/nodesource/nsolid/commit/edcd346843)] - **test**: fix failing grpc agent otel tests (Santiago Gimeno) [#421](https://github.com/nodesource/nsolid/pull/421)
+* \[[`f4360e5995`](https://github.com/nodesource/nsolid/commit/f4360e5995)] - **test**: fix flaky test-grpc-continuous-profile (Santiago Gimeno) [#418](https://github.com/nodesource/nsolid/pull/418)
+
+## 2026-01-14, Version 24.13.0-nsolid-v6.2.0 'Krypton'
+
+### Commits
+
+* \[[`666670a76b`](https://github.com/nodesource/nsolid/commit/666670a76b)] - Merge tag 'v24.13.0' into node-v24.13.0-nsolid-v6.1.2-release (Santiago Gimeno)
+* \[[`fd7c44ee33`](https://github.com/nodesource/nsolid/commit/fd7c44ee33)] - **agents**: fix otel-cpp warning when setting creds (Santiago Gimeno)
+* \[[`67b4bce062`](https://github.com/nodesource/nsolid/commit/67b4bce062)] - **agents**: increase gRPC timeout from 10 to 60 secs (Santiago Gimeno)
+* \[[`7d4cbcaef1`](https://github.com/nodesource/nsolid/commit/7d4cbcaef1)] - **agents**: add option to dump grpc keylog file (Santiago Gimeno) [#406](https://github.com/nodesource/nsolid/pull/406)
+* \[[`751b622cd2`](https://github.com/nodesource/nsolid/commit/751b622cd2)] - **deps**: update to protobuf v33.2 (Santiago Gimeno) [#398](https://github.com/nodesource/nsolid/pull/398)
+* \[[`fcab1898d3`](https://github.com/nodesource/nsolid/commit/fcab1898d3)] - **deps**: update grpc to 1.76.0 (Santiago Gimeno) [#390](https://github.com/nodesource/nsolid/pull/390)
+* \[[`1f41f13e5e`](https://github.com/nodesource/nsolid/commit/1f41f13e5e)] - **deps**: update to protobuf v33.0 (Santiago Gimeno)
+* \[[`e6ed2d1e88`](https://github.com/nodesource/nsolid/commit/e6ed2d1e88)] - **deps**: update to protobuf v33.0 (Santiago Gimeno) [#389](https://github.com/nodesource/nsolid/pull/389)
+* \[[`eb0e4988c6`](https://github.com/nodesource/nsolid/commit/eb0e4988c6)] - **deps**: update libcurl to 8.17.0 (Santiago Gimeno) [#388](https://github.com/nodesource/nsolid/pull/388)
+* \[[`c3d5f95aaa`](https://github.com/nodesource/nsolid/commit/c3d5f95aaa)] - **lib,src**: set default metrics interval to 5 secs (Santiago Gimeno)
+* \[[`2de22bbc07`](https://github.com/nodesource/nsolid/commit/2de22bbc07)] - **src**: fix null pointer deref error in SetWeak cb (Santiago Gimeno)
+* \[[`ba6c1d0a3c`](https://github.com/nodesource/nsolid/commit/ba6c1d0a3c)] - **src**: set name to nsolid threads (Santiago Gimeno) [#401](https://github.com/nodesource/nsolid/pull/401)
+* \[[`cb8bd50ca7`](https://github.com/nodesource/nsolid/commit/cb8bd50ca7)] - **test**: fix linting issues after v24.13.0 rebase (Santiago Gimeno)
+* \[[`8116ecd9b4`](https://github.com/nodesource/nsolid/commit/8116ecd9b4)] - **test**: add grpc tests testing TLS connections (Santiago Gimeno) [#406](https://github.com/nodesource/nsolid/pull/406)
+
+## 2025-12-08, Version 24.11.1-nsolid-v6.1.1 'Krypton'
+
+### Commits
+
+## 2025-12-02, Version 24.11.1-nsolid-v6.1.0 'Krypton'
+
+### Commits
+
+* \[[`8a9612b57a`](https://github.com/nodesource/nsolid/commit/8a9612b57a)] - Merge tag 'v24.11.1' into node-v24.11.1-nsolid-v6.1.0-release (Santiago Gimeno)
+* \[[`75faeaa214`](https://github.com/nodesource/nsolid/commit/75faeaa214)] - **agents**: add runtime control for asset collection (Santiago Gimeno) [#377](https://github.com/nodesource/nsolid/pull/377)
+
+## 2025-10-29, Version 24.11.0-nsolid-v6.0.2 'Krypton'
+
+### Commits
+
+* \[[`76e7b850b1`](https://github.com/nodesource/nsolid/commit/76e7b850b1)] - **agents**: improve debug logging and fix win crash (Santiago Gimeno) [#376](https://github.com/nodesource/nsolid/pull/376)
+* \[[`b4449eefdd`](https://github.com/nodesource/nsolid/commit/b4449eefdd)] - **agents**: guard StartWritesDone() in grpc streams (Santiago Gimeno) [#379](https://github.com/nodesource/nsolid/pull/379)
+* \[[`f1f29831de`](https://github.com/nodesource/nsolid/commit/f1f29831de)] - **build,deps**: add v8 patch management system (Santiago Gimeno) [#381](https://github.com/nodesource/nsolid/pull/381)
+* \[[`25ec327a61`](https://github.com/nodesource/nsolid/commit/25ec327a61)] - **deps**: add missing files to grpc and curl gyp files (Santiago Gimeno) [#380](https://github.com/nodesource/nsolid/pull/380)
+* \[[`4841cdbd1f`](https://github.com/nodesource/nsolid/commit/4841cdbd1f)] - **deps**: add missing source file to libcurl gyp (Santiago Gimeno)
+* \[[`308fb1748f`](https://github.com/nodesource/nsolid/commit/308fb1748f)] - **deps**: add support for exporting Summary via OTLP (Santiago Gimeno) [#371](https://github.com/nodesource/nsolid/pull/371)
+* \[[`a08b35806d`](https://github.com/nodesource/nsolid/commit/a08b35806d)] - **deps**: update opentelemetry-cpp to 1.23.0 (Santiago Gimeno) [#371](https://github.com/nodesource/nsolid/pull/371)
+* \[[`9aad7d18dd`](https://github.com/nodesource/nsolid/commit/9aad7d18dd)] - **deps**: update libcurl to 8.16.0 (Santiago Gimeno) [#370](https://github.com/nodesource/nsolid/pull/370)
+* \[[`3ad39da1d1`](https://github.com/nodesource/nsolid/commit/3ad39da1d1)] - **deps**: update grpc to 1.75.0 (Santiago Gimeno) [#369](https://github.com/nodesource/nsolid/pull/369)
+* \[[`9595fa4695`](https://github.com/nodesource/nsolid/commit/9595fa4695)] - **doc**: explain NSOLID\_DISABLE\_PACKAGE\_SCAN better (Santiago Gimeno) [#362](https://github.com/nodesource/nsolid/pull/362)
+* \[[`48283c7351`](https://github.com/nodesource/nsolid/commit/48283c7351)] - **misc**: changes up to node-v22.18.0-nsolid-v6.0.1 (Santiago Gimeno)
+* \[[`b6416a9ca9`](https://github.com/nodesource/nsolid/commit/b6416a9ca9)] - **src**: clamp idle time to avoid underflow in metrics (Santiago Gimeno) [#372](https://github.com/nodesource/nsolid/pull/372)
+* \[[`60c5c58e76`](https://github.com/nodesource/nsolid/commit/60c5c58e76)] - **test**: fix flaky test-grpc-packages (Santiago Gimeno) [#368](https://github.com/nodesource/nsolid/pull/368)

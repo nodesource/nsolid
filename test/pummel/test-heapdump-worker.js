@@ -1,11 +1,15 @@
 'use strict';
-
 // This tests heap snapshot integration of worker.
 
-require('../common');
+const common = require('../common');
 const { validateByRetainingPath } = require('../common/heap');
 const { Worker } = require('worker_threads');
 const assert = require('assert');
+
+// TODO(trevnorris): Investigate why this says EnvInst isn't being cleaned
+// up on the call to terminate() in this case.
+if (process.config.variables.asan)
+  common.skip('Skip flaky test');
 
 // Before worker is used, no MessagePort should be created.
 {

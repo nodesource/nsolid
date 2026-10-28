@@ -13,6 +13,8 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const { isMainThread } = require('worker_threads');
 
+delete process.env.NSOLID_LICENSE_TOKEN;
+
 if (isMainThread) {
   // TODO(richardlau): Decide if `crypto.setFips` should error if the
   // provider named "fips" is not available.

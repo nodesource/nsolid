@@ -36,6 +36,7 @@
 #include "node_url.h"
 #include "node_watchdog.h"
 #include "util-inl.h"
+#include "nsolid/nsolid_api.h"
 
 namespace node {
 namespace contextify {
@@ -1716,6 +1717,10 @@ static MaybeLocal<Function> CompileFunctionForCJSLoader(
   if (cache_entry != nullptr) {
     env->compile_cache_handler()->MaybeSave(cache_entry, fn, *cache_rejected);
   }
+
+  auto envinst = nsolid::EnvInst::GetCurrent(isolate);
+  envinst->StoreSourceCode(fn->ScriptId(), filename, code, false);
+
   return scope.Escape(fn);
 }
 

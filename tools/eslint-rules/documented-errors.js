@@ -15,12 +15,13 @@ function getErrorsInDoc() {
   let currentHeader;
   const errors = new Set();
   const legacyErrors = new Set();
+  const nsolidErrors = new Set();
   const codePattern = /^### `([^`]+)`$/;
   const anchorPattern = /^<a id="([^"]+)"><\/a>$/;
 
   let previousAnchor;
 
-  function parse(line, legacy, lineNumber) {
+  function parse(line, legacy, lineNumber, nsolid) {
     const anchorMatch = anchorPattern.exec(line);
     if (anchorMatch) {
       const code = anchorMatch[1];
@@ -43,25 +44,27 @@ function getErrorsInDoc() {
     if (legacy && errors.has(code)) {
       throw new Error(`Error is documented both as legacy and non-legacy in ${docPath}:${lineNumber}`, { cause: code });
     }
-    (legacy ? legacyErrors : errors).add(code);
+    (legacy ? legacyErrors : nsolid ? nsolidErrors : errors).add(code);
   }
 
   let lineNumber = 0;
   for (const line of lines) {
     lineNumber++;
     if (line.startsWith('## ')) currentHeader = line.substring(3);
-    if (currentHeader === 'Node.js error codes') parse(line, false, lineNumber);
+    if (currentHeader === 'Node.js error codes') parse(line, false, lineNumber, false);
     if (line === '## Legacy Node.js error codes') previousAnchor = null;
-    if (currentHeader === 'Legacy Node.js error codes') parse(line, true, lineNumber);
+    if (currentHeader === 'Legacy Node.js error codes') parse(line, true, lineNumber, false);
+    if (line === '## NSolid Error Codes') previousAnchor = null;
+    if (currentHeader === 'NSolid Error Codes') parse(line, false, lineNumber, true);
   }
 
-  return { errors, legacyErrors };
+  return { errors, legacyErrors, nsolidErrors };
 }
 
 // Main rule export
 module.exports = {
   create(context) {
-    const { errors, legacyErrors } = getErrorsInDoc();
+    const { errors, legacyErrors, nsolidErrors } = getErrorsInDoc();
     return {
       ExpressionStatement(node) {
         if (!isDefiningError(node)) return;
@@ -74,7 +77,7 @@ module.exports = {
             node,
             message: `"${code}" is marked as legacy, yet it is used in lib/.`,
           });
-        } else if (!errors.has(code)) {
+        } else if (!errors.has(code) && !nsolidErrors.has(code)) {
           context.report({
             node,
             message: `"${code}" is not documented in doc/api/errors.md`,
