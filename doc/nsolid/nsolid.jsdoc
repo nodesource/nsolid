@@ -4,6 +4,22 @@
  */
 
 /**
+ * Register an external OpenTelemetry API with N|Solid.
+ * @function module:nsolid.otel.register
+ * @param {Object} api - The external OpenTelemetry API.
+ * @param {Object} [options]
+ * @param {boolean} [options.traces=true] - Install N|Solid's context manager
+ * and tracer provider when runtime tracing is enabled, and follow subsequent
+ * tracing changes. When false, leave tracing providers and instrumentation
+ * enable/disable methods untouched.
+ * @param {boolean} [options.metrics=false] - Install N|Solid's meter provider.
+ * Custom metric export currently requires the gRPC agent. Tracing changes do
+ * not register or disable the meter provider.
+ * @returns {boolean} Whether active tracing registration succeeded; true if
+ * tracing registration is disabled or runtime tracing is not active.
+ */
+
+/**
  * @callback CustomCommandRequestThrow
  * @param {Object} error
  */

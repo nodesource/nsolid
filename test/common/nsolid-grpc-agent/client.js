@@ -125,7 +125,7 @@ function registerApiMetrics() {
     },
     getMeter: (...args) => metrics.getMeter(...args),
   };
-  nsolid.otel.register({ ...api, metrics: externalMetrics });
+  nsolid.otel.register({ ...api, metrics: externalMetrics }, { metrics: true });
   if (providerRegistrations !== 1) {
     throw new Error(`Meter provider registered ${providerRegistrations} times`);
   }

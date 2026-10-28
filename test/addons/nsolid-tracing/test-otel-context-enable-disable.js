@@ -65,7 +65,7 @@ setupNSolid(common.mustCall(() => {
   const externalMeterProvider = { getMeter() {} };
   metrics.setGlobalMeterProvider(externalMeterProvider);
 
-  if (!nsolid.otel.register({ ...api, metrics })) {
+  if (!nsolid.otel.register({ ...api, metrics }, { metrics: true })) {
     throw new Error('Error registering api');
   }
   assert.strictEqual(metrics.getMeterProvider(), externalMeterProvider);
