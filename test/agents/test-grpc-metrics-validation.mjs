@@ -10,6 +10,7 @@ await new Promise((resolve) => {
     const env = {
       NSOLID_GRPC_INSECURE: 1,
       NSOLID_GRPC: `localhost:${port}`,
+      NSOLID_INTERVAL: 500,
     };
     const child = new TestClient(['-t', 'http'], { env });
     await child.config({ app: 'metrics-validation' });
@@ -38,6 +39,12 @@ await new Promise((resolve) => {
       metric.name === 'valid-updates');
     assert.strictEqual(validUpdates.sum.dataPoints.length, 1);
     assert.strictEqual(validUpdates.sum.dataPoints[0].asDouble, 15);
+    const cached = metrics.find((metric) => metric.name === 'cached-attributes');
+    const cachedValues = new Map(cached.sum.dataPoints.map((point) => [
+      point.attributes.find((attribute) => attribute.key === 'b').value.intValue,
+      point.asDouble,
+    ]));
+    assert.deepStrictEqual(cachedValues, new Map([ ['2', 8], ['3', 2] ]));
     const gauge = metrics.find((metric) => metric.name === 'temperature');
     assert.ok(gauge);
     assert.strictEqual(gauge.data, 'gauge');

@@ -70,6 +70,7 @@ class OtelMetrics {
 
   uv_thread_t thread_id_;
   InstrumentsStor instruments_;
+  std::unordered_map<std::string, std::string> normalized_attributes_;
 };
 
 }  // namespace nsolid

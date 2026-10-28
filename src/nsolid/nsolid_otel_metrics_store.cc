@@ -83,34 +83,43 @@ int OtelMetrics::AddInstrument(uint32_t instrument_id,
     return UV_EINVAL;
   }
 
-  nlohmann::json parsed = nlohmann::json::parse(attributes, nullptr, false);
-  if (!parsed.is_object()) {
-    return UV_EINVAL;
-  }
-
-  for (const auto& [key, attribute] : parsed.items()) {
-    USE(key);
-    if (attribute.is_primitive() && !attribute.is_null()) {
-      continue;
-    }
-    if (!attribute.is_array()) {
+  const auto normalized = normalized_attributes_.find(attributes);
+  if (normalized != normalized_attributes_.end()) {
+    attributes = normalized->second;
+  } else {
+    nlohmann::json parsed = nlohmann::json::parse(attributes, nullptr, false);
+    if (!parsed.is_object()) {
       return UV_EINVAL;
     }
-    int type = -1;
-    for (const auto& element : attribute) {
-      if (!element.is_primitive() || element.is_null()) {
-        return UV_EINVAL;
-      }
-      const int element_type = element.is_boolean() ? 0 :
-          element.is_string() ? 1 : element.is_number() ? 2 : -1;
-      if (element_type < 0 || (type >= 0 && type != element_type)) {
-        return UV_EINVAL;
-      }
-      type = element_type;
-    }
-  }
 
-  attributes = parsed.dump();
+    for (const auto& [key, attribute] : parsed.items()) {
+      USE(key);
+      if (attribute.is_primitive() && !attribute.is_null()) {
+        continue;
+      }
+      if (!attribute.is_array()) {
+        return UV_EINVAL;
+      }
+      int type = -1;
+      for (const auto& element : attribute) {
+        if (!element.is_primitive() || element.is_null()) {
+          return UV_EINVAL;
+        }
+        const int element_type = element.is_boolean() ? 0 :
+            element.is_string() ? 1 : element.is_number() ? 2 : -1;
+        if (element_type < 0 || (type >= 0 && type != element_type)) {
+          return UV_EINVAL;
+        }
+        type = element_type;
+      }
+    }
+
+    const std::string canonical = parsed.dump();
+    if (normalized_attributes_.size() < kMaxAttributeSets) {
+      normalized_attributes_.emplace(std::move(attributes), canonical);
+    }
+    attributes = canonical;
+  }
   const std::string original_attributes = attributes;
   Instrument& instrument = instruments_[instrument_id];
   const bool observable_sum =
@@ -229,6 +238,7 @@ void OtelMetrics::ClearObservableValues() {
 void OtelMetrics::Disable() {
   AssertThread();
   instruments_.clear();
+  normalized_attributes_.clear();
 }
 
 }  // namespace nsolid

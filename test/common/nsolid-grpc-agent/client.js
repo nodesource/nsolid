@@ -678,6 +678,16 @@ if (isMainThread) {
       counter.add(10);
       counter.add(5);
 
+      const cached = meter.createCounter('cached-attributes');
+      const attributes = { b: 2, a: 1 };
+      cached.add(1, attributes);
+      attributes.b = 3;
+      cached.add(2, attributes);
+      cached.add(3, { a: 1, b: 2 });
+      cached.add(-1, { a: 1, b: 2 });
+      cached.add(100, { a: 1, b: null });
+      cached.add(4, { b: 2, a: 1 });
+
       const gauge = meter.createGauge('temperature', {
         unit: 'Cel',
         description: 'Temperature',
