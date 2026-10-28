@@ -371,6 +371,9 @@ inline void FileHandle::Close() {
   err_detail detail{ret, fd_, original_name_};
 
   AfterClose();
+  if (ret >= 0) {
+    env()->envinst_->inc_fs_handles_closed();
+  }
 
   // Even though we closed the file descriptor, we still throw an error
   // if the FileHandle object was not closed before garbage collection.
@@ -510,6 +513,7 @@ MaybeLocal<Promise> FileHandle::ClosePromise() {
       close->Reject(
           UVException(isolate, static_cast<int>(req->result), "close"));
     } else {
+      close->env()->envinst_->inc_fs_handles_closed();
       close->Resolve();
     }
   }};
@@ -1076,6 +1080,7 @@ void Close(const FunctionCallbackInfo<Value>& args) {
     FS_SYNC_TRACE_BEGIN(close);
     SyncCallAndThrowOnError(env, &req_wrap_sync, uv_fs_close, fd);
     FS_SYNC_TRACE_END(close);
+    env->envinst_->inc_fs_handles_closed();
   }
 }
 
@@ -2910,6 +2915,7 @@ static void Open(const FunctionCallbackInfo<Value>& args) {
     FS_SYNC_TRACE_END(open);
     if (is_uv_error(result)) return;
     env->AddUnmanagedFd(result);
+    env->envinst_->inc_fs_handles_opened();
     args.GetReturnValue().Set(result);
   }
 }
@@ -2971,6 +2977,7 @@ static void OpenFileHandle(const FunctionCallbackInfo<Value>& args) {
     }
     FileHandle* fd = FileHandle::New(binding_data, result, {}, path.ToString());
     if (fd == nullptr) return;
+    env->envinst_->inc_fs_handles_opened();
     args.GetReturnValue().Set(fd->object());
   }
 }
@@ -3638,6 +3645,7 @@ class ReadFileJob final : public AsyncWrap, public ThreadPoolWork {
     int fd = uv_fs_open(nullptr, &req, path_.c_str(), flags_, 0666, nullptr);
     uv_fs_req_cleanup(&req);
     if (fd < 0) return Fail("open", fd);
+    opened_ = true;
 
     int rc = uv_fs_fstat(nullptr, &req, fd, nullptr);
     if (rc < 0) {
@@ -3697,6 +3705,7 @@ class ReadFileJob final : public AsyncWrap, public ThreadPoolWork {
 
     rc = uv_fs_close(nullptr, &req, fd, nullptr);
     uv_fs_req_cleanup(&req);
+    closed_ = rc == 0;
     if (rc < 0) close_error_ = rc;
     if (error_ != 0) {
       free(data_);
@@ -3714,14 +3723,14 @@ class ReadFileJob final : public AsyncWrap, public ThreadPoolWork {
     std::unique_ptr<ReadFileJob> self(this);
     CHECK(status == 0 || status == UV_ECANCELED);
     FS_ASYNC_TRACE_END0(UV_FS_READ, this)
-    if (status == UV_ECANCELED) {
-      if (fd_ >= 0) CloseQuietly(fd_);
-      return;
+    const bool can_call_into_js = env->can_call_into_js();
+    if ((status == UV_ECANCELED || !can_call_into_js) && fd_ >= 0) {
+      CloseQuietly(fd_);
+      fd_ = -1;
     }
-    if (!env->can_call_into_js()) {
-      if (fd_ >= 0) CloseQuietly(fd_);
-      return;
-    }
+    if (opened_) env->envinst_->inc_fs_handles_opened();
+    if (closed_) env->envinst_->inc_fs_handles_closed();
+    if (status == UV_ECANCELED || !can_call_into_js) return;
     HandleScope handle_scope(env->isolate());
     Context::Scope context_scope(env->context());
     Isolate* isolate = env->isolate();
@@ -3828,10 +3837,13 @@ class ReadFileJob final : public AsyncWrap, public ThreadPoolWork {
     return {};
   }
 
-  static void CloseQuietly(int fd) {
+  void CloseQuietly(int fd) {
     uv_fs_t req;
-    uv_fs_close(nullptr, &req, fd, nullptr);
+    const int rc = uv_fs_close(nullptr, &req, fd, nullptr);
     uv_fs_req_cleanup(&req);
+    if (rc == 0) {
+      closed_ = true;
+    }
   }
 
   // Inputs.
@@ -3840,6 +3852,8 @@ class ReadFileJob final : public AsyncWrap, public ThreadPoolWork {
   int flags_;
   bool track_fd_;
   bool scheduled_ = false;
+  bool opened_ = false;
+  bool closed_ = false;
   // Results (written on the thread pool thread, read on the loop thread).
   uint64_t size_ = 0;
   size_t len_ = 0;
@@ -3906,6 +3920,7 @@ class WriteFileJob final : public AsyncWrap, public ThreadPoolWork {
     int fd = uv_fs_open(nullptr, &req, path_.c_str(), flags_, mode_, nullptr);
     uv_fs_req_cleanup(&req);
     if (fd < 0) return Fail("open", fd);
+    opened_ = true;
 
     size_t written = 0;
     while (written < length_) {
@@ -3923,6 +3938,7 @@ class WriteFileJob final : public AsyncWrap, public ThreadPoolWork {
 
     int rc = uv_fs_close(nullptr, &req, fd, nullptr);
     uv_fs_req_cleanup(&req);
+    closed_ = rc == 0;
     if (rc < 0 && error_ == 0) Fail("close", rc);
   }
 
@@ -3931,6 +3947,8 @@ class WriteFileJob final : public AsyncWrap, public ThreadPoolWork {
     std::unique_ptr<WriteFileJob> self(this);
     CHECK(status == 0 || status == UV_ECANCELED);
     FS_ASYNC_TRACE_END0(UV_FS_WRITE, this)
+    if (opened_) env->envinst_->inc_fs_handles_opened();
+    if (closed_) env->envinst_->inc_fs_handles_closed();
     if (status == UV_ECANCELED || !env->can_call_into_js()) return;
     HandleScope handle_scope(env->isolate());
     Context::Scope context_scope(env->context());
@@ -4002,6 +4020,8 @@ class WriteFileJob final : public AsyncWrap, public ThreadPoolWork {
   const int flags_;
   const int mode_;
   bool scheduled_ = false;
+  bool opened_ = false;
+  bool closed_ = false;
   int error_ = 0;
   const char* syscall_ = nullptr;
 };

@@ -1,43 +1,69 @@
-# Code of Conduct
+# Contributor Code of Conduct
 
-The Node.js project has a [Code of Conduct][] that _all_ contributors are
-expected to follow. This code describes the _minimum_ behavior expectations
-for all contributors.
+## Our Pledge
 
-As a contributor to Node.js, how you choose to act and interact towards your
-fellow contributors, as well as to the community, will reflect back not only
-on yourself but on the project as a whole. The Code of Conduct is designed and
-intended, above all else, to help establish a culture within the project that
-allows anyone and everyone who wants to contribute to feel safe doing so.
+In the interest of fostering an open and welcoming environment, we as
+contributors and maintainers pledge to making participation in our project and
+our community a harassment-free experience for everyone, regardless of age, body
+size, disability, ethnicity, sex characteristics, gender identity and
+expression, level of experience, education, socio-economic status, nationality,
+personal appearance, race, religion, or sexual identity and orientation.
 
-Should any individual act in any way that is considered in violation of the
-[Code of Conduct][], corrective actions will be taken. It is possible, however,
-for any individual to _act_ in such a manner that is not in violation of the
-strict letter of the Code of Conduct guidelines while still going completely
-against the spirit of what that Code is intended to accomplish.
+## Our Standards
 
-Open, diverse, and inclusive communities live and die on the basis of trust.
-Contributors can disagree with one another so long as they trust that those
-disagreements are in good faith and everyone is working towards a common goal.
+Examples of behavior that contributes to creating a positive environment
+include:
 
-## Bad actors
+* Using welcoming and inclusive language
+* Being respectful of differing viewpoints and experiences
+* Gracefully accepting constructive criticism
+* Focusing on what is best for the community
+* Showing a professional courtesy to everybody involved in the project
 
-All contributors to Node.js tacitly agree to abide by both the letter and
-spirit of the [Code of Conduct][]. Failure, or unwillingness, to do so will
-result in contributions being respectfully declined.
+Examples of unacceptable behavior by participants include:
 
-A _bad actor_ is someone who repeatedly violates the spirit of the Code of
-Conduct through failure to regulate how they
-interact with others. In doing so, bad actors
-alienate other contributors, discourage collaboration, and generally reflect
-poorly on the project as a whole.
+* The use of sexualized language or imagery and unwelcome sexual attention or
+  advances
+* Trolling, insulting/derogatory comments, and personal or political attacks
+* Public or private harassment
+* Publishing others’ private information, such as a physical or electronic
+  address, without explicit permission
+* Other conduct which could reasonably be considered inappropriate in a
+  professional setting
 
-Being a bad actor may be intentional or unintentional. Typically, unintentional
-bad behavior can be easily corrected by being quick to apologize and correct
-course _even if you are not entirely convinced you need to_. Giving other
-contributors the benefit of the doubt and having a sincere willingness to admit
-that you _might_ be wrong is critical for any successful open collaboration.
+## Our Responsibilities
 
-Don't be a bad actor.
+Maintainers are responsible for clarifying the standards of acceptable behavior
+and are expected to take appropriate and fair corrective action in response to
+any instances of unacceptable behavior.
 
-[Code of Conduct]: https://github.com/nodejs/admin/blob/HEAD/CODE_OF_CONDUCT.md
+Maintainers have the right and responsibility to remove, edit, or reject
+comments, commits, code, wiki edits, issues, and other contributions that are
+not aligned to this Code of Conduct, or to ban temporarily or permanently any
+contributor for other behaviors that they deem inappropriate, threatening,
+offensive, or harmful.
+
+## Scope
+
+This Code of Conduct applies both within project spaces and in public spaces
+when an individual is representing the project or its community. Examples of
+representing a project or community include using an official project e-mail
+address, posting via an official social media account, or acting as an appointed
+representative at an online or offline event. Representation of a project may be
+further defined and clarified by project maintainers.
+
+## Enforcement
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be
+reported by contacting the NodeSource at
+<conduct@nodesource.com>. All complaints will be reviewed and investigated
+and will result in a response that is deemed necessary and appropriate
+to the circumstances. NodeSource is obligated to
+maintain confidentiality with regard to the reporter of an incident.
+Further details of specific enforcement policies may be posted
+separately.
+
+## Attribution
+
+This Code of Conduct is adapted from the Contributor Covenant, version 1.4,
+available at <https://www.contributor-covenant.org/version/1/4/code-of-conduct.html>

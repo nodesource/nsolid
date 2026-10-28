@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message Error {
+  string message = 1;
+  string stack = 2;
+}
+
+message ExitBody {
+  int32 code = 1;
+  Error error = 2;
+  string profile = 3;
+}
+
+message ExitEvent {
+  CommonResponse common = 1;
+  ExitBody body = 2;
+}

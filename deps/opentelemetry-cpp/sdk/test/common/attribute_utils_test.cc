@@ -1,0 +1,302 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+#include <gtest/gtest.h>
+#include <array>
+#include <cstdint>
+#include <initializer_list>
+#include <map>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "opentelemetry/common/attribute_value.h"
+#include "opentelemetry/common/key_value_iterable_view.h"
+#include "opentelemetry/nostd/span.h"
+#include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/utility.h"
+#include "opentelemetry/nostd/variant.h"
+#include "opentelemetry/sdk/common/attribute_utils.h"
+
+TEST(AttributeMapTest, DefaultConstruction)
+{
+  opentelemetry::sdk::common::AttributeMap attribute_map;
+  EXPECT_EQ(attribute_map.GetAttributes().size(), 0);
+}
+
+TEST(OrderedAttributeMapTest, DefaultConstruction)
+{
+  opentelemetry::sdk::common::OrderedAttributeMap attribute_map;
+  EXPECT_EQ(attribute_map.GetAttributes().size(), 0);
+}
+
+TEST(AttributeMapTest, AttributesConstruction)
+{
+  const int kNumAttributes              = 3;
+  std::string keys[kNumAttributes]      = {"attr1", "attr2", "attr3"};
+  int values[kNumAttributes]            = {15, 24, 37};
+  std::map<std::string, int> attributes = {
+      {keys[0], values[0]}, {keys[1], values[1]}, {keys[2], values[2]}};
+
+  opentelemetry::common::KeyValueIterableView<std::map<std::string, int>> iterable(attributes);
+  opentelemetry::sdk::common::AttributeMap attribute_map(iterable);
+
+  for (int i = 0; i < kNumAttributes; i++)
+  {
+    EXPECT_EQ(opentelemetry::nostd::get<int>(attribute_map.GetAttributes().at(keys[i])), values[i]);
+  }
+}
+
+TEST(OrderedAttributeMapTest, AttributesConstruction)
+{
+  const int kNumAttributes              = 3;
+  std::string keys[kNumAttributes]      = {"attr1", "attr2", "attr3"};
+  int values[kNumAttributes]            = {15, 24, 37};
+  std::map<std::string, int> attributes = {
+      {keys[0], values[0]}, {keys[1], values[1]}, {keys[2], values[2]}};
+
+  opentelemetry::common::KeyValueIterableView<std::map<std::string, int>> iterable(attributes);
+  opentelemetry::sdk::common::OrderedAttributeMap attribute_map(iterable);
+
+  for (int i = 0; i < kNumAttributes; i++)
+  {
+    EXPECT_EQ(opentelemetry::nostd::get<int>(attribute_map.GetAttributes().at(keys[i])), values[i]);
+  }
+}
+
+TEST(AttributeEqualToVisitorTest, AttributeValueEqualTo)
+{
+  namespace sdk   = opentelemetry::sdk::common;
+  namespace api   = opentelemetry::common;
+  namespace nostd = opentelemetry::nostd;
+
+  using AV = api::AttributeValue;
+  using OV = sdk::OwnedAttributeValue;
+
+  sdk::AttributeEqualToVisitor equal_to_visitor;
+
+  // arithmetic types
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{bool(true)}, AV{bool(true)}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{int32_t(22)}, AV{int32_t(22)}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{int64_t(22)}, AV{int64_t(22)}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{uint32_t(22)}, AV{uint32_t(22)}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{uint64_t(22)}, AV{uint64_t(22)}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{double(22.0)}, AV{double(22.0)}));
+
+  // string types
+  EXPECT_TRUE(opentelemetry::nostd::visit(
+      equal_to_visitor, OV{std::string("string to const char*")}, AV{"string to const char*"}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor,
+                                          OV{std::string("string to string_view")},
+                                          AV{nostd::string_view("string to string_view")}));
+
+  // container types
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<bool>{true, false}},
+                                          AV{std::array<const bool, 2>{true, false}}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<uint8_t>{33, 44}},
+                                          AV{std::array<const uint8_t, 2>{33, 44}}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<int32_t>{33, 44}},
+                                          AV{std::array<const int32_t, 2>{33, 44}}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<int64_t>{33, 44}},
+                                          AV{std::array<const int64_t, 2>{33, 44}}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<uint32_t>{33, 44}},
+                                          AV{std::array<const uint32_t, 2>{33, 44}}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<uint64_t>{33, 44}},
+                                          AV{std::array<const uint64_t, 2>{33, 44}}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<double>{33.0, 44.0}},
+                                          AV{std::array<const double, 2>{33.0, 44.0}}));
+  EXPECT_TRUE(opentelemetry::nostd::visit(
+      equal_to_visitor, OV{std::vector<std::string>{"a string", "another string"}},
+      AV{std::array<const nostd::string_view, 2>{"a string", "another string"}}));
+}
+
+TEST(AttributeEqualToVisitorTest, AttributeValueNotEqualTo)
+{
+  namespace sdk   = opentelemetry::sdk::common;
+  namespace api   = opentelemetry::common;
+  namespace nostd = opentelemetry::nostd;
+
+  using AV = api::AttributeValue;
+  using OV = sdk::OwnedAttributeValue;
+
+  sdk::AttributeEqualToVisitor equal_to_visitor;
+
+  // check different values of the same type
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{bool(true)}, AV{bool(false)}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{int32_t(22)}, AV{int32_t(33)}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{int64_t(22)}, AV{int64_t(33)}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{uint32_t(22)}, AV{uint32_t(33)}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{double(22.2)}, AV{double(33.3)}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::string("string one")},
+                                           AV{"another string"}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::string("string one")},
+                                           AV{nostd::string_view("another string")}));
+
+  // check different value types
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{bool(true)}, AV{uint32_t(1)}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{int32_t(22)}, AV{uint32_t(22)}));
+
+  // check containers of different element values
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<bool>{true, false}},
+                                           AV{std::array<const bool, 2>{false, true}}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<int32_t>{22, 33}},
+                                           AV{std::array<const int32_t, 2>{33, 44}}));
+  EXPECT_FALSE(opentelemetry::nostd::visit(
+      equal_to_visitor, OV{std::vector<std::string>{"a string", "another string"}},
+      AV{std::array<const nostd::string_view, 2>{"a string", "a really different string"}}));
+
+  // check containers of different element types
+  EXPECT_FALSE(opentelemetry::nostd::visit(equal_to_visitor, OV{std::vector<int32_t>{22, 33}},
+                                           AV{std::array<const uint32_t, 2>{22, 33}}));
+}
+
+TEST(AttributeMapTest, EqualTo)
+{
+  using Attributes = std::initializer_list<
+      std::pair<opentelemetry::nostd::string_view, opentelemetry::common::AttributeValue>>;
+
+  // check for case where both are empty
+  Attributes attributes_empty = {};
+  auto kv_iterable_empty =
+      opentelemetry::common::MakeKeyValueIterableView<Attributes>(attributes_empty);
+  opentelemetry::sdk::common::AttributeMap attribute_map_empty(kv_iterable_empty);
+  EXPECT_TRUE(attribute_map_empty.EqualTo(kv_iterable_empty));
+
+  // check for equality with a range of attributes and types
+  Attributes attributes  = {{"key0", "some value"}, {"key1", 1}, {"key2", 2.0}, {"key3", true}};
+  auto kv_iterable_match = opentelemetry::common::MakeKeyValueIterableView<Attributes>(attributes);
+  opentelemetry::sdk::common::AttributeMap attribute_map(attributes);
+  EXPECT_TRUE(attribute_map.EqualTo(kv_iterable_match));
+
+  // check for several cases where the attributes are different
+  Attributes attributes_different_value = {
+      {"key0", "some value"}, {"key1", 1}, {"key2", 2.0}, {"key3", false}};
+  Attributes attributes_different_type = {
+      {"key0", "some value"}, {"key1", 1.0}, {"key2", 2.0}, {"key3", true}};
+  Attributes attributes_different_size = {{"key0", "some value"}};
+
+  // check for the case where the number of attributes is the same but all keys are different
+  Attributes attributes_different_all = {
+      {"a", "b"}, {"c", "d"}, {"e", 4.0}, {"f", static_cast<uint8_t>(5)}};
+
+  auto kv_iterable_different_value =
+      opentelemetry::common::MakeKeyValueIterableView<Attributes>(attributes_different_value);
+  auto kv_iterable_different_type =
+      opentelemetry::common::MakeKeyValueIterableView<Attributes>(attributes_different_type);
+  auto kv_iterable_different_size =
+      opentelemetry::common::MakeKeyValueIterableView<Attributes>(attributes_different_size);
+  auto kv_iterable_different_all =
+      opentelemetry::common::MakeKeyValueIterableView<Attributes>(attributes_different_all);
+
+  EXPECT_FALSE(attribute_map.EqualTo(kv_iterable_different_value));
+  EXPECT_FALSE(attribute_map.EqualTo(kv_iterable_different_type));
+  EXPECT_FALSE(attribute_map.EqualTo(kv_iterable_different_size));
+  EXPECT_FALSE(attribute_map.EqualTo(kv_iterable_different_all));
+}
+
+TEST(AttributeMapTest, SetAttributeTruncation)
+{
+  opentelemetry::sdk::common::AttributeMap attribute_map;
+  opentelemetry::nostd::string_view value("abcdefghijk");
+  attribute_map.SetAttribute("key", value, 5);
+  auto stored_value = attribute_map.GetAttributes().at("key");
+  auto string_value = opentelemetry::nostd::get<std::string>(stored_value);
+  EXPECT_EQ(string_value, "abcde");
+}
+
+TEST(OrderedAttributeMapTest, SetAttributeTruncation)
+{
+  opentelemetry::sdk::common::OrderedAttributeMap attribute_map;
+  opentelemetry::nostd::string_view value("abcdefghijk");
+  attribute_map.SetAttribute("key", value, 5);
+  auto stored_value = attribute_map.GetAttributes().at("key");
+  auto string_value = opentelemetry::nostd::get<std::string>(stored_value);
+  EXPECT_EQ(string_value, "abcde");
+}
+
+// ---------------------------------------------------------------------------
+// AttributeConverter truncation
+// ---------------------------------------------------------------------------
+//
+// "h\xC3\xA9llo" is "héllo" in UTF-8 (6 bytes). 'é' occupies bytes 1-2 as a
+// 2-byte sequence (0xC3 0xA9). String alternatives are truncated at a UTF-8
+// code-point boundary; the raw bytes alternative is cut at the exact byte.
+
+TEST(AttributeConverterTruncation, DefaultConverterDoesNotTruncate)
+{
+  opentelemetry::sdk::common::AttributeConverter converter;
+  auto v = converter(opentelemetry::nostd::string_view("0123456789"));
+  EXPECT_EQ(opentelemetry::nostd::get<std::string>(v), "0123456789");
+}
+
+TEST(AttributeConverterTruncation, AsciiTruncatesAtByteCount)
+{
+  opentelemetry::sdk::common::AttributeConverter converter(5);
+  auto v = converter(opentelemetry::nostd::string_view("0123456789"));
+  EXPECT_EQ(opentelemetry::nostd::get<std::string>(v), "01234");
+}
+
+TEST(AttributeConverterTruncation, KeepsCompleteMultiByteSequenceWithinBudget)
+{
+  // 'h' (1 byte) + 'é' (2 bytes) = 3 bytes exactly, still valid UTF-8.
+  opentelemetry::sdk::common::AttributeConverter converter(3);
+  auto v = converter(opentelemetry::nostd::string_view("h\xC3\xA9llo"));
+  EXPECT_EQ(opentelemetry::nostd::get<std::string>(v), std::string("h\xC3\xA9"));
+}
+
+TEST(AttributeConverterTruncation, DropsPartialMultiByteSequenceAtBoundary)
+{
+  // limit=2: 'h' fits at byte 0; 'é' would span bytes 1-2, ending past the
+  // limit, so the kept prefix stops at byte 1.
+  opentelemetry::sdk::common::AttributeConverter converter(2);
+  auto v = converter(opentelemetry::nostd::string_view("h\xC3\xA9llo"));
+  EXPECT_EQ(opentelemetry::nostd::get<std::string>(v), "h");
+}
+
+TEST(AttributeConverterTruncation, StdStringIsTruncatedUtf8Safe)
+{
+  opentelemetry::sdk::common::AttributeConverter converter(2);
+  auto v = converter(std::string("h\xC3\xA9llo"));
+  EXPECT_EQ(opentelemetry::nostd::get<std::string>(v), "h");
+}
+
+TEST(AttributeConverterTruncation, ConstCharPtrIsTruncatedUtf8Safe)
+{
+  opentelemetry::sdk::common::AttributeConverter converter(2);
+  const char *value = "h\xC3\xA9llo";
+  auto v            = converter(value);
+  EXPECT_EQ(opentelemetry::nostd::get<std::string>(v), "h");
+}
+
+TEST(AttributeConverterTruncation, BytesAreCutAtRawByteBoundary)
+{
+  // Raw bytes have no encoding, so truncation is a plain byte cut even when the
+  // leading bytes look like a multi-byte UTF-8 sequence.
+  const uint8_t bytes[] = {0xC3, 0xA9, 0x01, 0x02};
+  opentelemetry::sdk::common::AttributeConverter converter(1);
+  auto v             = converter(opentelemetry::nostd::span<const uint8_t>(bytes, 4));
+  const auto &stored = opentelemetry::nostd::get<std::vector<uint8_t>>(v);
+  ASSERT_EQ(stored.size(), 1u);
+  EXPECT_EQ(stored[0], 0xC3);
+}
+
+TEST(AttributeConverterTruncation, StringArrayTruncatedPerElementUtf8Safe)
+{
+  opentelemetry::nostd::string_view values[] = {opentelemetry::nostd::string_view("h\xC3\xA9llo"),
+                                                opentelemetry::nostd::string_view("ab")};
+  opentelemetry::sdk::common::AttributeConverter converter(2);
+  auto v =
+      converter(opentelemetry::nostd::span<const opentelemetry::nostd::string_view>(values, 2));
+  const auto &stored = opentelemetry::nostd::get<std::vector<std::string>>(v);
+  ASSERT_EQ(stored.size(), 2u);
+  EXPECT_EQ(stored[0], "h");
+  EXPECT_EQ(stored[1], "ab");
+}
+
+TEST(AttributeConverterTruncation, ShortStringUnderLimitUnchanged)
+{
+  opentelemetry::sdk::common::AttributeConverter converter(100);
+  auto v = converter(opentelemetry::nostd::string_view("short"));
+  EXPECT_EQ(opentelemetry::nostd::get<std::string>(v), "short");
+}

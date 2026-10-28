@@ -25,7 +25,7 @@ jobs:
   get_candidate_prs:
     permissions:
       pull-requests: read
-    if: github.repository == 'nodejs/node'
+    if: github.repository == 'nodesource/nsolid'
     runs-on: ubuntu-slim
     outputs:
       aged_prs: ${{ steps.get_candidate_prs.outputs.aged_prs }}

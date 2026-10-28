@@ -389,6 +389,8 @@ class PerProcessOptions : public Options {
   std::string experimental_sea_config;
   std::string run;
   std::string build_sea;
+  DEFINE_BOOL_FIELD(print_nsolid_version) = false;
+
 #ifdef NODE_HAVE_I18N_SUPPORT
   std::string icu_data_dir;
 #endif

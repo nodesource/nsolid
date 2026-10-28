@@ -15,8 +15,9 @@ cp.stdout.on('data', (d) => {
 });
 
 cp.stdout.on('end', common.mustCall(() => {
-  assert.strictEqual(out, `Welcome to Node.js ${process.version}.\n` +
-                        'Type ".help" for more information.\n> ');
+  assert.strictEqual(out, `Welcome to N|Solid ${process.version}` +
+      `+ns${process.versions.nsolid}.\n` +
+      'Type ".help" for more information.\n> ');
 }));
 
 cp.stdin.end('');
