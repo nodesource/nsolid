@@ -312,6 +312,7 @@ async function runTest({ getEnv }) {
         const afterRejectionObservable = testMeter?.metrics.find(
           (metric) => metric.name === 'observed-async-failure');
         if (afterRejectionObservable?.gauge.dataPoints.length > 0) {
+          assert.strictEqual(afterRejectionObservable.gauge.dataPoints.length, 1);
           afterRejectionObservableValue = afterRejectionObservable
             .gauge.dataPoints[0].asDouble;
         }

@@ -542,7 +542,8 @@ if (isMainThread) {
       });
       const asyncFailures =
         meter.createObservableGauge('observed-async-failure');
-      addObservableCallback(asyncFailures, async () => {
+      addObservableCallback(asyncFailures, async (result) => {
+        result.observe(100, { source: 'before-rejection' });
         await Promise.resolve();
         throw new Error('expected async observable callback error');
       });
