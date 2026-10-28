@@ -1,6 +1,7 @@
 #ifndef SRC_NSOLID_NSOLID_OTEL_METRICS_TYPES_H_
 #define SRC_NSOLID_NSOLID_OTEL_METRICS_TYPES_H_
 
+#include <chrono>
 #include <optional>
 #include <string>
 #include <vector>
@@ -30,6 +31,7 @@ struct OtelMetricStor {
   double value;
   std::string attributes;
   OtelMetricType type = OtelMetricType::kCounter;
+  std::chrono::system_clock::time_point collected_at;
   std::optional<opentelemetry::sdk::metrics::HistogramPointData>
       histogram_point_data;
 };

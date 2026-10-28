@@ -595,9 +595,8 @@ NSOLID_ENV_METRICS_NUMBERS(V)
 void fill_otel_instruments(
     OtelMetricsMap& metrics,
     const OtelMetricsStor& instruments) {
-  const time_point end = system_clock::now();
-
   for (const auto& instrument : instruments) {
+    const time_point end = instrument.collected_at;
     CHECK(instrument.type == OtelMetricType::kCounter ||
           instrument.type == OtelMetricType::kGauge ||
           instrument.type == OtelMetricType::kHistogram ||

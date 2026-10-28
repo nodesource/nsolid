@@ -321,7 +321,17 @@ void EnvInst::DisableOtelMetrics() {
 }
 
 
+void EnvInst::FinalizeOtelMetrics() {
+  ClearOtelCallbacks();
+  CancelOtelCollection();
+  // Pending observable values do not represent a completed collection.
+  otel_metrics->ClearObservableValues();
+  complete_otel_metrics_collection_();
+}
+
+
 void EnvInst::complete_otel_metrics_collection_() {
+  const auto collected_at = std::chrono::system_clock::now();
   const OtelMetrics::InstrumentsStor& instruments = otel_metrics->Get();
   OtelMetricsStor snapshot;
   size_t count = 0;
@@ -341,6 +351,7 @@ void EnvInst::complete_otel_metrics_collection_() {
       metric.value = value.value;
       metric.attributes = value.attributes;
       metric.type = instrument.type;
+      metric.collected_at = collected_at;
       if (value.histogram != nullptr) {
         const auto point = value.histogram->ToPoint();
         metric.histogram_point_data = opentelemetry::nostd::get<
@@ -1290,6 +1301,7 @@ NODE_PERFORMANCE_MILESTONES(V)
 void EnvList::RemoveEnv(Environment* env) {
   SharedEnvInst envinst_sp = env->envinst_;
   CHECK_NOT_NULL(envinst_sp);
+  envinst_sp->FinalizeOtelMetrics();
 
   // Erase this instance from the global map so it can no longer be accessed.
   {
@@ -1805,6 +1817,11 @@ void EnvList::DoExit(bool on_signal) {
   bool profile_stopped = false;
   if (!on_signal) {
     SharedEnvInst envinst = GetEnvInst(main_thread_id_);
+    if (envinst != nullptr &&
+        utils::are_threads_equal(envinst->creation_thread(),
+                                 uv_thread_self())) {
+      envinst->FinalizeOtelMetrics();
+    }
     int r1 = nsolid::CpuProfiler::StopProfileSync(envinst);
     int r2 = nsolid::Snapshot::StopTrackingHeapObjectsSync(envinst);
     int r3 = nsolid::Snapshot::StopSamplingSync(envinst);

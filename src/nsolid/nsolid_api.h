@@ -233,6 +233,7 @@ class EnvInst {
   void RequestOtelMetricsCollection();
   void CollectOtelMetrics();
   void DisableOtelMetrics();
+  void FinalizeOtelMetrics();
   OtelMetricsStor GetOtelMetrics() const;
 
   void SetModuleInfo(const char* path, const char* module);

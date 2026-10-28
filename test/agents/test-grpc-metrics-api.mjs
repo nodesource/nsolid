@@ -87,6 +87,15 @@ function getBatchRuns(exported) {
   return point?.asDouble;
 }
 
+function getCollectionTimes(exported) {
+  const scope = getScope(exported, 'api-contract');
+  return [ 'integer-value-type', 'cumulative-histogram', 'batch-second' ]
+    .map((name) => {
+      const metric = getMetric(scope, name);
+      return getPoint(metric, metric.data)[0].timeUnixNano;
+    });
+}
+
 try {
   await child.id();
   await child.config({ app: 'otel-metrics-api-contract' });
@@ -230,6 +239,9 @@ try {
     getMainThreadSnapshot(exported), pendingExportStart, 'pending callback snapshot');
   assert.strictEqual(getPoint(getMetric(getScope(pendingExport, 'api-contract'),
                                         'async-completion')).length, 0);
+  const pendingTimes = getCollectionTimes(pendingExport);
+  assert.strictEqual(new Set(pendingTimes).size, 1);
+  assert.ok(BigInt(pendingTimes[0]) > 0n);
 
   await sendToClient('api_metrics_contract_release_first',
                      'api_metrics_contract_first_released');
@@ -238,6 +250,7 @@ try {
   assert.strictEqual(getPoint(getMetric(getScope(afterFirstRelease,
                                                  'api-contract'),
                                         'async-completion')).length, 0);
+  assert.deepStrictEqual(getCollectionTimes(afterFirstRelease), pendingTimes);
 
   await sendToClient('api_metrics_contract_disable_release_second',
                      'api_metrics_contract_second_released');
@@ -247,6 +260,7 @@ try {
   assert.strictEqual(getPoint(getMetric(getScope(waitingForBatch,
                                                  'api-contract'),
                                         'async-completion')).length, 0);
+  assert.deepStrictEqual(getCollectionTimes(waitingForBatch), pendingTimes);
 
   await sendToClient('api_metrics_contract_release_batch',
                      'api_metrics_contract_batch_released');
@@ -258,6 +272,9 @@ try {
     return individual.length === 2 && batch.length === 1;
   }, exports.length, 'completed async callbacks');
   const completedScope = getScope(completedExport, 'api-contract');
+  const completedTimes = getCollectionTimes(completedExport);
+  assert.strictEqual(new Set(completedTimes).size, 1);
+  assert.ok(BigInt(completedTimes[0]) > BigInt(pendingTimes[0]));
   const individualPoints = getPoint(getMetric(completedScope,
                                               'async-completion'));
   assert.deepStrictEqual(individualPoints.map((point) => point.asDouble),
