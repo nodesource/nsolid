@@ -66,6 +66,7 @@ int OtelMetrics::RegisterInstrument(std::string meter_name,
                            std::chrono::system_clock::now(),
                            std::move(histogram_boundaries),
                            {},
+                           {},
                            {} });
   return 0;
 }
@@ -128,39 +129,37 @@ int OtelMetrics::AddInstrument(uint32_t instrument_id,
   if (observable_sum) {
     auto observed = instrument.overflow_observations.find(original_attributes);
     if (observed != instrument.overflow_observations.end()) {
-      auto overflow = std::find_if(instrument.values.begin(),
-                                   instrument.values.end(),
-                                   [](const Instrument::Value& v) {
-                                     return v.attributes ==
-                                         kOtelMetricOverflowAttributes;
-                                   });
-      if (overflow != instrument.values.end()) {
+      const auto overflow = instrument.value_indices.find(
+          kOtelMetricOverflowAttributes);
+      if (overflow != instrument.value_indices.end()) {
+        auto& point = instrument.values[overflow->second];
         const double total = replace_observation_value(
-            overflow->value, observed->second, value);
+            point.value, observed->second, value);
         if (!std::isfinite(total)) {
           return UV_EINVAL;
         }
-        overflow->value = total;
+        point.value = total;
         observed->second = value;
         return 0;
       }
     }
   }
-  auto it = std::find_if(instrument.values.begin(),
-                         instrument.values.end(),
-                         [&original_attributes](const Instrument::Value& v) {
-                           return v.attributes == original_attributes;
-                         });
+  // Avoid hashing for the common single-set instrument.
+  auto it = instrument.values.begin();
+  if (it == instrument.values.end() || it->attributes != original_attributes) {
+    const auto index = instrument.value_indices.find(original_attributes);
+    it = index == instrument.value_indices.end() ? instrument.values.end() :
+        instrument.values.begin() + index->second;
+  }
   bool overflow = false;
   if (it == instrument.values.end()) {
     if (instrument.values.size() >= kMaxAttributeSets - 1) {
       overflow = true;
       attributes = kOtelMetricOverflowAttributes;
-      it = std::find_if(instrument.values.begin(),
-                        instrument.values.end(),
-                        [&attributes](const Instrument::Value& v) {
-                          return v.attributes == attributes;
-                        });
+      const auto index = instrument.value_indices.find(attributes);
+      if (index != instrument.value_indices.end()) {
+        it = instrument.values.begin() + index->second;
+      }
     }
     if (it == instrument.values.end()) {
       Instrument::Value new_value;
@@ -178,6 +177,8 @@ int OtelMetrics::AddInstrument(uint32_t instrument_id,
       } else {
         new_value.value = value;
       }
+      instrument.value_indices.emplace(new_value.attributes,
+                                       instrument.values.size());
       instrument.values.push_back(std::move(new_value));
       if (overflow && observable_sum) {
         instrument.overflow_observations.emplace(original_attributes, value);
@@ -229,6 +230,7 @@ void OtelMetrics::ClearObservableValues() {
         instrument.type == OtelMetricType::kObservableGauge ||
         instrument.type == OtelMetricType::kObservableUpDownCounter) {
       instrument.values.clear();
+      instrument.value_indices.clear();
       std::unordered_map<std::string, double>().swap(
           instrument.overflow_observations);
     }

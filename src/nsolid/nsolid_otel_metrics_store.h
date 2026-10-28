@@ -40,6 +40,7 @@ class OtelMetrics {
     std::chrono::system_clock::time_point started_at;
     std::optional<std::vector<double>> histogram_boundaries;
     std::vector<Value> values;
+    std::unordered_map<std::string, size_t> value_indices;
     // Retained only for one observable collection to replace overflowed sets.
     std::unordered_map<std::string, double> overflow_observations;
   };
