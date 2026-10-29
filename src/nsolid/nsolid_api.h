@@ -563,8 +563,15 @@ class EnvList {
   void SetSavedExitError(v8::Isolate* isolate,
                          const v8::Local<v8::Value>& error);
   void ClearSavedExitError();
+  // An abort is ending the process (process.abort(), a fatal error, running
+  // out of memory, a failed check or an uncaught C++ exception): records it
+  // as the exit (by SIGABRT, outside Windows) with what it says, and the JS
+  // stack when that is safe to read.
+  void SetFatalExit(const char* location, const char* message);
 
   int GetExitCode() const;
+  // The signal ending the process, or 0 when it exits on its own.
+  int GetExitSignal() const;
   std::tuple<std::string, std::string>* GetExitError();
 
   void PromiseTracking(bool promiseTracking);
@@ -627,6 +634,7 @@ class EnvList {
   void operator delete(void*) = delete;
 
   static void exit_handler_();
+  static void abort_handler_(const char* location, const char* message);
 
   void DoSetExitError(v8::Isolate* isolate,
                       const v8::Local<v8::Value>& error,
@@ -724,6 +732,9 @@ class EnvList {
   // exit data
   std::atomic<bool> exiting_ = { false };
   std::atomic<int> exit_code_;
+  std::atomic<int> exit_signal_ = { 0 };
+  // Node's abort handler from before ours, which ours ends by calling.
+  node::AbortHandler prev_abort_handler_ = nullptr;
   // exit_error_ stores the error message and the error stack
   std::unique_ptr<std::tuple<std::string, std::string>> exit_error_;
   std::unique_ptr<std::tuple<std::string, std::string>> saved_exit_error_;
