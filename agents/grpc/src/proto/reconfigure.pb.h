@@ -224,9 +224,6 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
   // accessors -------------------------------------------------------
   enum : int {
     kTagsFieldNumber = 9,
-    kStatsdFieldNumber = 6,
-    kStatsdBucketFieldNumber = 7,
-    kStatsdTagsFieldNumber = 8,
     kBlockedLoopThresholdFieldNumber = 1,
     kIntervalFieldNumber = 2,
     kPauseMetricsFieldNumber = 3,
@@ -262,54 +259,6 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
   private:
   const ::google::protobuf::RepeatedPtrField<::std::string>& _internal_tags() const;
   ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL _internal_mutable_tags();
-
-  public:
-  // optional string statsd = 6;
-  [[nodiscard]] bool has_statsd() const;
-  void clear_statsd() ;
-  [[nodiscard]] const ::std::string& statsd() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_statsd(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_statsd();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_statsd();
-  void set_allocated_statsd(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_statsd() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_statsd(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_statsd();
-
-  public:
-  // optional string statsdBucket = 7;
-  [[nodiscard]] bool has_statsdbucket() const;
-  void clear_statsdbucket() ;
-  [[nodiscard]] const ::std::string& statsdbucket() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_statsdbucket(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_statsdbucket();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_statsdbucket();
-  void set_allocated_statsdbucket(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_statsdbucket() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_statsdbucket(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_statsdbucket();
-
-  public:
-  // optional string statsdTags = 8;
-  [[nodiscard]] bool has_statsdtags() const;
-  void clear_statsdtags() ;
-  [[nodiscard]] const ::std::string& statsdtags() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_statsdtags(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_statsdtags();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_statsdtags();
-  void set_allocated_statsdtags(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_statsdtags() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_statsdtags(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_statsdtags();
 
   public:
   // optional uint64 blockedLoopThreshold = 1;
@@ -426,8 +375,8 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<4, 14,
-                          0, 74,
+      ::google::protobuf::internal::TcParseTable<4, 11,
+                          0, 46,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
       const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
@@ -456,9 +405,6 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::RepeatedPtrField<::std::string> tags_;
-    ::google::protobuf::internal::ArenaStringPtr statsd_;
-    ::google::protobuf::internal::ArenaStringPtr statsdbucket_;
-    ::google::protobuf::internal::ArenaStringPtr statsdtags_;
     ::uint64_t blockedloopthreshold_;
     ::uint64_t interval_;
     bool pausemetrics_;
@@ -716,13 +662,13 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureEvent final : public ::g
 
 // optional uint64 blockedLoopThreshold = 1;
 inline bool ReconfigureBody::has_blockedloopthreshold() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000010U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
   return value;
 }
 inline void ReconfigureBody::clear_blockedloopthreshold() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.blockedloopthreshold_ = ::uint64_t{0u};
-  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
 }
 inline ::uint64_t ReconfigureBody::blockedloopthreshold() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.blockedLoopThreshold)
@@ -730,7 +676,7 @@ inline ::uint64_t ReconfigureBody::blockedloopthreshold() const {
 }
 inline void ReconfigureBody::set_blockedloopthreshold(::uint64_t value) {
   _internal_set_blockedloopthreshold(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.blockedLoopThreshold)
 }
 inline ::uint64_t ReconfigureBody::_internal_blockedloopthreshold() const {
@@ -744,13 +690,13 @@ inline void ReconfigureBody::_internal_set_blockedloopthreshold(::uint64_t value
 
 // optional uint64 interval = 2;
 inline bool ReconfigureBody::has_interval() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000020U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000004U);
   return value;
 }
 inline void ReconfigureBody::clear_interval() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.interval_ = ::uint64_t{0u};
-  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
 }
 inline ::uint64_t ReconfigureBody::interval() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.interval)
@@ -758,7 +704,7 @@ inline ::uint64_t ReconfigureBody::interval() const {
 }
 inline void ReconfigureBody::set_interval(::uint64_t value) {
   _internal_set_interval(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.interval)
 }
 inline ::uint64_t ReconfigureBody::_internal_interval() const {
@@ -772,13 +718,13 @@ inline void ReconfigureBody::_internal_set_interval(::uint64_t value) {
 
 // optional bool pauseMetrics = 3;
 inline bool ReconfigureBody::has_pausemetrics() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000040U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000008U);
   return value;
 }
 inline void ReconfigureBody::clear_pausemetrics() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.pausemetrics_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
 }
 inline bool ReconfigureBody::pausemetrics() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.pauseMetrics)
@@ -786,7 +732,7 @@ inline bool ReconfigureBody::pausemetrics() const {
 }
 inline void ReconfigureBody::set_pausemetrics(bool value) {
   _internal_set_pausemetrics(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.pauseMetrics)
 }
 inline bool ReconfigureBody::_internal_pausemetrics() const {
@@ -800,13 +746,13 @@ inline void ReconfigureBody::_internal_set_pausemetrics(bool value) {
 
 // optional bool promiseTracking = 4;
 inline bool ReconfigureBody::has_promisetracking() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000080U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000010U);
   return value;
 }
 inline void ReconfigureBody::clear_promisetracking() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.promisetracking_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
 }
 inline bool ReconfigureBody::promisetracking() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.promiseTracking)
@@ -814,7 +760,7 @@ inline bool ReconfigureBody::promisetracking() const {
 }
 inline void ReconfigureBody::set_promisetracking(bool value) {
   _internal_set_promisetracking(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.promiseTracking)
 }
 inline bool ReconfigureBody::_internal_promisetracking() const {
@@ -828,13 +774,13 @@ inline void ReconfigureBody::_internal_set_promisetracking(bool value) {
 
 // optional bool redactSnapshots = 5;
 inline bool ReconfigureBody::has_redactsnapshots() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000100U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000020U);
   return value;
 }
 inline void ReconfigureBody::clear_redactsnapshots() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.redactsnapshots_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000100U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
 }
 inline bool ReconfigureBody::redactsnapshots() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.redactSnapshots)
@@ -842,7 +788,7 @@ inline bool ReconfigureBody::redactsnapshots() const {
 }
 inline void ReconfigureBody::set_redactsnapshots(bool value) {
   _internal_set_redactsnapshots(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.redactSnapshots)
 }
 inline bool ReconfigureBody::_internal_redactsnapshots() const {
@@ -852,210 +798,6 @@ inline bool ReconfigureBody::_internal_redactsnapshots() const {
 inline void ReconfigureBody::_internal_set_redactsnapshots(bool value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.redactsnapshots_ = value;
-}
-
-// optional string statsd = 6;
-inline bool ReconfigureBody::has_statsd() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
-  return value;
-}
-inline void ReconfigureBody::clear_statsd() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.statsd_.ClearToEmpty();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
-}
-inline const ::std::string& ReconfigureBody::statsd() const
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.statsd)
-  return _internal_statsd();
-}
-template <typename Arg_, typename... Args_>
-PROTOBUF_ALWAYS_INLINE void ReconfigureBody::set_statsd(Arg_&& arg, Args_... args) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
-  _impl_.statsd_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
-  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.statsd)
-}
-inline ::std::string* PROTOBUF_NONNULL ReconfigureBody::mutable_statsd()
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
-  ::std::string* _s = _internal_mutable_statsd();
-  // @@protoc_insertion_point(field_mutable:grpcagent.ReconfigureBody.statsd)
-  return _s;
-}
-inline const ::std::string& ReconfigureBody::_internal_statsd() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.statsd_.Get();
-}
-inline void ReconfigureBody::_internal_set_statsd(const ::std::string& value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.statsd_.Set(value, GetArena());
-}
-inline ::std::string* PROTOBUF_NONNULL ReconfigureBody::_internal_mutable_statsd() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  return _impl_.statsd_.Mutable( GetArena());
-}
-inline ::std::string* PROTOBUF_NULLABLE ReconfigureBody::release_statsd() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:grpcagent.ReconfigureBody.statsd)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
-    return nullptr;
-  }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
-  auto* released = _impl_.statsd_.Release();
-  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
-    _impl_.statsd_.Set("", GetArena());
-  }
-  return released;
-}
-inline void ReconfigureBody::set_allocated_statsd(::std::string* PROTOBUF_NULLABLE value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
-  } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
-  }
-  _impl_.statsd_.SetAllocated(value, GetArena());
-  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.statsd_.IsDefault()) {
-    _impl_.statsd_.Set("", GetArena());
-  }
-  // @@protoc_insertion_point(field_set_allocated:grpcagent.ReconfigureBody.statsd)
-}
-
-// optional string statsdBucket = 7;
-inline bool ReconfigureBody::has_statsdbucket() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000004U);
-  return value;
-}
-inline void ReconfigureBody::clear_statsdbucket() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.statsdbucket_.ClearToEmpty();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
-}
-inline const ::std::string& ReconfigureBody::statsdbucket() const
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.statsdBucket)
-  return _internal_statsdbucket();
-}
-template <typename Arg_, typename... Args_>
-PROTOBUF_ALWAYS_INLINE void ReconfigureBody::set_statsdbucket(Arg_&& arg, Args_... args) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
-  _impl_.statsdbucket_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
-  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.statsdBucket)
-}
-inline ::std::string* PROTOBUF_NONNULL ReconfigureBody::mutable_statsdbucket()
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
-  ::std::string* _s = _internal_mutable_statsdbucket();
-  // @@protoc_insertion_point(field_mutable:grpcagent.ReconfigureBody.statsdBucket)
-  return _s;
-}
-inline const ::std::string& ReconfigureBody::_internal_statsdbucket() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.statsdbucket_.Get();
-}
-inline void ReconfigureBody::_internal_set_statsdbucket(const ::std::string& value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.statsdbucket_.Set(value, GetArena());
-}
-inline ::std::string* PROTOBUF_NONNULL ReconfigureBody::_internal_mutable_statsdbucket() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  return _impl_.statsdbucket_.Mutable( GetArena());
-}
-inline ::std::string* PROTOBUF_NULLABLE ReconfigureBody::release_statsdbucket() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:grpcagent.ReconfigureBody.statsdBucket)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000004U)) {
-    return nullptr;
-  }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
-  auto* released = _impl_.statsdbucket_.Release();
-  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
-    _impl_.statsdbucket_.Set("", GetArena());
-  }
-  return released;
-}
-inline void ReconfigureBody::set_allocated_statsdbucket(::std::string* PROTOBUF_NULLABLE value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
-  } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
-  }
-  _impl_.statsdbucket_.SetAllocated(value, GetArena());
-  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.statsdbucket_.IsDefault()) {
-    _impl_.statsdbucket_.Set("", GetArena());
-  }
-  // @@protoc_insertion_point(field_set_allocated:grpcagent.ReconfigureBody.statsdBucket)
-}
-
-// optional string statsdTags = 8;
-inline bool ReconfigureBody::has_statsdtags() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000008U);
-  return value;
-}
-inline void ReconfigureBody::clear_statsdtags() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.statsdtags_.ClearToEmpty();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
-}
-inline const ::std::string& ReconfigureBody::statsdtags() const
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.statsdTags)
-  return _internal_statsdtags();
-}
-template <typename Arg_, typename... Args_>
-PROTOBUF_ALWAYS_INLINE void ReconfigureBody::set_statsdtags(Arg_&& arg, Args_... args) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
-  _impl_.statsdtags_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
-  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.statsdTags)
-}
-inline ::std::string* PROTOBUF_NONNULL ReconfigureBody::mutable_statsdtags()
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
-  ::std::string* _s = _internal_mutable_statsdtags();
-  // @@protoc_insertion_point(field_mutable:grpcagent.ReconfigureBody.statsdTags)
-  return _s;
-}
-inline const ::std::string& ReconfigureBody::_internal_statsdtags() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.statsdtags_.Get();
-}
-inline void ReconfigureBody::_internal_set_statsdtags(const ::std::string& value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.statsdtags_.Set(value, GetArena());
-}
-inline ::std::string* PROTOBUF_NONNULL ReconfigureBody::_internal_mutable_statsdtags() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  return _impl_.statsdtags_.Mutable( GetArena());
-}
-inline ::std::string* PROTOBUF_NULLABLE ReconfigureBody::release_statsdtags() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:grpcagent.ReconfigureBody.statsdTags)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000008U)) {
-    return nullptr;
-  }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
-  auto* released = _impl_.statsdtags_.Release();
-  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
-    _impl_.statsdtags_.Set("", GetArena());
-  }
-  return released;
-}
-inline void ReconfigureBody::set_allocated_statsdtags(::std::string* PROTOBUF_NULLABLE value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
-  } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
-  }
-  _impl_.statsdtags_.SetAllocated(value, GetArena());
-  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.statsdtags_.IsDefault()) {
-    _impl_.statsdtags_.Set("", GetArena());
-  }
-  // @@protoc_insertion_point(field_set_allocated:grpcagent.ReconfigureBody.statsdTags)
 }
 
 // repeated string tags = 9;
@@ -1132,13 +874,13 @@ ReconfigureBody::_internal_mutable_tags() {
 
 // optional bool tracingEnabled = 10;
 inline bool ReconfigureBody::has_tracingenabled() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000040U);
   return value;
 }
 inline void ReconfigureBody::clear_tracingenabled() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.tracingenabled_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000200U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
 }
 inline bool ReconfigureBody::tracingenabled() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.tracingEnabled)
@@ -1146,7 +888,7 @@ inline bool ReconfigureBody::tracingenabled() const {
 }
 inline void ReconfigureBody::set_tracingenabled(bool value) {
   _internal_set_tracingenabled(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.tracingEnabled)
 }
 inline bool ReconfigureBody::_internal_tracingenabled() const {
@@ -1160,13 +902,13 @@ inline void ReconfigureBody::_internal_set_tracingenabled(bool value) {
 
 // optional uint32 tracingModulesBlacklist = 11;
 inline bool ReconfigureBody::has_tracingmodulesblacklist() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000080U);
   return value;
 }
 inline void ReconfigureBody::clear_tracingmodulesblacklist() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.tracingmodulesblacklist_ = 0u;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000400U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
 }
 inline ::uint32_t ReconfigureBody::tracingmodulesblacklist() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.tracingModulesBlacklist)
@@ -1174,7 +916,7 @@ inline ::uint32_t ReconfigureBody::tracingmodulesblacklist() const {
 }
 inline void ReconfigureBody::set_tracingmodulesblacklist(::uint32_t value) {
   _internal_set_tracingmodulesblacklist(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.tracingModulesBlacklist)
 }
 inline ::uint32_t ReconfigureBody::_internal_tracingmodulesblacklist() const {
@@ -1188,13 +930,13 @@ inline void ReconfigureBody::_internal_set_tracingmodulesblacklist(::uint32_t va
 
 // optional bool contCpuProfile = 12;
 inline bool ReconfigureBody::has_contcpuprofile() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
   return value;
 }
 inline void ReconfigureBody::clear_contcpuprofile() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.contcpuprofile_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00001000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000200U);
 }
 inline bool ReconfigureBody::contcpuprofile() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.contCpuProfile)
@@ -1202,7 +944,7 @@ inline bool ReconfigureBody::contcpuprofile() const {
 }
 inline void ReconfigureBody::set_contcpuprofile(bool value) {
   _internal_set_contcpuprofile(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.contCpuProfile)
 }
 inline bool ReconfigureBody::_internal_contcpuprofile() const {
@@ -1216,13 +958,13 @@ inline void ReconfigureBody::_internal_set_contcpuprofile(bool value) {
 
 // optional bool assetsEnabled = 13;
 inline bool ReconfigureBody::has_assetsenabled() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
   return value;
 }
 inline void ReconfigureBody::clear_assetsenabled() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.assetsenabled_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00002000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000400U);
 }
 inline bool ReconfigureBody::assetsenabled() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.assetsEnabled)
@@ -1230,7 +972,7 @@ inline bool ReconfigureBody::assetsenabled() const {
 }
 inline void ReconfigureBody::set_assetsenabled(bool value) {
   _internal_set_assetsenabled(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.assetsEnabled)
 }
 inline bool ReconfigureBody::_internal_assetsenabled() const {
@@ -1244,13 +986,13 @@ inline void ReconfigureBody::_internal_set_assetsenabled(bool value) {
 
 // optional double traceSampleRate = 14;
 inline bool ReconfigureBody::has_tracesamplerate() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000100U);
   return value;
 }
 inline void ReconfigureBody::clear_tracesamplerate() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.tracesamplerate_ = 0;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000800U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000100U);
 }
 inline double ReconfigureBody::tracesamplerate() const {
   // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.traceSampleRate)
@@ -1258,7 +1000,7 @@ inline double ReconfigureBody::tracesamplerate() const {
 }
 inline void ReconfigureBody::set_tracesamplerate(double value) {
   _internal_set_tracesamplerate(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
   // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.traceSampleRate)
 }
 inline double ReconfigureBody::_internal_tracesamplerate() const {

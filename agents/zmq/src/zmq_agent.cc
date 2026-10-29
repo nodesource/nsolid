@@ -2573,28 +2573,6 @@ int ZmqAgent::validate_reconfigure(const json& in, json& out) const {
         message = "'redactSnapshots' should be a boolean";
         goto send_validation_error;
       }
-    } else if (key == "statsd") {
-      if (!val.is_null()) {
-        // Make sure some hostname is always provided if only port was passed.
-        if (val.is_number_unsigned()) {
-          out[key] = std::string("localhost:") +
-                     std::to_string(val.get<uint32_t>());
-          continue;
-        } else if (!val.is_string()) {
-          message = "'statsd' should be a string";
-          goto send_validation_error;
-        }
-      }
-    } else if (key == "statsdBucket") {
-      if (!val.is_string()) {
-        message = "'statsdBucket' should be a string";
-        goto send_validation_error;
-      }
-    } else if (key == "statsdTags") {
-      if (!val.is_string()) {
-        message = "'statsdTags' should be a string";
-        goto send_validation_error;
-      }
     } else if (key == "tags") {
       if (!val.is_array()) {
         message = "'tags' should be an array of strings";
@@ -2647,9 +2625,6 @@ int ZmqAgent::reconfigure(const nlohmann::json& msg,
                                     "pauseMetrics",
                                     "promiseTracking",
                                     "redactSnapshots",
-                                    "statsd",
-                                    "statsdBucket",
-                                    "statsdTags",
                                     "tags",
                                     "tracingEnabled",
                                     "tracingModulesBlacklist"};
