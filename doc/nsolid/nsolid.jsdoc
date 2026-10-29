@@ -175,8 +175,8 @@
  * @property {string} hostname - The hostname the N\|Solid process is running
  * on (overrides system-determined hostname).
  * @property {string} interval - The interval, in milliseconds, in which the
- * N\|Solid Agent will collect and report metrics to the console and/or the
- * StatsD collector if either are connected. This value defaults to 3000
+ * N\|Solid Agent will collect and report metrics to the console when connected.
+ * This value defaults to 3000
  * (3 seconds) and cannot be lower than 1000.
  * @property {boolean} pauseMetrics - Whether the agent is periodically
  * retrieving metrics or not.
@@ -187,17 +187,6 @@
  * @property {boolean} redactSnapshots - Boolean to indicate if you want heap
  * snapshots to obscure string variable contents. This may impede your ability
  * to debug and is meant for sensitive production environments.
- * @property {string|number} statsd - The route to a StatsD collector if you
- * wish to send metrics directly to an external data collection service from the
- * N\|Solid process. Without this environment variable, the N\|Solid Agent will
- * not attempt to send StatsD data.
- * It should be formatted as "protocol://host:port". If unspecified, the default
- * protocol is udp, host is localhost and port is 8125. Hosts and IP addresses
- * are accepted in the same format as in `command`.
- * @property {string} statsdBucket - An override for the default StatsD bucket
- * (key prefix) when using the NSOLID_STATSD functionality.
- * @property {string} statsdTags - Optional tags to append to StatsD metric data
- * when using the NSOLID_STATSD functionality.
  * @property {Array<string>} tags - The list of tags associated with your instance,
  * which can be used to identify and filter instances in Console views.
  * @property {boolean} tracingEnabled - Whether the agent is to automatically
@@ -216,8 +205,6 @@
  *  interval: 3000,
  *  pauseMetrics: false,
  *  pubkey: '^kvyYYYzzzXXCCVSSSSSSSS',
- *  statsd: 'localhost',
- *  statsdBucket: 'nsolid.${env}.${app}.${hostname}.${shortId}',
  *  tags: []
  * }
  */
@@ -548,79 +535,6 @@
  * @param {StartupTimes} startup_times
  */
 
-
-/**
- * @callback StatsDStrMethod
- * @returns {string}
- */
-
-/**
- * @callback StatsDFormatMethod
- * @param {string} name
- * @param {string} value
- */
-
-/**
- * @typedef {Object} StatsDFormat
- * @property {StatsDStrMethod} bucket - Returns the "bucket"
- * string prepended to all auto-generated statsd metric strings.
- * @property {StatsDStrMethod} tags - Returns the "tags" string
- * appended to all auto-generated statsd metric strings, includes the |#
- * prefix. This value is an empty string if no tags are configured for statsd.
- * @property {StatsDFormatMethod} counter - Format a "counter"
- * string for name and value suitable for statsd.
- * @property {StatsDFormatMethod} gauge - Format a "gauge"
- * string for name and value suitable for statsd.
- * @property {StatsDFormatMethod} set - Format a "set" string
- * for name and value suitable for statsd.
- * @property {StatsDFormatMethod} timing - Format a "timing"
- * string for name and value suitable for statsd.
- */
-
-/**
- * @callback StatsDSendRawMethod
- * @param {(string|string[])} data
- */
-
-/**
- * @callback StatsDSendMethod
- * @description Sends that to the StatsD server configured using the
- * configured bucket and tags.
- * @param {string} name
- * @param {string} value
- */
-
-/**
- * @typedef {Object} StatsD
- * @property {('unconfigured'|
- *             'initializing'|
- *             'connecting'|
- *             'ready')} status - The status of the StatsD agent.
- * @property {StatsDStrMethod} udpIp - If configured, returns
- * the ip address udp statsd data will be sent to.
- * @property {StatsDStrMethod} tcpIp - If configured, returns
- * the ip address tcp statsd data will be sent to.
- * @property {StatsDSendRawMethod} sendRaw - Send a raw string
- * to statsd. Caller is required to comply to statsd format (terminating
- * newline not required). An array of strings is also permissible, they will
- * be sent newline separated. If connected via UDP, data sent via sendRaw()
- * will be split up into 1400Kb batches to fit within a standard MTU window,
- * this applies to newline separated strings or an array of strings passed to
- * this interface.
- * @property {StatsDSendMethod} counter - Send a "counter" type
- * value to statsd. Will use NSOLID_STATSD_BUCKET and NSOLID_STATSD_TAGS if
- * configured.
- * @property {StatsDSendMethod} gauge - Send a "gauge" type
- * value to statsd. Will use NSOLID_STATSD_BUCKET and NSOLID_STATSD_TAGS if
- * configured.
- * @property {StatsDSendMethod} set - Send a "set" type value
- * to statsd. Will use NSOLID_STATSD_BUCKET and NSOLID_STATSD_TAGS if
- * configured.
- * @property {StatsDSendMethod} timing - Send a "timing" type
- * value to statsd. Will use NSOLID_STATSD_BUCKET and NSOLID_STATSD_TAGS if
- * configured.
- * @property {StatsDFormat} format
- */
 
 /**
  * @typedef {Object} TraceStats
