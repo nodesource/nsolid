@@ -11,7 +11,7 @@ const { Worker, isMainThread, threadId, parentPort } =
   require('worker_threads');
 let er;
 
-if (process.env.NSOLID_COMMAND)
+if (process.env.NSOLID_GRPC || process.env.NSOLID_SAAS)
   skip('required to run without the Console');
 
 if (!isMainThread && +process.argv[2] !== process.pid)

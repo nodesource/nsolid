@@ -18,7 +18,7 @@ const nsolid = require('nsolid');
 const { internalBinding } = require('internal/test/binding');
 const { UV_ESRCH } = internalBinding('uv');
 
-if (process.env.NSOLID_COMMAND)
+if (process.env.NSOLID_GRPC || process.env.NSOLID_SAAS)
   common.skip('required to run without the Console');
 
 if (!isMainThread && +process.argv[2] !== process.pid)

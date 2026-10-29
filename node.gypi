@@ -263,64 +263,6 @@
       'dependencies': [ 'deps/libffi/libffi.gyp:libffi' ],
     }],
 
-    [ 'node_shared_sodium=="false"', {
-      'dependencies': [ 'deps/sodium/sodium.gyp:sodium', ],
-      'conditions': [
-        [ 'force_load=="true"', {
-          'xcode_settings': {
-            'OTHER_LDFLAGS': [
-              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)sodium<(STATIC_LIB_SUFFIX)',
-            ],
-          },
-          'msvs_settings': {
-            'VCLinkerTool': {
-              'AdditionalOptions': [
-                '/WHOLEARCHIVE:<(PRODUCT_DIR)/lib/sodium<(STATIC_LIB_SUFFIX)',
-              ],
-            },
-          },
-          'conditions': [
-            ['OS!="aix" and node_shared=="false"', {
-              'ldflags': [
-                '-Wl,--whole-archive',
-                '<(obj_dir)/deps/sodium/<(STATIC_LIB_PREFIX)sodium<(STATIC_LIB_SUFFIX)',
-                '-Wl,--no-whole-archive',
-              ],
-            }],
-          ],
-        }],
-      ],
-    }],
-
-    [ 'node_shared_zmq=="false"', {
-      'dependencies': [ 'deps/zmq/zmq.gyp:zmq', ],
-      'conditions': [
-        [ 'force_load=="true"', {
-          'xcode_settings': {
-            'OTHER_LDFLAGS': [
-              '-Wl,-force_load,<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)zmq<(STATIC_LIB_SUFFIX)',
-            ],
-          },
-          'msvs_settings': {
-            'VCLinkerTool': {
-              'AdditionalOptions': [
-                '/WHOLEARCHIVE:<(PRODUCT_DIR)/lib/zmq<(STATIC_LIB_SUFFIX)',
-              ],
-            },
-          },
-          'conditions': [
-            ['OS!="aix" and node_shared=="false"', {
-              'ldflags': [
-                '-Wl,--whole-archive',
-                '<(obj_dir)/deps/zmq/<(STATIC_LIB_PREFIX)zmq<(STATIC_LIB_SUFFIX)',
-                '-Wl,--no-whole-archive',
-              ],
-            }],
-          ],
-        }],
-      ],
-    }],
-
     [ 'node_shared_curl=="false"', {
       'dependencies': [ 'deps/curl/curl.gyp:curl' ],
       'conditions': [

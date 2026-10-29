@@ -10,8 +10,7 @@ const nsolid = require('nsolid');
 if (process.argv[2] === 'child') {
   // Configure the console so the `profile()` call may succeed
   nsolid.start({
-    command: 'localhost:9001',
-    data: 'localhost:9002'
+    grpc: 'localhost:9001',
   });
 
   setTimeout(() => {
