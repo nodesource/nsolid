@@ -55,6 +55,10 @@ When not in use it behaves exactly as Node.js. See the
 .Sy N|SOLID CONFIGURATION
 section to enable the N|Solid Agent features.
 .Pp
+The StatsD agent, its configuration options, and the nsolid.statsd API have been removed.
+StatsD fields in remote reconfiguration requests are ignored.
+Use the OTLP agent to export metrics to supported collectors.
+.Pp
 Node.js is a set of libraries for JavaScript which allows it to be used outside of the browser.
 It is primarily focused on creating simple, easy-to-build network clients and servers.
 .Pp
@@ -890,37 +894,6 @@ Data will always be encrypted, but for security you should create your own Curve
 .It Ev NSOLID_SAAS Ar key
 The SaaS token acquired while signing up for a SaaS account.
 .
-.It Ev NSOLID_STATSD Ar [ip|hostname][:port]
-Provide the location of a StatsD endpoint.
-.Pp
-Example: NSOLID_STATSD=127.0.0.1:8125
-.
-.It Ev NSOLID_STATSD_BUCKET Ar [nsolid.${env}.${app}.${hostname}.${shortid}]
-Provide a StatsD bucket format string for N|Solid to use when reporting StatsD metrics. Will substitute recognized variables with the N|Solid configuration.
-.Pp
-Default:
-.Ar nsolid.${env}.${app}.${hostname}.${shortid}
-.Pp
-Recognized Substitutions:
-  * \fB${env}\fR: the NODE_ENV
-  * \fB${app}\fR: nsolid app
-  * \fB${hostname}\fR: the configured hostname value
-  * \fB${id}\fR: the unique agent id
-  * \fB${shortid}\fR: a short prefix of the agent id
-.
-.It Ev NSOLID_STATSD_TAGS Ar ${env},${tags}
-Provide a StatsD tags extension format string for N|Solid to use when reporting StatsD metrics. Not all StatsD applications use this extension, so use with caution. Will substitute recognized variables with the N|Solid configuration.
-.Pp
-Defaults to not sending the tags extension.
-.Pp
-Recognized Substitutions:
-  * \fB${env}\fR: the NODE_ENV
-  * \fB${app}\fR: nsolid app
-  * \fB${hostname}\fR: the configured hostname value
-  * \fB${id}\fR: the unique agent id
-  * \fB${shortid}\fR: a short prefix of the agent id
-  * \fB${tags}\fR: a concatenated list of the tags
-.
 .It Ev NSOLID_DISABLE_IPV6
 Disable IPv6 in case it's not supported by the host system.
 .
@@ -996,7 +969,6 @@ Example:
     ...,
     "nsolid": {
       "app": "api-server",
-      "statsd": "8125",
       "command": "storage.local:9001",
       "tags": "api,staging"
     }
@@ -1017,9 +989,6 @@ The following lists all package.json field names along with their environment va
 .It data : Ev NSOLID_DATA
 .It bulk : Ev NSOLID_BULK
 .It pubkey : Ev NSOLID_PUBKEY
-.It statsd : Ev NSOLID_STATSD
-.It statsdBucket : Ev NSOLID_STATSD_BUCKET
-.It statsdTags : Ev NSOLID_STATSD_TAGS
 .It disableIpv6 : Ev NSOLID_DISABLE_IPV6
 .It disableSnapshots : Ev NSOLID_DISABLE_SNAPSHOTS
 .It redactSnapshots : Ev NSOLID_REDACT_SNAPSHOTS
