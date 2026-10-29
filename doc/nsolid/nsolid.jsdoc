@@ -148,28 +148,8 @@
  * @property {string} appVersion - To specify the version of the application.
  * @property {string} blockedLoopThreshold - Threshold in milliseconds the
  * event loop has to be blocked for the runtime to emit a `loop_blocked` event.
- * @property {string|number} bulk - The route to the console bulk port.
- * It should be formatted as "host:port". The default host is localhost, and
- * the default port is 9003.
- * The host can be provided via several formats:
- * - `IPv4` 10.0.0.21
- * - `IPv6` [2001:cdba::3257:9652]
- * - `hostname` nsolid_hub.local
- * @property {string|number} command - The route to the console command port.
- * It should be formatted as "host:port". The default host is localhost, and
- * the default port is 9001.
- * The host can be provided via several formats:
- * - `IPv4` 10.0.0.21
- * - `IPv6` [2001:cdba::3257:9652]
- * - `hostname` nsolid_hub.local
- * @property {string|number} data - The route to the console data port.
- * It should be formatted as "host:port". The default host is localhost, and
- * the default port is 9002.
- * The host can be provided via several formats:
- * - `IPv4` 10.0.0.21
- * - `IPv6` [2001:cdba::3257:9652]
- * - `hostname` nsolid_hub.local
- * @property {boolean} disableIpv6 - Whether to support IPv6 or only IPv4999.
+ * @property {string|number} grpc - The N|Solid Console gRPC endpoint.
+ * @property {string} saas - The SaaS token used by the gRPC agent.
  * @property {string} disableSnapshots - The version of the package.
  * @property {string} env - Overrides the NODE_ENV variable. Defaults to 'prod'.
  * @property {string} hostname - The hostname the N\|Solid process is running
@@ -182,8 +162,6 @@
  * retrieving metrics or not.
  * @property {boolean} promiseTracking - Whether the agent is to track the
  * promises created / resolved by the runtime.
- * @property {string} pubkey - The ZMQ public key used with the N\|Solid Console
- * server.
  * @property {boolean} redactSnapshots - Boolean to indicate if you want heap
  * snapshots to obscure string variable contents. This may impede your ability
  * to debug and is meant for sensitive production environments.
@@ -193,7 +171,7 @@
  * not attempt to send StatsD data.
  * It should be formatted as "protocol://host:port". If unspecified, the default
  * protocol is udp, host is localhost and port is 8125. Hosts and IP addresses
- * are accepted in the same format as in `command`.
+ * are accepted as hostnames, IPv4 or bracketed IPv6 addresses.
  * @property {string} statsdBucket - An override for the default StatsD bucket
  * (key prefix) when using the NSOLID_STATSD functionality.
  * @property {string} statsdTags - Optional tags to append to StatsD metric data
@@ -208,14 +186,11 @@
  * {
  *  app: 'application name',
  *  blockedLoopThreshold: 200,
- *  bulk: 'localhost:9003',
- *  command: 'localhost:9001',
- *  data: 'localhost:9002',
+ *  grpc: 'localhost:9001',
  *  env: 'prod',
  *  hostname: 'my-hostname',
  *  interval: 3000,
  *  pauseMetrics: false,
- *  pubkey: '^kvyYYYzzzXXCCVSSSSSSSS',
  *  statsd: 'localhost',
  *  statsdBucket: 'nsolid.${env}.${app}.${hostname}.${shortId}',
  *  tags: []
@@ -634,13 +609,4 @@
  * served incoming HTTP(S) requests canceled.
  * @property {number} httpServerCount - The process's total number of incoming
  * HTTP(s) requests served.
- */
-
-/**
- * @typedef {Object} Zmq
- * @property {('unconfigured'|
- *             'initializing'|
- *             'connecting'|
- *             'buffering'|
- *             'ready')} status - The status of the ZMQ agent.
  */

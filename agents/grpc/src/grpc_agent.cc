@@ -2136,6 +2136,10 @@ ErrorType GrpcAgent::do_start_prof_init(
     const ProfileType& type,
     ProfileOptions& options) {
 
+  if (ready_ == false) {
+    return ErrorType::ENotAvailable;
+  }
+
   if (!assets_enabled_.load(std::memory_order_acquire)) {
     return ErrorType::EAssetsDisabled;
   }

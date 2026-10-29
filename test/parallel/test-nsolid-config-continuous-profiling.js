@@ -7,7 +7,7 @@ const nsolid = require('nsolid');
 
 // Test CPU continuous profiling configuration
 nsolid.start({
-  command: 9001,
+  grpc: 9001,
   contCpuProfile: true,
   contCpuProfileInterval: 60000
 });

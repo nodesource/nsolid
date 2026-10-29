@@ -34,8 +34,7 @@ nsolid.snapshot(common.mustCall((err) => {
 
 // Sonfigure the console so the `snapshot()` call may succeed
 nsolid.start({
-  command: 'localhost:9001',
-  data: 'localhost:9002',
+  grpc: 'localhost:9001',
   disableSnapshots: true
 });
 
@@ -59,8 +58,7 @@ setImmediate(common.mustCall(() => {
 
 function runSnapshotAssetsToggleTests() {
   nsolid.start({
-    command: 'localhost:9001',
-    data: 'localhost:9002',
+    grpc: 'localhost:9001',
     assetsEnabled: false,
     disableSnapshots: false,
   });
