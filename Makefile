@@ -1614,8 +1614,6 @@ LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	agents/otlp/src/*.h \
 	agents/src/*.cc \
 	agents/src/*.h \
-	agents/statsd/src/*.cc \
-	agents/statsd/src/*.h \
 	agents/zmq/src/*.cc \
 	agents/zmq/src/*.h \
 	benchmark/napi/*/*.cc \

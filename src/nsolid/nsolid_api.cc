@@ -7,7 +7,6 @@
 #include "grpc/src/grpc_agent.h"
 #include "otlp/src/otlp_agent.h"
 #include "otlp/src/otlp_common.h"
-#include "statsd/src/statsd_agent.h"
 #include "util.h"
 #include "env-inl.h"
 #include "uv.h"
@@ -1268,11 +1267,6 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     it = config.find("otlp");
     if (it != config.end() && !it->is_null()) {
       otlp::OTLPAgent::Inst()->start();
-    }
-
-    it = config.find("statsd");
-    if (it != config.end() && !it->is_null()) {
-      statsd::StatsDAgent::Inst()->start();
     }
 
     it = config.find("grpc");

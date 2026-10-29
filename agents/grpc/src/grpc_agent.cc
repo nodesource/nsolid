@@ -381,18 +381,6 @@ void PopulateReconfigureEvent(grpcagent::ReconfigureEvent* reconfigure_event,
   if (it != config.end()) {
     body->set_redactsnapshots(*it);
   }
-  it = config.find("statsd");
-  if (it != config.end()) {
-    body->set_statsd(it->get<std::string>());
-  }
-  it = config.find("statsdBucket");
-  if (it != config.end()) {
-    body->set_statsdbucket(it->get<std::string>());
-  }
-  it = config.find("statsdTags");
-  if (it != config.end()) {
-    body->set_statsdtags(it->get<std::string>());
-  }
   it = config.find("tags");
   if (it != config.end()) {
     for (const auto& tag : *it) {
@@ -1763,15 +1751,6 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   }
   if (body.has_redactsnapshots()) {
       out["redactSnapshots"] = body.redactsnapshots();
-  }
-  if (body.has_statsd()) {
-      out["statsd"] = body.statsd();
-  }
-  if (body.has_statsdbucket()) {
-      out["statsdBucket"] = body.statsdbucket();
-  }
-  if (body.has_statsdtags()) {
-      out["statsdTags"] = body.statsdtags();
   }
   if (body.tags_size() > 0) {
       out["tags"] = json::array();
