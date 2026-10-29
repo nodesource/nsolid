@@ -34,8 +34,7 @@ nsolid.snapshot(common.mustCall((err) => {
 
 // Configure the console so the `snapshot()` call may succeed
 nsolid.start({
-  command: 'localhost:9001',
-  data: 'localhost:9002',
+  grpc: 'localhost:9001',
   assetsEnabled: false,
 });
 
@@ -64,13 +63,12 @@ setImmediate(common.mustCall(() => {
     nsolid.enableAssets();
     runDisableSnapshotsTests();
   }));
-}));
+}), common.platformTimeout(100));
 
 // Disabling snapshots can be undone after rejecting requests.
 function runDisableSnapshotsTests() {
   nsolid.start({
-    command: 'localhost:9001',
-    data: 'localhost:9002',
+    grpc: 'localhost:9001',
     disableSnapshots: true,
   });
 
@@ -100,5 +98,5 @@ function runDisableSnapshotsTests() {
         nsolid.snapshot(common.mustSucceed());
       }));
     }));
-  }));
+  }), common.platformTimeout(100));
 }

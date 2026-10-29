@@ -117,10 +117,6 @@ expected.beforePreExec = new Set([
 
 expected.atRunTime = new Set([
   'NativeModule internal/process/pre_execution',
-  'Internal Binding nsolid_zmq_agent',
-  'NativeModule internal/agents/zmq/lib/agent',
-  'NativeModule internal/agents/zmq/lib/nsolid',
-  'NativeModule internal/nsolid_assets',
   'NativeModule internal/nsolid_loader',
   'NativeModule internal/nsolid_promise_tracking',
   'NativeModule internal/nsolid_diag',

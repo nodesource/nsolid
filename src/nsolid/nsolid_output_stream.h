@@ -22,7 +22,6 @@ enum ErrorType {
 #define X(type, code, str) type = code,
   HEAP_SNAPSHOT_ERRORS(X)
 #undef X
-      NSOLID_ZMQ_ERROR_MAX
 };
 
 }  // namespace heap_profiler

@@ -30,8 +30,6 @@ const expected_keys = [
   'grpc',
   'nlohmann',
   'opentelemetry',
-  'zmq',
-  'sodium',
   'protobuf',
 ];
 
