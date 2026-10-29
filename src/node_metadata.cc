@@ -1,5 +1,4 @@
 #include "node_metadata.h"
-#include <zmq.h>
 #include "acorn_version.h"
 #include "ada.h"
 #include "amaro_version.h"
@@ -29,7 +28,6 @@
 #include "uvwasi.h"
 #include "v8.h"
 #include "zstd.h"
-#include "sodium/version.h"
 #include <google/protobuf/message.h>
 
 #ifdef NODE_BUNDLED_ZLIB
@@ -194,13 +192,6 @@ Metadata::Versions::Versions() {
     "."
     NODE_STRINGIFY(NLOHMANN_JSON_VERSION_PATCH);
   opentelemetry = OPENTELEMETRY_VERSION;
-  zmq =
-    NODE_STRINGIFY(ZMQ_VERSION_MAJOR)
-    "."
-    NODE_STRINGIFY(ZMQ_VERSION_MINOR)
-    "."
-    NODE_STRINGIFY(ZMQ_VERSION_PATCH);
-  sodium = SODIUM_VERSION_STRING;
   protobuf = google::protobuf::internal::VersionString(GOOGLE_PROTOBUF_VERSION);
 }
 

@@ -5,7 +5,7 @@ const assert = require('assert');
 const nsolid = require('nsolid');
 
 nsolid.start({
-  command: 9001,
+  grpc: 9001,
   tracingEnabled: true
 });
 

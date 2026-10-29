@@ -14,7 +14,7 @@ setTimeout(common.mustCall(function r() {
   }
 
   // Change config, config hook should be called
-  nsolid.start({ command: 9000 });
+  nsolid.start({ interval: 9000 });
   setTimeout(common.mustCall(function r1() {
     const new_count = binding.checkConfig();
     if (new_count === count) {
@@ -23,7 +23,7 @@ setTimeout(common.mustCall(function r() {
 
     assert.strictEqual(new_count, count + 1);
     // Don't change config, so config hooks should not be called
-    nsolid.start({ command: 9000 });
+    nsolid.start({ interval: 9000 });
     setTimeout(common.mustCall(() => {
       assert.strictEqual(new_count, binding.checkConfig());
     }), 100);

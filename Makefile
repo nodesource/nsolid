@@ -1616,8 +1616,6 @@ LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	agents/src/*.h \
 	agents/statsd/src/*.cc \
 	agents/statsd/src/*.h \
-	agents/zmq/src/*.cc \
-	agents/zmq/src/*.h \
 	benchmark/napi/*/*.cc \
 	src/*.c \
 	src/*.cc \
@@ -1812,31 +1810,13 @@ lint-clean: ## Remove linting artifacts.
 get-nsolid-version:
 	@$(PYTHON) ./tools/getnsolidversion.py
 
-.PHONY: test-with-console
-test-with-console: export NSOLID_COMMAND = localhost:9001
-test-with-console:
-	@$(NODE) ./tools/check-for-console.js
-	$(MAKE) build-addons
-	$(MAKE) build-js-native-api-tests
-	$(MAKE) build-node-api-tests
-	# This is broken and won't allow testing to continue.
-	#$(MAKE) cctest
-	$(MAKE) jstest
-	$(MAKE) tooltest
-
 .PHONY: test-agents-prereqs
 test-agents-prereqs:
-	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 base85 --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock --ignore-scripts
-	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install nan@latest --no-save --no-package-lock --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
-	# Patch zeromq binding.gyp to use C++20 instead of C++17 before building
-	sed -i.bak 's/c++17/c++20/g' test/common/nsolid-zmq-agent/node_modules/zeromq/binding.gyp && rm -f test/common/nsolid-zmq-agent/node_modules/zeromq/binding.gyp.bak
-	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm run build:libzmq --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install @opentelemetry/otlp-proto-exporter-base @grpc/grpc-js @grpc/proto-loader --prefix test/common/nsolid-otlp-agent --no-save --no-package-lock
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install @grpc/grpc-js @grpc/proto-loader --prefix test/common/nsolid-grpc-agent --no-save --no-package-lock
 
 .PHONY: test-agents-prereqs-clean
 test-agents-prereqs-clean:
-	$(RM) -r test/common/nsolid-zmq-agent/node_modules
 	$(RM) -r test/common/nsolid-otlp-agent/node_modules
 
 HAS_DOCKER ?= $(shell command -v docker > /dev/null 2>&1; [ $$? -eq 0 ] && echo 1 || echo 0)

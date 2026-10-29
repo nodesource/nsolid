@@ -55,6 +55,10 @@ When not in use it behaves exactly as Node.js. See the
 .Sy N|SOLID CONFIGURATION
 section to enable the N|Solid Agent features.
 .Pp
+The ZeroMQ agent, its configuration options, and the nsolid.zmq API have been removed.
+Use NSOLID_GRPC or NSOLID_SAAS to connect to the N|Solid Console.
+Profiling and snapshots now use the gRPC agent.
+.Pp
 Node.js is a set of libraries for JavaScript which allows it to be used outside of the browser.
 It is primarily focused on creating simple, easy-to-build network clients and servers.
 .Pp
@@ -810,9 +814,6 @@ Path of the gRPC CA certificate bundle.
 .It Ev NSOLID_GRPC_KEYLOG
 Path of the gRPC TLS key log file.
 .
-.It Ev NSOLID_AUTH_URL
-Override the ZMQ SaaS authentication URL.
-.
 .It Ev NSOLID_ASSETS_ENABLED
 Enable profiling and snapshot assets (default: true).
 .
@@ -827,18 +828,6 @@ Positive CPU profiling interval in milliseconds (default: 30000).
 .
 .It Ev NSOLID_APPNAME
 Alias for NSOLID_APP.
-.
-.It Ev NSOLID_COMMAND_REMOTE
-Alias for NSOLID_COMMAND.
-.
-.It Ev NSOLID_DATA_REMOTE
-Alias for NSOLID_DATA.
-.
-.It Ev NSOLID_BULK_REMOTE
-Alias for NSOLID_BULK.
-.
-.It Ev NSOLID_STORAGE_PUBKEY
-Alias for NSOLID_PUBKEY.
 .
 .It Ev NSOLID_PACKAGE_JSON Ar path
 Provide the path of the package.json that contains NSolid configuration.
@@ -857,35 +846,6 @@ Comma-separated list of tags for identification and filtering in the N|Solid Con
 Tags must be 2\-140 characters in length.
 .Pp
 Example: NSOLID_TAGS="api,staging,v1.9.2"
-.
-.It Ev NSOLID_COMMAND Ar [ip|hostname][:port]
-Provide the location of the N|Solid Storage COMMAND socket.
-.Pp
-Requires at minimum either a host or port for N|Solid Storage/Console functionality.
-If left unconfigured, the N|Solid Agent will not start up.
-.Pp
-In most configurations this is the only socket that must be configured.
-Upon successful NSOLID_COMMAND connection it will attempt to configure the NSOLID_BULK and NSOLID_DATA sockets.
-The default hostname is localhost.
-.Pp
-Examples:
-    Port only (default host is localhost): NSOLID_COMMAND=9001
-    IP and Port: NSOLID_COMMAND=127.0.0.1:9001
-    Hostname and Port: NSOLID_COMMAND=localhost:9001
-    Hostname only (default port 9001): NSOLID_COMMAND=localhost
-.It Ev NSOLID_DATA Ar [ip|hostname][:port]
-Provide the location of the N|Solid Storage DATA socket. Optional in most scenarios.
-.
-.It Ev NSOLID_BULK Ar [ip|hostname][:port]
-Provide the location of the N|Solid Storage BULK socket. Optional in most scenarios.
-.
-.It Ev NSOLID_PUBKEY Ar key
-Provide a custom public key for N|Solid Storage socket communication.
-Must match the private key set on the N|Solid Storage server.
-.Pp
-Default (unsecure) key: '^kvy<i^qI<r{=ZDrfK4K<#NtqY+zaH:ksm/YGE6I'
-.Pp
-Data will always be encrypted, but for security you should create your own CurveZMQ key pair. See nsolid-cli documentation for instructions.
 .
 .It Ev NSOLID_SAAS Ar key
 The SaaS token acquired while signing up for a SaaS account.
@@ -920,9 +880,6 @@ Recognized Substitutions:
   * \fB${id}\fR: the unique agent id
   * \fB${shortid}\fR: a short prefix of the agent id
   * \fB${tags}\fR: a concatenated list of the tags
-.
-.It Ev NSOLID_DISABLE_IPV6
-Disable IPv6 in case it's not supported by the host system.
 .
 .It Ev NSOLID_DISABLE_SNAPSHOTS
 Force disable snapshots. Once set it cannot be reset.
@@ -997,7 +954,7 @@ Example:
     "nsolid": {
       "app": "api-server",
       "statsd": "8125",
-      "command": "storage.local:9001",
+      "grpc": "storage.local:9001",
       "tags": "api,staging"
     }
   }
@@ -1013,14 +970,9 @@ The following lists all package.json field names along with their environment va
 .It app : Ev NSOLID_APP
 .It hostname : Ev NSOLID_HOSTNAME
 .It tags : Ev NSOLID_TAGS
-.It command : Ev NSOLID_COMMAND
-.It data : Ev NSOLID_DATA
-.It bulk : Ev NSOLID_BULK
-.It pubkey : Ev NSOLID_PUBKEY
 .It statsd : Ev NSOLID_STATSD
 .It statsdBucket : Ev NSOLID_STATSD_BUCKET
 .It statsdTags : Ev NSOLID_STATSD_TAGS
-.It disableIpv6 : Ev NSOLID_DISABLE_IPV6
 .It disableSnapshots : Ev NSOLID_DISABLE_SNAPSHOTS
 .It redactSnapshots : Ev NSOLID_REDACT_SNAPSHOTS
 .It interval : Ev NSOLID_INTERVAL

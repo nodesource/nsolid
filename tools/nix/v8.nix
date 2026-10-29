@@ -160,7 +160,7 @@ stdenv.mkDerivation (finalAttrs: {
   # We need to remove the node_inspector.gypi ref so GYP does not search for it.
   postPatch = ''
     # N|Solid agent dependencies are not needed for the V8-only targets.
-    for dep in sodium zmq curl protobuf otlp_http_exporter grpc; do
+    for dep in curl protobuf otlp_http_exporter grpc; do
       substituteInPlace node.gypi --replace-fail "node_shared_$dep==\"false\"" "1==0"
     done
     substituteInPlace node.gyp --replace-fail "'includes' : [ 'src/inspector/node_inspector.gypi' ]" "'includes' : []"
