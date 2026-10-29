@@ -2285,6 +2285,10 @@ ErrorType GrpcAgent::do_start_prof_init(
     const grpcagent::CommandRequest& req,
     const ProfileType& type,
     ProfileOptions& options) {
+  if (ready_ == false) {
+    return ErrorType::ENotAvailable;
+  }
+
   // Config changes must take effect before the agent's config queue is drained.
   const json config = json::parse(GetConfig(), nullptr, false);
   ASSERT(!config.is_discarded());
