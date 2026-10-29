@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package grpcagent;
+
+message PermissionAuditBody {
+  uint64 thread_id = 1;
+  // Permission scope that was denied (e.g. "FileSystemRead").
+  string permission = 2;
+  // Resource that was denied (e.g. a path). It may be empty.
+  string resource = 3;
+  // When the violation happened, in nanoseconds since the unix epoch.
+  uint64 timestamp = 4;
+}
+
+message PermissionAuditEvent {
+  CommonResponse common = 1;
+  PermissionAuditBody body = 2;
+}
+
+// Sent once per thread when it reaches the limit of unique
+// (permission, resource) pairs it reports. No more PermissionAuditEvent are
+// sent for that thread afterwards.
+message PermissionAuditLimitBody {
+  uint64 thread_id = 1;
+  uint32 limit = 2;
+  uint64 timestamp = 3;
+}
+
+message PermissionAuditLimitEvent {
+  CommonResponse common = 1;
+  PermissionAuditLimitBody body = 2;
+}

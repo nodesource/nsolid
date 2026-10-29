@@ -144,6 +144,10 @@ class EnvironmentOptions : public Options {
   bool entry_is_url = false;
   bool permission = false;
   bool permission_audit = false;
+  // Set from the NSOLID_PERMISSION_AUDIT environment variable. Enables the
+  // permission model in audit-only mode without the hard restrictions that
+  // --permission-audit applies (addons, inspector and process.binding).
+  bool nsolid_permission_audit = false;
   std::vector<std::string> allow_fs_read;
   std::vector<std::string> allow_fs_write;
   bool allow_addons = false;
