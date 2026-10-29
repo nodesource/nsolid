@@ -171,8 +171,6 @@ function testProfileSchema(profile) {
 function runHeapSamplingStreamAssetsToggleTests() {
   // Disable assets through config update
   nsolid.start({
-    command: 'localhost:9001',
-    data: 'localhost:9002',
     assetsEnabled: false,
   });
 

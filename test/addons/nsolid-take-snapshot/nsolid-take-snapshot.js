@@ -6,7 +6,7 @@ const bindingPath = require.resolve(`./build/${buildType}/binding`);
 const binding = require(bindingPath);
 const { Worker, isMainThread, parentPort } = require('worker_threads');
 
-if (process.env.NSOLID_COMMAND)
+if (process.env.NSOLID_GRPC || process.env.NSOLID_SAAS)
   skip('required to run without the Console');
 
 if (!isMainThread && +process.argv[2] !== process.pid)

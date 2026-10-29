@@ -9,8 +9,7 @@ const source = fs.readFileSync(path.join(root, 'lib/nsolid.js'), 'utf8');
 const names = new Set(
   Array.from(source.matchAll(/process\.env\.(NSOLID_[A-Z0-9_]+)/g),
              ([, name]) => name));
-for (const file of ['agents/grpc/src/grpc_agent.cc',
-                    'agents/zmq/src/zmq_agent.cc']) {
+for (const file of ['agents/grpc/src/grpc_agent.cc']) {
   const nativeSource = fs.readFileSync(path.join(root, file), 'utf8');
   for (const [, name] of nativeSource.matchAll(/"(NSOLID_[A-Z0-9_]+)"/g)) {
     names.add(name);

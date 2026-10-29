@@ -348,7 +348,7 @@ int NSolidHeapSnapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
 
     // At this point, the snapshot is fully serialized
     stor.cb(0, snapshot_str.c_str(), stor.data.get());
-    // Tell ZMQ that the snapshot is done
+    // Notify that the snapshot is done
     stor.cb(0, std::string(), stor.data.get());
 
     // Work around a deficiency in the API. The HeapSnapshot object is const
