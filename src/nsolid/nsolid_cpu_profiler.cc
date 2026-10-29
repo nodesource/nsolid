@@ -181,7 +181,7 @@ int NSolidCpuProfiler::StopProfilingSync(SharedEnvInst envinst) {
   profile->Serialize(&stream);
   // Send the whole profile
   stor.proxy_(0, profileJSON, stor.data_.get());
-  // Tell to zmq that the profile is done
+  // Notify that the profile is done
   stor.proxy_(0, "", stor.data_.get());
   // Get rid of the profile.
   profile->Delete();

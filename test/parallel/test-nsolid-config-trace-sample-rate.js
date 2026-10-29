@@ -7,7 +7,7 @@ const nsolid = require('nsolid');
 // Keep whatever the current initial value is when an invalid update arrives.
 const initialRate = nsolid.config.traceSampleRate;
 nsolid.start({
-  command: 9001,
+  grpc: 9001,
   traceSampleRate: 'invalid'
 });
 assert.strictEqual(nsolid.config.traceSampleRate, initialRate);

@@ -23,7 +23,7 @@
 const common = require('../common');
 if (common.isWindows)
   common.skip('no RLIMIT_NOFILE on Windows');
-if (process.env.NSOLID_COMMAND)
+if (process.env.NSOLID_GRPC || process.env.NSOLID_SAAS)
   common.skip('test not compatible with NSolid Console');
 
 const assert = require('assert');

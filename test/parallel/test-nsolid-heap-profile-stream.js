@@ -72,8 +72,6 @@ const {
 function runHeapProfileStreamAssetsToggleTests() {
   // Disable assets via config update and ensure stream creation fails
   nsolid.start({
-    command: 'localhost:9001',
-    data: 'localhost:9002',
     assetsEnabled: false,
   });
 

@@ -32,14 +32,13 @@ nsolid.snapshot(common.mustCall((err) => {
   assert.strictEqual(err.message, 'Heap snapshot could not be generated');
 }));
 
-// Sonfigure the console so the `snapshot()` call may succeed
+// Configure the console so the `snapshot()` call may succeed
 nsolid.start({
-  command: 'localhost:9001',
-  data: 'localhost:9002',
+  grpc: 'localhost:9001',
   disableSnapshots: true
 });
 
-setImmediate(common.mustCall(() => {
+setTimeout(common.mustCall(() => {
   // Snapshot should return an error if snapshots disabled
   assert.throws(
     () => {
@@ -55,17 +54,16 @@ setImmediate(common.mustCall(() => {
     assert.strictEqual(err.message, 'Heap snapshot could not be generated');
     runSnapshotAssetsToggleTests();
   }));
-}));
+}), common.platformTimeout(100));
 
 function runSnapshotAssetsToggleTests() {
   nsolid.start({
-    command: 'localhost:9001',
-    data: 'localhost:9002',
+    grpc: 'localhost:9001',
     assetsEnabled: false,
     disableSnapshots: false,
   });
 
-  setImmediate(common.mustCall(() => {
+  setTimeout(common.mustCall(() => {
     assert.throws(
       () => {
         nsolid.snapshot();
@@ -81,12 +79,12 @@ function runSnapshotAssetsToggleTests() {
 
       // Only enable assets after the error callback completes
       nsolid.enableAssets();
-      setImmediate(common.mustCall(() => {
+      setTimeout(common.mustCall(() => {
         // Wait for snapshot to complete before disabling assets
         nsolid.snapshot(common.mustSucceed(() => {
           // Only disable assets after snapshot completes
           nsolid.disableAssets();
-          setImmediate(common.mustCall(() => {
+          setTimeout(common.mustCall(() => {
             assert.throws(
               () => {
                 nsolid.snapshot();
@@ -98,13 +96,13 @@ function runSnapshotAssetsToggleTests() {
 
             // Only enable assets after error is confirmed
             nsolid.enableAssets();
-            setImmediate(common.mustCall(() => {
+            setTimeout(common.mustCall(() => {
               // Wait for final snapshot to complete
               nsolid.snapshot(common.mustSucceed());
-            }));
-          }));
+            }), common.platformTimeout(100));
+          }), common.platformTimeout(100));
         }));
-      }));
+      }), common.platformTimeout(100));
     }));
-  }));
+  }), common.platformTimeout(100));
 }

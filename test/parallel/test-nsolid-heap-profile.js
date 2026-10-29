@@ -73,8 +73,7 @@ nsolid.heapProfile(common.mustCall((err) => {
 
 // Configure the console so the `profile()` call may succeed
 nsolid.start({
-  command: 'localhost:9001',
-  data: 'localhost:9002'
+  grpc: 'localhost:9001',
 });
 
 setTimeout(common.mustCall(() => {
@@ -133,8 +132,7 @@ setTimeout(common.mustCall(() => {
 function runHeapProfileAssetsToggleTests() {
   // Disable assets via config update
   nsolid.start({
-    command: 'localhost:9001',
-    data: 'localhost:9002',
+    grpc: 'localhost:9001',
     assetsEnabled: false,
   });
 
