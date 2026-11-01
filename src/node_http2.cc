@@ -3364,8 +3364,17 @@ void Http2Session::AltSvc(const FunctionCallbackInfo<Value>& args) {
 
   MaybeStackBuffer<uint8_t> origin(origin_len);
   MaybeStackBuffer<uint8_t> value(value_len);
-  origin_str->WriteOneByte(env->isolate(), *origin);
-  value_str->WriteOneByte(env->isolate(), *value);
+  // The buffers hold exactly the string contents, with no room for a NUL.
+  origin_str->WriteOneByte(env->isolate(),
+                           *origin,
+                           0,
+                           static_cast<int>(origin_len),
+                           String::NO_NULL_TERMINATION);
+  value_str->WriteOneByte(env->isolate(),
+                          *value,
+                          0,
+                          static_cast<int>(value_len),
+                          String::NO_NULL_TERMINATION);
 
   session->AltSvc(id, *origin, origin_len, *value, value_len);
 }
