@@ -559,14 +559,14 @@ if (process.argv[2] === 'child') {
         }
       } else {
         validateArray(dataPoint.quantileValues, `${name}.quantileValues`);
-        assert.strictEqual(dataPoint.quantileValues.length, 2);
-        assert.strictEqual(dataPoint.quantileValues[0].quantile, 0.99);
-        assert.strictEqual(dataPoint.quantileValues[1].quantile, 0.5);
-        if (dataPoint.quantileValues[0].value) {
-          validateNumber(dataPoint.quantileValues[0].value, `${name}.quantileValues[0].value`);
-        }
-        if (dataPoint.quantileValues[1].value) {
-          validateNumber(dataPoint.quantileValues[1].value, `${name}.quantileValues[1].value`);
+        // The SDK keeps quantiles in an unordered map, so their order differs
+        // between standard libraries.
+        const quantiles = dataPoint.quantileValues.map((q) => q.quantile);
+        assert.deepStrictEqual(quantiles.sort((a, b) => a - b), [0.5, 0.99]);
+        for (const { quantile, value } of dataPoint.quantileValues) {
+          if (value) {
+            validateNumber(value, `${name}.quantileValues[${quantile}].value`);
+          }
         }
       }
 
@@ -589,7 +589,9 @@ if (process.argv[2] === 'child') {
     checkScopeMetrics(resourceMetrics[0].scopeMetrics);
 
     if (resourceMetrics[0].scopeMetrics[0].metrics) {
-      context.metrics = [...resourceMetrics[0].scopeMetrics[0].metrics];
+      // Histograms are validated by the dedicated histogram tests.
+      context.metrics = resourceMetrics[0].scopeMetrics[0].metrics.filter(
+        (metric) => !metric.exponentialHistogram);
 
       // Process metrics until we've handled all of them or reached the Done state
       while (context.metrics.length > 0 && !areWeDone(context)) {

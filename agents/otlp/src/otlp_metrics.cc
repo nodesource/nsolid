@@ -128,10 +128,22 @@ void OTLPMetrics::got_thr_metrics(
 
   for (const auto& tm : thr_metrics) {
     fill_env_metrics(metrics, tm.stor);
+    for (const auto& snapshot : tm.histogram_snapshots) {
+      fill_histograms(metrics,
+                      tm.stor,
+                      snapshot.client_points,
+                      snapshot.server_points,
+                      snapshot.dns_points,
+                      snapshot.gc_points,
+                      true,
+                      snapshot.start_timestamp_ms,
+                      snapshot.end_timestamp_ms);
+    }
   }
 
+  if (metrics.empty()) return;
   data.scope_metric_data_ =
-    std::vector<ScopeMetrics>{{scope_, metrics}};
+      std::vector<ScopeMetrics>{{scope_, std::move(metrics)}};
   auto result = otlp_metric_exporter_->Export(data);
   Debug("# ThreadMetrics Exported. Result: %d\n", static_cast<int>(result));
 }

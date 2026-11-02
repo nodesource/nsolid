@@ -903,7 +903,14 @@ Track packages listed in the globalPaths
 Specify whether the process is being run in an IIS environment.
 .
 .It Ev NSOLID_OTLP Ar config
-Define the type of OTLP endpoint.
+Select the exporter type: \fBotlp\fR, \fBdatadog\fR,
+\fBdynatrace\fR or \fBnewrelic\fR.
+.Pp
+HTTP, DNS and GC latency histograms are available through the N|Solid gRPC
+agent and the generic OTLP exporter (\fBNSOLID_OTLP=otlp\fR).
+The OTLP exporter supports both gRPC and HTTP transports.
+The dedicated Datadog, Dynatrace and New Relic exporters send legacy metrics
+without histograms.
 .
 .It Ev NSOLID_OTLP_CONFIG Ar config
 Specify the configuration for the OTLP endpoint defined in \fBNSOLID_OTLP\fR.
