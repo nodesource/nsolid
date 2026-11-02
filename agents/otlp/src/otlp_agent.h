@@ -102,6 +102,8 @@ class OTLPAgent {
 
   void got_proc_metrics();
 
+  void got_thr_metrics();
+
   void got_spans(const UniqRecordables& spans);
 
   void setup_trace_otlp_exporter(  // NOLINTNEXTLINE(runtime/references)
@@ -141,7 +143,7 @@ class OTLPAgent {
   ProcessMetrics::MetricsStor proc_prev_stor_;
   std::map<uint64_t, JSThreadMetrics> env_metrics_map_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ThreadMetrics::MetricsStor> thr_metrics_msg_q_;
+  TSQueue<MetricsExporter::ThrMetricsStor> thr_metrics_msg_q_;
   nsuv::ns_timer metrics_timer_;
   std::unique_ptr<MetricsExporter> metrics_exporter_;
 
