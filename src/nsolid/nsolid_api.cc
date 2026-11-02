@@ -90,7 +90,6 @@ static void calculatePtiles(std::vector<double>* vals, double* med, double* nn);
 // any thread have been blocked longer than the threadshold passed to
 // OnBlockedLoopHook().
 constexpr uint64_t blocked_loop_interval = 100;
-uint64_t gen_ptiles_interval = 5000;
 constexpr uint64_t datapoints_q_interval = 100;
 constexpr size_t datapoints_q_max_size = 100;
 
@@ -1202,7 +1201,15 @@ void EnvList::validate_trace_sample_rate(nlohmann::json* config) {
 
 void EnvList::validate_config(nlohmann::json* config) {
   validate_trace_sample_rate(config);
-  auto it = config->find("contCpuProfileInterval");
+  auto it = config->find("interval");
+  if (it != config->end() &&
+      (!it->is_number() || it->get<double>() < 1 ||
+       it->get<double>() > 9007199254740991.0 ||
+       std::floor(it->get<double>()) != it->get<double>())) {
+    config->erase(it);
+  }
+
+  it = config->find("contCpuProfileInterval");
   if (it != config->end() &&
       (!it->is_number_integer() || it->get<double>() <= 0 ||
        it->get<double>() > 9007199254740991.0)) {
@@ -1224,6 +1231,11 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     validate_config(&validated_config);
     current_config_.merge_patch(validated_config);
     curr = current_config_;
+    auto it = curr.find("interval");
+    if (it != curr.end()) {
+      gen_ptiles_interval_.store(it->get<uint64_t>(),
+                                std::memory_order_relaxed);
+    }
   }
 
   auto diff = nlohmann::json::diff(old, curr);
@@ -1682,6 +1694,16 @@ void EnvList::process_callbacks_(ns_async*, EnvList* envlist) {
   // is being processed.
   ns_mutex::scoped_lock cmd_lock(Inst()->command_lock_);
 
+  uint64_t interval =
+      envlist->gen_ptiles_interval_.load(std::memory_order_relaxed);
+  uint64_t repeat = uv_timer_get_repeat(reinterpret_cast<uv_timer_t*>(
+      envlist->gen_ptiles_timer_.base_handle()));
+  if (interval != repeat) {
+    int er = envlist->gen_ptiles_timer_.start(
+        gen_ptiles_cb_, interval, interval);
+    CHECK_EQ(er, 0);
+  }
+
   // Process all EnvList::QueueCallback calls.
   QCbStor envlist_stor;
   while (envlist->queued_cb_q_.dequeue(envlist_stor)) {
@@ -1769,8 +1791,9 @@ void EnvList::env_list_routine_(ns_thread*, EnvList* envlist) {
   er = envlist->blocked_loop_timer_.start(
       blocked_loop_timer_cb_, blocked_loop_interval, blocked_loop_interval);
   CHECK_EQ(er, 0);
-  er = envlist->gen_ptiles_timer_.start(
-      gen_ptiles_cb_, gen_ptiles_interval, gen_ptiles_interval);
+  uint64_t interval =
+      envlist->gen_ptiles_interval_.load(std::memory_order_relaxed);
+  er = envlist->gen_ptiles_timer_.start(gen_ptiles_cb_, interval, interval);
   CHECK_EQ(er, 0);
   envlist->blocked_loop_timer_.unref();
   envlist->gen_ptiles_timer_.unref();
@@ -3004,13 +3027,6 @@ static void ResumeMetrics(const FunctionCallbackInfo<Value>& args) {
 }
 
 
-static void SetMetricsInterval(const FunctionCallbackInfo<Value>& args) {
-  CHECK(args[0]->IsNumber());
-  double interval = args[0].As<Number>()->Value();
-  gen_ptiles_interval = static_cast<uint64_t>(interval);
-}
-
-
 static void OnCustomCommand(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
   CHECK(args[0]->IsFunction());
@@ -3435,7 +3451,6 @@ void BindingData::Initialize(Local<Object> target,
   SetMethod(context, target, "getKernelVersion", GetKernelVersion);
   SetMethod(context, target, "pauseMetrics", PauseMetrics);
   SetMethod(context, target, "resumeMetrics", ResumeMetrics);
-  SetMethod(context, target, "setMetricsInterval", SetMetricsInterval);
   SetMethod(context, target, "onCustomCommand", OnCustomCommand);
   SetMethod(context, target, "customCommandResponse", CustomCommandResponse);
   SetMethod(context,
@@ -3572,7 +3587,6 @@ void BindingData::RegisterExternalReferences(
   registry->Register(GetKernelVersion);
   registry->Register(PauseMetrics);
   registry->Register(ResumeMetrics);
-  registry->Register(SetMetricsInterval);
   registry->Register(OnCustomCommand);
   registry->Register(CustomCommandResponse);
   registry->Register(AttachRequestToCustomCommand);

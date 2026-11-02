@@ -932,7 +932,8 @@ Redact all strings from snapshots.
 .
 .It Ev NSOLID_INTERVAL Ar interval
 Override the default metrics reporting interval (milliseconds) of the N|Solid Agent.
-Default is 5000.
+Must be a positive safe integer. Invalid values fall back to the package setting
+or the default of 5000.
 .
 .It Ev NSOLID_DELAY_INIT Ar interval
 Delay initializing nsolid for duration (milliseconds) after the process starts.
