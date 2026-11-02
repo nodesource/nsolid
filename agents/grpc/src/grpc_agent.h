@@ -55,7 +55,7 @@ using WeakGrpcAgent = std::weak_ptr<GrpcAgent>;
 
 struct ExtMetricsStor {
   ThreadMetrics::MetricsStor stor;
-  std::vector<HttpHistogramSnapshot> http_histogram_snapshots;
+  std::vector<HistogramSnapshot> histogram_snapshots;
 };
 
 struct JSThreadMetrics {

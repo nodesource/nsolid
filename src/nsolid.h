@@ -892,7 +892,12 @@ class NODE_EXTERN MetricsStream {
     std::string error_type; /**< error.type */
   };
 
-  using DatapointAttrs = std::variant<std::monostate, HttpDatapointAttrs>;
+  struct GcDatapointAttrs {
+    uint8_t type; /**< Raw v8::GCType value */
+  };
+
+  using DatapointAttrs =
+      std::variant<std::monostate, HttpDatapointAttrs, GcDatapointAttrs>;
 
   struct Datapoint {
     uint64_t thread_id;
