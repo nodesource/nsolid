@@ -1291,7 +1291,10 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     auto saas = config.find("saas");
     if ((it != config.end() && !it->is_null()) ||
         (saas != config.end() && !saas->is_null())) {
-      grpc::GrpcAgent::Inst()->start();
+      grpc::SharedGrpcAgent agent = grpc::GrpcAgent::Inst();
+      if (agent != nullptr) {
+        agent->start();
+      }
     }
 
     it = curr.find("traceSampleRate");
