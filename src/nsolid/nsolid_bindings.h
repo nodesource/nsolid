@@ -40,10 +40,12 @@ class BindingData : public SnapshotableObject {
                                    uint32_t protocol_version,
                                    const std::string& error_type);
 
+  static void FastPushDnsBucket(v8::Local<v8::Object> receiver,
+                                double val,
+                                const v8::FastOneByteString& name,
+                                const v8::FastOneByteString& error);
   static void SlowPushDnsBucket(
       const v8::FunctionCallbackInfo<v8::Value>& args);
-  static void FastPushDnsBucket(v8::Local<v8::Object> receiver, double val);
-  static void PushDnsBucketImpl(BindingData* data, double val);
 
   static void SlowPushServerBucket(
       const v8::FunctionCallbackInfo<v8::Value>& args);
