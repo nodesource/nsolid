@@ -5,6 +5,7 @@
 #include "nsolid/continuous_profiler.h"
 #include "nsolid/nsolid_util.h"
 #include "node_file_utils.h"
+#include "node_mutex.h"
 #include "../../otlp/src/otlp_common.h"
 #include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
@@ -453,10 +454,15 @@ void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* bl_event,
   blocked_body->set_callback_cntr(body["callback_cntr"].get<int32_t>());
 }
 
-/*static*/ SharedGrpcAgent GrpcAgent::Inst() {
+/*static*/ SharedGrpcAgent GrpcAgent::Inst(bool reset) {
+  static Mutex mutex;
+  Mutex::ScopedLock lock(mutex);
   static SharedGrpcAgent agent(new GrpcAgent(), [](GrpcAgent* agent) {
     delete agent;
   });
+  if (reset) {
+    agent.reset();
+  }
   return agent;
 }
 
@@ -576,8 +582,8 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
           return;
         }
 
+        GrpcAgent::Inst(true);
         agent->stop();
-        delete agent.get();
       }, weak_from_this());
       return;
     }
