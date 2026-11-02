@@ -276,7 +276,7 @@ class EnvInst {
   uint32_t* get_trace_flags() { return &trace_flags_; }
   double* trace_sample_rate() { return &trace_sample_rate_; }
 
-  std::vector<HttpHistogramSnapshot> TakeHttpHistogramSnapshots();
+  std::vector<HistogramSnapshot> TakeHistogramSnapshots();
 
   std::atomic<bool> metrics_paused = { false };
 
@@ -408,14 +408,17 @@ class EnvInst {
   std::vector<double> client_bucket_;
   std::vector<double> server_bucket_;
   UniqueAttributesHashMap http_client_hashmap_ =
-      std::make_unique<AttributesHashMap>(kHttpHistogramCardinalityLimit);
+      std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
   UniqueAttributesHashMap http_server_hashmap_ =
-      std::make_unique<AttributesHashMap>(kHttpHistogramCardinalityLimit);
+      std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
+  UniqueAttributesHashMap gc_hashmap_ =
+      std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
+  SharedPointDataAttributes gc_hist_points_;
   SharedPointDataAttributes http_client_hist_points_;
   SharedPointDataAttributes http_server_hist_points_;
-  std::deque<HttpHistogramSnapshot> http_histogram_snapshots_;
-  nsuv::ns_mutex http_histogram_snapshots_lock_;
-  uint64_t http_histogram_window_end_ms_ = 0;
+  std::deque<HistogramSnapshot> grpc_histogram_snapshots_;
+  nsuv::ns_mutex histogram_snapshots_lock_;
+  uint64_t histogram_window_end_ms_ = 0;
   std::atomic<double> dns_median_ = { 0 };
   std::atomic<double> dns99_ptile_ = { 0 };
   std::atomic<double> http_client_median_ = { 0 };
@@ -567,7 +570,7 @@ class EnvList {
   // argument
   void UpdateConfig(const nlohmann::json& config);
   void UpdateConfig(const std::string& config);
-  void SetHttpHistogramConsumerActive(bool active);
+  void SetHistogramConsumerActive(bool active);
 
   void DoExit(bool on_signal);
   bool exiting() const { return exiting_.load(std::memory_order_acquire); }
@@ -685,7 +688,7 @@ class EnvList {
   static void env_list_routine_(nsuv::ns_thread*, EnvList* envlist);
   static void blocked_loop_timer_cb_(nsuv::ns_timer*);
   static void metrics_window_cb_(nsuv::ns_timer*);
-  void update_http_histogram_snapshots_(EnvInst*, uint64_t window_end_ms);
+  void update_histogram_snapshots_(EnvInst*, uint64_t window_end_ms);
   static void raw_metrics_timer_cb_(nsuv::ns_timer*);
   static void promise_tracking_(SharedEnvInst envinst_sp, bool track);
   static void enable_promise_tracking_(SharedEnvInst envinst_sp, void*);
@@ -747,10 +750,10 @@ class EnvList {
   // blocked.
   nsuv::ns_timer blocked_loop_timer_;
   std::atomic<uint64_t> min_blocked_threshold_ = { UINT64_MAX };
-  // Close HTTP/DNS metrics windows at the configured collection interval.
+  // Close latency metric windows at the configured collection interval.
   nsuv::ns_timer metrics_window_timer_;
   std::atomic<uint64_t> metrics_window_interval_ = {5000};
-  std::atomic<bool> http_histogram_consumer_active_ = {false};
+  std::atomic<bool> grpc_histogram_consumer_active_ = {false};
   // exit data
   std::atomic<bool> exiting_ = { false };
   std::atomic<int> exit_code_;

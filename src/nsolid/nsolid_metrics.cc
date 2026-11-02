@@ -100,9 +100,9 @@ MetricAttributes BuildMetricAttributes(
   return attrs;
 }
 
-void AggregateHttpHistogram(AttributesHashMap* hashmap,
-                            double value,
-                            MetricAttributes&& metric_attrs) {
+void AggregateHistogram(AttributesHashMap* hashmap,
+                        double value_seconds,
+                        MetricAttributes&& metric_attrs) {
   using opentelemetry::sdk::metrics::Aggregation;
   using opentelemetry::sdk::metrics::Base2ExponentialHistogramAggregation;
 
@@ -110,12 +110,12 @@ void AggregateHttpHistogram(AttributesHashMap* hashmap,
     return std::make_unique<Base2ExponentialHistogramAggregation>();
   };
   auto* agg = hashmap->GetOrSetDefault(std::move(metric_attrs), factory);
-  agg->Aggregate(value / 1000);
+  agg->Aggregate(value_seconds);
 }
 
-void MergeHttpHistogramPoints(SharedPointDataAttributes& accumulated,
-                              const SharedPointDataAttributes& next,
-                              size_t cardinality_limit) {
+void MergeHistogramPoints(SharedPointDataAttributes& accumulated,
+                          const SharedPointDataAttributes& next,
+                          size_t cardinality_limit) {
   using opentelemetry::sdk::metrics::GetOverflowAttributes;
   using opentelemetry::sdk::metrics::PointDataAttributes;
   using HistogramAggregation =
