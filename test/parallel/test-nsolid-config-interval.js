@@ -51,7 +51,7 @@ for (const interval of [0, -1, 0.5, 1.5, Number.MAX_SAFE_INTEGER + 1,
 
 async function waitForDnsMedian(value) {
   for (let i = 0; i < 200; i++) {
-    binding.pushDnsBucket(value);
+    binding.pushDnsBucket(value, '', '');
     await delay(50);
     if (nsolid.metrics().dnsMedian === value)
       return;
