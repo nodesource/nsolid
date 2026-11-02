@@ -1070,14 +1070,15 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     auto& stor = ext_stor.stor;
     otlp::fill_env_metrics(metrics, stor, false);
     uint64_t thread_id = stor.thread_id;
-    for (const auto& snapshot : ext_stor.http_histogram_snapshots) {
-      otlp::fill_http_histograms(metrics,
-                                 stor,
-                                 snapshot.client_points,
-                                 snapshot.server_points,
-                                 false,
-                                 snapshot.start_timestamp_ms,
-                                 snapshot.end_timestamp_ms);
+    for (const auto& snapshot : ext_stor.histogram_snapshots) {
+      otlp::fill_histograms(metrics,
+                            stor,
+                            snapshot.client_points,
+                            snapshot.server_points,
+                            snapshot.gc_points,
+                            false,
+                            snapshot.start_timestamp_ms,
+                            snapshot.end_timestamp_ms);
     }
     // A completed report can arrive after the thread deletion notification.
     if (agent->env_metrics_map_.find(thread_id) ==
@@ -1138,8 +1139,7 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   auto envinst_sp = EnvInst::GetInst(thread_id);
   ExtMetricsStor ext_stor{metrics->Get(), {}};
   if (envinst_sp != nullptr) {
-    ext_stor.http_histogram_snapshots =
-        envinst_sp->TakeHttpHistogramSnapshots();
+    ext_stor.histogram_snapshots = envinst_sp->TakeHistogramSnapshots();
   }
 
   if (agent->thr_metrics_msg_q_.enqueue(std::move(ext_stor)) == 1) {
@@ -1464,7 +1464,7 @@ void GrpcAgent::do_stop() {
     send_exit();
   }
 
-  EnvList::Inst()->SetHttpHistogramConsumerActive(false);
+  EnvList::Inst()->SetHistogramConsumerActive(false);
 
   log_exporter_.reset();
   metrics_exporter_.reset();
@@ -2259,7 +2259,7 @@ void GrpcAgent::setup_blocked_loop_hooks() {
 
 int GrpcAgent::setup_metrics_timer(uint64_t period) {
   if (period == 0) {
-    EnvList::Inst()->SetHttpHistogramConsumerActive(false);
+    EnvList::Inst()->SetHistogramConsumerActive(false);
     return metrics_timer_.stop();
   }
 
@@ -2267,7 +2267,7 @@ int GrpcAgent::setup_metrics_timer(uint64_t period) {
   // timer if active.
   int er =
       metrics_timer_.start(metrics_timer_cb_, period, period, weak_from_this());
-  EnvList::Inst()->SetHttpHistogramConsumerActive(er == 0);
+  EnvList::Inst()->SetHistogramConsumerActive(er == 0);
   return er;
 }
 

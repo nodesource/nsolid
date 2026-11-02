@@ -618,11 +618,12 @@ NSOLID_ENV_METRICS_NUMBERS(V)
               attrs);
 }
 
-void fill_http_histograms(
+void fill_histograms(
     std::vector<MetricData>& metrics,  // NOLINT(runtime/references)
     const ThreadMetrics::MetricsStor& stor,
     SharedPointDataAttributes http_client_points,
     SharedPointDataAttributes http_server_points,
+    SharedPointDataAttributes gc_points,
     bool use_snake_case,
     uint64_t start_timestamp_ms,
     uint64_t end_timestamp_ms) {
@@ -671,6 +672,7 @@ void fill_http_histograms(
   emit(kMetricHttpServerRequestDuration,
        unitMetricHttpServerRequestDuration,
        http_server_points);
+  emit("v8js.gc.duration", "s", gc_points);
 }
 
 void fill_log_recordable(LogsRecordable* recordable,
