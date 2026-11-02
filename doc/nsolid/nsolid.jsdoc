@@ -176,8 +176,9 @@
  * on (overrides system-determined hostname).
  * @property {string} interval - The interval, in milliseconds, in which the
  * N\|Solid Agent will collect and report metrics to the console and/or the
- * StatsD collector if either are connected. This value defaults to 3000
- * (3 seconds) and cannot be lower than 1000.
+ * StatsD collector if either are connected. This value defaults to 5000
+ * (5 seconds) and must be a positive safe integer. Invalid updates preserve
+ * the previous interval.
  * @property {boolean} pauseMetrics - Whether the agent is periodically
  * retrieving metrics or not.
  * @property {boolean} promiseTracking - Whether the agent is to track the
