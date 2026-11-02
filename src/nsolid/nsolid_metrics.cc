@@ -128,6 +128,11 @@ void MergeHistogramPoints(SharedPointDataAttributes& accumulated,
     accumulated = std::make_shared<PointDataAttributesVector>();
   }
 
+  // Each exporter retains its own view of the completed windows.
+  if (accumulated.use_count() > 1) {
+    accumulated = std::make_shared<PointDataAttributesVector>(*accumulated);
+  }
+
   const auto& overflow_attributes = GetOverflowAttributes();
   size_t regular_attributes =
       std::count_if(accumulated->begin(),

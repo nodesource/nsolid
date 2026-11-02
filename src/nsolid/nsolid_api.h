@@ -276,7 +276,7 @@ class EnvInst {
   uint32_t* get_trace_flags() { return &trace_flags_; }
   double* trace_sample_rate() { return &trace_sample_rate_; }
 
-  std::vector<HistogramSnapshot> TakeHistogramSnapshots();
+  std::vector<HistogramSnapshot> TakeHistogramSnapshots(bool otlp = false);
 
   std::atomic<bool> metrics_paused = { false };
 
@@ -420,6 +420,7 @@ class EnvInst {
   SharedPointDataAttributes http_client_hist_points_;
   SharedPointDataAttributes http_server_hist_points_;
   std::deque<HistogramSnapshot> grpc_histogram_snapshots_;
+  std::deque<HistogramSnapshot> otlp_histogram_snapshots_;
   nsuv::ns_mutex histogram_snapshots_lock_;
   uint64_t histogram_window_end_ms_ = 0;
   std::atomic<double> dns_median_ = { 0 };
@@ -573,7 +574,7 @@ class EnvList {
   // argument
   void UpdateConfig(const nlohmann::json& config);
   void UpdateConfig(const std::string& config);
-  void SetHistogramConsumerActive(bool active);
+  void SetHistogramConsumerActive(bool active, bool otlp = false);
 
   void DoExit(bool on_signal);
   bool exiting() const { return exiting_.load(std::memory_order_acquire); }
@@ -756,6 +757,7 @@ class EnvList {
   // Close latency metric windows at the configured collection interval.
   nsuv::ns_timer metrics_window_timer_;
   std::atomic<uint64_t> metrics_window_interval_ = {5000};
+  std::atomic<bool> otlp_histogram_consumer_active_ = {false};
   std::atomic<bool> grpc_histogram_consumer_active_ = {false};
   // exit data
   std::atomic<bool> exiting_ = { false };
