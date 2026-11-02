@@ -70,7 +70,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
     uint64_t thread_id;
   };
 
-  static SharedGrpcAgent Inst();
+  static SharedGrpcAgent Inst(bool reset = false);
 
   virtual void on_asset_stream_done(const ::grpc::Status&, AssetStor&& stor);
 

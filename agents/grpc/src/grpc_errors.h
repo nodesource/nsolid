@@ -29,6 +29,8 @@ enum class ErrorType {
 #undef X
 };
 
+ErrorStor fill_error_stor(const ErrorType& type);
+
 }  // namespace grpc
 }  // namespace nsolid
 }  // namespace node

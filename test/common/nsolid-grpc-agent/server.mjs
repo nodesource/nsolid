@@ -7,7 +7,11 @@ import protoLoader from '@grpc/proto-loader';
 import fixtures from '../fixtures.js';
 
 const options = {
-  tls: {
+  'reject-auth': {
+    type: 'boolean',
+    default: false,
+  },
+  'tls': {
     type: 'boolean',
     default: false,
   },
@@ -73,6 +77,12 @@ async function startServer(cb) {
   const packageObject = grpc.loadPackageDefinition(packageDefinition);
   server.addService(packageObject.grpcagent.NSolidService.service, {
     Command: async (call) => {
+      if (args.values['reject-auth']) {
+        call.emit('error', { code: grpc.status.UNAUTHENTICATED,
+                             details: 'Invalid token' });
+        return;
+      }
+
       // The 1st time this is called is because the Command rpc is up.
       // get the agentId from the metadata and store the call object in a map
       // so we can use it later to send commands to that specific agent
