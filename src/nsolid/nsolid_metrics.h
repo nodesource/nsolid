@@ -25,6 +25,7 @@ struct HistogramSnapshot {
   uint64_t end_timestamp_ms;
   SharedPointDataAttributes client_points;
   SharedPointDataAttributes server_points;
+  SharedPointDataAttributes dns_points;
   SharedPointDataAttributes gc_points;
 };
 
