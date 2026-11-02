@@ -213,7 +213,7 @@ class EnvInst {
                         MetricsStream::HttpDatapointAttrs&& attrs);
   void PushServerBucket(double value,
                         MetricsStream::HttpDatapointAttrs&& attrs);
-  void PushDnsBucket(double value);
+  void PushDnsBucket(double value, MetricsStream::DnsDatapointAttrs&& attrs);
 
   std::string GetModuleInfo();
   std::string GetStartupTimesJSON() const;
@@ -411,8 +411,11 @@ class EnvInst {
       std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
   UniqueAttributesHashMap http_server_hashmap_ =
       std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
+  UniqueAttributesHashMap dns_hashmap_ =
+      std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
   UniqueAttributesHashMap gc_hashmap_ =
       std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
+  SharedPointDataAttributes dns_hist_points_;
   SharedPointDataAttributes gc_hist_points_;
   SharedPointDataAttributes http_client_hist_points_;
   SharedPointDataAttributes http_server_hist_points_;
