@@ -121,6 +121,9 @@ class GRPCServer extends EventEmitter {
 
   start(cb) {
     const args = [];
+    if (this.#opts.rejectAuth) {
+      args.push('--reject-auth');
+    }
     if (this.#opts.tls) {
       args.push('--tls');
     }
