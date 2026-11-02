@@ -10,7 +10,7 @@ const binding = internalBinding('nsolid_api');
 
 async function waitForDnsMedian(value) {
   for (let i = 0; i < 100; i++) {
-    binding.pushDnsBucket(value);
+    binding.pushDnsBucket(value, '', '');
     await delay(50);
     if (nsolid.metrics().dnsMedian === value)
       return;
