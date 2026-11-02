@@ -20,11 +20,12 @@ using PointDataAttributesVector =
 // Shared pointer to point data attributes (used for histogram caching)
 using SharedPointDataAttributes = std::shared_ptr<PointDataAttributesVector>;
 
-struct HttpHistogramSnapshot {
+struct HistogramSnapshot {
   uint64_t start_timestamp_ms;
   uint64_t end_timestamp_ms;
   SharedPointDataAttributes client_points;
   SharedPointDataAttributes server_points;
+  SharedPointDataAttributes gc_points;
 };
 
 // Type alias for attributes hashmap (used for metric aggregation)
@@ -33,21 +34,21 @@ using AttributesHashMap = opentelemetry::sdk::metrics::AttributesHashMap;
 // Unique pointer to attributes hashmap
 using UniqueAttributesHashMap = std::unique_ptr<AttributesHashMap>;
 
-constexpr size_t kHttpHistogramCardinalityLimit =
+constexpr size_t kHistogramCardinalityLimit =
     opentelemetry::sdk::metrics::kAggregationCardinalityLimit;
 
 opentelemetry::sdk::metrics::MetricAttributes BuildMetricAttributes(
     const MetricsStream::HttpDatapointAttrs& http, MetricsStream::Type type);
 
-void AggregateHttpHistogram(
+void AggregateHistogram(
     AttributesHashMap* hashmap,
-    double value,
+    double value_seconds,
     opentelemetry::sdk::metrics::MetricAttributes&& metric_attrs);
 
-void MergeHttpHistogramPoints(
+void MergeHistogramPoints(
     SharedPointDataAttributes& accumulated,
     const SharedPointDataAttributes& next,
-    size_t cardinality_limit = kHttpHistogramCardinalityLimit);
+    size_t cardinality_limit = kHistogramCardinalityLimit);
 
 }  // namespace nsolid
 }  // namespace node

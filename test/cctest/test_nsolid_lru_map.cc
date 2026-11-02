@@ -6,7 +6,7 @@
 #define NANOS_PER_SEC 1000000000
 
 using node::nsolid::LRUMap;
-using node::nsolid::MergeHttpHistogramPoints;
+using node::nsolid::MergeHistogramPoints;
 using node::nsolid::PointDataAttributesVector;
 using node::nsolid::SharedPointDataAttributes;
 
@@ -70,7 +70,7 @@ TEST(LRUMapTest, Basic) {
   EXPECT_EQ(count, 3);
 }
 
-static opentelemetry::sdk::metrics::PointDataAttributes makeHttpHistogramPoint(
+static opentelemetry::sdk::metrics::PointDataAttributes makeHistogramPoint(
     const char* address) {
   using opentelemetry::sdk::metrics::Base2ExponentialHistogramAggregation;
   using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
@@ -85,7 +85,7 @@ static opentelemetry::sdk::metrics::PointDataAttributes makeHttpHistogramPoint(
   return {attributes, std::move(*histogram)};
 }
 
-TEST(NsolidHttpHistogramMergeTest, LimitsDisjointAttributesAcrossWindows) {
+TEST(NsolidHistogramMergeTest, LimitsDisjointAttributesAcrossWindows) {
   using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
   using opentelemetry::sdk::metrics::GetOverflowAttributes;
   SharedPointDataAttributes accumulated =
@@ -93,8 +93,8 @@ TEST(NsolidHttpHistogramMergeTest, LimitsDisjointAttributesAcrossWindows) {
 
   for (const char* address : {"one", "two", "three", "four", "five", "six"}) {
     auto next = std::make_shared<PointDataAttributesVector>();
-    next->push_back(makeHttpHistogramPoint(address));
-    MergeHttpHistogramPoints(accumulated, next, 2);
+    next->push_back(makeHistogramPoint(address));
+    MergeHistogramPoints(accumulated, next, 2);
   }
 
   ASSERT_EQ(accumulated->size(), 3U);
