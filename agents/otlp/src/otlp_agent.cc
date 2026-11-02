@@ -21,7 +21,6 @@
 #include "../../src/root_certs.h"
 #include "../../src/span_collector.h"
 
-using ThreadMetricsStor = node::nsolid::ThreadMetrics::MetricsStor;
 using nlohmann::json;
 
 namespace sdk = OPENTELEMETRY_NAMESPACE::sdk;
@@ -218,7 +217,8 @@ int OTLPAgent::config(const nlohmann::json& config) {
   // If metrics timer is not active or if the diff contains metrics fields,
   // recalculate the metrics status. (stop/start/what period)
   if (!metrics_timer_.is_active() ||
-      utils::find_any_fields_in_diff(diff, metrics_fields)) {
+      utils::find_any_fields_in_diff(diff, metrics_fields) ||
+      utils::find_any_fields_in_diff(diff, otlp_fields)) {
     uint64_t period = 0;
     if (metrics_exporter_ != nullptr) {
       auto it = config_.find("pauseMetrics");
@@ -292,6 +292,8 @@ int OTLPAgent::config(const nlohmann::json& config) {
   std::tuple<SharedEnvInst, bool> tup;
   while (agent->env_msg_q_.dequeue(tup)) {
     SharedEnvInst envinst = std::get<0>(tup);
+    // Export queued reports before removing their previous metrics state.
+    if (!std::get<1>(tup)) agent->got_thr_metrics();
     EnvInst::Scope scp(envinst);
     if (scp.Success()) {
       bool creation = std::get<1>(tup);
@@ -328,8 +330,20 @@ int OTLPAgent::config(const nlohmann::json& config) {
     return;
   }
 
-  agent->env_msg_q_.enqueue({ envinst, false });
-  ASSERT_EQ(0, agent->env_msg_.send());
+  // Order removal after any metrics callback already capturing snapshots.
+  ASSERT_EQ(0,
+            QueueCallback(
+                [](SharedEnvInst envinst, OTLPAgent* agent) {
+                  nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+                  if (!is_running_ || !agent->ready_) {
+                    return;
+                  }
+
+                  agent->env_msg_q_.enqueue({envinst, false});
+                  ASSERT_EQ(0, agent->env_msg_.send());
+                },
+                envinst,
+                agent));
 }
 
 
@@ -355,6 +369,7 @@ void OTLPAgent::do_start() {
 
 
 void OTLPAgent::do_stop() {
+  EnvList::Inst()->SetHistogramConsumerActive(false, true);
   ready_ = false;
   shutdown_.close();
   env_msg_.close();
@@ -397,22 +412,29 @@ void OTLPAgent::got_spans(const UniqRecordables& recordables) {
     return;
   }
 
+  agent->got_thr_metrics();
+}
+
+void OTLPAgent::got_thr_metrics() {
   std::vector<MetricsExporter::ThrMetricsStor> thr_metrics_vector;
-  ThreadMetricsStor stor;
-  while (agent->thr_metrics_msg_q_.dequeue(stor)) {
-    auto it = agent->env_metrics_map_.find(stor.thread_id);
-    if (it != agent->env_metrics_map_.end()) {
+  MetricsExporter::ThrMetricsStor tm;
+  while (thr_metrics_msg_q_.dequeue(tm)) {
+    auto it = env_metrics_map_.find(tm.stor.thread_id);
+    if (it != env_metrics_map_.end()) {
       auto& metrics = it->second;
-      thr_metrics_vector.push_back({stor, metrics.prev_, metrics.loop_start_ });
-      metrics.prev_ = stor;
+      tm.prev_stor = metrics.prev_;
+      tm.loop_start = metrics.loop_start_;
+      metrics.prev_ = tm.stor;
+      thr_metrics_vector.push_back(std::move(tm));
+    } else {
+      DCHECK(tm.histogram_snapshots.empty());
     }
   }
 
-  if (agent->metrics_exporter_) {
-    agent->metrics_exporter_->got_thr_metrics(thr_metrics_vector);
+  if (metrics_exporter_) {
+    metrics_exporter_->got_thr_metrics(thr_metrics_vector);
   }
 }
-
 
 /*static*/void OTLPAgent::thr_metrics_cb_(SharedThreadMetrics metrics,
                                           OTLPAgent* agent) {
@@ -421,7 +443,13 @@ void OTLPAgent::got_spans(const UniqRecordables& recordables) {
     return;
   }
 
-  agent->thr_metrics_msg_q_.enqueue(metrics->Get());
+  auto envinst = EnvInst::GetInst(metrics->thread_id());
+  agent->thr_metrics_msg_q_.enqueue({metrics->Get(),
+                                     {},
+                                     0,
+                                     envinst
+                                         ? envinst->TakeHistogramSnapshots(true)
+                                         : std::vector<HistogramSnapshot>{}});
   ASSERT_EQ(0, uv_async_send(&agent->metrics_msg_));
 }
 
@@ -613,6 +641,8 @@ void OTLPAgent::setup_trace_grpc_otlp_exporter(
 
 
 int OTLPAgent::setup_metrics_timer(uint64_t period) {
+  EnvList::Inst()->SetHistogramConsumerActive(
+      period != 0 && config_.value("otlp", std::string{}) == "otlp", true);
   if (period == 0) {
     return metrics_timer_.stop();
   }

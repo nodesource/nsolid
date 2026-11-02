@@ -7,6 +7,7 @@ import { once } from 'node:events';
 import { performance } from 'node:perf_hooks';
 import nsolid from 'nsolid';
 import { GRPCServer } from '../common/nsolid-grpc-agent/index.js';
+import { OTLPGRPCServer, OTLPServer } from '../common/nsolid-otlp-agent/index.js';
 
 const gcCount = 3;
 
@@ -39,22 +40,31 @@ if (process.argv[2] === 'child') {
       assert.strictEqual(typeof nsolid.metrics()[key], 'number');
     }
 
-    process.send({ gcSeconds });
+    process.send({ gcSeconds, agentId: nsolid.id });
   }, 2));
   process.send('ready');
 } else {
-  for (const mode of ['grpc']) {
+  for (const mode of ['grpc', 'otlp-grpc', 'otlp-http', 'both']) {
     const servers = [];
     const env = {
       NSOLID_INTERVAL: 100,
       NSOLID_GRPC_INSECURE: 1,
     };
     const states = [];
-    {
-      const server = new GRPCServer();
+    for (const transport of mode === 'both' ? ['grpc', 'otlp-grpc'] : [mode]) {
+      const server = transport === 'grpc' ? new GRPCServer() :
+        transport === 'otlp-grpc' ? new OTLPGRPCServer() : new OTLPServer();
       const port = await new Promise((resolve) => server.start(mustSucceed(resolve)));
       servers.push(server);
-      env.NSOLID_GRPC = `localhost:${port}`;
+      if (transport === 'grpc') {
+        env.NSOLID_GRPC = `localhost:${port}`;
+      } else {
+        env.NSOLID_OTLP = 'otlp';
+        env.NSOLID_OTLP_CONFIG = JSON.stringify({
+          url: `http://localhost:${port}`,
+          protocol: transport === 'otlp-grpc' ? 'grpc' : 'http',
+        });
+      }
       const state = { major: 0, gcSum: 0, client: 0, server: 0 };
       states.push(state);
       server.on('metrics', mustCallAtLeast((data) => {
@@ -120,6 +130,15 @@ if (process.argv[2] === 'child') {
       for (const state of states) {
         assert.ok(state.gcSum <= bounds.gcSeconds + 0.001,
                   'GC microseconds must be exported in seconds');
+      }
+      if (env.NSOLID_GRPC) {
+        // Command replies must not replay any exported delta histogram.
+        for (let i = 0; i < 2; i++) {
+          const { data } = await servers[0].metrics(bounds.agentId);
+          const metrics = data.msg.body.resourceMetrics[0].scopeMetrics[0].metrics;
+          assert.ok(metrics.length > 0);
+          assert.ok(metrics.every((metric) => metric.data !== 'exponentialHistogram'));
+        }
       }
       child.send('exit');
       const [code] = await once(child, 'exit');

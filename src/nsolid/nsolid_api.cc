@@ -328,12 +328,13 @@ void EnvInst::GetThreadMetrics(ThreadMetrics::MetricsStor* stor) {
   get_http_dns_stats_(this, stor);
 }
 
-std::vector<HistogramSnapshot> EnvInst::TakeHistogramSnapshots() {
+std::vector<HistogramSnapshot> EnvInst::TakeHistogramSnapshots(bool otlp) {
   ns_mutex::scoped_lock lock(histogram_snapshots_lock_);
+  auto& pending = otlp ? otlp_histogram_snapshots_ : grpc_histogram_snapshots_;
   std::vector<HistogramSnapshot> snapshots(
-      std::make_move_iterator(grpc_histogram_snapshots_.begin()),
-      std::make_move_iterator(grpc_histogram_snapshots_.end()));
-  grpc_histogram_snapshots_.clear();
+      std::make_move_iterator(pending.begin()),
+      std::make_move_iterator(pending.end()));
+  pending.clear();
   return snapshots;
 }
 
@@ -1355,12 +1356,16 @@ void EnvList::UpdateConfig(const std::string& config_s) {
   UpdateConfig(config);
 }
 
-void EnvList::SetHistogramConsumerActive(bool active) {
-  grpc_histogram_consumer_active_.store(active, std::memory_order_release);
+void EnvList::SetHistogramConsumerActive(bool active, bool otlp) {
+  auto& consumer =
+      otlp ? otlp_histogram_consumer_active_ : grpc_histogram_consumer_active_;
+  consumer.store(active, std::memory_order_release);
   if (!active) {
-    getAllEnvInst([](SharedEnvInst envinst_sp) {
+    getAllEnvInst([otlp](SharedEnvInst envinst_sp) {
       ns_mutex::scoped_lock lock(envinst_sp->histogram_snapshots_lock_);
-      envinst_sp->grpc_histogram_snapshots_.clear();
+      auto& pending = otlp ? envinst_sp->otlp_histogram_snapshots_
+                           : envinst_sp->grpc_histogram_snapshots_;
+      pending.clear();
     });
   }
 }
@@ -2048,30 +2053,32 @@ void EnvList::metrics_window_cb_(ns_timer*) {
 void EnvList::update_histogram_snapshots_(EnvInst* envinst,
                                           uint64_t window_end_ms) {
   ns_mutex::scoped_lock lock(envinst->histogram_snapshots_lock_);
-  if (grpc_histogram_consumer_active_.load(std::memory_order_acquire)) {
-    if (envinst->grpc_histogram_snapshots_.size() >=
-        kHistogramSnapshotQueueLimit) {
-      // Merge the oldest windows to bound the queue without losing
-      // observations when the consumer falls behind.
-      auto first = envinst->grpc_histogram_snapshots_.begin();
+  auto update = [&](std::deque<HistogramSnapshot>& snapshots, bool active) {
+    if (!active) {
+      snapshots.clear();
+      return;
+    }
+    if (snapshots.size() >= kHistogramSnapshotQueueLimit) {
+      auto first = snapshots.begin();
       auto second = std::next(first);
       MergeHistogramPoints(first->client_points, second->client_points);
       MergeHistogramPoints(first->server_points, second->server_points);
       MergeHistogramPoints(first->dns_points, second->dns_points);
       MergeHistogramPoints(first->gc_points, second->gc_points);
       first->end_timestamp_ms = second->end_timestamp_ms;
-      envinst->grpc_histogram_snapshots_.erase(second);
+      snapshots.erase(second);
     }
-    envinst->grpc_histogram_snapshots_.push_back(
-        {envinst->histogram_window_end_ms_,
-         window_end_ms,
-         envinst->http_client_hist_points_,
-         envinst->http_server_hist_points_,
-         envinst->dns_hist_points_,
-         envinst->gc_hist_points_});
-  } else {
-    envinst->grpc_histogram_snapshots_.clear();
-  }
+    snapshots.push_back({envinst->histogram_window_end_ms_,
+                         window_end_ms,
+                         envinst->http_client_hist_points_,
+                         envinst->http_server_hist_points_,
+                         envinst->dns_hist_points_,
+                         envinst->gc_hist_points_});
+  };
+  update(envinst->grpc_histogram_snapshots_,
+         grpc_histogram_consumer_active_.load(std::memory_order_acquire));
+  update(envinst->otlp_histogram_snapshots_,
+         otlp_histogram_consumer_active_.load(std::memory_order_acquire));
   envinst->histogram_window_end_ms_ = window_end_ms;
 }
 
@@ -2283,13 +2290,17 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
                                     double value,
                                     MetricsStream::DatapointAttrs attrs) {
   DCHECK(utils::are_threads_equal(uv_thread_self(), EnvList::Inst()->thread()));
+  const bool histogram_active =
+      EnvList::Inst()->grpc_histogram_consumer_active_.load(
+          std::memory_order_acquire) ||
+      EnvList::Inst()->otlp_histogram_consumer_active_.load(
+          std::memory_order_acquire);
   switch (type) {
     case MetricsStream::Type::kDns:
     {
       dns_bucket_.push_back(value);
       auto* dns = std::get_if<MetricsStream::DnsDatapointAttrs>(&attrs);
-      if (dns && EnvList::Inst()->grpc_histogram_consumer_active_.load(
-                     std::memory_order_acquire)) {
+      if (dns && histogram_active) {
         opentelemetry::sdk::metrics::MetricAttributes metric_attrs;
         if (!dns->question_name.empty()) {
           metric_attrs.insert({"dns.question.name", dns->question_name});
@@ -2309,8 +2320,7 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
       if (!http || http->status_code != 0) {
         client_bucket_.push_back(value);
       }
-      if (http && EnvList::Inst()->grpc_histogram_consumer_active_.load(
-                      std::memory_order_acquire)) {
+      if (http && histogram_active) {
         AggregateHistogram(http_client_hashmap_.get(),
                            value / 1000,
                            BuildMetricAttributes(*http, type));
@@ -2321,8 +2331,7 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
     {
       server_bucket_.push_back(value);
       auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
-      if (http && EnvList::Inst()->grpc_histogram_consumer_active_.load(
-                      std::memory_order_acquire)) {
+      if (http && histogram_active) {
         AggregateHistogram(http_server_hashmap_.get(),
                            value / 1000,
                            BuildMetricAttributes(*http, type));
@@ -2335,9 +2344,7 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
     case MetricsStream::Type::kGcRegular:
     case MetricsStream::Type::kGc: {
       auto* gc = std::get_if<MetricsStream::GcDatapointAttrs>(&attrs);
-      if (!gc || !EnvList::Inst()->grpc_histogram_consumer_active_.load(
-                     std::memory_order_acquire))
-        break;
+      if (!gc || !histogram_active) break;
       const char* gc_type;
       switch (gc->type) {
         case v8::kGCTypeScavenge:
