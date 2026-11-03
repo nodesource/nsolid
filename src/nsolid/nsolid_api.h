@@ -195,11 +195,9 @@ class EnvInst {
                             const char* value,
                             bool is_return);
 
-  void PushClientBucket(double value,
-                        MetricsStream::HttpDatapointAttrs&& attrs);
-  void PushServerBucket(double value,
-                        MetricsStream::HttpDatapointAttrs&& attrs);
-  void PushDnsBucket(double value, MetricsStream::DnsDatapointAttrs&& attrs);
+  void PushClientBucket(double value, HttpDatapointAttrs&& attrs);
+  void PushServerBucket(double value, HttpDatapointAttrs&& attrs);
+  void PushDnsBucket(double value, DnsDatapointAttrs&& attrs);
 
   std::string GetModuleInfo();
   std::string GetStartupTimesJSON() const;
@@ -317,12 +315,10 @@ class EnvInst {
   static void custom_command_(SharedEnvInst envinst_sp,
                               const std::string req_id);
 
-  void add_metric_datapoint_(MetricsStream::Type type,
+  void add_metric_datapoint_(MetricType type,
                              double value,
-                             MetricsStream::DatapointAttrs attrs = {});
-  void send_datapoint(MetricsStream::Type type,
-                      double value,
-                      MetricsStream::DatapointAttrs attrs = {});
+                             const DatapointAttrs& attrs);
+  void send_datapoint(MetricType type, double value, DatapointAttrs attrs);
 
   static void get_event_loop_stats_(EnvInst* envinst,
                                     ThreadMetrics::MetricsStor* stor);
@@ -408,7 +404,6 @@ class EnvInst {
   std::string thread_name_;
   uint32_t trace_flags_;
   double trace_sample_rate_;
-  bool has_metrics_stream_hooks_;
 
   nsuv::ns_mutex source_files_lock_;
   std::map<int, SourceCodeInfo> source_files_;
@@ -478,13 +473,6 @@ class EnvList {
 
   struct AtExitStor {
     at_exit_void_cb_sig cb;
-    nsolid::internal::user_data data;
-  };
-
-  struct MetricsStreamHookStor {
-    uint32_t flags;
-    MetricsStream* stream;
-    MetricsStream::metrics_stream_proxy_sig cb;
     nsolid::internal::user_data data;
   };
 
@@ -580,8 +568,6 @@ class EnvList {
   // NOLINTNEXTLINE(runtime/references)
   void popTraceId(std::array<uint8_t, 16>& trace_id);
 
-  void UpdateHasMetricsStreamHooks(bool has_metrics);
-
   void UpdateTracingFlags(uint32_t flags);
 
   void getAllEnvInst(std::function<void(SharedEnvInst)>);
@@ -602,14 +588,6 @@ class EnvList {
 
   tracing::TracerImpl* GetTracer() { return &tracer_; }
   void send_trace_data(tracing::SpanItem&& item);
-
-  TSList<MetricsStreamHookStor>::iterator
-  AddMetricsStreamHook(uint32_t flags,
-                       MetricsStream* stream,
-                       MetricsStream::metrics_stream_proxy_sig cb,
-                       internal::deleter_sig deleter,
-                       void* data);
-  void RemoveMetricsStreamHook(TSList<MetricsStreamHookStor>::iterator it);
 
   NSolidHeapSnapshot* HeapSnapshot() { return &heap_snapshot_; }
 
@@ -667,11 +645,10 @@ class EnvList {
   static void promise_tracking_(SharedEnvInst envinst_sp, bool track);
   static void enable_promise_tracking_(SharedEnvInst envinst_sp, void*);
   static void disable_promise_tracking_(SharedEnvInst envinst_sp, void*);
-  static void update_has_metrics_stream_hooks(SharedEnvInst, bool has_metrics);
   static void update_tracing_flags(SharedEnvInst envinst_sp, uint32_t flags);
   static void fill_tracing_ids_cb_(nsuv::ns_async*, EnvList* envlist);
   static void q_cb_timeout_cb_(nsuv::ns_timer*, QCbTimeoutStor*);
-  static void datapoint_cb_(std::queue<MetricsStream::Datapoint>&&);
+  static void datapoint_cb_(std::queue<MetricDatapoint>&&);
 
   std::atomic<bool> is_alive_ = { true };
   std::atomic<double> trace_sample_rate_ = { 1.0 };
@@ -742,8 +719,7 @@ class EnvList {
 
   TSList<AtExitStor> at_exit_hook_list_;
   // For metric datapoints collection
-  DispatchQueue<MetricsStream::Datapoint> datapoints_q_;
-  TSList<MetricsStreamHookStor> metrics_stream_hook_list_;
+  DispatchQueue<MetricDatapoint> datapoints_q_;
 
   nsuv::ns_async fill_tracing_ids_msg_;
   // Use arrays of bytes instead of hex strings to avoid conversions
