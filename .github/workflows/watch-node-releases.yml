@@ -1,0 +1,29 @@
+name: Watch Node.js Releases
+
+on:
+  schedule:
+    - cron: '17 12 * * *'
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  watch:
+    if: github.repository == 'nodesource/nsolid'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: lts/*
+
+      - name: Watch Node.js release lines
+        run: node tools/actions/watch-node-releases.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_USER_TOKEN || github.token }}
