@@ -38,7 +38,7 @@ nsolid.start({
   disableSnapshots: true
 });
 
-setTimeout(common.mustCall(() => {
+setImmediate(common.mustCall(() => {
   // Snapshot should return an error if snapshots disabled
   assert.throws(
     () => {
@@ -54,7 +54,7 @@ setTimeout(common.mustCall(() => {
     assert.strictEqual(err.message, 'Heap snapshot could not be generated');
     runSnapshotAssetsToggleTests();
   }));
-}), common.platformTimeout(100));
+}));
 
 function runSnapshotAssetsToggleTests() {
   nsolid.start({
@@ -63,7 +63,7 @@ function runSnapshotAssetsToggleTests() {
     disableSnapshots: false,
   });
 
-  setTimeout(common.mustCall(() => {
+  setImmediate(common.mustCall(() => {
     assert.throws(
       () => {
         nsolid.snapshot();
@@ -77,32 +77,16 @@ function runSnapshotAssetsToggleTests() {
       assert.notStrictEqual(err.code, 0);
       assert.strictEqual(err.message, 'Heap snapshot could not be generated');
 
-      // Only enable assets after the error callback completes
       nsolid.enableAssets();
-      setTimeout(common.mustCall(() => {
-        // Wait for snapshot to complete before disabling assets
-        nsolid.snapshot(common.mustSucceed(() => {
-          // Only disable assets after snapshot completes
-          nsolid.disableAssets();
-          setTimeout(common.mustCall(() => {
-            assert.throws(
-              () => {
-                nsolid.snapshot();
-              },
-              {
-                message: 'Heap snapshot could not be generated'
-              }
-            );
+      assert.strictEqual(nsolid.assetsEnabled, true);
+      nsolid.disableAssets();
+      assert.throws(
+        () => nsolid.snapshot(),
+        { code: 500, message: 'Heap snapshot could not be generated' }
+      );
 
-            // Only enable assets after error is confirmed
-            nsolid.enableAssets();
-            setTimeout(common.mustCall(() => {
-              // Wait for final snapshot to complete
-              nsolid.snapshot(common.mustSucceed());
-            }), common.platformTimeout(100));
-          }), common.platformTimeout(100));
-        }));
-      }), common.platformTimeout(100));
+      nsolid.enableAssets();
+      nsolid.snapshot(common.mustSucceed());
     }));
-  }), common.platformTimeout(100));
+  }));
 }
