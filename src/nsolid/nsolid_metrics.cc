@@ -9,54 +9,53 @@ namespace nsolid {
 
 using opentelemetry::sdk::metrics::MetricAttributes;
 
-static const char* HttpMethodToString(MetricsStream::HttpMethod m) {
+static const char* HttpMethodToString(HttpMethod m) {
   switch (m) {
-    case MetricsStream::HttpMethod::kGet:
+    case HttpMethod::kGet:
       return "GET";
-    case MetricsStream::HttpMethod::kHead:
+    case HttpMethod::kHead:
       return "HEAD";
-    case MetricsStream::HttpMethod::kPost:
+    case HttpMethod::kPost:
       return "POST";
-    case MetricsStream::HttpMethod::kPut:
+    case HttpMethod::kPut:
       return "PUT";
-    case MetricsStream::HttpMethod::kDelete:
+    case HttpMethod::kDelete:
       return "DELETE";
-    case MetricsStream::HttpMethod::kConnect:
+    case HttpMethod::kConnect:
       return "CONNECT";
-    case MetricsStream::HttpMethod::kOptions:
+    case HttpMethod::kOptions:
       return "OPTIONS";
-    case MetricsStream::HttpMethod::kTrace:
+    case HttpMethod::kTrace:
       return "TRACE";
-    case MetricsStream::HttpMethod::kPatch:
+    case HttpMethod::kPatch:
       return "PATCH";
-    case MetricsStream::HttpMethod::kOther:
+    case HttpMethod::kOther:
       return "_OTHER";
   }
   return "_OTHER";
 }
 
-static const char* HttpProtocolVersionToString(
-    MetricsStream::HttpProtocolVersion v) {
+static const char* HttpProtocolVersionToString(HttpProtocolVersion v) {
   switch (v) {
-    case MetricsStream::HttpProtocolVersion::k10:
+    case HttpProtocolVersion::k10:
       return "1.0";
-    case MetricsStream::HttpProtocolVersion::k11:
+    case HttpProtocolVersion::k11:
       return "1.1";
-    case MetricsStream::HttpProtocolVersion::k2:
+    case HttpProtocolVersion::k2:
       return "2";
-    case MetricsStream::HttpProtocolVersion::kOther:
+    case HttpProtocolVersion::kOther:
       return "";
   }
   return "";
 }
 
-static const char* HttpUrlSchemeToString(MetricsStream::HttpUrlScheme s) {
+static const char* HttpUrlSchemeToString(HttpUrlScheme s) {
   switch (s) {
-    case MetricsStream::HttpUrlScheme::kHttp:
+    case HttpUrlScheme::kHttp:
       return "http";
-    case MetricsStream::HttpUrlScheme::kHttps:
+    case HttpUrlScheme::kHttps:
       return "https";
-    case MetricsStream::HttpUrlScheme::kOther:
+    case HttpUrlScheme::kOther:
       return "";
   }
   return "";
@@ -64,8 +63,8 @@ static const char* HttpUrlSchemeToString(MetricsStream::HttpUrlScheme s) {
 
 // Build OTel MetricAttributes from HttpDatapointAttrs for attribute-keyed
 // histogram aggregation.
-MetricAttributes BuildMetricAttributes(
-    const MetricsStream::HttpDatapointAttrs& http, MetricsStream::Type type) {
+MetricAttributes BuildMetricAttributes(const HttpDatapointAttrs& http,
+                                       MetricType type) {
   MetricAttributes attrs;
   attrs.insert(
       {"http.request.method", std::string(HttpMethodToString(http.method))});
@@ -80,7 +79,7 @@ MetricAttributes BuildMetricAttributes(
   if (version[0] != '\0') {
     attrs.insert({"network.protocol.version", std::string(version)});
   }
-  if (type == MetricsStream::Type::kHttpClient) {
+  if (type == MetricType::kHttpClient) {
     if (!http.server_address.empty()) {
       attrs.insert({"server.address", http.server_address});
     }
