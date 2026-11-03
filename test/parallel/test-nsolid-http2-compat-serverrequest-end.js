@@ -37,9 +37,9 @@ server.listen(0, common.mustCall(function() {
     request.resume();
     request.on('end', common.mustCall(() => {
       client.close(common.mustCall(() => {
-        assert.strictEqual(nsolid.traceStats.httpClientCount, 1);
+        assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpClientCount'));
         assert.strictEqual(nsolid.traceStats.httpClientAbortCount, 0);
-        assert.strictEqual(nsolid.traceStats.httpServerCount, 1);
+        assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpServerCount'));
         assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 0);
       }));
     }));

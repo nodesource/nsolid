@@ -28,7 +28,7 @@ TEST(OTLPVendorMetrics, FirstSampleSeedsBaseline) {
     proc.uptime = 100;
     MetricsExporter::ThrMetricsStor thread{};
     thread.stor.timestamp = 1000;
-    thread.stor.gc_count = 100;
+    thread.stor.http_client_abort_count = 100;
     for (const auto& exporter : exporters) {
       exporter->got_proc_metrics(proc, prev);
       exporter->got_thr_metrics({thread});
@@ -39,7 +39,7 @@ TEST(OTLPVendorMetrics, FirstSampleSeedsBaseline) {
     proc.uptime++;
     thread.prev_stor = thread.stor;
     thread.stor.timestamp += 1000;
-    thread.stor.gc_count++;
+    thread.stor.http_client_abort_count++;
     for (const auto& exporter : exporters) {
       exporter->got_proc_metrics(proc, prev);
       EXPECT_TRUE(uv_loop_alive(&loop));
