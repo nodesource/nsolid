@@ -64,10 +64,12 @@ if (process.argv[2] === 'child') {
     });
     httpServer.close();
 
-    for (const key of ['gcDurUs99Ptile', 'gcDurUsMedian', 'dns99Ptile', 'dnsMedian',
+    for (const key of ['gcCount', 'gcForcedCount', 'gcFullCount', 'gcMajorCount',
+                       'dnsCount', 'httpClientCount', 'httpServerCount',
+                       'gcDurUs99Ptile', 'gcDurUsMedian', 'dns99Ptile', 'dnsMedian',
                        'httpClient99Ptile', 'httpClientMedian',
                        'httpServer99Ptile', 'httpServerMedian']) {
-      assert.strictEqual(typeof nsolid.metrics()[key], 'number');
+      assert.ok(!Object.hasOwn(nsolid.metrics(), key));
     }
 
     // A known input verifies milliseconds-to-seconds conversion exactly.

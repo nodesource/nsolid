@@ -186,6 +186,11 @@
 
 /**
  * @typedef {Object} Metrics
+ * HTTP, DNS, and GC durations and observation counts are exported through the
+ * histogram stream instead of scalar counts and percentile metrics. GC points
+ * include `v8js.gc.type` and `nsolid.gc.flags`, the raw V8 callback flags integer
+ * bitmask (including zero). Interpret flags according to the V8 runtime version.
+ *
  * @property {number} activeHandles - The number of active long-term resources
  * held by the process.
  * @property {number} activeRequests - The number of active short-term resources
@@ -204,12 +209,6 @@
  * context switches away from the process.
  * @property {number} ctxSwitchVoluntaryCount - The number of voluntary context
  * switches away from the process.
- * @property {number} dns99Ptile - The process's 99th percentile duration of DNS
- * lookups performed, in milliseconds.
- * @property {number} dnsCount - The process's total number of DNS lookups
- * performed.
- * @property {number} dnsMedian - The process's median duration of DNS lookups
- * performed, in milliseconds.
  * @property {number} eventsProcessed - The cumulative count of events the event
  * loop has processed.
  * @property {number} eventsWaiting - The cumulative count of events waiting to
@@ -219,20 +218,6 @@
  * soft-allocated by V8.
  * @property {number} freeMem - The host system's amount of free (unused)
  * memory, in bytes.
- * @property {number} gcCount - The total number of garbage collections done by
- * the process.
- * @property {number} gcDurUs99Ptile - The process's 99th percentile duration of
- * garbage collections, in microseconds.
- * @property {number} gcDurUsMedian - The process's median duration of garbage
- * collections, in microseconds.
- * @property {number} gcForcedCount - The process's number of externally forced
- * garbage collections.
- * @property {number} gcFullCount - The number of garbage collections run by the
- * process which collected all available garbage. Usually only observed when the
- * heapTotal is approaching heapSizeLimit.
- * @property {number} gcMajorCount - The number of significant garbage
- * collections done by the process. An example of a "significant" garbage
- * collection is a "Mark-Sweep".
  * @property {number} heapSizeLimit - The maximum amount of memory reserved for
  * the heap by the process, as allocated by the host system, in bytes. V8 will
  * terminate with allocation failures if memory is used beyond this.
@@ -240,22 +225,10 @@
  * size, in bytes.
  * @property {number} heapUsed - The process's total used JavaScript heap size,
  * in bytes.
- * @property {number} httpClient99Ptile - The process's 99th percentile duration
- * of outgoing HTTP(s) client requests completed, in milliseconds.
  * @property {number} httpClientAbortCount - The process's total number of
  * outgoing HTTP(S) client requests canceled due to inactivity.
- * @property {number} httpClientCount - The process's total number of outgoing
- * HTTP(S) client requests performed.
- * @property {number} httpClientMedian - The process's median duration of
- * outgoing HTTP(S) client requests completed, in milliseconds.
- * @property {number} httpServer99Ptile - The process's 99th percentile duration
- * of served incoming HTTP(S) requests completed, in milliseconds.
  * @property {number} httpServerAbortCount - The process's total number of
  * served incoming HTTP(S) requests canceled.
- * @property {number} httpServerCount - The process's total number of incoming
- * HTTP(s) requests served.
- * @property {number} httpServerMedian - The process's median duration of served
- * incoming HTTP(S) requests completed, in milliseconds.
  * @property {number} ipcReceivedCount - The number of IPC messages received by
  * the process.
  * @property {number} ipcSentCount - The number of IPC messages sent by the
@@ -367,23 +340,8 @@
  *   peakMallocedMemory: 965856,
  *   numberOfNativeContexts: 1,
  *   numberOfDetachedContexts: 0,
- *   gcCount: 11,
- *   gcForcedCount: 0,
- *   gcFullCount: 0,
- *   gcMajorCount: 7,
- *   gcDurUs99Ptile: 5158,
- *   gcDurUsMedian: 1263,
- *   dnsCount: 0,
  *   httpClientAbortCount: 0,
- *   httpClientCount: 0,
  *   httpServerAbortCount: 0,
- *   httpServerCount: 0,
- *   dns99Ptile: 0,
- *   dnsMedian: 0,
- *   httpClient99Ptile: 0,
- *   httpClientMedian: 0,
- *   httpServer99Ptile: 0,
- *   httpServerMedian: 0,
  *   loopIdleTime: 123990806640,
  *   loopIterations: 171,
  *   loopIterWithEvents: 45,
@@ -513,14 +471,8 @@
 
 /**
  * @typedef {Object} TraceStats
- * @property {number} dnsCount - The process's total number of DNS lookups
- * performed.
  * @property {number} httpClientAbortCount - The process's total number of
  * outgoing HTTP(S) client requests canceled due to inactivity.
- * @property {number} httpClientCount - The process's total number of outgoing
- * HTTP(S) client requests performed.
  * @property {number} httpServerAbortCount -  The process's total number of
  * served incoming HTTP(S) requests canceled.
- * @property {number} httpServerCount - The process's total number of incoming
- * HTTP(s) requests served.
  */

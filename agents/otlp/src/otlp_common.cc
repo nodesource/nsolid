@@ -420,28 +420,6 @@ static void add_gauge(std::vector<MetricData>& metrics,
 }
 
 // NOLINTNEXTLINE(runtime/references)
-static void add_summary(std::vector<MetricData>& metrics,
-                        const time_point& start,
-                        const time_point& end,
-                        const char* name,
-                        const char* unit,
-                        InstrumentValueType type,
-                        std::unordered_map<double, ValueType>&& values,
-                        PointAttributes attrs = {}) {
-  opentelemetry::sdk::metrics::SummaryPointData summary_point_data{};
-  summary_point_data.quantile_values_ = std::move(values);
-  MetricData metric_data{
-    InstrumentDescriptor{
-      name, "", unit, InstrumentType::kSummary, type },
-    AggregationTemporality::kUnspecified,
-    SystemTimestamp{ start },
-    SystemTimestamp{ end },
-    std::vector<PointDataAttributes>{{ attrs, summary_point_data }}
-  };
-  metrics.push_back(metric_data);
-}
-
-// NOLINTNEXTLINE(runtime/references)
 void fill_proc_metrics(std::vector<MetricData>& metrics,
                        const ProcessMetrics::MetricsStor& stor,
                        const ProcessMetrics::MetricsStor& prev_stor,
@@ -580,43 +558,6 @@ void fill_env_metrics(std::vector<MetricData>& metrics,
 }
 NSOLID_ENV_METRICS_NUMBERS(V)
 #undef V
-
-  // Add the summary metrics separately.
-  add_summary(metrics,
-              process_start,
-              end,
-              use_snake_case ? "gc_dur_us" : "gcDurUs",
-              kNSUSecs,
-              InstrumentValueType::kDouble,
-              {{ 0.5, stor.gc_dur_us_median },
-               { 0.99, stor.gc_dur_us99_ptile }},
-              attrs);
-  add_summary(metrics,
-              process_start,
-              end,
-              "dns",
-              kNSMSecs,
-              InstrumentValueType::kDouble,
-              {{ 0.5, stor.dns_median }, { 0.99, stor.dns99_ptile }},
-              attrs);
-  add_summary(metrics,
-              process_start,
-              end,
-              use_snake_case ? "http_client" : "httpClient",
-              kNSMSecs,
-              InstrumentValueType::kDouble,
-              {{ 0.5, stor.http_client_median },
-               { 0.99, stor.http_client99_ptile }},
-              attrs);
-  add_summary(metrics,
-              process_start,
-              end,
-              use_snake_case ? "http_server" : "httpServer",
-              kNSMSecs,
-              InstrumentValueType::kDouble,
-              {{ 0.5, stor.http_server_median },
-               { 0.99, stor.http_server99_ptile }},
-              attrs);
 }
 
 void fill_histograms(

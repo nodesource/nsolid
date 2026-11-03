@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { fork } from 'node:child_process';
 import http from 'node:http';
 import { once } from 'node:events';
-import { performance } from 'node:perf_hooks';
+import { performance, constants } from 'node:perf_hooks';
 import nsolid from 'nsolid';
 import { GRPCServer } from '../common/nsolid-grpc-agent/index.js';
 import { OTLPGRPCServer, OTLPServer } from '../common/nsolid-otlp-agent/index.js';
@@ -23,6 +23,7 @@ if (process.argv[2] === 'child') {
       global.gc();
       gcSeconds += (performance.now() - start) / 1000;
     }
+    global.gc({ type: 'minor' });
     const httpServer = http.createServer((req, res) => res.end());
     httpServer.listen(0, '127.0.0.1');
     await once(httpServer, 'listening');
@@ -34,10 +35,12 @@ if (process.argv[2] === 'child') {
     });
     httpServer.close();
 
-    for (const key of ['gcDurUs99Ptile', 'gcDurUsMedian', 'dns99Ptile', 'dnsMedian',
+    for (const key of ['gcCount', 'gcForcedCount', 'gcFullCount', 'gcMajorCount',
+                       'dnsCount', 'httpClientCount', 'httpServerCount',
+                       'gcDurUs99Ptile', 'gcDurUsMedian', 'dns99Ptile', 'dnsMedian',
                        'httpClient99Ptile', 'httpClientMedian',
                        'httpServer99Ptile', 'httpServerMedian']) {
-      assert.strictEqual(typeof nsolid.metrics()[key], 'number');
+      assert.ok(!Object.hasOwn(nsolid.metrics(), key));
     }
 
     process.send({ gcSeconds, agentId: nsolid.id });
@@ -65,7 +68,7 @@ if (process.argv[2] === 'child') {
           protocol: transport === 'otlp-grpc' ? 'grpc' : 'http',
         });
       }
-      const state = { major: 0, gcSum: 0, client: 0, server: 0 };
+      const state = { major: 0, minor: 0, gcSum: 0, client: 0, server: 0 };
       states.push(state);
       server.on('metrics', mustCallAtLeast((data) => {
         for (const resource of data.resourceMetrics || []) {
@@ -100,6 +103,10 @@ if (process.argv[2] === 'child') {
                 }
                 if (metric.name === 'v8js.gc.duration') {
                   assert.ok(['major', 'minor', 'incremental', 'weakcb'].includes(attrs['v8js.gc.type']));
+                  const flags = Number(attrs['nsolid.gc.flags']);
+                  assert.ok(Number.isInteger(flags) && flags >= 0);
+                  if (!(flags & constants.NODE_PERFORMANCE_GC_FLAGS_FORCED)) continue;
+                  if (attrs['v8js.gc.type'] === 'minor') state.minor += count;
                   if (attrs['v8js.gc.type'] === 'major') {
                     state.major += count;
                     state.gcSum += point.sum;
@@ -120,7 +127,7 @@ if (process.argv[2] === 'child') {
     });
     try {
       const deadline = Date.now() + 15000;
-      while (!bounds || !states.every((s) => s.major >= gcCount &&
+      while (!bounds || !states.every((s) => s.major >= gcCount && s.minor >= 1 &&
         s.client === 1 && s.server === 1)) {
         assert.ok(Date.now() < deadline, `${mode}: ${JSON.stringify(states)}`);
         await new Promise((resolve) => setTimeout(resolve, 50));

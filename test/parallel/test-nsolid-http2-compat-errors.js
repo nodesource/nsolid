@@ -24,9 +24,9 @@ const server = h2.createServer(common.mustCall(function(req, res) {
   expected = new Error('kaboom');
   res.stream.destroy(expected);
   server.close(common.mustCall(() => {
-    assert.strictEqual(nsolid.traceStats.httpClientCount, 1);
+    assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpClientCount'));
     assert.strictEqual(nsolid.traceStats.httpClientAbortCount, 0);
-    assert.strictEqual(nsolid.traceStats.httpServerCount, 0);
+    assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpServerCount'));
     assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 1);
   }));
 }));

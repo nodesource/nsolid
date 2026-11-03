@@ -16,9 +16,9 @@ const server = http.createServer(function(req, res) {
 
 function onRequestError() {
   const metrics = require('nsolid').metrics();
-  assert.strictEqual(metrics.httpClientCount, 0);
+  assert.ok(!Object.hasOwn(metrics, 'httpClientCount'));
   assert.strictEqual(metrics.httpClientAbortCount, 1);
-  assert.strictEqual(metrics.httpServerCount, 0);
+  assert.ok(!Object.hasOwn(metrics, 'httpServerCount'));
   assert.strictEqual(metrics.httpServerAbortCount, 1);
   server.close();
 }

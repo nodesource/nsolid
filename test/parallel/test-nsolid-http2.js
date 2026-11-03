@@ -33,18 +33,11 @@ server.listen(0, common.mustCall(() => {
     server.close();
     client.close(common.mustCall(() => {
       assert.strictEqual(data, 'test');
-      assert.strictEqual(nsolid.traceStats.httpClientCount, 1);
+      assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpClientCount'));
       assert.strictEqual(nsolid.traceStats.httpClientAbortCount, 0);
-      assert.strictEqual(nsolid.traceStats.httpServerCount, 1);
+      assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpServerCount'));
       assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 0);
     }));
-    // Wait for more than 3secs for the percentiles to be updated
-    setTimeout(common.mustCall(() => {
-      const metrics = nsolid.metrics();
-      assert.ok(metrics.httpClientMedian > 0);
-      assert.ok(metrics.httpClient99Ptile > 0);
-      assert.ok(metrics.httpServerMedian > 0);
-      assert.ok(metrics.httpServer99Ptile > 0);
-    }), 5500);
+
   }));
 }));

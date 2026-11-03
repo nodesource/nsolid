@@ -27,7 +27,7 @@ if (process.argv[2] === 'child') {
     server.on('metrics', mustCallAtLeast((data) => {
       for (const resource of data.resourceMetrics || []) {
         for (const scope of resource.scopeMetrics || []) {
-          const scalar = scope.metrics.find(({ name }) => name === 'dns_count');
+          const scalar = scope.metrics.find(({ name }) => name === 'used_heap_size');
           if (scalar) server.emit('thread-metrics');
           const histogram = scope.metrics.find(({ name }) => name === 'dns.lookup.duration');
           for (const point of histogram?.exponentialHistogram.dataPoints || []) {
