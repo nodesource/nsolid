@@ -40,11 +40,10 @@ function checkProfileData(requestId, options, agentId, data, complete, onExit = 
 
 const tests = [];
 
-function testMainThreadProfile(playground) {
+function testMainThreadProfile(playground, requestId) {
   return new Promise((resolve) => {
     let events = 0;
     let profile = '';
-    let requestId;
     let gotExit = false;
     let processExited = false;
     const options = {
@@ -85,7 +84,15 @@ function testMainThreadProfile(playground) {
     }
 
     playground.bootstrap(mustSucceed((agentId) => {
-      requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      if (requestId === undefined) {
+        requestId = playground.zmqAgentBus.agentProfileStart(agentId, options);
+      } else {
+        playground.zmqAgentBus._sendCB({
+          id: agentId, command: 'profile', requestId, args: options,
+        }, mustSucceed((response) => {
+          assert.strictEqual(response.requestId, requestId);
+        }));
+      }
     }), onEvent);
   });
 }
@@ -444,6 +451,11 @@ function testProfileEndsBeforeExit(
 tests.push({
   name: 'should work for the main thread',
   test: testMainThreadProfile,
+});
+
+tests.push({
+  name: 'should preserve escaped request IDs in profile metadata',
+  test: (playground) => testMainThreadProfile(playground, 'quote"backslash\\newline\ncontrol\x1f'),
 });
 
 tests.push({

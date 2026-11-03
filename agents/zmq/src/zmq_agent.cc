@@ -100,16 +100,6 @@ const char MSG_2[] =
     ",\"body\":%s"
     "}";
 
-const char MSG_3[] = "{"
-                     "\"agentId\":\"%s\""
-                     ",\"app\":%s"
-                     ",\"requestId\": %s"
-                     ",\"command\":\"%s\""
-                     ",\"duration\":%" PRIu64 ",\"metadata\":%s"
-                     ",\"complete\":%s"
-                     ",\"threadId\":%" PRIu64 ",\"version\":%d"
-                     "}";
-
 const char MSG_4[] =
     "{"
     "\"agentId\":\"%s\""
@@ -1102,12 +1092,13 @@ int ZmqAgent::send_command_message(const char* command,
                  real_body);
 
   } else {
+    const std::string request_id_json = json(request_id).dump();
     r = snprintf(msg_buf_,
                  msg_size_,
                  MSG_1,
                  agent_id_.c_str(),
                  json(app_name_).dump().c_str(),
-                 json(request_id).dump().c_str(),
+                 request_id_json.c_str(),
                  json(command).dump().c_str(),
                  std::get<0>(recorded),
                  std::get<1>(recorded),
@@ -1180,12 +1171,32 @@ int ZmqAgent::config_message(const json& message) {
   ASSERT_NOT_NULL(command_handle_.get());
   int ret = 0;
   const json& cfg = message["config"];
+  if (!cfg.is_object()) {
+    send_error_message("invalid command", 400);
+    return UV_EINVAL;
+  }
   // get version of the message
   auto it = cfg.find(kVersion);
+  if (it != cfg.end() && !it->is_number_integer()) {
+    send_error_message("invalid command", 400);
+    return UV_EINVAL;
+  }
   int version = it == cfg.end() ? 4 : it->get<int>();
   // handle "sockets" field
   it = cfg.find("sockets");
   if (it != cfg.end()) {
+    if (!it->is_object()) {
+      send_error_message("invalid command", 400);
+      return UV_EINVAL;
+    }
+    for (const char* field :
+         {"commandBindAddr", "dataBindAddr", "bulkBindAddr"}) {
+      auto addr = it->find(field);
+      if (addr != it->end() && !addr->is_string()) {
+        send_error_message("invalid command", 400);
+        return UV_EINVAL;
+      }
+    }
     ret = config_sockets(*it);
     if (ret != 0) {
       return ret;
@@ -1199,8 +1210,10 @@ int ZmqAgent::config_message(const json& message) {
 
 void ZmqAgent::command_handler(const std::string& cmd) {
   json message = json::parse(cmd, nullptr, false);
-  if (message.is_discarded() && data_handle_ != nullptr) {
-    return send_error_message("unable to parse json", 500);
+  if (message.is_discarded() || !message.is_object()) {
+    Debug("Rejecting invalid command JSON\n");
+    if (data_handle_ != nullptr) send_error_message("invalid command", 400);
+    return;
   }
 
   DebugJSON("Command Received:\n%s\n", message);
@@ -1214,6 +1227,11 @@ void ZmqAgent::command_handler(const std::string& cmd) {
   }
 
   auto it = message.find(kVersion);
+  if (it != message.end() && !it->is_number_integer()) {
+    Debug("Rejecting invalid command version\n");
+    send_error_message("invalid command", 400);
+    return;
+  }
   int version = it == message.end() ? 3 : it->get<int>();
   // This should almost never happen, only if the runtime was already connected
   // to a console in relay mode and the end-console changed versions. Take that
@@ -1222,13 +1240,7 @@ void ZmqAgent::command_handler(const std::string& cmd) {
     version_ = version;
   }
 
-  it_config = message.find(kCommand);
-  if (it_config != message.end()) {
-    command_message(message);
-    return;
-  }
-
-  // Unhandled command message. Log about it.
+  command_message(message);
 }
 
 int ZmqAgent::handshake_failed() {
@@ -1395,10 +1407,23 @@ int ZmqAgent::config(const json& config) {
 }
 
 int ZmqAgent::command_message(const json& message) {
-  const std::string type = message[kCommand];
+  auto command = message.find(kCommand);
   auto it = message.find(kRequestId);
-  ASSERT(it != message.end());
-  const std::string req_id = *it;
+  auto cancel_it = message.find("cancel");
+  if (command == message.end() || !command->is_string() ||
+      it == message.end() || !it->is_string() ||
+      (cancel_it != message.end() && !cancel_it->is_boolean())) {
+    Debug("Rejecting command with invalid command, requestId or cancel\n");
+    send_error_message("invalid command", 400);
+    return UV_EINVAL;
+  }
+  const std::string type = command->get<std::string>();
+  const std::string req_id = it->get<std::string>();
+  // Reply helpers use C strings, which cannot preserve embedded NULs.
+  if (req_id.find('\0') != std::string::npos) {
+    send_error_message("invalid command", 400);
+    return UV_EINVAL;
+  }
 
   // The cancel request only makes sense for asynchronous ops.
   // In the nsolid 3.x agent only "packages" and profiling commands were
@@ -1630,13 +1655,14 @@ void ZmqAgent::send_error_message(const std::string& msg,
 int ZmqAgent::send_error_command_message(const std::string& req_id,
                                          const std::string& command,
                                          const ZmqCommandError& err) {
+  const std::string req_id_json = json(req_id).dump();
   auto recorded = create_recorded(system_clock::now());
   int r = snprintf(msg_buf_,
                    msg_size_,
                    MSG_4,
                    agent_id_.c_str(),
                    json(app_name_).dump().c_str(),
-                   json(req_id).dump().c_str(),
+                   req_id_json.c_str(),
                    json(command).dump().c_str(),
                    std::get<0>(recorded),
                    std::get<1>(recorded),
@@ -1655,7 +1681,7 @@ int ZmqAgent::send_error_command_message(const std::string& req_id,
                  MSG_4,
                  agent_id_.c_str(),
                  json(app_name_).dump().c_str(),
-                 json(req_id).dump().c_str(),
+                 req_id_json.c_str(),
                  json(command).dump().c_str(),
                  std::get<0>(recorded),
                  std::get<1>(recorded),
@@ -1796,6 +1822,10 @@ int ZmqAgent::handle_xping(const json& message,
     json args = *it;
     it = args.find("restart");
     if (it != args.end()) {
+      if (!it->is_boolean()) {
+        send_error_message("invalid command", 400);
+        return UV_EINVAL;
+      }
       bool restart = *it;
       if (restart) {
         reset_command_handle(false);
@@ -2105,23 +2135,19 @@ void ZmqAgent::do_got_prof(ProfileType type,
   if (bulk_handle_) {
     uv_update_time(&loop_);
     // Access the metadata field from the options variant
-    std::string metadata_dump;
-    std::visit([&metadata_dump](auto&& option) {
-      metadata_dump = option.metadata.dump();
-    }, prof_stor.options);
-    snprintf(msg_buf_,
-             msg_size_,
-             MSG_3,
-             agent_id_.c_str(),
-             json(app_name_).dump().c_str(),
-             json(prof_stor.req_id).dump().c_str(),
-             cmd,
-             uv_now(&loop_) - prof_stor.timestamp,
-             metadata_dump.c_str(),
-             profileStreamComplete ? "true" : "false",
-             thread_id,
-             version_);
-    bulk_handle_->send(msg_buf_, profile);
+    json metadata;
+    std::visit([&metadata](auto&& option) { metadata = option.metadata; },
+               prof_stor.options);
+    const json envelope = {{"agentId", agent_id_},
+                           {"app", app_name_},
+                           {"requestId", prof_stor.req_id},
+                           {"command", cmd},
+                           {"duration", uv_now(&loop_) - prof_stor.timestamp},
+                           {"metadata", std::move(metadata)},
+                           {"complete", profileStreamComplete},
+                           {"threadId", thread_id},
+                           {"version", version_}};
+    bulk_handle_->send(envelope.dump(), profile);
   }
 
   // Don't continue with the exit procedure until all profiles have finished.
@@ -2635,6 +2661,11 @@ int ZmqAgent::reconfigure(const nlohmann::json& msg,
     return send_command_message(kReconfigure,
                                 req_id.c_str(),
                                 config_.dump().c_str());
+  }
+
+  if (!it->is_null() && !it->is_object()) {
+    send_error_message("invalid command", 400);
+    return UV_EINVAL;
   }
 
   json jargs = *it;
