@@ -419,46 +419,6 @@ void ThreadMetrics::reset() {
   update_running_ = false;
 }
 
-
-class MetricsStream::Impl {
- public:
-  Impl() = default;
-  ~Impl() {
-    EnvList::Inst()->RemoveMetricsStreamHook(hook_);
-  }
-
- private:
-  void Setup(uint32_t flags,
-             MetricsStream* stream,
-             metrics_stream_proxy_sig cb,
-             internal::deleter_sig deleter,
-             void* data) {
-    hook_ = EnvList::Inst()->AddMetricsStreamHook(flags,
-                                                  stream,
-                                                  cb,
-                                                  deleter,
-                                                  data);
-  }
-
-  friend class MetricsStream;
-  TSList<EnvList::MetricsStreamHookStor>::iterator hook_;
-};
-
-
-MetricsStream::MetricsStream(): impl_(std::make_unique<Impl>()) {
-}
-
-
-MetricsStream::~MetricsStream() = default;
-
-void MetricsStream::DoSetup(uint32_t flags,
-                            metrics_stream_proxy_sig cb,
-                            internal::deleter_sig deleter,
-                            void* data) {
-  impl_->Setup(flags, this, cb, deleter, data);
-}
-
-
 class Tracer::Impl {
  public:
   Impl() = default;
