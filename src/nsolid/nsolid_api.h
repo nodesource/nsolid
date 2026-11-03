@@ -35,11 +35,8 @@ namespace node {
 namespace nsolid {
 
 #define NSOLID_JS_METRICS_COUNTERS(V)                                          \
-  V(kHttpClientCount)                                                          \
-  V(kHttpServerCount)                                                          \
   V(kHttpClientAbortCount)                                                     \
   V(kHttpServerAbortCount)                                                     \
-  V(kDnsCount)                                                                 \
   V(kAsyncPipeServerCreatedCount)                                              \
   V(kAsyncPipeServerDestroyedCount)                                            \
   V(kAsyncPipeSocketCreatedCount)                                              \
@@ -127,17 +124,6 @@ class EnvInst {
     NSOLID_JS_METRICS_COUNTERS(V)
 #undef V
     kFieldCount
-  };
-
-  enum GCFields {
-    kGcCount,
-    kGcMajor,
-    kGcFull,
-    kGcForced,
-    // TODO(trevnorris): Are we really going to track this?
-    // kGcDurUsMedian,
-    // kGcDurUs99Ptile,
-    kGCFieldsCount
   };
 
   struct CmdQueueStor {
@@ -283,7 +269,6 @@ class EnvInst {
   // Track the values of JSMetricsFields.
   double count_fields[kFieldCount];
   // Array to track garbage collection information.
-  uint64_t gc_fields[kGCFieldsCount];
 
   // TODO(trevnorris): Most of these metrics are counters, but metrics like
   // cpuPercent are calculated based on the last call to GetEnvMetrics(). So
@@ -343,8 +328,6 @@ class EnvInst {
                                     ThreadMetrics::MetricsStor* stor);
   static void get_heap_stats_(EnvInst* envinst,
                               ThreadMetrics::MetricsStor* stor);
-  static void get_gc_stats_(EnvInst* envinst,
-                            ThreadMetrics::MetricsStor* stor);
   static void get_http_dns_stats_(EnvInst* envinst,
                                   ThreadMetrics::MetricsStor* stor);
 
@@ -391,7 +374,6 @@ class EnvInst {
   // Store responsiveness metric info.
   double res_arr_[4];
   uint64_t gc_start_;
-  utils::ring_buffer gc_ring_;
   // Track user specified startup times.
   std::map<std::string, uint64_t> startup_times_;
   nsuv::ns_mutex startup_times_lock_;
@@ -401,12 +383,6 @@ class EnvInst {
   std::atomic<bool> reported_blocked_ = { false };
   std::atomic<bool> blocked_body_created_ = { false };
 
-  // TODO(trevnorris): This is temporary until the change can be made to the
-  // Console to accept streaming raw metrics. This will only work for a single
-  // external service making the metrics calls.
-  std::vector<double> dns_bucket_;
-  std::vector<double> client_bucket_;
-  std::vector<double> server_bucket_;
   UniqueAttributesHashMap http_client_hashmap_ =
       std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
   UniqueAttributesHashMap http_server_hashmap_ =
@@ -423,12 +399,6 @@ class EnvInst {
   std::deque<HistogramSnapshot> otlp_histogram_snapshots_;
   nsuv::ns_mutex histogram_snapshots_lock_;
   uint64_t histogram_window_end_ms_ = 0;
-  std::atomic<double> dns_median_ = { 0 };
-  std::atomic<double> dns99_ptile_ = { 0 };
-  std::atomic<double> http_client_median_ = { 0 };
-  std::atomic<double> http_client99_ptile_ = { 0 };
-  std::atomic<double> http_server_median_ = { 0 };
-  std::atomic<double> http_server99_ptile_ = { 0 };
 
   nsuv::ns_mutex scope_lock_;
 

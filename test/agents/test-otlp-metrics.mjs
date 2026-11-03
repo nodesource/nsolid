@@ -87,15 +87,8 @@ if (process.argv[2] === 'child') {
     ['peak_malloced_memory', 'byte', 'asInt', 'gauge'],
     ['number_of_native_contexts', undefined, 'asInt', 'gauge'],
     ['number_of_detached_contexts', undefined, 'asInt', 'gauge'],
-    ['gc_count', undefined, 'asInt', 'sum'],
-    ['gc_forced_count', undefined, 'asInt', 'sum'],
-    ['gc_full_count', undefined, 'asInt', 'sum'],
-    ['gc_major_count', undefined, 'asInt', 'sum'],
-    ['dns_count', undefined, 'asInt', 'sum'],
     ['http_client_abort_count', undefined, 'asInt', 'sum'],
-    ['http_client_count', undefined, 'asInt', 'sum'],
     ['http_server_abort_count', undefined, 'asInt', 'sum'],
-    ['http_server_count', undefined, 'asInt', 'sum'],
     ['loop_idle_time', 'ns', 'asInt', 'gauge'],
     ['loop_iterations', undefined, 'asInt', 'sum'],
     ['loop_iter_with_events', undefined, 'asInt', 'sum'],
@@ -126,10 +119,6 @@ if (process.argv[2] === 'child') {
     ['loop_avg_tasks', undefined, 'asDouble', 'gauge'],
     ['loop_estimated_lag', 'ms', 'asDouble', 'gauge'],
     ['loop_idle_percent', undefined, 'asDouble', 'gauge'],
-    ['gc_dur_us', 'us', 'asDouble', 'summary'],
-    ['dns', 'ms', 'asDouble', 'summary'],
-    ['http_client', 'ms', 'asDouble', 'summary'],
-    ['http_server', 'ms', 'asDouble', 'summary'],
   ];
 
   // The format of the metrics is as follows:

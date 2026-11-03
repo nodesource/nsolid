@@ -10,18 +10,10 @@ const WORKERS = 10;
 
 if (!isMainThread) {
   fetch(`http://127.0.0.1:${workerData.port}`).then(() => {
-    assert.strictEqual(nsolid.traceStats.httpClientCount, 1);
+    assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpClientCount'));
     assert.strictEqual(nsolid.traceStats.httpClientAbortCount, 0);
-    assert.strictEqual(nsolid.traceStats.httpServerCount, 0);
+    assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpServerCount'));
     assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 0);
-    return new Promise((resolve) => {
-      setTimeout(common.mustCall(() => {
-        const metrics = nsolid.metrics();
-        assert.ok(metrics.httpClientMedian > 0);
-        assert.ok(metrics.httpClient99Ptile > 0);
-        resolve();
-      }), 5500);
-    });
   }).then(common.mustCall());
   return;
 }
@@ -37,9 +29,9 @@ server.listen(0, '127.0.0.1', common.mustSucceed(async () => {
                          { workerData: { port: server.address().port } });
     w.on('exit', common.mustCall(() => {
       if (++endedWorkers === WORKERS) {
-        assert.strictEqual(nsolid.traceStats.httpClientCount, 0);
+        assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpClientCount'));
         assert.strictEqual(nsolid.traceStats.httpClientAbortCount, 0);
-        assert.strictEqual(nsolid.traceStats.httpServerCount, WORKERS);
+        assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpServerCount'));
         assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 0);
         server.close();
       }
