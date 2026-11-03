@@ -128,9 +128,7 @@ EnvInst::EnvInst(Environment* env)
       prev_metrics_cb_time_(uv_hrtime()),
       res_arr_(),
       trace_flags_(EnvList::Inst()->GetTracer()->traceFlags()),
-      trace_sample_rate_(EnvList::Inst()->trace_sample_rate()),
-      has_metrics_stream_hooks_(
-          EnvList::Inst()->metrics_stream_hook_list_.size() > 0) {
+      trace_sample_rate_(EnvList::Inst()->trace_sample_rate()) {
   int er;
 
   er = eloop_cmds_msg_.init(event_loop_, run_event_loop_cmds_, this);
@@ -221,19 +219,16 @@ int EnvInst::RunCommand(SharedEnvInst envinst_sp,
   return UV_EINVAL;
 }
 
-void EnvInst::PushClientBucket(double value,
-                               MetricsStream::HttpDatapointAttrs&& attrs) {
-  send_datapoint(MetricsStream::Type::kHttpClient, value, std::move(attrs));
+void EnvInst::PushClientBucket(double value, HttpDatapointAttrs&& attrs) {
+  send_datapoint(MetricType::kHttpClient, value, std::move(attrs));
 }
 
-void EnvInst::PushServerBucket(double value,
-                               MetricsStream::HttpDatapointAttrs&& attrs) {
-  send_datapoint(MetricsStream::Type::kHttpServer, value, std::move(attrs));
+void EnvInst::PushServerBucket(double value, HttpDatapointAttrs&& attrs) {
+  send_datapoint(MetricType::kHttpServer, value, std::move(attrs));
 }
 
-void EnvInst::PushDnsBucket(double value,
-                            MetricsStream::DnsDatapointAttrs&& attrs) {
-  send_datapoint(MetricsStream::Type::kDns, value, std::move(attrs));
+void EnvInst::PushDnsBucket(double value, DnsDatapointAttrs&& attrs) {
+  send_datapoint(MetricType::kDns, value, std::move(attrs));
 }
 
 std::string EnvInst::GetModuleInfo() {
@@ -725,32 +720,18 @@ void EnvInst::v8_gc_prologue_cb_(Isolate* isolate,
   envinst->gc_start_ = uv_hrtime();
 }
 
-
 void EnvInst::v8_gc_epilogue_cb_(Isolate* isolate,
                                  GCType type,
                                  GCCallbackFlags flags,
                                  void* data) {
-  MetricsStream::Type rm_type = MetricsStream::Type::kGcRegular;
   EnvInst* envinst = static_cast<EnvInst*>(data);
   double gc_dur = (uv_hrtime() - envinst->gc_start_) / 1000;
 
-  if (type & (v8::kGCTypeMarkSweepCompact | v8::kGCTypeIncrementalMarking)) {
-    rm_type = MetricsStream::Type::kGcMajor;
-  }
-  if (flags & v8::kGCCallbackFlagCollectAllAvailableGarbage) {
-    rm_type = MetricsStream::Type::kGcFull;
-  }
-  if (flags & v8::kGCCallbackFlagForced) {
-    rm_type = MetricsStream::Type::kGcForced;
-  }
-
-  envinst->send_datapoint(
-      rm_type,
-      gc_dur,
-      MetricsStream::GcDatapointAttrs{static_cast<uint8_t>(type),
-                                      static_cast<uint32_t>(flags)});
+  envinst->send_datapoint(MetricType::kGc,
+                          gc_dur,
+                          GcDatapointAttrs{static_cast<uint8_t>(type),
+                                           static_cast<uint32_t>(flags)});
 }
-
 
 int EnvInst::CustomCommand(std::string req_id,
                            std::string command,
@@ -1596,47 +1577,23 @@ void EnvList::getAllEnvInst(std::function<void(SharedEnvInst)> cb) {
   }
 }
 
-
-void EnvList::datapoint_cb_(std::queue<MetricsStream::Datapoint>&& q) {
-  // It runs in the nsolid thread
-  if (q.empty()) {
-    return;
-  }
-  MetricsStream::metrics_stream_bucket bucket;
-  bucket.reserve(q.size());
+void EnvList::datapoint_cb_(std::queue<MetricDatapoint>&& q) {
+  // It runs in the nsolid thread.
   while (!q.empty()) {
-    MetricsStream::Datapoint& dp = q.front();
+    const MetricDatapoint& dp = q.front();
     auto envinst_sp = EnvInst::GetInst(dp.thread_id);
     if (envinst_sp != nullptr)
       envinst_sp->add_metric_datapoint_(dp.type, dp.value, dp.attrs);
 
-    bucket.emplace_back(std::move(dp));
     q.pop();
   }
-
-  EnvList::Inst()->metrics_stream_hook_list_.for_each([&](auto& stor) {
-    MetricsStream::metrics_stream_bucket filtered_bucket;
-    std::copy_if(bucket.begin(),
-                 bucket.end(),
-                 std::back_inserter(filtered_bucket),
-                 [&stor](const MetricsStream::Datapoint& dp) {
-                   return static_cast<uint32_t>(dp.type) & stor.flags;
-                 });
-    stor.cb(stor.stream, filtered_bucket, stor.data.get());
-  });
 }
 
-void EnvInst::send_datapoint(MetricsStream::Type type,
+void EnvInst::send_datapoint(MetricType type,
                              double value,
-                             MetricsStream::DatapointAttrs attrs) {
-  double ts = 0;
-  if (has_metrics_stream_hooks_) {
-    ts = (PERFORMANCE_NOW() - env()->time_origin()) / 1e6 +
-         env()->time_origin_timestamp() / 1e3;
-  }
-
+                             DatapointAttrs attrs) {
   EnvList::Inst()->datapoints_q_.Enqueue(
-      {thread_id_, ts, type, value, std::move(attrs)});
+      {thread_id_, type, value, std::move(attrs)});
 }
 
 void EnvList::send_trace_data(SpanItem&& item) {
@@ -1913,8 +1870,8 @@ void EnvList::env_list_routine_(ns_thread*, EnvList* envlist) {
   envlist->fill_trace_id_q();
   // We initialize from the N|Solid thread and not the EnvList constructor as
   // DispatchQueue::Init() actually calls EnvList::Inst()
-  er = envlist->datapoints_q_.Init(
-      [](int er, DispatchQueue<MetricsStream::Datapoint>* q) {
+  er = envlist->datapoints_q_.Init([](int er,
+                                      DispatchQueue<MetricDatapoint>* q) {
     CHECK_EQ(er, 0);
     er = q->Start(datapoints_q_interval,
                   datapoints_q_max_size,
@@ -2253,9 +2210,9 @@ void EnvInst::CustomCommandReqWeakCallback(
   }
 }
 
-void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
+void EnvInst::add_metric_datapoint_(MetricType type,
                                     double value,
-                                    MetricsStream::DatapointAttrs attrs) {
+                                    const DatapointAttrs& attrs) {
   DCHECK(utils::are_threads_equal(uv_thread_self(), EnvList::Inst()->thread()));
   const bool histogram_active =
       EnvList::Inst()->grpc_histogram_consumer_active_.load(
@@ -2263,8 +2220,8 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
       EnvList::Inst()->otlp_histogram_consumer_active_.load(
           std::memory_order_acquire);
   switch (type) {
-    case MetricsStream::Type::kDns: {
-      auto* dns = std::get_if<MetricsStream::DnsDatapointAttrs>(&attrs);
+    case MetricType::kDns: {
+      auto* dns = std::get_if<DnsDatapointAttrs>(&attrs);
       if (dns && histogram_active) {
         opentelemetry::sdk::metrics::MetricAttributes metric_attrs;
         if (!dns->question_name.empty()) {
@@ -2277,30 +2234,24 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
             dns_hashmap_.get(), value / 1000, std::move(metric_attrs));
       }
     } break;
-    case MetricsStream::Type::kHttpClient:
-    {
-      auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
+    case MetricType::kHttpClient: {
+      auto* http = std::get_if<HttpDatapointAttrs>(&attrs);
       if (http && histogram_active) {
         AggregateHistogram(http_client_hashmap_.get(),
                            value / 1000,
                            BuildMetricAttributes(*http, type));
       }
-    }
-    break;
-    case MetricsStream::Type::kHttpServer: {
-      auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
+    } break;
+    case MetricType::kHttpServer: {
+      auto* http = std::get_if<HttpDatapointAttrs>(&attrs);
       if (http && histogram_active) {
         AggregateHistogram(http_server_hashmap_.get(),
                            value / 1000,
                            BuildMetricAttributes(*http, type));
       }
     } break;
-    case MetricsStream::Type::kGcForced:
-    case MetricsStream::Type::kGcFull:
-    case MetricsStream::Type::kGcMajor:
-    case MetricsStream::Type::kGcRegular:
-    case MetricsStream::Type::kGc: {
-      auto* gc = std::get_if<MetricsStream::GcDatapointAttrs>(&attrs);
+    case MetricType::kGc: {
+      auto* gc = std::get_if<GcDatapointAttrs>(&attrs);
       if (!gc || !histogram_active) break;
       const char* gc_type;
       switch (gc->type) {
@@ -2328,61 +2279,6 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
     } break;
   }
 }
-
-TSList<EnvList::MetricsStreamHookStor>::iterator
-EnvList::AddMetricsStreamHook(uint32_t flags,
-                              MetricsStream* stream,
-                              MetricsStream::metrics_stream_proxy_sig cb,
-                              internal::deleter_sig deleter,
-                              void* data) {
-  auto it = metrics_stream_hook_list_.push_back(
-    { flags, stream, cb, nsolid::internal::user_data(data, deleter) });
-  if (metrics_stream_hook_list_.size() == 1)
-    UpdateHasMetricsStreamHooks(true);
-  return it;
-}
-
-
-void EnvList::RemoveMetricsStreamHook(
-    TSList<EnvList::MetricsStreamHookStor>::iterator it) {
-  metrics_stream_hook_list_.erase(it);
-  if (metrics_stream_hook_list_.size() == 0)
-    UpdateHasMetricsStreamHooks(false);
-}
-
-
-void EnvList::update_has_metrics_stream_hooks(SharedEnvInst envinst_sp,
-                                              bool has_metrics) {
-  DCHECK_EQ(envinst_sp->isolate(), v8::Isolate::TryGetCurrent());
-
-  envinst_sp->has_metrics_stream_hooks_ = has_metrics;
-}
-
-
-void EnvList::UpdateHasMetricsStreamHooks(bool has_metrics) {
-  decltype(env_map_) env_map;
-  {
-    // Copy the envinst map so we don't need to keep it locked the entire time.
-    ns_mutex::scoped_lock lock(map_lock_);
-    env_map = env_map_;
-  }
-
-  for (auto& entry : env_map) {
-    SharedEnvInst envinst_sp = entry.second;
-    EnvInst::Scope lock(envinst_sp);
-    if (!lock.Success())
-      continue;
-
-    int er = RunCommand(envinst_sp,
-                        CommandType::InterruptOnly,
-                        update_has_metrics_stream_hooks,
-                        has_metrics);
-    if (er) {
-      // Nothing to do here, really.
-    }
-  }
-}
-
 
 void EnvInst::get_heap_stats_(EnvInst* envinst,
                               ThreadMetrics::MetricsStor* stor) {
@@ -2590,15 +2486,14 @@ void BindingData::PushClientBucketImpl(BindingData* data,
                                        uint32_t server_port,
                                        uint32_t protocol_version,
                                        const std::string& error_type) {
-  MetricsStream::HttpDatapointAttrs attrs{
-      static_cast<MetricsStream::HttpMethod>(method),
-      static_cast<uint16_t>(status_code),
-      server_address,
-      static_cast<uint16_t>(server_port),
-      MetricsStream::HttpUrlScheme::kOther,
-      static_cast<MetricsStream::HttpProtocolVersion>(protocol_version),
-      std::string(),
-      error_type};
+  HttpDatapointAttrs attrs{static_cast<HttpMethod>(method),
+                           static_cast<uint16_t>(status_code),
+                           server_address,
+                           static_cast<uint16_t>(server_port),
+                           HttpUrlScheme::kOther,
+                           static_cast<HttpProtocolVersion>(protocol_version),
+                           std::string(),
+                           error_type};
   data->env()->envinst_->PushClientBucket(val, std::move(attrs));
 }
 
@@ -2677,15 +2572,14 @@ void BindingData::PushServerBucketImpl(BindingData* data,
                                        uint32_t protocol_version,
                                        const std::string& route,
                                        const std::string& error_type) {
-  MetricsStream::HttpDatapointAttrs attrs{
-      static_cast<MetricsStream::HttpMethod>(method),
-      static_cast<uint16_t>(status_code),
-      "",
-      0,
-      static_cast<MetricsStream::HttpUrlScheme>(url_scheme),
-      static_cast<MetricsStream::HttpProtocolVersion>(protocol_version),
-      route,
-      error_type};
+  HttpDatapointAttrs attrs{static_cast<HttpMethod>(method),
+                           static_cast<uint16_t>(status_code),
+                           "",
+                           0,
+                           static_cast<HttpUrlScheme>(url_scheme),
+                           static_cast<HttpProtocolVersion>(protocol_version),
+                           route,
+                           error_type};
   data->env()->envinst_->PushServerBucket(val, std::move(attrs));
 }
 
@@ -3755,27 +3649,27 @@ void BindingData::Initialize(Local<Object> target,
       .Check();
 
 #define NSOLID_HTTP_METHOD_CONSTS(V)                                           \
-  V(kHttpMethodGet, MetricsStream::HttpMethod::kGet)                           \
-  V(kHttpMethodHead, MetricsStream::HttpMethod::kHead)                         \
-  V(kHttpMethodPost, MetricsStream::HttpMethod::kPost)                         \
-  V(kHttpMethodPut, MetricsStream::HttpMethod::kPut)                           \
-  V(kHttpMethodDelete, MetricsStream::HttpMethod::kDelete)                     \
-  V(kHttpMethodConnect, MetricsStream::HttpMethod::kConnect)                   \
-  V(kHttpMethodOptions, MetricsStream::HttpMethod::kOptions)                   \
-  V(kHttpMethodTrace, MetricsStream::HttpMethod::kTrace)                       \
-  V(kHttpMethodPatch, MetricsStream::HttpMethod::kPatch)                       \
-  V(kHttpMethodOther, MetricsStream::HttpMethod::kOther)
+  V(kHttpMethodGet, HttpMethod::kGet)                                          \
+  V(kHttpMethodHead, HttpMethod::kHead)                                        \
+  V(kHttpMethodPost, HttpMethod::kPost)                                        \
+  V(kHttpMethodPut, HttpMethod::kPut)                                          \
+  V(kHttpMethodDelete, HttpMethod::kDelete)                                    \
+  V(kHttpMethodConnect, HttpMethod::kConnect)                                  \
+  V(kHttpMethodOptions, HttpMethod::kOptions)                                  \
+  V(kHttpMethodTrace, HttpMethod::kTrace)                                      \
+  V(kHttpMethodPatch, HttpMethod::kPatch)                                      \
+  V(kHttpMethodOther, HttpMethod::kOther)
 
 #define NSOLID_HTTP_VERSION_CONSTS(V)                                          \
-  V(kHttpVersion10, MetricsStream::HttpProtocolVersion::k10)                   \
-  V(kHttpVersion11, MetricsStream::HttpProtocolVersion::k11)                   \
-  V(kHttpVersion2, MetricsStream::HttpProtocolVersion::k2)                     \
-  V(kHttpVersionOther, MetricsStream::HttpProtocolVersion::kOther)
+  V(kHttpVersion10, HttpProtocolVersion::k10)                                  \
+  V(kHttpVersion11, HttpProtocolVersion::k11)                                  \
+  V(kHttpVersion2, HttpProtocolVersion::k2)                                    \
+  V(kHttpVersionOther, HttpProtocolVersion::kOther)
 
 #define NSOLID_HTTP_SCHEME_CONSTS(V)                                           \
-  V(kHttpSchemeHttp, MetricsStream::HttpUrlScheme::kHttp)                      \
-  V(kHttpSchemeHttps, MetricsStream::HttpUrlScheme::kHttps)                    \
-  V(kHttpSchemeOther, MetricsStream::HttpUrlScheme::kOther)
+  V(kHttpSchemeHttp, HttpUrlScheme::kHttp)                                     \
+  V(kHttpSchemeHttps, HttpUrlScheme::kHttps)                                   \
+  V(kHttpSchemeOther, HttpUrlScheme::kOther)
 
   NSOLID_HTTP_METHOD_CONSTS(NSOLID_EXPORT_CONST)
   NSOLID_HTTP_VERSION_CONSTS(NSOLID_EXPORT_CONST)
