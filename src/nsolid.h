@@ -117,23 +117,16 @@ struct LogWriteInfo;
     numberOfDetachedContexts,                                                  \
     EGauge,                                                                    \
     kNSNoUnit)                                                                 \
-  V(uint64_t, gc_count, gcCount, ECounter, kNSNoUnit)                          \
-  V(uint64_t, gc_forced_count, gcForcedCount, ECounter, kNSNoUnit)             \
-  V(uint64_t, gc_full_count, gcFullCount, ECounter, kNSNoUnit)                 \
-  V(uint64_t, gc_major_count, gcMajorCount, ECounter, kNSNoUnit)               \
-  V(uint64_t, dns_count, dnsCount, ECounter, kNSNoUnit)                        \
   V(uint64_t,                                                                  \
     http_client_abort_count,                                                   \
     httpClientAbortCount,                                                      \
     ECounter,                                                                  \
     kNSNoUnit)                                                                 \
-  V(uint64_t, http_client_count, httpClientCount, ECounter, kNSNoUnit)         \
   V(uint64_t,                                                                  \
     http_server_abort_count,                                                   \
     httpServerAbortCount,                                                      \
     ECounter,                                                                  \
     kNSNoUnit)                                                                 \
-  V(uint64_t, http_server_count, httpServerCount, ECounter, kNSNoUnit)         \
   V(uint64_t, loop_idle_time, loopIdleTime, EGauge, kNSNSecs)                  \
   V(uint64_t, loop_iterations, loopIterations, ECounter, kNSNoUnit)            \
   V(uint64_t, loop_iter_with_events, loopIterWithEvents, ECounter, kNSNoUnit)  \
@@ -202,14 +195,6 @@ struct LogWriteInfo;
   V(uint64_t, fs_handles_closed, fsHandlesClosedCount, ECounter, kNSNoUnit)
 
 #define NSOLID_ENV_METRICS_DOUBLE(V)                                           \
-  V(double, gc_dur_us99_ptile, gcDurUs99Ptile, ESeries, kNSUSecs)              \
-  V(double, gc_dur_us_median, gcDurUsMedian, ESeries, kNSUSecs)                \
-  V(double, dns99_ptile, dns99Ptile, ESeries, kNSMSecs)                        \
-  V(double, dns_median, dnsMedian, ESeries, kNSMSecs)                          \
-  V(double, http_client99_ptile, httpClient99Ptile, ESeries, kNSMSecs)         \
-  V(double, http_client_median, httpClientMedian, ESeries, kNSMSecs)           \
-  V(double, http_server99_ptile, httpServer99Ptile, ESeries, kNSMSecs)         \
-  V(double, http_server_median, httpServerMedian, ESeries, kNSMSecs)           \
   V(double, loop_utilization, loopUtilization, EGauge, kNSNoUnit)              \
   V(double, res_5s, res5s, EGauge, kNSNoUnit)                                  \
   V(double, res_1m, res1m, EGauge, kNSNoUnit)                                  \
@@ -898,7 +883,8 @@ class NODE_EXTERN MetricsStream {
   };
 
   struct GcDatapointAttrs {
-    uint8_t type; /**< Raw v8::GCType value */
+    uint8_t type;   /**< Raw v8::GCType value */
+    uint32_t flags; /**< Raw v8::GCCallbackFlags bitmask */
   };
 
   using DatapointAttrs = std::variant<std::monostate,

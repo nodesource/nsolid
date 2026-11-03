@@ -91,11 +91,6 @@ using opentelemetry::sdk::metrics::Base2ExponentialHistogramPointData;
 using opentelemetry::sdk::metrics::MetricAttributes;
 using opentelemetry::sdk::metrics::PointDataAttributes;
 
-static void calculateHttpDnsPtiles(
-    std::vector<double>& bucket,  // NOLINT(runtime/references)
-    std::atomic<double>& median,  // NOLINT(runtime/references)
-    std::atomic<double>& ptile);  // NOLINT(runtime/references)
-static void calculatePtiles(std::vector<double>* vals, double* med, double* nn);
 static void harvestHistogram(UniqueAttributesHashMap& hashmap,
                              SharedPointDataAttributes& points);
 
@@ -118,10 +113,8 @@ static std::string OneByteToUtf8(const FastOneByteString& input) {
   return out;
 }
 
-
 EnvInst::EnvInst(Environment* env)
     : count_fields(),
-      gc_fields(),
       tmetrics(env->thread_id()),
       env_(env),
       isolate_(env->isolate()),
@@ -134,11 +127,10 @@ EnvInst::EnvInst(Environment* env)
       metrics_info_(),
       prev_metrics_cb_time_(uv_hrtime()),
       res_arr_(),
-      gc_ring_(1000),
       trace_flags_(EnvList::Inst()->GetTracer()->traceFlags()),
       trace_sample_rate_(EnvList::Inst()->trace_sample_rate()),
       has_metrics_stream_hooks_(
-        EnvList::Inst()->metrics_stream_hook_list_.size() > 0) {
+          EnvList::Inst()->metrics_stream_hook_list_.size() > 0) {
   int er;
 
   er = eloop_cmds_msg_.init(event_loop_, run_event_loop_cmds_, this);
@@ -166,7 +158,6 @@ EnvInst::EnvInst(Environment* env)
   er = metrics_handle_.start(uv_metrics_cb_, this);
   CHECK_EQ(er, 0);
 }
-
 
 void EnvInst::CloseInstHandles() {
   auto close_and_finish = [&](uv_handle_t* handle) {
@@ -323,7 +314,6 @@ void EnvInst::GetThreadMetrics(ThreadMetrics::MetricsStor* stor) {
 
   get_event_loop_stats_(this, stor);
   get_heap_stats_(this, stor);
-  get_gc_stats_(this, stor);
   get_http_dns_stats_(this, stor);
 }
 
@@ -744,27 +734,21 @@ void EnvInst::v8_gc_epilogue_cb_(Isolate* isolate,
   EnvInst* envinst = static_cast<EnvInst*>(data);
   double gc_dur = (uv_hrtime() - envinst->gc_start_) / 1000;
 
-  uint64_t* gc_fields = envinst->gc_fields;
-
-  gc_fields[kGcCount]++;
   if (type & (v8::kGCTypeMarkSweepCompact | v8::kGCTypeIncrementalMarking)) {
-    gc_fields[kGcMajor]++;
     rm_type = MetricsStream::Type::kGcMajor;
   }
   if (flags & v8::kGCCallbackFlagCollectAllAvailableGarbage) {
-    gc_fields[kGcFull]++;
     rm_type = MetricsStream::Type::kGcFull;
   }
   if (flags & v8::kGCCallbackFlagForced) {
-    gc_fields[kGcForced]++;
     rm_type = MetricsStream::Type::kGcForced;
   }
 
   envinst->send_datapoint(
       rm_type,
       gc_dur,
-      MetricsStream::GcDatapointAttrs{static_cast<uint8_t>(type)});
-  envinst->gc_ring_.push_back(gc_dur);
+      MetricsStream::GcDatapointAttrs{static_cast<uint8_t>(type),
+                                      static_cast<uint32_t>(flags)});
 }
 
 
@@ -2005,8 +1989,7 @@ void EnvList::blocked_loop_timer_cb_(ns_timer*) {
   }
 }
 
-// Close each metrics window by calculating percentiles and harvesting
-// Latency histograms for exporters.
+// Close each metrics window by harvesting histograms for exporters.
 void EnvList::metrics_window_cb_(ns_timer*) {
   EnvList* envlist = EnvList::Inst();
   decltype(EnvList::env_map_) env_map;
@@ -2021,16 +2004,6 @@ void EnvList::metrics_window_cb_(ns_timer*) {
   for (auto entry : env_map) {
     auto envinst_sp = entry.second;
     const uint64_t window_end_ms = utils::ms_since_epoch();
-    calculateHttpDnsPtiles(envinst_sp->dns_bucket_,
-                           envinst_sp->dns_median_,
-                           envinst_sp->dns99_ptile_);
-    calculateHttpDnsPtiles(envinst_sp->client_bucket_,
-                           envinst_sp->http_client_median_,
-                           envinst_sp->http_client99_ptile_);
-    calculateHttpDnsPtiles(envinst_sp->server_bucket_,
-                           envinst_sp->http_server_median_,
-                           envinst_sp->http_server99_ptile_);
-
     harvestHistogram(envinst_sp->http_client_hashmap_,
                      envinst_sp->http_client_hist_points_);
     harvestHistogram(envinst_sp->http_server_hashmap_,
@@ -2290,9 +2263,7 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
       EnvList::Inst()->otlp_histogram_consumer_active_.load(
           std::memory_order_acquire);
   switch (type) {
-    case MetricsStream::Type::kDns:
-    {
-      dns_bucket_.push_back(value);
+    case MetricsStream::Type::kDns: {
       auto* dns = std::get_if<MetricsStream::DnsDatapointAttrs>(&attrs);
       if (dns && histogram_active) {
         opentelemetry::sdk::metrics::MetricAttributes metric_attrs;
@@ -2305,15 +2276,10 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
         AggregateHistogram(
             dns_hashmap_.get(), value / 1000, std::move(metric_attrs));
       }
-    }
-    break;
+    } break;
     case MetricsStream::Type::kHttpClient:
     {
       auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
-      // Keep no-response failures out of the legacy percentile series.
-      if (!http || http->status_code != 0) {
-        client_bucket_.push_back(value);
-      }
       if (http && histogram_active) {
         AggregateHistogram(http_client_hashmap_.get(),
                            value / 1000,
@@ -2321,17 +2287,14 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
       }
     }
     break;
-    case MetricsStream::Type::kHttpServer:
-    {
-      server_bucket_.push_back(value);
+    case MetricsStream::Type::kHttpServer: {
       auto* http = std::get_if<MetricsStream::HttpDatapointAttrs>(&attrs);
       if (http && histogram_active) {
         AggregateHistogram(http_server_hashmap_.get(),
                            value / 1000,
                            BuildMetricAttributes(*http, type));
       }
-    }
-    break;
+    } break;
     case MetricsStream::Type::kGcForced:
     case MetricsStream::Type::kGcFull:
     case MetricsStream::Type::kGcMajor:
@@ -2357,9 +2320,11 @@ void EnvInst::add_metric_datapoint_(MetricsStream::Type type,
         default:
           return;
       }
-      AggregateHistogram(gc_hashmap_.get(),
-                         value / 1e6,
-                         {{"v8js.gc.type", std::string(gc_type)}});
+      AggregateHistogram(
+          gc_hashmap_.get(),
+          value / 1e6,
+          {{"v8js.gc.type", std::string(gc_type)},
+           {"nsolid.gc.flags", static_cast<int64_t>(gc->flags)}});
     } break;
   }
 }
@@ -2458,81 +2423,11 @@ void harvestHistogram(UniqueAttributesHashMap& hashmap,
   hashmap = std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
 }
 
-void calculateHttpDnsPtiles(
-    std::vector<double>& bucket,  // NOLINT(runtime/references)
-    std::atomic<double>& median,  // NOLINT(runtime/references)
-    std::atomic<double>& ptile) {  // NOLINT(runtime/references)
-  std::vector<double> vals;
-  double med;
-  double nn;
-
-  // By moving the bucket we do not need to clear it later on.
-  vals = std::move(bucket);
-
-  calculatePtiles(&vals, &med, &nn);
-
-  median = med;
-  ptile = nn;
-}
-
-
-void calculatePtiles(std::vector<double>* vals, double* med, double* nn) {
-  if (vals->size() == 0) {
-    *med = 0;
-    *nn = 0;
-    return;
-  }
-  if (vals->size() == 1) {
-    *med = vals->at(0);
-    *nn = vals->at(0);
-    return;
-  }
-
-  const auto n_it = vals->begin() + vals->size() * 0.99;
-  std::nth_element(vals->begin(), n_it, vals->end());
-  *nn = *n_it;
-
-  if (vals->size() % 2 > 0) {
-    const auto m_it = vals->begin() + vals->size() / 2;
-    std::nth_element(vals->begin(), m_it, vals->end());
-    *med = *m_it;
-  } else {
-    const auto m_it1 = vals->begin() + vals->size() / 2 - 1;
-    const auto m_it2 = vals->begin() + vals->size() / 2 - 1;
-    std::nth_element(vals->begin(), m_it1 , vals->end());
-    std::nth_element(vals->begin(), m_it2 , vals->end());
-    *med = ((*m_it1) + (*m_it2)) / 2;
-  }
-}
-
-
-void EnvInst::get_gc_stats_(EnvInst* envinst,
-                            ThreadMetrics::MetricsStor* stor) {
-  uint64_t* gc_fields = envinst->gc_fields;
-  stor->gc_count = gc_fields[kGcCount];
-  stor->gc_forced_count = gc_fields[kGcForced];
-  stor->gc_full_count = gc_fields[kGcFull];
-  stor->gc_major_count = gc_fields[kGcMajor];
-  stor->gc_dur_us_median = envinst->gc_ring_.percentile(0.5);
-  stor->gc_dur_us99_ptile = envinst->gc_ring_.percentile(0.99);
-}
-
-
 void EnvInst::get_http_dns_stats_(EnvInst* envinst,
                                   ThreadMetrics::MetricsStor* stor) {
   double* js_counts = envinst->count_fields;
-  stor->dns_count = js_counts[kDnsCount];
   stor->http_client_abort_count = js_counts[kHttpClientAbortCount];
-  stor->http_client_count = js_counts[kHttpClientCount];
   stor->http_server_abort_count = js_counts[kHttpServerAbortCount];
-  stor->http_server_count = js_counts[kHttpServerCount];
-
-  stor->dns_median = envinst->dns_median_;
-  stor->dns99_ptile = envinst->dns99_ptile_;
-  stor->http_client_median = envinst->http_client_median_;
-  stor->http_client99_ptile = envinst->http_client99_ptile_;
-  stor->http_server_median = envinst->http_server_median_;
-  stor->http_server99_ptile = envinst->http_server99_ptile_;
 
   stor->pipe_server_created_count =
     js_counts[kAsyncPipeServerCreatedCount];
