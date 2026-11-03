@@ -1,6 +1,7 @@
 // Flags: --expose-internals
-import { mustSucceed } from '../common/index.mjs';
+import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { once } from 'node:events';
 import validators from 'internal/validators';
 import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 
@@ -60,6 +61,74 @@ tests.push({
       }));
     });
   },
+});
+
+tests.push({
+  name: 'should reject malformed commands and remain alive',
+  test: mustCall(async (playground) => {
+    const agentId = await new Promise((resolve) => {
+      playground.bootstrap(mustSucceed(resolve));
+    });
+    const messages = [
+      '{', 'null', '[]', '{}',
+      JSON.stringify({ command: 'ping', version: 4 }),
+      JSON.stringify({ requestId: 'invalid', version: 4 }),
+      JSON.stringify({ command: 42, requestId: 'invalid', version: 4 }),
+      JSON.stringify({ command: 'ping', requestId: 42, version: 4 }),
+      JSON.stringify({ command: 'ping', requestId: 'embedded\0nul', version: 4 }),
+      JSON.stringify({ command: 'ping', requestId: 'invalid', version: '4' }),
+      JSON.stringify({ command: 'ping', requestId: 'invalid', version: 4, cancel: 'yes' }),
+      JSON.stringify({ command: 'xping', requestId: 'invalid', version: 4, args: { restart: 'yes' } }),
+      ...[[], [1], 42, 'invalid', true].map((args) =>
+        JSON.stringify({ command: 'reconfigure', requestId: 'invalid', version: 4, args })),
+      JSON.stringify({ config: null }),
+      JSON.stringify({ config: { version: '4' } }),
+      JSON.stringify({ config: { sockets: [] } }),
+      ...['commandBindAddr', 'dataBindAddr', 'bulkBindAddr'].map((field) =>
+        JSON.stringify({ config: { sockets: { [field]: 42 } } })),
+    ];
+    for (const message of messages) {
+      console.log(`Malformed ZMQ command: ${message}`);
+      const rejected = once(playground.zmqAgentBus, 'error:undefined');
+      playground.zmqAgentBus.server.command.socket.send([`id:${agentId}`, message]);
+      const [err] = await rejected;
+      assert.strictEqual(err.code, 400);
+      assert.strictEqual(err.message, 'invalid command');
+      await new Promise((resolve) => {
+        const requestId = playground.zmqAgentBus.agentPingRequest(
+          agentId, mustSucceed((ping) => {
+            checkPingData(ping, requestId, agentId);
+            resolve();
+          }));
+      });
+    }
+  }),
+});
+
+tests.push({
+  name: 'should preserve escaped request IDs in replies',
+  test: mustCall(async (playground) => {
+    const agentId = await new Promise((resolve) => {
+      playground.bootstrap(mustSucceed(resolve));
+    });
+    const requestId = 'quote"backslash\\newline\ncontrol\x1f';
+    await new Promise((resolve) => {
+      playground.zmqAgentBus._sendCB({
+        id: agentId, command: 'ping', requestId,
+      }, mustSucceed((ping) => {
+        checkPingData(ping, requestId, agentId);
+        resolve();
+      }));
+    });
+    await new Promise((resolve) => {
+      playground.zmqAgentBus._sendCB({
+        id: agentId, command: 'reconfigure', requestId, args: { assetsEnabled: 'yes' },
+      }, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        resolve();
+      }));
+    });
+  }),
 });
 
 const config = {
