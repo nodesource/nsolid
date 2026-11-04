@@ -2,6 +2,7 @@
 #define AGENTS_OTLP_SRC_OTLP_COMMON_H_
 
 #include <memory>
+#include <string>
 
 #include "nsolid.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
@@ -51,6 +52,8 @@ std::shared_ptr<OPENTELEMETRY_NAMESPACE::sdk::resource::Resource>
     GetMetricsResource();
 
 void InvalidateMetricsResource();
+
+bool UseGrpcSslCredentials(const std::string& url, const char* insecure_env);
 
 std::shared_ptr<OPENTELEMETRY_NAMESPACE::sdk::resource::Resource>
     UpdateResource(
