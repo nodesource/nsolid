@@ -9,16 +9,18 @@
 #include "env-inl.h"
 #include "nlohmann/json.hpp"
 #include "nsuv-inl.h"
+#include "opentelemetry/sdk/common/env_variables.h"
+#include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
+#include "opentelemetry/sdk/logs/recordable.h"
+#include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/semconv/incubating/deployment_attributes.h"
 #include "opentelemetry/semconv/incubating/host_attributes.h"
 #include "opentelemetry/semconv/incubating/os_attributes.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/incubating/service_attributes.h"
 #include "opentelemetry/semconv/incubating/thread_attributes.h"
-#include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
-#include "opentelemetry/sdk/logs/recordable.h"
-#include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/trace/propagation/detail/hex.h"
+#include "util-inl.h"
 
 using nlohmann::json;
 
@@ -74,6 +76,20 @@ using opentelemetry::semconv::thread::kThreadName;
 namespace node {
 namespace nsolid {
 namespace otlp {
+
+bool UseGrpcSslCredentials(const std::string& url, const char* insecure_env) {
+  if (StringEqualNoCaseN(url.c_str(), "https://", 8)) return true;
+  if (StringEqualNoCaseN(url.c_str(), "http://", 7)) return false;
+
+  // Read insecure overrides without consulting an unrelated env endpoint.
+  bool insecure = false;
+  if (!opentelemetry::sdk::common::GetBoolEnvironmentVariable(insecure_env,
+                                                              insecure)) {
+    opentelemetry::sdk::common::GetBoolEnvironmentVariable(
+        "OTEL_EXPORTER_OTLP_INSECURE", insecure);
+  }
+  return !insecure;
+}
 
 static const size_t kTraceIdSize             = 32;
 static const size_t kSpanIdSize              = 16;
