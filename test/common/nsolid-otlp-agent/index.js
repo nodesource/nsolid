@@ -39,7 +39,10 @@ class OTLPServer extends EventEmitter {
   }
 
   close() {
-    this.#server.send({ type: 'close' });
+    return new Promise((resolve) => {
+      this.#server.once('exit', resolve);
+      this.#server.send({ type: 'close' });
+    });
   }
 }
 
@@ -76,7 +79,10 @@ class OTLPGRPCServer extends EventEmitter {
   }
 
   close() {
-    this.#server.send({ type: 'close' });
+    return new Promise((resolve) => {
+      this.#server.once('exit', resolve);
+      this.#server.send({ type: 'close' });
+    });
   }
 }
 

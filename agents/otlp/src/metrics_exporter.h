@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "nsolid.h"
+#include "nsolid/nsolid_otel_metrics_types.h"
 
 namespace node {
 namespace nsolid {
@@ -25,6 +26,9 @@ class MetricsExporter {
       const ProcessMetrics::MetricsStor& prev_stor) = 0;
 
   virtual void got_thr_metrics(const std::vector<ThrMetricsStor>&) = 0;
+
+  // Vendor-specific adapters only support the built-in runtime metrics.
+  virtual void got_otel_metrics(const OtelMetricsStor&) {}
 };
 
 }  // namespace otlp
