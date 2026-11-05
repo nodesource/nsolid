@@ -1724,10 +1724,10 @@ void EnvList::exit_handler_() {
 constexpr uint64_t kAbortReportTimeoutMs = 10000;
 
 
+// Ends the process if the exit hooks hang. It writes nothing first: stderr may
+// be a pipe nobody reads, and a blocked write would keep the process alive.
 static void abort_watchdog_(void*) {
   uv_sleep(kAbortReportTimeoutMs);
-  fprintf(stderr, "N|Solid: the exit hooks took too long, aborting\n");
-  fflush(stderr);
   ABORT_NO_BACKTRACE();
 }
 
@@ -1737,11 +1737,13 @@ void EnvList::abort_handler_(const char* location, const char* message) {
   envlist->SetFatalExit(location, message);
   // The process must end even if a hook can't finish (a lock the aborting
   // thread holds, say): a watchdog ends it after a while. It is never joined.
+  // Without one, the hooks are skipped, so nothing can hold the process open.
   uv_thread_t watchdog;
-  USE(uv_thread_create(&watchdog, abort_watchdog_, nullptr));
-  // As for a signal, profiles aren't stopped: V8 may be out of memory, or this
-  // may not be the main thread.
-  envlist->DoExit(true);
+  if (uv_thread_create(&watchdog, abort_watchdog_, nullptr) == 0) {
+    // As for a signal, profiles aren't stopped: V8 may be out of memory, or
+    // this may not be the main thread.
+    envlist->DoExit(true);
+  }
   envlist->prev_abort_handler_(location, message);
 }
 
