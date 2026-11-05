@@ -178,6 +178,8 @@ if (isMainThread) {
       nsolidTracer.on('flagsUpdated', onFlagsUpdated);
       onFlagsUpdated();
     } else if (msg.type === 'heap_profile') {
+      if (msg.config)
+        nsolid.start(msg.config);
       nsolid.heapProfile(msg.duration);
     } else if (msg.type === 'heap_sampling') {
       nsolid.heapSampling(msg.duration);
@@ -219,6 +221,8 @@ if (isMainThread) {
         throw new Error('error');
       }
     } else if (msg.type === 'snapshot') {
+      if (msg.config)
+        nsolid.start(msg.config);
       nsolid.snapshot();
     } else if (msg.type === 'startupTimes') {
       process.recordStartupTime(msg.name);

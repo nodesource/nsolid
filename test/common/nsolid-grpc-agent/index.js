@@ -491,10 +491,10 @@ class TestClient {
     });
   }
 
-  async heapProfile(duration) {
+  async heapProfile(duration, config) {
     return new Promise((resolve) => {
       if (this.#child) {
-        this.#child.send({ type: 'heap_profile', duration }, () => {
+        this.#child.send({ type: 'heap_profile', duration, config }, () => {
           resolve();
         });
       } else {
@@ -635,10 +635,10 @@ class TestClient {
     });
   }
 
-  async snapshot(duration) {
+  async snapshot(duration, config) {
     return new Promise((resolve) => {
       if (this.#child) {
-        this.#child.send({ type: 'snapshot', duration }, () => {
+        this.#child.send({ type: 'snapshot', duration, config }, () => {
           resolve();
         });
       } else {
