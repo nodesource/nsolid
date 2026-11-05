@@ -29,10 +29,10 @@ namespace grpc {
 /**
   * Create gRPC channel credentials.
   */
-std::shared_ptr<::grpc::ChannelCredentials>
-    GrpcClient::MakeCredentials(const OtlpGrpcClientOptions& options,
-                                const std::string& tls_keylog_file,
-                                const ClientIdentityProvider& client_identity) {
+std::shared_ptr<::grpc::ChannelCredentials> GrpcClient::MakeCredentials(
+    const OtlpGrpcClientOptions& options,
+    const std::string& tls_keylog_file,
+    const ClientIdentityProvider& client_identity) {
   if (!options.use_ssl_credentials) {
     return InsecureChannelCredentials();
   }
@@ -63,10 +63,10 @@ std::shared_ptr<::grpc::ChannelCredentials>
 /**
   * Create gRPC channel.
   */
-std::shared_ptr<Channel>
-    GrpcClient::MakeChannel(const OtlpGrpcClientOptions& options,
-                            const std::string& tls_keylog_file,
-                            const ClientIdentityProvider& client_identity) {
+std::shared_ptr<Channel> GrpcClient::MakeChannel(
+    const OtlpGrpcClientOptions& options,
+    const std::string& tls_keylog_file,
+    const ClientIdentityProvider& client_identity) {
   std::shared_ptr<Channel> channel;
   ChannelArguments grpc_arguments;
   // Configure the keepalive of the Client Channel. The keepalive time period is
@@ -106,11 +106,10 @@ void GrpcClient::AddMetadata(ClientContext* context,
 /**
   * Create N|Solid service stub to communicate with the N|Solid Console.
   */
-std::unique_ptr<NSolidService::StubInterface>
-    GrpcClient::MakeNSolidServiceStub(
-        const OtlpGrpcClientOptions& options,
-        const std::string& tls_keylog_file,
-        const ClientIdentityProvider& client_identity) {
+std::unique_ptr<NSolidService::StubInterface> GrpcClient::MakeNSolidServiceStub(
+    const OtlpGrpcClientOptions& options,
+    const std::string& tls_keylog_file,
+    const ClientIdentityProvider& client_identity) {
   return NSolidService::NewStub(
       MakeChannel(options, tls_keylog_file, client_identity));
 }
