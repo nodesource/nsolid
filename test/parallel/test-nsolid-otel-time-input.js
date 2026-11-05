@@ -33,6 +33,10 @@ const relative = 123.5;
 const tracer = tracerProvider.getTracer('time-input');
 for (const [input, expected] of [
   [epoch, epoch - origin],
+  [epoch - 2000, epoch - 2000 - origin],
+  [origin / 2 - 1, origin / 2 - 1],
+  [origin / 2, -origin / 2],
+  [origin / 2 + 1, origin / 2 + 1 - origin],
   [new Date(epoch), epoch - origin],
   [[Math.floor(epoch / 1000), (epoch % 1000) * 1e6], epoch - origin],
   [relative, relative],
