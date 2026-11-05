@@ -649,7 +649,6 @@ ZmqAgent::ZmqAgent()
       status_(Unconfigured),
       profile_on_exit_(false),
       cont_cpu_profile_enabled_(false),
-      assets_enabled_(true),
       trace_flags_(0),
       status_cb_(nullptr) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
@@ -1307,13 +1306,6 @@ int ZmqAgent::config(const json& config) {
 
   if (utils::find_any_fields_in_diff(diff, { "/blockedLoopThreshold" })) {
     setup_blocked_loop_hooks();
-  }
-
-  {
-    auto it = config_.find("assetsEnabled");
-    if (it != config_.end()) {
-      assets_enabled_ = *it;
-    }
   }
 
   if (utils::find_any_fields_in_diff(diff, { "/app" })) {
@@ -2160,8 +2152,19 @@ void ZmqAgent::do_got_prof(ProfileType type,
 int ZmqAgent::do_start_prof_init(const nlohmann::json& message,
                                  ProfileType type,
                                  ProfileOptions& options) {
-  if (!assets_enabled_) {
+  // Config changes must take effect before the agent's config queue is drained.
+  const json config = json::parse(GetConfig(), nullptr, false);
+  ASSERT(!config.is_discarded());
+  auto config_it = config.find("assetsEnabled");
+  if (config_it != config.end() && config_it->is_boolean() &&
+      !config_it->get<bool>()) {
     return UV_EINVAL;
+  }
+
+  bool redact_snapshots = false;
+  config_it = config.find("redactSnapshots");
+  if (config_it != config.end() && config_it->is_boolean()) {
+    redact_snapshots = config_it->get<bool>();
   }
 
   StartProfiling start_profiling = nullptr;
@@ -2170,12 +2173,14 @@ int ZmqAgent::do_start_prof_init(const nlohmann::json& message,
       start_profiling = &ZmqAgent::do_start_cpu_prof;
       break;
     case ProfileType::kHeapProf:
+      std::get<HeapProfileOptions>(options).redacted = redact_snapshots;
       start_profiling = &ZmqAgent::do_start_heap_prof;
       break;
     case ProfileType::kHeapSampl:
       start_profiling = &ZmqAgent::do_start_heap_sampl;
       break;
     case ProfileType::kHeapSnapshot:
+      std::get<HeapSnapshotOptions>(options).redacted = redact_snapshots;
       start_profiling = &ZmqAgent::do_start_heap_snapshot;
       break;
     default:
@@ -2223,6 +2228,12 @@ int ZmqAgent::do_start_prof_init(const nlohmann::json& message,
     opt.duration = duration;
     opt.metadata = std::move(metadata);
   }, options);
+
+  config_it = config.find("disableSnapshots");
+  if (type == ProfileType::kHeapSnapshot && config_it != config.end() &&
+      config_it->get<bool>()) {
+    return UV_EINVAL;
+  }
 
   return (this->*start_profiling)(args, options);
 }
@@ -2273,13 +2284,6 @@ int ZmqAgent::do_start_heap_prof(const nlohmann::json& args,
 
   HeapProfileOptions& options = std::get<HeapProfileOptions>(opts);
   options.track_allocations = *it;
-  auto conf_it = config_.find("redactSnapshots");
-  if (conf_it != config_.end()) {
-    if (conf_it->is_boolean()) {
-      options.redacted = *conf_it;
-    }
-  }
-
   Debug("Starting Heap profile for thread %lu, duration: %lu\n",
         options.thread_id,
         options.duration);
@@ -2324,26 +2328,9 @@ int ZmqAgent::do_start_heap_sampl(const nlohmann::json& args,
   return profile_collector_->StartHeapSampling(options);
 }
 
-int ZmqAgent::do_start_heap_snapshot(const nlohmann::json& args,
+int ZmqAgent::do_start_heap_snapshot(const nlohmann::json&,
                                      ProfileOptions& opts) {
-  bool disable_snapshots = false;
-  auto conf_it = config_.find("disableSnapshots");
-  if (conf_it != config_.end()) {
-    disable_snapshots = *conf_it;
-  }
-
-  if (disable_snapshots == true) {
-    return UV_EINVAL;
-  }
-
   HeapSnapshotOptions& options = std::get<HeapSnapshotOptions>(opts);
-  conf_it = config_.find("redactSnapshots");
-  if (conf_it != config_.end()) {
-    if (conf_it->is_boolean()) {
-      options.redacted = *conf_it;
-    }
-  }
-
   Debug("Starting Heap Snapshot for thread %lu\n", options.thread_id);
 
   return profile_collector_->StartHeapSnapshot(options);

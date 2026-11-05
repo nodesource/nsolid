@@ -278,7 +278,7 @@ tests.push({
 });
 
 tests.push({
-  name: 'should respect assetsEnabled toggled via nsolid.start()',
+  name: 'should respect assetsEnabled and disableSnapshots via nsolid.start()',
   test: async (getEnv) => {
     return new Promise((resolve) => {
       const grpcServer = new GRPCServer();
@@ -311,6 +311,19 @@ tests.push({
 
         const { data, requestId } = await grpcServer.heapSnapshot(agentId, snapshotOpts);
         checkSnapshotData(data.msg, data.metadata, requestId, agentId, snapshotOpts, true);
+
+        await child.config({ disableSnapshots: true });
+        const metadata = {
+          fields: { reason: { stringValue: 'audit-request', kind: 'stringValue' } },
+        };
+        const disabled = await grpcServer.heapSnapshot(agentId, { ...snapshotOpts, metadata });
+        checkSnapshotError(disabled.data.msg,
+                           disabled.data.metadata,
+                           disabled.requestId,
+                           agentId,
+                           500,
+                           'Heap Snapshots disabled(1004)');
+        assert.deepStrictEqual(disabled.data.msg.metadata, metadata);
 
         await child.shutdown(0);
         grpcServer.close();
