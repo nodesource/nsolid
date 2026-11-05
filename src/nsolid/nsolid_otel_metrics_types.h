@@ -2,6 +2,7 @@
 #define SRC_NSOLID_NSOLID_OTEL_METRICS_TYPES_H_
 
 #include <chrono>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -21,17 +22,21 @@ enum class OtelMetricType {
   kObservableUpDownCounter,
 };
 
-struct OtelMetricStor {
+struct OtelInstrumentMetadata {
   std::string meter_name;
   std::string meter_version;
   std::string meter_schema_url;
   std::string name;
   std::string unit;
   std::string description;
-  double value;
-  std::string attributes;
   OtelMetricType type = OtelMetricType::kCounter;
   std::chrono::system_clock::time_point started_at;
+};
+
+struct OtelMetricStor {
+  std::shared_ptr<const OtelInstrumentMetadata> metadata;
+  double value;
+  std::string attributes;
   std::chrono::system_clock::time_point collected_at;
   std::optional<opentelemetry::sdk::metrics::HistogramPointData>
       histogram_point_data;
