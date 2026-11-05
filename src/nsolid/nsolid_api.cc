@@ -1459,7 +1459,6 @@ void EnvList::ClearSavedExitError() {
   saved_exit_error_.reset(nullptr);
 }
 
-
 void EnvList::SetFatalExit(const char* location, const char* message) {
 #ifdef __POSIX__
   // An abort ends the process by SIGABRT: like other signals, it's the code.
@@ -1486,26 +1485,23 @@ void EnvList::SetFatalExit(const char* location, const char* message) {
   }
   // Empty when out of memory, or when this thread runs no JS.
   std::string stack =
-    node::GetCurrentStackTraceString(v8::Isolate::TryGetCurrent());
+      node::GetCurrentStackTraceString(v8::Isolate::TryGetCurrent());
   ns_mutex::scoped_lock lock(exit_lock_);
   // An uncaught error the process is already dying of says more.
   if (exit_error_) {
     return;
   }
   exit_error_ =
-    std::make_unique<std::tuple<std::string, std::string>>(what, stack);
+      std::make_unique<std::tuple<std::string, std::string>>(what, stack);
 }
-
 
 int EnvList::GetExitCode() const {
   return exit_code_;
 }
 
-
 int EnvList::GetExitSignal() const {
   return exit_signal_;
 }
-
 
 std::tuple<std::string, std::string>* EnvList::GetExitError() {
   ns_mutex::scoped_lock lock(exit_lock_);
@@ -1718,11 +1714,9 @@ void EnvList::exit_handler_() {
   envlist->DoExit(false);
 }
 
-
 // How long an abort waits for the exit hooks (the agents reporting the exit)
 // before the process ends regardless.
 constexpr uint64_t kAbortReportTimeoutMs = 10000;
-
 
 // Ends the process if the exit hooks hang. It writes nothing first: stderr may
 // be a pipe nobody reads, and a blocked write would keep the process alive.
@@ -1730,7 +1724,6 @@ static void abort_watchdog_(void*) {
   uv_sleep(kAbortReportTimeoutMs);
   ABORT_NO_BACKTRACE();
 }
-
 
 void EnvList::abort_handler_(const char* location, const char* message) {
   EnvList* envlist = EnvList::Inst();
@@ -1746,7 +1739,6 @@ void EnvList::abort_handler_(const char* location, const char* message) {
   }
   envlist->prev_abort_handler_(location, message);
 }
-
 
 #ifdef __POSIX__
 void EnvList::signal_handler_(int signum, siginfo_t* info, void* ucontext) {
