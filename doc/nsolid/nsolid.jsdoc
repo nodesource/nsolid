@@ -13,6 +13,7 @@
  * tracing changes. When false, leave tracing providers and instrumentation
  * enable/disable methods untouched.
  * @param {boolean} [options.metrics=false] - Install N|Solid's meter provider.
+ * Custom metrics are exported by the gRPC agent.
  * Tracing changes do not register or disable the meter provider.
  * Calling nsolid.metrics() neither collects nor returns custom OTel metrics.
  * Observable callbacks have a 30-second timeout. Observations are committed

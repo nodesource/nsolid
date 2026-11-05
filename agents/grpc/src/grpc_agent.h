@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+
 #include "../../src/profile_collector.h"
 #include "./proto/nsolid_service.grpc.pb.h"
 #include "asset_stream.h"
@@ -12,7 +13,9 @@
 #include "grpcpp/grpcpp.h"
 #include "nsolid.h"
 #include "nsolid/async_ts_queue.h"
+#include "nsolid/nsolid_api.h"
 #include "nsolid/nsolid_metrics.h"
+#include "nsolid/nsolid_otel_metrics_types.h"
 #include "nsolid/thread_safe.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/trace/recordable.h"
@@ -52,11 +55,6 @@ using UniqRecordable =
 using UniqRecordables = std::vector<UniqRecordable>;
 using SharedGrpcAgent = std::shared_ptr<GrpcAgent>;
 using WeakGrpcAgent = std::weak_ptr<GrpcAgent>;
-
-struct ExtMetricsStor {
-  ThreadMetrics::MetricsStor stor;
-  std::vector<HttpHistogramSnapshot> http_histogram_snapshots;
-};
 
 struct JSThreadMetrics {
   explicit JSThreadMetrics(SharedEnvInst envinst);
@@ -109,7 +107,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   int start_heap_snapshot_from_js(const grpcagent::CommandRequest& req);
 
-  int stop(bool profile_stopped = false);
+  int stop(bool profile_stopped = false, OtelMetricsStor final_metrics = {});
 
   const std::string& agent_id() const { return agent_id_; }
 
@@ -205,6 +203,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   static void start_profiling_msg_cb(nsuv::ns_async*, WeakGrpcAgent);
 
   static void thr_metrics_cb_(SharedThreadMetrics, WeakGrpcAgent);
+  static void queue_final_otel_metrics_(SharedEnvInst, WeakGrpcAgent);
+
+  void export_metrics_(const OtelMetricsStor&,
+                       const ThreadMetrics::MetricsStor* = nullptr,
+                       const std::vector<HttpHistogramSnapshot>* = nullptr);
 
   static void trace_hook_(Tracer*, const Tracer::SpanStor&, WeakGrpcAgent);
 
@@ -310,6 +313,12 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   void update_tracer(uint32_t flags);
 
  private:
+  struct ThreadMetricsSnapshot {
+    ThreadMetrics::MetricsStor metrics;
+    OtelMetricsStor otel_metrics;
+    std::vector<HttpHistogramSnapshot> http_histogram_snapshots;
+  };
+
   uv_loop_t loop_;
   nsuv::ns_thread thread_;
   nsuv::ns_async shutdown_;
@@ -343,7 +352,8 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   ProcessMetrics::MetricsStor proc_prev_stor_;
   std::map<uint64_t, JSThreadMetrics> env_metrics_map_;
   nsuv::ns_async metrics_msg_;
-  TSQueue<ExtMetricsStor> thr_metrics_msg_q_;
+  TSQueue<ThreadMetricsSnapshot> thr_metrics_msg_q_;
+  TSQueue<OtelMetricsStor> final_otel_metrics_q_;
   nsuv::ns_timer metrics_timer_;
   std::unique_ptr<opentelemetry::v1::exporter::otlp::OtlpGrpcMetricExporter>
     metrics_exporter_;
