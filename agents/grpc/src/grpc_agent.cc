@@ -84,7 +84,7 @@ const int CONSOLE_ID_SIZE = 36;
 
 const seconds DEFAULT_GRPC_TIMEOUT = seconds{ 60 };
 // How long an ending process waits for its exit event to be sent.
-const seconds EXIT_EVENT_TIMEOUT = seconds{ 5 };
+const seconds EXIT_EVENT_TIMEOUT = seconds{5};
 
 JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)) {
@@ -1919,19 +1919,21 @@ void GrpcAgent::send_exit() {
   uv_mutex_init(&lock);
   uv_cond_init(&cond);
   int r = GrpcClient::DelegateAsyncExport<grpcagent::ExitEvent>(
-    nsolid_service_stub_.get(),
-    &nsolid_grpc_async::ExportExit,
-    std::move(context), std::move(arena), std::move(*exit_event),
-    [&lock, &cond, &signaled](::grpc::Status,
-        std::unique_ptr<Arena> &&,
-        const grpcagent::ExitEvent& event,
-        grpcagent::EventResponse*) {
-      uv_mutex_lock(&lock);
-      signaled = true;
-      uv_cond_signal(&cond);
-      uv_mutex_unlock(&lock);
-      return true;
-    });
+      nsolid_service_stub_.get(),
+      &nsolid_grpc_async::ExportExit,
+      std::move(context),
+      std::move(arena),
+      std::move(*exit_event),
+      [&lock, &cond, &signaled](::grpc::Status,
+                                std::unique_ptr<Arena>&&,
+                                const grpcagent::ExitEvent& event,
+                                grpcagent::EventResponse*) {
+        uv_mutex_lock(&lock);
+        signaled = true;
+        uv_cond_signal(&cond);
+        uv_mutex_unlock(&lock);
+        return true;
+      });
 
   // wait for the exit event to be sent; when it couldn't be, nothing will call
   // back.

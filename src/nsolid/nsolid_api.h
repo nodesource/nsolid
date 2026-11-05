@@ -732,7 +732,7 @@ class EnvList {
   // exit data
   std::atomic<bool> exiting_ = { false };
   std::atomic<int> exit_code_;
-  std::atomic<int> exit_signal_ = { 0 };
+  std::atomic<int> exit_signal_ = {0};
   // Node's abort handler from before ours, which ours ends by calling.
   node::AbortHandler prev_abort_handler_ = nullptr;
   // exit_error_ stores the error message and the error stack
