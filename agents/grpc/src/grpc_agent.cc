@@ -1,5 +1,6 @@
 #include "grpc_agent.h"
 
+#include <charconv>
 #include "../../otlp/src/otlp_common.h"
 #include "../../src/node_version.h"
 #include "../../src/root_certs.h"
@@ -25,7 +26,6 @@
 #include "opentelemetry/sdk/metrics/export/metric_producer.h"
 #include "opentelemetry/semconv/incubating/process_attributes.h"
 #include "opentelemetry/semconv/service_attributes.h"
-#include <charconv>
 
 using std::chrono::duration_cast;
 using std::chrono::nanoseconds;
@@ -476,22 +476,23 @@ void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* bl_event,
   return agent;
 }
 
-GrpcAgent::GrpcAgent(): hooks_init_(false),
-                        ready_(false),
-                        exiting_(false),
-                        trace_flags_(0),
-                        proc_metrics_(),
-                        proc_prev_stor_(),
-                        config_(json::object()),
-                        agent_id_(GetAgentId()),
-                        rpc_metadata_(BuildRpcMetadata(agent_id_, "")),
-                        auth_retries_(0),
-                        unauthorized_(false),
-                        grpc_reconnect_in_progress_(false),
-                        reset_grpc_clients_on_retry_(false),
-                        assets_enabled_(true),
-                        cont_cpu_profile_enabled_(false),
-                        profile_on_exit_(false) {
+GrpcAgent::GrpcAgent()
+    : hooks_init_(false),
+      ready_(false),
+      exiting_(false),
+      trace_flags_(0),
+      proc_metrics_(),
+      proc_prev_stor_(),
+      config_(json::object()),
+      agent_id_(GetAgentId()),
+      rpc_metadata_(BuildRpcMetadata(agent_id_, "")),
+      auth_retries_(0),
+      unauthorized_(false),
+      grpc_reconnect_in_progress_(false),
+      reset_grpc_clients_on_retry_(false),
+      assets_enabled_(true),
+      cont_cpu_profile_enabled_(false),
+      profile_on_exit_(false) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
   ASSERT_EQ(0, uv_cond_init(&start_cond_));
   ASSERT_EQ(0, uv_mutex_init(&start_lock_));
@@ -561,9 +562,8 @@ void GrpcAgent::setup_client_identity() {
   if (refresh_interval.has_value()) {
     unsigned int parsed_interval;
     const std::string& value = refresh_interval.value();
-    auto [end, error] = std::from_chars(value.data(),
-                                        value.data() + value.size(),
-                                        parsed_interval);
+    auto [end, error] = std::from_chars(
+        value.data(), value.data() + value.size(), parsed_interval);
     if (error == std::errc() && end == value.data() + value.size() &&
         parsed_interval > 0) {
       refresh_sec = parsed_interval;
@@ -1248,8 +1248,8 @@ int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
       reset_command_stream();
 
       // The OTLP client shares the TLS keylog and the client certificate.
-      opts.credentials = GrpcClient::MakeCredentials(
-          opts, tls_keylog_file_, client_identity_);
+      opts.credentials =
+          GrpcClient::MakeCredentials(opts, tls_keylog_file_, client_identity_);
       opts.use_ssl_credentials = false;
 
       std::shared_ptr<OtlpGrpcClient> client =
