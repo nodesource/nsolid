@@ -39,6 +39,7 @@
         'sdk/src/metrics/aggregation/base2_exponential_histogram_aggregation.cc',
         'sdk/src/metrics/aggregation/base2_exponential_histogram_indexer.cc',
         'sdk/src/metrics/data/circular_buffer.cc',
+        'sdk/src/metrics/aggregation/histogram_aggregation.cc',
         'sdk/src/resource/resource.cc',
         'sdk/src/resource/resource_detector.cc',
         'sdk/src/resource/detail/percent_decode.cc',

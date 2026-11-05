@@ -40,11 +40,9 @@ inline void (*fn2void(Fn (*fn)(Args...)))() {
   return reinterpret_cast<void(*)()>(fn);
 }
 
-
-inline bool are_threads_equal(uv_thread_t&& t1, uv_thread_t&& t2) {
+inline bool are_threads_equal(uv_thread_t t1, uv_thread_t t2) {
   return uv_thread_equal(&t1, &t2);
 }
-
 
 inline bool find_any_fields_in_diff(const nlohmann::json& diff,
                                     const std::vector<std::string>& fields) {
