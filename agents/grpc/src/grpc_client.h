@@ -3,9 +3,9 @@
 
 #include <cinttypes>
 
-#include "asserts-cpp/asserts.h"
 #include "../../src/profile_collector.h"
 #include "./proto/nsolid_service.grpc.pb.h"
+#include "asserts-cpp/asserts.h"
 #include "google/protobuf/util/json_util.h"
 #include "grpc_utils.h"
 #include "grpcpp/grpcpp.h"
@@ -65,19 +65,19 @@ class GrpcClient {
   /**
    * Create gRPC channel.
    */
-  static std::shared_ptr<::grpc::Channel>
-    MakeChannel(const OtlpGrpcClientOptions& options,
-                const std::string& tls_keylog_file = "",
-                const ClientIdentityProvider& client_identity = nullptr);
+  static std::shared_ptr<::grpc::Channel> MakeChannel(
+      const OtlpGrpcClientOptions& options,
+      const std::string& tls_keylog_file = "",
+      const ClientIdentityProvider& client_identity = nullptr);
 
   /**
    * Create gRPC channel credentials. With a client identity, the channel
    * presents the agent's client certificate (mutual TLS).
    */
-  static std::shared_ptr<::grpc::ChannelCredentials>
-    MakeCredentials(const OtlpGrpcClientOptions& options,
-                    const std::string& tls_keylog_file,
-                    const ClientIdentityProvider& client_identity = nullptr);
+  static std::shared_ptr<::grpc::ChannelCredentials> MakeCredentials(
+      const OtlpGrpcClientOptions& options,
+      const std::string& tls_keylog_file,
+      const ClientIdentityProvider& client_identity = nullptr);
 
   /**
    * Create gRPC client context to call RPC.
@@ -92,10 +92,10 @@ class GrpcClient {
    * Create N|Solid service stub to communicate with the N|Solid Console.
    */
   static std::unique_ptr<grpcagent::NSolidService::StubInterface>
-    MakeNSolidServiceStub(
-        const OtlpGrpcClientOptions& options,
-        const std::string& tls_keylog_file,
-        const ClientIdentityProvider& client_identity = nullptr);
+  MakeNSolidServiceStub(
+      const OtlpGrpcClientOptions& options,
+      const std::string& tls_keylog_file,
+      const ClientIdentityProvider& client_identity = nullptr);
 
   /**
    * Generic DelegateAsyncExport for any event type.
