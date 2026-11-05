@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { canCreateSymLink, mustNotCall } from '../common/index.mjs';
+import { canCreateSymLink, mustNotCall, platformTimeout } from '../common/index.mjs';
 import fixtures from '../common/fixtures.js';
 import assert from 'node:assert';
 import { spawn } from 'node:child_process';
@@ -52,15 +52,20 @@ async function copyIdentity(dir, identity, cert = `${identity}-cert.pem`) {
   ]);
 }
 
-function commandFrom(server, description) {
-  return once(server, 'command', { signal: AbortSignal.timeout(10_000) })
+// The agent retries the command stream with backoff, doubling the wait from
+// half a second, so after a repair it reconnects at its next retry: several
+// seconds after the repair, not the next half second.
+const RECONNECT_MS = platformTimeout(30_000);
+
+function commandFrom(server, description, ms = 10_000) {
+  return once(server, 'command', { signal: AbortSignal.timeout(ms) })
     .catch((err) => {
       throw new Error(`Timed out waiting for ${description}`, { cause: err });
     });
 }
 
-function metricsFrom(server, description) {
-  return once(server, 'metrics', { signal: AbortSignal.timeout(10_000) })
+function metricsFrom(server, description, ms = 10_000) {
+  return once(server, 'metrics', { signal: AbortSignal.timeout(ms) })
     .catch((err) => {
       throw new Error(`Timed out waiting for ${description}`, { cause: err });
     });
@@ -90,8 +95,8 @@ async function checkRecovery(condition = 'missing') {
       grpcServer.on('metrics', unexpectedConnection);
     }
     const connection = Promise.all([
-      commandFrom(grpcServer, 'recovery command stream'),
-      metricsFrom(grpcServer, 'recovery metrics export'),
+      commandFrom(grpcServer, 'recovery command stream', RECONNECT_MS),
+      metricsFrom(grpcServer, 'recovery metrics export', RECONNECT_MS),
     ]);
     connection.catch(() => {});
     child = new TestClient([], childOpts({
@@ -272,8 +277,8 @@ async function checkRenewal(corrupt = '') {
       grpcServer.off('command', unexpectedAuthentication);
       grpcServer.off('metrics', unexpectedAuthentication);
       connection = Promise.all([
-        commandFrom(grpcServer, 'repaired agent2 command stream'),
-        metricsFrom(grpcServer, 'repaired agent2 metrics export'),
+        commandFrom(grpcServer, 'repaired agent2 command stream', RECONNECT_MS),
+        metricsFrom(grpcServer, 'repaired agent2 metrics export', RECONNECT_MS),
       ]);
       connection.catch(() => {});
     }
@@ -289,8 +294,8 @@ async function checkRenewal(corrupt = '') {
       grpcServer = null;
       ({ grpcServer } = await startServer({ port }));
       connection = Promise.all([
-        commandFrom(grpcServer, 'renewed agent2 command stream'),
-        metricsFrom(grpcServer, 'renewed agent2 metrics export'),
+        commandFrom(grpcServer, 'renewed agent2 command stream', RECONNECT_MS),
+        metricsFrom(grpcServer, 'renewed agent2 metrics export', RECONNECT_MS),
       ]);
       connection.catch(() => {});
     }
