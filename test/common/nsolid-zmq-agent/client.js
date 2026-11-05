@@ -110,6 +110,14 @@ if (isMainThread) {
       }
 
       process.send({ type: 'config', config: nsolid.config });
+    } else if (msg.type === 'snapshot' || msg.type === 'heap_profile') {
+      if (msg.config)
+        nsolid.start(msg.config);
+      if (msg.type === 'snapshot') {
+        nsolid.snapshot();
+      } else {
+        nsolid.heapProfile(msg.duration);
+      }
     } else if (msg.type === 'nativeConfig') {
       const { internalBinding } = require('internal/test/binding');
       internalBinding('nsolid_api').updateConfig(JSON.stringify(msg.config));

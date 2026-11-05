@@ -1,6 +1,7 @@
 // Flags: --expose-internals
 import { mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { once } from 'node:events';
 import { GRPCServer, TestClient } from '../common/nsolid-grpc-agent/index.js';
 
 function checkRedacted(data, redacted) {
@@ -51,6 +52,16 @@ server.start(mustSucceed(async (port) => {
         checkRedacted(data.msg.data, redacted || configured === true);
       }
     }
+  }
+  for (const [method, event] of [ ['snapshot', 'snapshot'],
+                                  ['heapProfile', 'heap_profile'] ]) {
+    await child.config({ assetsEnabled: false, redactSnapshots: false });
+    const result = once(server, event);
+    // Apply config and request collection in the same child message handler.
+    await child[method](100, { assetsEnabled: true, redactSnapshots: true });
+    const [{ msg }] = await result;
+    assert.strictEqual(msg.common.error, null);
+    checkRedacted(msg.data, true);
   }
   const { code, signal } = await child.shutdown(0);
   assert.strictEqual(code, 0);

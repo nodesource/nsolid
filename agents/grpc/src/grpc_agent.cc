@@ -490,7 +490,6 @@ GrpcAgent::GrpcAgent()
       unauthorized_(false),
       grpc_reconnect_in_progress_(false),
       reset_grpc_clients_on_retry_(false),
-      assets_enabled_(true),
       cont_cpu_profile_enabled_(false),
       profile_on_exit_(false) {
   ASSERT_EQ(0, uv_loop_init(&loop_));
@@ -1360,13 +1359,6 @@ int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
     }
 
     ret = setup_metrics_timer(period);
-  }
-
-  {
-    auto it = config_.find("assetsEnabled");
-    if (it != config_.end() && it->is_boolean()) {
-      assets_enabled_.store(*it, std::memory_order_release);
-    }
   }
 
   {
@@ -2279,9 +2271,18 @@ ErrorType GrpcAgent::do_start_prof_init(
     const grpcagent::CommandRequest& req,
     const ProfileType& type,
     ProfileOptions& options) {
-
-  if (!assets_enabled_.load(std::memory_order_acquire)) {
+  // Config changes must take effect before the agent's config queue is drained.
+  const json config = json::parse(GetConfig(), nullptr, false);
+  ASSERT(!config.is_discarded());
+  auto it = config.find("assetsEnabled");
+  if (it != config.end() && it->is_boolean() && !it->get<bool>()) {
     return ErrorType::EAssetsDisabled;
+  }
+
+  bool redact_snapshots = false;
+  it = config.find("redactSnapshots");
+  if (it != config.end() && it->is_boolean()) {
+    redact_snapshots = it->get<bool>();
   }
 
   const grpcagent::ProfileArgs& args = req.args().profile();
@@ -2301,12 +2302,16 @@ ErrorType GrpcAgent::do_start_prof_init(
       start_profiling = &GrpcAgent::do_start_cpu_prof;
     break;
     case ProfileType::kHeapProf:
+      std::get<HeapProfileOptions>(options).redacted =
+          args.heap_profile().redacted() || redact_snapshots;
       start_profiling = &GrpcAgent::do_start_heap_prof;
     break;
     case ProfileType::kHeapSampl:
       start_profiling = &GrpcAgent::do_start_heap_sampl;
     break;
     case ProfileType::kHeapSnapshot:
+      std::get<HeapSnapshotOptions>(options).redacted =
+          args.heap_snapshot().redacted() || redact_snapshots;
       start_profiling = &GrpcAgent::do_start_heap_snapshot;
     break;
     default:
@@ -2320,6 +2325,12 @@ ErrorType GrpcAgent::do_start_prof_init(
     opt.metadata_pb = std::move(args.metadata());
     opt.start_timestamp = uv_hrtime();
   }, options);
+
+  it = config.find("disableSnapshots");
+  if (type == ProfileType::kHeapSnapshot && it != config.end() &&
+      it->get<bool>()) {
+    return ErrorType::ESnapshotDisabled;
+  }
 
   nsuv::ns_mutex::scoped_lock lock(profile_state_lock_);
   ProfileState& profile_state = profile_state_[type];
@@ -2383,13 +2394,6 @@ ErrorType GrpcAgent::do_start_heap_prof(const grpcagent::ProfileArgs& args,
                                         ProfileOptions& opts) {
   HeapProfileOptions& options = std::get<HeapProfileOptions>(opts);
   options.track_allocations = args.heap_profile().track_allocations();
-  options.redacted = args.heap_profile().redacted();
-  auto it = config_.find("redactSnapshots");
-  if (it != config_.end()) {
-    if (it->is_boolean()) {
-      options.redacted = options.redacted || it->get<bool>();
-    }
-  }
 
   int ret = profile_collector_->StartHeapProfile(options);
   return translate_error(ret);
@@ -2415,26 +2419,9 @@ ErrorType GrpcAgent::do_start_heap_sampl(const grpcagent::ProfileArgs& args,
   return translate_error(ret);
 }
 
-ErrorType GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs& args,
+ErrorType GrpcAgent::do_start_heap_snapshot(const grpcagent::ProfileArgs&,
                                             ProfileOptions& opts) {
   HeapSnapshotOptions& options = std::get<HeapSnapshotOptions>(opts);
-  bool disable_snapshots = false;
-  auto it = config_.find("disableSnapshots");
-  if (it != config_.end()) {
-    disable_snapshots = *it;
-  }
-
-  if (disable_snapshots == true) {
-    return ErrorType::ESnapshotDisabled;
-  }
-
-  options.redacted = args.heap_snapshot().redacted();
-  it = config_.find("redactSnapshots");
-  if (it != config_.end()) {
-    if (it->is_boolean()) {
-      options.redacted = options.redacted || it->get<bool>();
-    }
-  }
 
   int ret = profile_collector_->StartHeapSnapshot(options);
   return translate_error(ret);
