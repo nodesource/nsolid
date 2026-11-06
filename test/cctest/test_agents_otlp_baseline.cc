@@ -12,6 +12,8 @@ using node::nsolid::otlp::NewRelicMetrics;
 TEST(OTLPVendorMetrics, FirstSampleSeedsBaseline) {
   uv_loop_t loop;
   ASSERT_EQ(uv_loop_init(&loop), 0);
+  auto config = nlohmann::json::parse(node::nsolid::GetConfig());
+  node::nsolid::UpdateConfig(R"({"app":"otlp-vendor-metrics-test"})");
   {
     std::vector<std::unique_ptr<MetricsExporter>> exporters;
     exporters.emplace_back(
@@ -49,4 +51,5 @@ TEST(OTLPVendorMetrics, FirstSampleSeedsBaseline) {
   }
   uv_run(&loop, UV_RUN_DEFAULT);
   EXPECT_EQ(uv_loop_close(&loop), 0);
+  node::nsolid::UpdateConfig(nlohmann::json({{"app", config["app"]}}).dump());
 }
