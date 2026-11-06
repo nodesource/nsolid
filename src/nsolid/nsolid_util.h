@@ -162,35 +162,6 @@ inline std::vector<std::string> split(const std::string& str,
   return res;
 }
 
-
-class ring_buffer {
- public:
-  NSOLID_DELETE_DEFAULT_CONSTRUCTORS(ring_buffer)
-  explicit ring_buffer(size_t s) : size_(s),
-                                   buffer_(s) {
-  }
-
-  void push_back(double n) {
-    buffer_[idx_] = n;
-    idx_ = (idx_ + 1) % size_;
-    if (len_ < size_) len_++;
-  }
-
-  double percentile(double p) {
-    if (p > 1 || p < 0)
-      return 0;
-    const auto n_it = buffer_.begin() + len_ * p;
-    std::nth_element(buffer_.begin(), n_it, buffer_.end());
-    return *n_it;
-  }
-
- private:
-  size_t idx_ = 0;
-  size_t len_ = 0;
-  const size_t size_;
-  std::vector<double> buffer_;
-};
-
 template <typename T>
 class RingBuffer {
  public:

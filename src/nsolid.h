@@ -7,7 +7,6 @@
 
 #include <memory>
 #include <string>
-#include <variant>
 
 /**
  * @file nsolid.h
@@ -117,23 +116,16 @@ struct LogWriteInfo;
     numberOfDetachedContexts,                                                  \
     EGauge,                                                                    \
     kNSNoUnit)                                                                 \
-  V(uint64_t, gc_count, gcCount, ECounter, kNSNoUnit)                          \
-  V(uint64_t, gc_forced_count, gcForcedCount, ECounter, kNSNoUnit)             \
-  V(uint64_t, gc_full_count, gcFullCount, ECounter, kNSNoUnit)                 \
-  V(uint64_t, gc_major_count, gcMajorCount, ECounter, kNSNoUnit)               \
-  V(uint64_t, dns_count, dnsCount, ECounter, kNSNoUnit)                        \
   V(uint64_t,                                                                  \
     http_client_abort_count,                                                   \
     httpClientAbortCount,                                                      \
     ECounter,                                                                  \
     kNSNoUnit)                                                                 \
-  V(uint64_t, http_client_count, httpClientCount, ECounter, kNSNoUnit)         \
   V(uint64_t,                                                                  \
     http_server_abort_count,                                                   \
     httpServerAbortCount,                                                      \
     ECounter,                                                                  \
     kNSNoUnit)                                                                 \
-  V(uint64_t, http_server_count, httpServerCount, ECounter, kNSNoUnit)         \
   V(uint64_t, loop_idle_time, loopIdleTime, EGauge, kNSNSecs)                  \
   V(uint64_t, loop_iterations, loopIterations, ECounter, kNSNoUnit)            \
   V(uint64_t, loop_iter_with_events, loopIterWithEvents, ECounter, kNSNoUnit)  \
@@ -202,14 +194,6 @@ struct LogWriteInfo;
   V(uint64_t, fs_handles_closed, fsHandlesClosedCount, ECounter, kNSNoUnit)
 
 #define NSOLID_ENV_METRICS_DOUBLE(V)                                           \
-  V(double, gc_dur_us99_ptile, gcDurUs99Ptile, ESeries, kNSUSecs)              \
-  V(double, gc_dur_us_median, gcDurUsMedian, ESeries, kNSUSecs)                \
-  V(double, dns99_ptile, dns99Ptile, ESeries, kNSMSecs)                        \
-  V(double, dns_median, dnsMedian, ESeries, kNSMSecs)                          \
-  V(double, http_client99_ptile, httpClient99Ptile, ESeries, kNSMSecs)         \
-  V(double, http_client_median, httpClientMedian, ESeries, kNSMSecs)           \
-  V(double, http_server99_ptile, httpServer99Ptile, ESeries, kNSMSecs)         \
-  V(double, http_server_median, httpServerMedian, ESeries, kNSMSecs)           \
   V(double, loop_utilization, loopUtilization, EGauge, kNSNoUnit)              \
   V(double, res_5s, res5s, EGauge, kNSNoUnit)                                  \
   V(double, res_1m, res1m, EGauge, kNSNoUnit)                                  \
@@ -829,140 +813,6 @@ class NODE_EXTERN ThreadMetrics :
   MetricsStor stor_;
 };
 
-
-/**
- * @brief Class to retrieve a stream of some thread-specific metrics.
- *
- * For some specific metrics: dns request duration, http client transaction
- * duration, http server transaction duration and garbage collection duration,
- * it's useful to receive all the datapoints collected by the N|Solid runtime
- * instead of (or in addition to) the derived metrics calculated by N|Solid such
- * as: dns_count, dns_median, dns99_ptile, etc. The MetricsStrem provides that
- * specific feature.
- */
-class NODE_EXTERN MetricsStream {
- public:
-  /**
-   * @brief types of metrics that can be collected using MetricsStream.
-   *
-   * They can be combined in a flags field to specify which metrics are to be
-   * collected.
-   */
-  enum class Type: uint32_t {
-    kDns = 1 << 0, /**< DNS request duration */
-    kHttpClient = 1 << 1, /**< HTTP client transaction duration */
-    kHttpServer = 1 << 2, /**< HTTP server transaction duration */
-    kGcRegular = 1 << 3, /**< Duration of a "regular" garbage collection */
-    kGcForced = 1 << 4, /**< Duration of a "forced" garbage collection */
-    kGcFull = 1 << 5, /**< Duration of a "full" garbage collection */
-    kGcMajor = 1 << 6, /**< Duration of a "major" garbage collection */
-    kGc = 120 /**< kGcRegular | kGcForced | kGcFull | kGcMajor */
-  };
-
-  enum class HttpMethod : uint8_t {
-    kGet,
-    kHead,
-    kPost,
-    kPut,
-    kDelete,
-    kConnect,
-    kOptions,
-    kTrace,
-    kPatch,
-    kOther
-  };
-
-  enum class HttpProtocolVersion : uint8_t {
-    k10, /**< HTTP/1.0 */
-    k11, /**< HTTP/1.1 */
-    k2,  /**< HTTP/2 */
-    kOther
-  };
-
-  enum class HttpUrlScheme : uint8_t { kHttp, kHttps, kOther };
-
-  struct HttpDatapointAttrs {
-    HttpMethod method;                    /**< http.request.method */
-    uint16_t status_code;                 /**< http.response.status_code */
-    std::string server_address;           /**< server.address (client only) */
-    uint16_t server_port;                 /**< server.port (client only) */
-    HttpUrlScheme url_scheme;             /**< url.scheme (server only) */
-    HttpProtocolVersion protocol_version; /**< network.protocol.version */
-    std::string route;      /**< http.route (server only, route template) */
-    std::string error_type; /**< error.type */
-  };
-
-  struct DnsDatapointAttrs {
-    std::string question_name; /**< dns.question.name */
-    std::string error_type;    /**< error.type */
-  };
-
-  struct GcDatapointAttrs {
-    uint8_t type; /**< Raw v8::GCType value */
-  };
-
-  using DatapointAttrs = std::variant<std::monostate,
-                                      HttpDatapointAttrs,
-                                      DnsDatapointAttrs,
-                                      GcDatapointAttrs>;
-
-  struct Datapoint {
-    uint64_t thread_id;
-    double timestamp; /**< Datapoint timestamp in milliseconds */
-    Type type;
-    double value;
-    DatapointAttrs attrs; /**< Type-specific attributes (monostate = none) */
-  };
-
-  using metrics_stream_bucket = std::vector<Datapoint>;
-  using metrics_stream_proxy_sig = void(*)(MetricsStream*,
-                                           const metrics_stream_bucket&,
-                                           void*);
-
-  /**
-   * @brief Destroy the Metrics Stream object
-   *
-   */
-  ~MetricsStream();
-
-  // The callback is called from the NSolid thread.
-  // signature: cb(MetricsStream*, metrics_stream_bucket, ...Data)
-  /**
-   * @brief Creates a MetricsStream instance which sets up a hook to consume
-   * a DataPoint stream of a specific kind of metrics.
-   *
-   * The Datapoints will be returned sporadically using the registered hook in a
-   * `metrics_stream_bucket`.
-   *
-   * @param flags allows filtering which specific metrics are going to be
-   * retrieved.
-   * @param cb hook function with the following signature:
-   * `cb(MetricsStream*, metrics_stream_bucket, ...Data)`. It is called from the
-   * NSolid thread.
-   * @param data variable number of arguments to be propagated to the hook.
-   * @return MetricsStream instance.
-   */
-  template <typename Cb, typename... Data>
-  static MetricsStream* CreateInstance(uint32_t flags, Cb&& cb, Data&&... data);
-
- private:
-  template <typename G>
-  static void metrics_stream_proxy_(MetricsStream*,
-                                    const metrics_stream_bucket&,
-                                    void*);
-
-  MetricsStream();
-
-  void DoSetup(uint32_t flags,
-               metrics_stream_proxy_sig,
-               internal::deleter_sig,
-               void* cb);
-
-  class Impl;
-  std::unique_ptr<Impl> impl_;
-};
-
-
 /**
  * @brief Class to setup a hook (callback) to retrieve tracing span data from a
  * specific JS thread in the runtime.
@@ -1322,45 +1172,6 @@ void ThreadMetrics::thread_metrics_proxy_(SharedThreadMetrics tm_sp) {
   tm_sp->reset();
   (*g)(tm_sp);
 }
-
-
-template <typename Cb, typename... Data>
-MetricsStream* MetricsStream::CreateInstance(uint32_t flags,
-                                             Cb&& cb,
-                                             Data&&... data) {
-  MetricsStream* stream = new (std::nothrow) MetricsStream();
-  if (stream == nullptr) {
-    return stream;
-  }
-
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using UserData = decltype(std::bind(
-        std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
-  // _1 - MetricsStream* metrics_stream
-  // _2 - const metrics_stream_bucket& bucket
-  UserData* user_data = new (std::nothrow) UserData(
-      std::bind(std::forward<Cb>(cb), _1, _2, std::forward<Data>(data)...));
-
-  if (user_data == nullptr) {
-    return nullptr;
-  }
-
-  stream->DoSetup(flags,
-                  metrics_stream_proxy_<UserData>,
-                  internal::delete_proxy_<UserData>,
-                  static_cast<void*>(user_data));
-
-  return stream;
-}
-
-
-template <typename G>
-void MetricsStream::metrics_stream_proxy_(
-    MetricsStream* ms, const metrics_stream_bucket& bucket, void* g) {
-  (*static_cast<G*>(g))(ms, bucket);
-}
-
 
 template <typename Cb, typename... Data>
 Tracer* Tracer::CreateInstance(uint32_t flags, Cb&& cb, Data&&... data) {

@@ -51,15 +51,8 @@ const expectedThreadMetrics = [
   ['peakMallocedMemory', 'byte', 'asInt', 'gauge'],
   ['numberOfNativeContexts', '', 'asInt', 'gauge'],
   ['numberOfDetachedContexts', '', 'asInt', 'gauge'],
-  ['gcCount', '', 'asInt', 'sum'],
-  ['gcForcedCount', '', 'asInt', 'sum'],
-  ['gcFullCount', '', 'asInt', 'sum'],
-  ['gcMajorCount', '', 'asInt', 'sum'],
-  ['dnsCount', '', 'asInt', 'sum'],
   ['httpClientAbortCount', '', 'asInt', 'sum'],
-  ['httpClientCount', '', 'asInt', 'sum'],
   ['httpServerAbortCount', '', 'asInt', 'sum'],
-  ['httpServerCount', '', 'asInt', 'sum'],
   ['loopIdleTime', 'ns', 'asInt', 'gauge'],
   ['loopIterations', '', 'asInt', 'sum'],
   ['loopIterWithEvents', '', 'asInt', 'sum'],
@@ -90,10 +83,6 @@ const expectedThreadMetrics = [
   ['loopAvgTasks', '', 'asDouble', 'gauge'],
   ['loopEstimatedLag', 'ms', 'asDouble', 'gauge'],
   ['loopIdlePercent', '', 'asDouble', 'gauge'],
-  ['gcDurUs', 'us', 'asDouble', 'summary'],
-  ['dns', 'ms', 'asDouble', 'summary'],
-  ['httpClient', 'ms', 'asDouble', 'summary'],
-  ['httpServer', 'ms', 'asDouble', 'summary'],
 ];
 
 function checkScopeMetrics(scopeMetrics) {

@@ -25,8 +25,7 @@ enum class InstrumentType : std::uint8_t
   kObservableCounter,
   kObservableGauge,
   kObservableUpDownCounter,
-  kGauge,
-  kSummary
+  kGauge
 };
 
 enum class InstrumentClass : std::uint8_t
@@ -50,8 +49,7 @@ enum class AggregationType : std::uint8_t
   kLastValue,
   kSum,
   kDefault,
-  kBase2ExponentialHistogram,
-  kSummary
+  kBase2ExponentialHistogram
 };
 
 enum class AggregationTemporality : std::uint8_t

@@ -35,11 +35,8 @@ namespace node {
 namespace nsolid {
 
 #define NSOLID_JS_METRICS_COUNTERS(V)                                          \
-  V(kHttpClientCount)                                                          \
-  V(kHttpServerCount)                                                          \
   V(kHttpClientAbortCount)                                                     \
   V(kHttpServerAbortCount)                                                     \
-  V(kDnsCount)                                                                 \
   V(kAsyncPipeServerCreatedCount)                                              \
   V(kAsyncPipeServerDestroyedCount)                                            \
   V(kAsyncPipeSocketCreatedCount)                                              \
@@ -129,17 +126,6 @@ class EnvInst {
     kFieldCount
   };
 
-  enum GCFields {
-    kGcCount,
-    kGcMajor,
-    kGcFull,
-    kGcForced,
-    // TODO(trevnorris): Are we really going to track this?
-    // kGcDurUsMedian,
-    // kGcDurUs99Ptile,
-    kGCFieldsCount
-  };
-
   struct CmdQueueStor {
     SharedEnvInst envinst_sp;
     user_cb_sig cb;
@@ -209,11 +195,9 @@ class EnvInst {
                             const char* value,
                             bool is_return);
 
-  void PushClientBucket(double value,
-                        MetricsStream::HttpDatapointAttrs&& attrs);
-  void PushServerBucket(double value,
-                        MetricsStream::HttpDatapointAttrs&& attrs);
-  void PushDnsBucket(double value, MetricsStream::DnsDatapointAttrs&& attrs);
+  void PushClientBucket(double value, HttpDatapointAttrs&& attrs);
+  void PushServerBucket(double value, HttpDatapointAttrs&& attrs);
+  void PushDnsBucket(double value, DnsDatapointAttrs&& attrs);
 
   std::string GetModuleInfo();
   std::string GetStartupTimesJSON() const;
@@ -283,7 +267,6 @@ class EnvInst {
   // Track the values of JSMetricsFields.
   double count_fields[kFieldCount];
   // Array to track garbage collection information.
-  uint64_t gc_fields[kGCFieldsCount];
 
   // TODO(trevnorris): Most of these metrics are counters, but metrics like
   // cpuPercent are calculated based on the last call to GetEnvMetrics(). So
@@ -332,19 +315,15 @@ class EnvInst {
   static void custom_command_(SharedEnvInst envinst_sp,
                               const std::string req_id);
 
-  void add_metric_datapoint_(MetricsStream::Type type,
+  void add_metric_datapoint_(MetricType type,
                              double value,
-                             MetricsStream::DatapointAttrs attrs = {});
-  void send_datapoint(MetricsStream::Type type,
-                      double value,
-                      MetricsStream::DatapointAttrs attrs = {});
+                             const DatapointAttrs& attrs);
+  void send_datapoint(MetricType type, double value, DatapointAttrs attrs);
 
   static void get_event_loop_stats_(EnvInst* envinst,
                                     ThreadMetrics::MetricsStor* stor);
   static void get_heap_stats_(EnvInst* envinst,
                               ThreadMetrics::MetricsStor* stor);
-  static void get_gc_stats_(EnvInst* envinst,
-                            ThreadMetrics::MetricsStor* stor);
   static void get_http_dns_stats_(EnvInst* envinst,
                                   ThreadMetrics::MetricsStor* stor);
 
@@ -391,7 +370,6 @@ class EnvInst {
   // Store responsiveness metric info.
   double res_arr_[4];
   uint64_t gc_start_;
-  utils::ring_buffer gc_ring_;
   // Track user specified startup times.
   std::map<std::string, uint64_t> startup_times_;
   nsuv::ns_mutex startup_times_lock_;
@@ -401,12 +379,6 @@ class EnvInst {
   std::atomic<bool> reported_blocked_ = { false };
   std::atomic<bool> blocked_body_created_ = { false };
 
-  // TODO(trevnorris): This is temporary until the change can be made to the
-  // Console to accept streaming raw metrics. This will only work for a single
-  // external service making the metrics calls.
-  std::vector<double> dns_bucket_;
-  std::vector<double> client_bucket_;
-  std::vector<double> server_bucket_;
   UniqueAttributesHashMap http_client_hashmap_ =
       std::make_unique<AttributesHashMap>(kHistogramCardinalityLimit);
   UniqueAttributesHashMap http_server_hashmap_ =
@@ -423,12 +395,6 @@ class EnvInst {
   std::deque<HistogramSnapshot> otlp_histogram_snapshots_;
   nsuv::ns_mutex histogram_snapshots_lock_;
   uint64_t histogram_window_end_ms_ = 0;
-  std::atomic<double> dns_median_ = { 0 };
-  std::atomic<double> dns99_ptile_ = { 0 };
-  std::atomic<double> http_client_median_ = { 0 };
-  std::atomic<double> http_client99_ptile_ = { 0 };
-  std::atomic<double> http_server_median_ = { 0 };
-  std::atomic<double> http_server99_ptile_ = { 0 };
 
   nsuv::ns_mutex scope_lock_;
 
@@ -438,7 +404,6 @@ class EnvInst {
   std::string thread_name_;
   uint32_t trace_flags_;
   double trace_sample_rate_;
-  bool has_metrics_stream_hooks_;
 
   nsuv::ns_mutex source_files_lock_;
   std::map<int, SourceCodeInfo> source_files_;
@@ -508,13 +473,6 @@ class EnvList {
 
   struct AtExitStor {
     at_exit_void_cb_sig cb;
-    nsolid::internal::user_data data;
-  };
-
-  struct MetricsStreamHookStor {
-    uint32_t flags;
-    MetricsStream* stream;
-    MetricsStream::metrics_stream_proxy_sig cb;
     nsolid::internal::user_data data;
   };
 
@@ -610,8 +568,6 @@ class EnvList {
   // NOLINTNEXTLINE(runtime/references)
   void popTraceId(std::array<uint8_t, 16>& trace_id);
 
-  void UpdateHasMetricsStreamHooks(bool has_metrics);
-
   void UpdateTracingFlags(uint32_t flags);
 
   void getAllEnvInst(std::function<void(SharedEnvInst)>);
@@ -632,14 +588,6 @@ class EnvList {
 
   tracing::TracerImpl* GetTracer() { return &tracer_; }
   void send_trace_data(tracing::SpanItem&& item);
-
-  TSList<MetricsStreamHookStor>::iterator
-  AddMetricsStreamHook(uint32_t flags,
-                       MetricsStream* stream,
-                       MetricsStream::metrics_stream_proxy_sig cb,
-                       internal::deleter_sig deleter,
-                       void* data);
-  void RemoveMetricsStreamHook(TSList<MetricsStreamHookStor>::iterator it);
 
   NSolidHeapSnapshot* HeapSnapshot() { return &heap_snapshot_; }
 
@@ -697,11 +645,10 @@ class EnvList {
   static void promise_tracking_(SharedEnvInst envinst_sp, bool track);
   static void enable_promise_tracking_(SharedEnvInst envinst_sp, void*);
   static void disable_promise_tracking_(SharedEnvInst envinst_sp, void*);
-  static void update_has_metrics_stream_hooks(SharedEnvInst, bool has_metrics);
   static void update_tracing_flags(SharedEnvInst envinst_sp, uint32_t flags);
   static void fill_tracing_ids_cb_(nsuv::ns_async*, EnvList* envlist);
   static void q_cb_timeout_cb_(nsuv::ns_timer*, QCbTimeoutStor*);
-  static void datapoint_cb_(std::queue<MetricsStream::Datapoint>&&);
+  static void datapoint_cb_(std::queue<MetricDatapoint>&&);
 
   std::atomic<bool> is_alive_ = { true };
   std::atomic<double> trace_sample_rate_ = { 1.0 };
@@ -772,8 +719,7 @@ class EnvList {
 
   TSList<AtExitStor> at_exit_hook_list_;
   // For metric datapoints collection
-  DispatchQueue<MetricsStream::Datapoint> datapoints_q_;
-  TSList<MetricsStreamHookStor> metrics_stream_hook_list_;
+  DispatchQueue<MetricDatapoint> datapoints_q_;
 
   nsuv::ns_async fill_tracing_ids_msg_;
   // Use arrays of bytes instead of hex strings to avoid conversions

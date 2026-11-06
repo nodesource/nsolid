@@ -26,8 +26,8 @@ server.on('stream', common.mustCall(() => {
 }));
 
 process.on('beforeExit', common.mustCall(() => {
-  assert.strictEqual(nsolid.traceStats.httpClientCount, 0);
+  assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpClientCount'));
   assert.strictEqual(nsolid.traceStats.httpClientAbortCount, 1);
-  assert.strictEqual(nsolid.traceStats.httpServerCount, 0);
+  assert.ok(!Object.hasOwn(nsolid.traceStats, 'httpServerCount'));
   assert.strictEqual(nsolid.traceStats.httpServerAbortCount, 1);
 }));
