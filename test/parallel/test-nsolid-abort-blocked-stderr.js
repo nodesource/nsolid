@@ -3,7 +3,8 @@
 // An abort must end the process even when stderr is a full pipe that nobody
 // reads, where the handler from before N|Solid's blocks writing its
 // backtraces. The watchdog ends it without writing first, and when the
-// watchdog can't start, the process ends at once.
+// watchdog can't start, the process ends at once. A process started from a
+// --snapshot-blob gets the same handler.
 
 const common = require('../common');
 if (!common.isLinux) {
@@ -12,18 +13,27 @@ if (!common.isLinux) {
 
 const assert = require('assert');
 const { execFileSync, spawn } = require('child_process');
+const { spawnSyncAndExitWithoutError } = require('../common/child_process');
 const fs = require('fs');
-const path = require('path');
 const tmpdir = require('../common/tmpdir');
 
 const { O_NONBLOCK, O_RDONLY, O_WRONLY } = fs.constants;
 
 tmpdir.refresh();
 
+// A snapshot whose main function aborts.
+fs.writeFileSync(tmpdir.resolve('entry.js'),
+                 "require('v8').startupSnapshot" +
+                 '.setDeserializeMainFunction(() => process.abort());\n');
+const blob = tmpdir.resolve('snapshot.blob');
+spawnSyncAndExitWithoutError(process.execPath, [
+  '--snapshot-blob', blob, '--build-snapshot', 'entry.js',
+], { cwd: tmpdir.path });
+
 // Runs N|Solid with `args` and a full FIFO as stderr, and checks that SIGABRT
 // ends it after a time `expected` accepts. SIGKILL means it hung.
 function abortWithFullStderr(name, args, expected) {
-  const fifo = path.join(tmpdir.path, name);
+  const fifo = tmpdir.resolve(name);
   execFileSync('mkfifo', [fifo]);
   // The read end stays open, and is never read.
   const reader = fs.openSync(fifo, O_RDONLY | O_NONBLOCK);
@@ -65,3 +75,7 @@ abortWithFullStderr('no-watchdog', [
   "require('internal/test/binding').internalBinding('nsolid_api')" +
     '.failAbortWatchdogForTesting(); process.abort();',
 ], (ms) => ms < 9000);
+
+// Started from a snapshot, it still aborts through the watchdog.
+abortWithFullStderr('snapshot', ['--no-warnings', '--snapshot-blob', blob],
+                    (ms) => ms >= 9000);
