@@ -1573,7 +1573,6 @@ bool LoadSnapshotData(const SnapshotData** snapshot_data_ptr) {
     }
   }
 
-  nsolid::EnvList::Inst()->SetupExitHandlers();
   return true;
 }
 
@@ -1632,6 +1631,9 @@ static ExitCode StartInternal(int argc, char** argv) {
   if (!LoadSnapshotData(&snapshot_data)) {
     return ExitCode::kStartupSnapshotFailure;
   }
+  // Here, not in LoadSnapshotData(): a snapshot from --snapshot-blob or a
+  // single executable returns early from there.
+  nsolid::EnvList::Inst()->SetupExitHandlers();
   NodeMainInstance main_instance(snapshot_data,
                                  uv_default_loop(),
                                  per_process::v8_platform.Platform(),
