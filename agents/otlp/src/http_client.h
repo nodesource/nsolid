@@ -25,6 +25,11 @@ class OTLPHttpClient: public HttpClient {
   virtual void transfer_done(CURLMsg* message, struct HttpClientStor* stor);
 
  private:
+  template <typename... Args>
+  void warn_once_(const char* format, Args... args);
+
+  bool notified_export_error_ = false;
+
   int post_metrics(const std::string& url,
                    const std::string& metrics,
                    struct curl_slist* header_list);
