@@ -1686,18 +1686,28 @@ static void abort_watchdog_(void*) {
   ABORT_NO_BACKTRACE();
 }
 
+// Tests set this to take the path where the watchdog can't start.
+static std::atomic<bool> fail_abort_watchdog_for_testing{false};
+
+static void FailAbortWatchdogForTesting(const FunctionCallbackInfo<Value>&) {
+  fail_abort_watchdog_for_testing = true;
+}
+
 void EnvList::abort_handler_(const char* location, const char* message) {
   EnvList* envlist = EnvList::Inst();
   envlist->SetFatalExit(location, message);
   // The process must end even if a hook can't finish (a lock the aborting
   // thread holds, say): a watchdog ends it after a while. It is never joined.
-  // Without one, the hooks are skipped, so nothing can hold the process open.
+  // Without one, nothing would bound the hooks, or the previous handler's
+  // backtraces on a stderr nobody reads, so the process ends at once.
   uv_thread_t watchdog;
-  if (uv_thread_create(&watchdog, abort_watchdog_, nullptr) == 0) {
-    // As for a signal, profiles aren't stopped: V8 may be out of memory, or
-    // this may not be the main thread.
-    envlist->DoExit(true);
+  if (fail_abort_watchdog_for_testing ||
+      uv_thread_create(&watchdog, abort_watchdog_, nullptr) != 0) {
+    ABORT_NO_BACKTRACE();
   }
+  // As for a signal, profiles aren't stopped: V8 may be out of memory, or this
+  // may not be the main thread.
+  envlist->DoExit(true);
   envlist->prev_abort_handler_(location, message);
 }
 
@@ -3500,6 +3510,10 @@ void BindingData::Initialize(Local<Object> target,
 
   SetMethod(context, target, "agentId", AgentId);
   SetMethod(context, target, "writeLog", WriteLog);
+  SetMethod(context,
+            target,
+            "failAbortWatchdogForTesting",
+            FailAbortWatchdogForTesting);
   SetMethod(context, target, "getEnvMetrics", GetEnvMetrics);
   SetMethod(context, target, "getProcessMetrics", GetProcessMetrics);
   SetMethod(context, target, "getProcessInfo", GetProcessInfo);
@@ -3637,6 +3651,7 @@ void BindingData::RegisterExternalReferences(
 
   registry->Register(AgentId);
   registry->Register(WriteLog);
+  registry->Register(FailAbortWatchdogForTesting);
   registry->Register(GetEnvMetrics);
   registry->Register(GetProcessMetrics);
   registry->Register(GetProcessInfo);
