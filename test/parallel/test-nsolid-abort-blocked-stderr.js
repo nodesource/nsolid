@@ -20,9 +20,9 @@ const { O_NONBLOCK, O_RDONLY, O_WRONLY } = fs.constants;
 
 tmpdir.refresh();
 
-// Runs N|Solid with `args` and a full FIFO as stderr, then calls back with the
-// signal that ended it and how long that took. SIGKILL means it hung.
-function abortWithFullStderr(name, args, cb) {
+// Runs N|Solid with `args` and a full FIFO as stderr, and checks that SIGABRT
+// ends it after a time `expected` accepts. SIGKILL means it hung.
+function abortWithFullStderr(name, args, expected) {
   const fifo = path.join(tmpdir.path, name);
   execFileSync('mkfifo', [fifo]);
   // The read end stays open, and is never read.
@@ -49,15 +49,14 @@ function abortWithFullStderr(name, args, cb) {
   child.on('exit', common.mustCall((code, signal) => {
     clearTimeout(timer);
     fs.closeSync(reader);
-    cb(signal, Date.now() - start);
+    const ms = Date.now() - start;
+    assert.strictEqual(signal, 'SIGABRT', `${name}: ${signal} after ${ms} ms`);
+    assert.ok(expected(ms), `${name}: ended after ${ms} ms`);
   }));
 }
 
 // The watchdog gives the exit hooks 10 seconds, then ends the process.
-abortWithFullStderr('watchdog', ['-e', 'process.abort()'], (signal, ms) => {
-  assert.strictEqual(signal, 'SIGABRT');
-  assert.ok(ms >= 9000, `ended after ${ms} ms`);
-});
+abortWithFullStderr('watchdog', ['-e', 'process.abort()'], (ms) => ms >= 9000);
 
 // With no watchdog, nothing would end it later, so it ends at once.
 abortWithFullStderr('no-watchdog', [
@@ -65,7 +64,4 @@ abortWithFullStderr('no-watchdog', [
   '-e',
   "require('internal/test/binding').internalBinding('nsolid_api')" +
     '.failAbortWatchdogForTesting(); process.abort();',
-], (signal, ms) => {
-  assert.strictEqual(signal, 'SIGABRT');
-  assert.ok(ms < 9000, `ended after ${ms} ms`);
-});
+], (ms) => ms < 9000);
