@@ -1,8 +1,9 @@
 'use strict';
 
 // An abort must end the process even when stderr is a full pipe that nobody
-// reads. The handler from before N|Solid's then blocks writing its backtraces,
-// so only the watchdog can end the process, and it must not write first.
+// reads, where the handler from before N|Solid's blocks writing its
+// backtraces. The watchdog ends it without writing first, and when the
+// watchdog can't start, the process ends at once.
 
 const common = require('../common');
 if (!common.isLinux) {
@@ -15,37 +16,56 @@ const fs = require('fs');
 const path = require('path');
 const tmpdir = require('../common/tmpdir');
 
-tmpdir.refresh();
-const fifo = path.join(tmpdir.path, 'stderr');
-execFileSync('mkfifo', [fifo]);
-
 const { O_NONBLOCK, O_RDONLY, O_WRONLY } = fs.constants;
-// The read end stays open, and is never read.
-const reader = fs.openSync(fifo, O_RDONLY | O_NONBLOCK);
-const filler = fs.openSync(fifo, O_WRONLY | O_NONBLOCK);
-for (const size of [4096, 1]) {
-  const chunk = Buffer.alloc(size, 'x');
-  assert.throws(() => {
-    for (;;) fs.writeSync(filler, chunk);
-  }, { code: 'EAGAIN' });
+
+tmpdir.refresh();
+
+// Runs N|Solid with `args` and a full FIFO as stderr, then calls back with the
+// signal that ended it and how long that took. SIGKILL means it hung.
+function abortWithFullStderr(name, args, cb) {
+  const fifo = path.join(tmpdir.path, name);
+  execFileSync('mkfifo', [fifo]);
+  // The read end stays open, and is never read.
+  const reader = fs.openSync(fifo, O_RDONLY | O_NONBLOCK);
+  const filler = fs.openSync(fifo, O_WRONLY | O_NONBLOCK);
+  for (const size of [4096, 1]) {
+    const chunk = Buffer.alloc(size, 'x');
+    assert.throws(() => {
+      for (;;) fs.writeSync(filler, chunk);
+    }, { code: 'EAGAIN' });
+  }
+  fs.closeSync(filler);
+
+  // A blocking descriptor on the full pipe: the child's first write to stderr
+  // blocks.
+  const stderr = fs.openSync(fifo, O_WRONLY);
+  const start = Date.now();
+  const child = spawn(process.execPath, args, {
+    stdio: ['ignore', 'ignore', stderr],
+  });
+  fs.closeSync(stderr);
+
+  const timer = setTimeout(() => child.kill('SIGKILL'), 60_000);
+  child.on('exit', common.mustCall((code, signal) => {
+    clearTimeout(timer);
+    fs.closeSync(reader);
+    cb(signal, Date.now() - start);
+  }));
 }
-fs.closeSync(filler);
 
-// A blocking descriptor on the full pipe: the child's first write to stderr
-// blocks.
-const stderr = fs.openSync(fifo, O_WRONLY);
-const start = Date.now();
-const child = spawn(process.execPath, ['-e', 'process.abort()'], {
-  stdio: ['ignore', 'ignore', stderr],
-});
-fs.closeSync(stderr);
-
-const timer = setTimeout(() => child.kill('SIGKILL'), 60_000);
-child.on('exit', common.mustCall((code, signal) => {
-  clearTimeout(timer);
-  fs.closeSync(reader);
-  // SIGKILL means the abort hung.
+// The watchdog gives the exit hooks 10 seconds, then ends the process.
+abortWithFullStderr('watchdog', ['-e', 'process.abort()'], (signal, ms) => {
   assert.strictEqual(signal, 'SIGABRT');
-  // The watchdog gives the exit hooks 10 seconds.
-  assert.ok(Date.now() - start >= 9000);
-}));
+  assert.ok(ms >= 9000, `ended after ${ms} ms`);
+});
+
+// With no watchdog, nothing would end it later, so it ends at once.
+abortWithFullStderr('no-watchdog', [
+  '--expose-internals',
+  '-e',
+  "require('internal/test/binding').internalBinding('nsolid_api')" +
+    '.failAbortWatchdogForTesting(); process.abort();',
+], (signal, ms) => {
+  assert.strictEqual(signal, 'SIGABRT');
+  assert.ok(ms < 9000, `ended after ${ms} ms`);
+});
