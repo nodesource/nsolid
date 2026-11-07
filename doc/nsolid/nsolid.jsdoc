@@ -183,6 +183,12 @@
  * retrieving metrics or not.
  * @property {boolean} promiseTracking - Whether the agent is to track the
  * promises created / resolved by the runtime.
+ * @property {boolean} sourceCodeEnabled - Allow remote `source_code` commands.
+ * Defaults to false. Enable it through NSOLID_SOURCE_CODE_ENABLED, the
+ * package.json nsolid.sourceCodeEnabled setting, configuration, or Console
+ * reconfigure. String values enable reads only for "1" or "true" (any case).
+ * Upgrading disables existing Console source views until explicitly enabled;
+ * set NSOLID_SOURCE_CODE_ENABLED=1 to restore them.
  * @property {string} pubkey - The ZMQ public key used with the N\|Solid Console
  * server.
  * @property {boolean} redactSnapshots - Boolean to indicate if you want heap

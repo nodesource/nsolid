@@ -49,11 +49,11 @@ constexpr ReconfigureBody::ParseTableT_ ReconfigureBody::InternalGenerateParseTa
     {
       PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_._has_bits_),
       0, // no _extensions_
-      14, 120,  // max_field_number, fast_idx_mask
+      16, 120,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294950912,  // skipmap
+      4294918144,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      14,  // num_field_entries
+      15,  // num_field_entries
       0,  // num_aux_entries
       offsetof(ParseTableT_, field_names),  // no aux_entries
       class_data,
@@ -63,7 +63,10 @@ constexpr ReconfigureBody::ParseTableT_ ReconfigureBody::InternalGenerateParseTa
       ::_pbi::TcParser::GetTable<::grpcagent::ReconfigureBody>(),  // to_prefetch
       #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
     }, {{
-      {::_pbi::TcParser::MiniParse, {}},
+      // optional bool sourceCodeEnabled = 16;
+      {::_pbi::TcParser::FastV8S2,
+       {384, 14, 0,
+        PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.sourcecodeenabled_)}},
       // optional uint64 blockedLoopThreshold = 1;
       {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(ReconfigureBody, _impl_.blockedloopthreshold_), 4>(),
        {8, 4, 0,
@@ -152,6 +155,8 @@ constexpr ReconfigureBody::ParseTableT_ ReconfigureBody::InternalGenerateParseTa
       {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.assetsenabled_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
       // optional double traceSampleRate = 14;
       {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.tracesamplerate_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional bool sourceCodeEnabled = 16;
+      {PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.sourcecodeenabled_), _Internal::kHasBitsOffset + 14, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     }},
     // no aux_entries
     {{
@@ -192,7 +197,8 @@ inline constexpr ReconfigureBody::Impl_::Impl_(
         tracingmodulesblacklist_{0u},
         tracesamplerate_{0},
         contcpuprofile_{false},
-        assetsenabled_{false} {}
+        assetsenabled_{false},
+        sourcecodeenabled_{false} {}
 
 template <typename>
 constexpr ReconfigureBody::ReconfigureBody(::_pbi::ConstantInitialized,
@@ -454,7 +460,7 @@ const ::uint32_t
         protodesc_cold) = {
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_._has_bits_),
-        17, // hasbit index offset
+        18, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.blockedloopthreshold_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.interval_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.pausemetrics_),
@@ -469,6 +475,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.contcpuprofile_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.assetsenabled_),
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.tracesamplerate_),
+        PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureBody, _impl_.sourcecodeenabled_),
         4,
         5,
         6,
@@ -483,6 +490,7 @@ const ::uint32_t
         12,
         13,
         11,
+        14,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::grpcagent::ReconfigureEvent, _impl_._has_bits_),
         5, // hasbit index offset
@@ -495,7 +503,7 @@ const ::uint32_t
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::grpcagent::ReconfigureBody)},
-        {31, sizeof(::grpcagent::ReconfigureEvent)},
+        {33, sizeof(::grpcagent::ReconfigureEvent)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
@@ -505,7 +513,7 @@ static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
 const char descriptor_table_protodef_reconfigure_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n\021reconfigure.proto\022\tgrpcagent\032\014common.p"
-    "roto\"\205\005\n\017ReconfigureBody\022!\n\024blockedLoopT"
+    "roto\"\273\005\n\017ReconfigureBody\022!\n\024blockedLoopT"
     "hreshold\030\001 \001(\004H\000\210\001\001\022\025\n\010interval\030\002 \001(\004H\001\210"
     "\001\001\022\031\n\014pauseMetrics\030\003 \001(\010H\002\210\001\001\022\034\n\017promise"
     "Tracking\030\004 \001(\010H\003\210\001\001\022\034\n\017redactSnapshots\030\005"
@@ -515,16 +523,17 @@ const char descriptor_table_protodef_reconfigure_2eproto[] ABSL_ATTRIBUTE_SECTIO
     "H\010\210\001\001\022$\n\027tracingModulesBlacklist\030\013 \001(\rH\t"
     "\210\001\001\022\033\n\016contCpuProfile\030\014 \001(\010H\n\210\001\001\022\032\n\rasse"
     "tsEnabled\030\r \001(\010H\013\210\001\001\022\034\n\017traceSampleRate\030"
-    "\016 \001(\001H\014\210\001\001B\027\n\025_blockedLoopThresholdB\013\n\t_"
-    "intervalB\017\n\r_pauseMetricsB\022\n\020_promiseTra"
-    "ckingB\022\n\020_redactSnapshotsB\t\n\007_statsdB\017\n\r"
-    "_statsdBucketB\r\n\013_statsdTagsB\021\n\017_tracing"
-    "EnabledB\032\n\030_tracingModulesBlacklistB\021\n\017_"
-    "contCpuProfileB\020\n\016_assetsEnabledB\022\n\020_tra"
-    "ceSampleRate\"g\n\020ReconfigureEvent\022)\n\006comm"
-    "on\030\001 \001(\0132\031.grpcagent.CommonResponse\022(\n\004b"
-    "ody\030\002 \001(\0132\032.grpcagent.ReconfigureBodyb\006p"
-    "roto3"
+    "\016 \001(\001H\014\210\001\001\022\036\n\021sourceCodeEnabled\030\020 \001(\010H\r\210"
+    "\001\001B\027\n\025_blockedLoopThresholdB\013\n\t_interval"
+    "B\017\n\r_pauseMetricsB\022\n\020_promiseTrackingB\022\n"
+    "\020_redactSnapshotsB\t\n\007_statsdB\017\n\r_statsdB"
+    "ucketB\r\n\013_statsdTagsB\021\n\017_tracingEnabledB"
+    "\032\n\030_tracingModulesBlacklistB\021\n\017_contCpuP"
+    "rofileB\020\n\016_assetsEnabledB\022\n\020_traceSample"
+    "RateB\024\n\022_sourceCodeEnabled\"g\n\020Reconfigur"
+    "eEvent\022)\n\006common\030\001 \001(\0132\031.grpcagent.Commo"
+    "nResponse\022(\n\004body\030\002 \001(\0132\032.grpcagent.Reco"
+    "nfigureBodyb\006proto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_reconfigure_2eproto_deps[1] = {
@@ -534,7 +543,7 @@ static ::absl::once_flag descriptor_table_reconfigure_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_reconfigure_2eproto = {
     false,
     false,
-    805,
+    859,
     descriptor_table_protodef_reconfigure_2eproto,
     "reconfigure.proto",
     &descriptor_table_reconfigure_2eproto_once,
@@ -593,9 +602,9 @@ ReconfigureBody::ReconfigureBody(
                offsetof(Impl_, blockedloopthreshold_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, blockedloopthreshold_),
-           offsetof(Impl_, assetsenabled_) -
+           offsetof(Impl_, sourcecodeenabled_) -
                offsetof(Impl_, blockedloopthreshold_) +
-               sizeof(Impl_::assetsenabled_));
+               sizeof(Impl_::sourcecodeenabled_));
 
   // @@protoc_insertion_point(copy_constructor:grpcagent.ReconfigureBody)
 }
@@ -616,9 +625,9 @@ inline void ReconfigureBody::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, blockedloopthreshold_),
            0,
-           offsetof(Impl_, assetsenabled_) -
+           offsetof(Impl_, sourcecodeenabled_) -
                offsetof(Impl_, blockedloopthreshold_) +
-               sizeof(Impl_::assetsenabled_));
+               sizeof(Impl_::sourcecodeenabled_));
 }
 ReconfigureBody::~ReconfigureBody() {
   // @@protoc_insertion_point(destructor:grpcagent.ReconfigureBody)
@@ -691,12 +700,12 @@ PROTOBUF_NOINLINE void ReconfigureBody::Clear() {
                  reinterpret_cast<char*>(&this_._impl_.blockedloopthreshold_)) +
                  sizeof(_impl_.promisetracking_));
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00007f00U)) {
     ::memset(&this_._impl_.redactsnapshots_, 0,
              static_cast<::size_t>(
-                 reinterpret_cast<char*>(&this_._impl_.assetsenabled_) -
+                 reinterpret_cast<char*>(&this_._impl_.sourcecodeenabled_) -
                  reinterpret_cast<char*>(&this_._impl_.redactsnapshots_)) +
-                 sizeof(_impl_.assetsenabled_));
+                 sizeof(_impl_.sourcecodeenabled_));
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -825,6 +834,13 @@ PROTOBUF_NOINLINE void ReconfigureBody::Clear() {
         14, this_._internal_tracesamplerate(), target);
   }
 
+  // optional bool sourceCodeEnabled = 16;
+  if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(
+        16, this_._internal_sourcecodeenabled(), target);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -849,6 +865,7 @@ PROTOBUF_NOINLINE void ReconfigureBody::Clear() {
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
   total_size += static_cast<bool>(0x00000800U & cached_has_bits) * 9;
+  total_size += static_cast<bool>(0x00004000U & cached_has_bits) * 3;
   total_size += ::absl::popcount(0x000033c0U & cached_has_bits) * 2;
   if (BatchCheckHasBit(cached_has_bits, 0x0000003fU)) {
     // repeated string tags = 9;
@@ -939,7 +956,7 @@ void ReconfigureBody::MergeImpl(::google::protobuf::MessageLite& to_msg,
       _this->_impl_.promisetracking_ = from._impl_.promisetracking_;
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00007f00U)) {
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
       _this->_impl_.redactsnapshots_ = from._impl_.redactsnapshots_;
     }
@@ -957,6 +974,9 @@ void ReconfigureBody::MergeImpl(::google::protobuf::MessageLite& to_msg,
     }
     if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       _this->_impl_.assetsenabled_ = from._impl_.assetsenabled_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+      _this->_impl_.sourcecodeenabled_ = from._impl_.sourcecodeenabled_;
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
@@ -983,8 +1003,8 @@ void ReconfigureBody::InternalSwap(ReconfigureBody* PROTOBUF_RESTRICT PROTOBUF_N
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.statsdbucket_, &other->_impl_.statsdbucket_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.statsdtags_, &other->_impl_.statsdtags_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.assetsenabled_)
-      + sizeof(ReconfigureBody::_impl_.assetsenabled_)
+      PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.sourcecodeenabled_)
+      + sizeof(ReconfigureBody::_impl_.sourcecodeenabled_)
       - PROTOBUF_FIELD_OFFSET(ReconfigureBody, _impl_.blockedloopthreshold_)>(
           reinterpret_cast<char*>(&_impl_.blockedloopthreshold_),
           reinterpret_cast<char*>(&other->_impl_.blockedloopthreshold_));

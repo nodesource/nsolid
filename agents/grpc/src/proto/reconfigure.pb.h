@@ -237,6 +237,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
     kTraceSampleRateFieldNumber = 14,
     kContCpuProfileFieldNumber = 12,
     kAssetsEnabledFieldNumber = 13,
+    kSourceCodeEnabledFieldNumber = 16,
   };
   // repeated string tags = 9;
   [[nodiscard]] int tags_size() const;
@@ -422,11 +423,22 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
   void _internal_set_assetsenabled(bool value);
 
   public:
+  // optional bool sourceCodeEnabled = 16;
+  [[nodiscard]] bool has_sourcecodeenabled() const;
+  void clear_sourcecodeenabled() ;
+  [[nodiscard]] bool sourcecodeenabled() const;
+  void set_sourcecodeenabled(bool value);
+
+  private:
+  bool _internal_sourcecodeenabled() const;
+  void _internal_set_sourcecodeenabled(bool value);
+
+  public:
   // @@protoc_insertion_point(class_scope:grpcagent.ReconfigureBody)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<4, 14,
+      ::google::protobuf::internal::TcParseTable<4, 15,
                           0, 74,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -469,6 +481,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ReconfigureBody final : public ::go
     double tracesamplerate_;
     bool contcpuprofile_;
     bool assetsenabled_;
+    bool sourcecodeenabled_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1268,6 +1281,34 @@ inline double ReconfigureBody::_internal_tracesamplerate() const {
 inline void ReconfigureBody::_internal_set_tracesamplerate(double value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.tracesamplerate_ = value;
+}
+
+// optional bool sourceCodeEnabled = 16;
+inline bool ReconfigureBody::has_sourcecodeenabled() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
+  return value;
+}
+inline void ReconfigureBody::clear_sourcecodeenabled() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.sourcecodeenabled_ = false;
+  ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
+}
+inline bool ReconfigureBody::sourcecodeenabled() const {
+  // @@protoc_insertion_point(field_get:grpcagent.ReconfigureBody.sourceCodeEnabled)
+  return _internal_sourcecodeenabled();
+}
+inline void ReconfigureBody::set_sourcecodeenabled(bool value) {
+  _internal_set_sourcecodeenabled(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  // @@protoc_insertion_point(field_set:grpcagent.ReconfigureBody.sourceCodeEnabled)
+}
+inline bool ReconfigureBody::_internal_sourcecodeenabled() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.sourcecodeenabled_;
+}
+inline void ReconfigureBody::_internal_set_sourcecodeenabled(bool value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.sourcecodeenabled_ = value;
 }
 
 // -------------------------------------------------------------------
