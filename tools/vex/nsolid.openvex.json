@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-03ef5f18b23613604b1fa25866bf44f1fc86c4697115e09b843a129d0cce0755",
+  "@id": "https://openvex.dev/docs/public/vex-edae8b8044275b0cf185d73b4757b87af5091f542c5697defa20e0d7f8c1fc87",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-11-09T17:46:11.529162Z",
+  "timestamp": "2026-11-09T17:47:00.286912Z",
   "statements": [
     {
       "vulnerability": {
@@ -13,7 +13,7 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/nodesource/nsolid@node-v22.23.2-nsolid-v6.3.6",
+          "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
               "@id": "pkg:npm/sigstore@3.1.0"
@@ -32,7 +32,7 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/nodesource/nsolid@node-v22.23.2-nsolid-v6.3.6",
+          "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
               "@id": "pkg:npm/%40sigstore/core@2.0.0"
