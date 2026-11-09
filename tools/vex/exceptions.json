@@ -36,5 +36,88 @@
         }
       ]
     }
+  },
+  {
+    "cve": "CVE-2026-118773",
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "impact_statement": "The flaw is in how glob handles an AbortSignal: after an aborted walk rejects, glob keeps reading directories. npm never passes a signal to glob (its callers are the help and help-search commands, @npmcli/map-workspaces, @npmcli/package-json and cacache), so the affected abort branches never run.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/glob@13.0.6"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-14683",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/hdrhistogram@0.11.2"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-14684",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/hdrhistogram@0.11.2"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-14685",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/hdrhistogram@0.11.2"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-14686",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/hdrhistogram@0.11.2"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-111497",
+    "status": "fixed",
+    "action_statement": "Fixed in Node.js 24.22.1, which N|Solid 6.3.9 and later include: the upstream decoder fix (google/brotli 0ed4268a4401abcb44720963) is cherry-picked into deps/brotli, so the bundled copy still reports version 1.2.0.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/brotli@1.2.0"
+        }
+      ]
+    }
   }
 ]
