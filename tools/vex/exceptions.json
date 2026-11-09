@@ -70,5 +70,130 @@
         }
       ]
     }
+  },
+  {
+    "cve": "CVE-2026-118773",
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "impact_statement": "The flaw is in how glob handles an AbortSignal: after an aborted walk rejects, glob keeps reading directories. npm never passes a signal to glob (its callers are the help and help-search commands, @npmcli/map-workspaces, @npmcli/package-json and cacache), so the affected abort branches never run.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/glob@10.5.0"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-22184",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "The overflow is in zlib's untgz example utility (contrib/untgz). N|Solid, like Node.js, doesn't vendor or build untgz: deps/zlib holds the zlib library and Chromium's optimizations. Node.js reached the same conclusion in https://github.com/nodejs/nodejs-dependency-vuln-assessments/issues/220.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/zlib@1.3.1"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-27171",
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "impact_statement": "The unbounded loop is in crc32_combine64() and crc32_combine_gen64(). Nothing in N|Solid calls them: node:zlib uses the deflate and inflate stream functions, zlib.crc32() calls crc32(), and the only caller in deps/zlib is the Intel QAT offload in contrib/qat, which is not built.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/zlib@1.3.1"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-58055",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "The flaw is in nghttpx, nghttp2's proxy server (src/shrpx_*). N|Solid, like Node.js, vendors only the nghttp2 library in deps/nghttp2/lib; nghttpx is neither included nor built.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/nghttp2@1.69.0"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-14683",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/hdrhistogram@0.11.2"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-14684",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/hdrhistogram@0.11.2"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-14685",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/hdrhistogram@0.11.2"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-14686",
+    "status": "not_affected",
+    "justification": "component_not_present",
+    "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/hdrhistogram@0.11.2"
+        }
+      ]
+    }
+  },
+  {
+    "cve": "CVE-2026-111497",
+    "status": "fixed",
+    "action_statement": "Fixed in Node.js 22.23.4, which N|Solid 6.3.9 and later include: the upstream decoder fix (google/brotli 0ed4268a4401abcb44720963) is cherry-picked into deps/brotli, so the bundled copy still reports version 1.1.0.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:generic/brotli@1.1.0"
+        }
+      ]
+    }
   }
 ]
