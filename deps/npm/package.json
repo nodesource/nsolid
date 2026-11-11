@@ -76,7 +76,7 @@
     "http-cache-semantics": "^4.3.0",
     "ini": "^5.0.0",
     "init-package-json": "^7.0.2",
-    "ip-address": "^10.7.2",
+    "ip-address": "^10.7.4",
     "is-cidr": "^5.1.1",
     "json-parse-even-better-errors": "^4.0.0",
     "libnpmaccess": "^9.0.0",
