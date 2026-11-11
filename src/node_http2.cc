@@ -631,6 +631,9 @@ Http2Session::~Http2Session() {
   // Ensure that all `Http2Stream` instances and the memory they hold
   // on to are destroyed before the nghttp2 session is.
   for (const auto& [id, stream] : streams_) {
+    // Detach() only frees the stream if nothing else holds a strong
+    // reference to it.
+    stream->ClearHeaders();
     stream->Detach();
   }
   streams_.clear();
@@ -792,6 +795,18 @@ bool Http2Session::HasPendingData() const {
   return true;
 }
 
+// nghttp2 signals that the connection should be dropped by having both
+// want_read and want_write return 0. If that happens while we still track
+// open streams, nghttp2 has terminated the session on its own (for example
+// due to a protocol error from the peer) and those streams will never be
+// completed.
+bool Http2Session::HasStreamsAbandonedByNghttp2() const {
+  if (HasPendingData()) return false;
+  return std::ranges::any_of(streams_, [](const auto& entry) {
+    return !entry.second->is_closed() && !entry.second->is_destroyed();
+  });
+}
+
 void Http2Session::EmitStatistics() {
   if (!HasHttp2Observer(env())) [[likely]] {
     return;
@@ -928,6 +943,11 @@ BaseObjectPtr<Http2Stream> Http2Session::RemoveStream(int32_t id) {
   stream = FindStream(id);
   if (stream) {
     streams_.erase(id);
+    // The stream can outlive the session, for example while one of its writes
+    // is still on the socket. Headers that were not passed to JS, such as an
+    // oversized block that caused the stream to be reset, hold nghttp2 memory
+    // that has to be released before the session is.
+    stream->ClearHeaders();
     if (stream->current_headers_length_ > 0) {
       DecrementCurrentSessionMemory(stream->current_headers_length_);
       stream->current_headers_length_ = 0;
@@ -2075,9 +2095,11 @@ uint8_t Http2Session::SendPendingData() {
 
   MaybeStopReading();
 
-  // If nghttp2 has internally torn down the session (detected in OnFrameSent)
-  // during the nghttp2_session_mem_send loop above, at this point we error:
-  if (internal_goaway_sent_) {
+  // If nghttp2 has internally torn down the session (detected in OnFrameSent,
+  // or because it no longer wants to read or write while we still have open
+  // streams) during the nghttp2_session_mem_send loop above, at this point we
+  // error:
+  if (internal_goaway_sent_ || HasStreamsAbandonedByNghttp2()) {
     internal_goaway_sent_ = false;
     if (!is_closing() && !is_destroyed()) {
       Isolate* isolate = env()->isolate();
@@ -2129,10 +2151,10 @@ int Http2Session::OnSendData(
       continue;
     }
 
-    // Slice off `length` bytes of the first write in the queue.
-    session->PushOutgoingBuffer(NgHttp2StreamWrite {
-      uv_buf_init(write.buf.base, length)
-    });
+    // Slice off `length` bytes of the first write in the queue. Retain the
+    // originating request until the slice is no longer used by the socket.
+    session->PushOutgoingBuffer(NgHttp2StreamWrite{
+        nullptr, write.buffer_owner, uv_buf_init(write.buf.base, length)});
     write.buf.base += length;
     write.buf.len -= length;
     break;
@@ -2736,14 +2758,16 @@ int Http2Stream::DoWrite(WriteWrap* req_wrap,
     return UV_EOF;
   }
   Debug(this, "queuing %d buffers to send", nbufs);
+  BaseObjectPtr<AsyncWrap> buffer_owner(req_wrap->GetAsyncWrap());
   for (size_t i = 0; i < nbufs; ++i) {
     // Store the req_wrap on the last write info in the queue, so that it is
     // only marked as finished once all buffers associated with it are finished.
-    queue_.emplace(NgHttp2StreamWrite {
-      BaseObjectPtr<AsyncWrap>(
-          i == nbufs - 1 ? req_wrap->GetAsyncWrap() : nullptr),
-      bufs[i]
-    });
+    // Every entry retains the request separately so partial slices remain valid
+    // until the underlying socket write completes.
+    queue_.emplace(NgHttp2StreamWrite{
+        BaseObjectPtr<AsyncWrap>(i == nbufs - 1 ? buffer_owner : nullptr),
+        buffer_owner,
+        bufs[i]});
     IncrementAvailableOutboundLength(bufs[i].len);
   }
   CHECK_NE(nghttp2_session_resume_data(
@@ -3520,6 +3544,7 @@ void Http2Ping::DetachFromSession() {
 void NgHttp2StreamWrite::MemoryInfo(MemoryTracker* tracker) const {
   if (req_wrap)
     tracker->TrackField("req_wrap", req_wrap);
+  if (buffer_owner) tracker->TrackField("buffer_owner", buffer_owner);
   tracker->TrackField("buf", buf);
 }
 

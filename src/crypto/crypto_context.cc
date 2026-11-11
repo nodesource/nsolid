@@ -1612,6 +1612,7 @@ inline void SecureContext::Reset() {
   ctx_.reset();
   cert_.reset();
   issuer_.reset();
+  has_own_ca_ = false;
 }
 
 SecureContext::~SecureContext() {
@@ -1773,6 +1774,14 @@ void SecureContext::SetGetSessionCallback(GetSessionCb cb) {
 
 void SecureContext::SetSelectSNIContextCallback(SelectSNIContextCb cb) {
   SSL_CTX_set_tlsext_servername_callback(ctx_.get(), cb);
+}
+
+void SecureContext::SetClientHelloCallback(ClientHelloCb cb) {
+#ifdef OPENSSL_IS_BORINGSSL
+  SSL_CTX_set_select_certificate_cb(ctx_.get(), cb);
+#else
+  SSL_CTX_set_client_hello_cb(ctx_.get(), cb, nullptr);
+#endif
 }
 
 void SecureContext::SetKeylogCallback(KeylogCb cb) {
@@ -1949,6 +1958,7 @@ void SecureContext::SetAllowPartialTrustChain(
 void SecureContext::SetCACert(const BIOPointer& bio) {
   ClearErrorOnReturn clear_error_on_return;
   if (!bio) return;
+  has_own_ca_ = true;
   while (X509Pointer x509 = X509Pointer(PEM_read_bio_X509_AUX(
              bio.get(), nullptr, NoPasswordCallback, nullptr))) {
     CHECK_EQ(1,
@@ -2195,8 +2205,11 @@ void SecureContext::SetSessionIdContext(
       reinterpret_cast<const unsigned char*>(*sessionIdContext);
   unsigned int sid_ctx_len = sessionIdContext.length();
 
-  if (SSL_CTX_set_session_id_context(sc->ctx_.get(), sid_ctx, sid_ctx_len) == 1)
+  int ok = SSL_CTX_set_session_id_context(sc->ctx_.get(), sid_ctx, sid_ctx_len);
+  if (ok == 1) {
+    sc->session_id_context_.assign(*sessionIdContext, sid_ctx_len);
     return;
+  }
 
   Local<String> message;
 
