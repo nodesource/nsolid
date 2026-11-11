@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-74dcda3e21e7c038af6b5f140e701e38b15bfe0c9ab3ab26f264a881ac1716f6",
+  "@id": "https://openvex.dev/docs/public/vex-40b7a5e197ad400c03200f5eb1f12e2a42edd66150a32adda8f9bc20cea54cca",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-11-11T17:19:32.045421Z",
+  "timestamp": "2026-11-11T19:54:06.673262Z",
   "statements": [
     {
       "vulnerability": {
@@ -106,7 +106,7 @@
         }
       ],
       "status": "fixed",
-      "action_statement": "Upstream fix backported to the minimatch copies bundled with npm and with Node.js: at optimizationLevel 2, splitting **/.. portions stops at braceExpandMax patterns, and sets of more than 1000 patterns are not deduplicated. Upstream fix: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8"
+      "action_statement": "Upstream fixes backported to the minimatch copies bundled with npm and with Node.js: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336"
     },
     {
       "vulnerability": {
