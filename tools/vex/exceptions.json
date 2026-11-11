@@ -27,7 +27,7 @@
   {
     "cve": "CVE-2026-118764",
     "status": "fixed",
-    "action_statement": "Upstream fix backported to the minimatch copies bundled with npm and with Node.js: at optimizationLevel 2, splitting **/.. portions stops at braceExpandMax patterns, and sets of more than 1000 patterns are not deduplicated. Upstream fix: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8",
+    "action_statement": "Upstream fixes backported to the minimatch copies bundled with npm and with Node.js, and to the copy inlined in npm's glob 13.0.6 bundles: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336",
     "product": {
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
@@ -36,6 +36,9 @@
         },
         {
           "@id": "pkg:npm/minimatch@10.2.6"
+        },
+        {
+          "@id": "pkg:npm/glob@13.0.6"
         }
       ]
     }
@@ -113,12 +116,15 @@
   {
     "cve": "CVE-2026-111497",
     "status": "fixed",
-    "action_statement": "Fixed in Node.js 26.12.1, which N|Solid 6.3.9 and later include: the upstream decoder fix (google/brotli 0ed4268a4401abcb44720963) is cherry-picked into deps/brotli, so the bundled copy still reports version 1.2.0.",
+    "action_statement": "Fixed in Node.js 26.12.1, which N|Solid 6.3.9 and later include: the upstream decoder fix (google/brotli 0ed4268a4401abcb44720963) is cherry-picked into deps/brotli 1.2.0. Node.js 26.13.1 updates deps/brotli to 1.2.1, which includes the fix.",
     "product": {
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
         {
           "@id": "pkg:generic/brotli@1.2.0"
+        },
+        {
+          "@id": "pkg:generic/brotli@1.2.1"
         }
       ]
     }
