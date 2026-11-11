@@ -444,6 +444,13 @@ export class Minimatch {
     // **/*/<rest> -> */**/<rest> <== not valid because ** doesn't follow
     // this WOULD be allowed if ** did follow symlinks, or * didn't
     firstPhasePreProcess(globParts) {
+        // each **/.. split doubles the patterns, and adds a copy of the
+        // whole pattern. Throw if either gets too large. A partial split
+        // would match some paths and not others, depending on which rows
+        // the pass reached first.
+        const { braceExpandMax = 100000 } = this.options;
+        let splitCells = 0;
+        const maxSplitCells = 1000000;
         let didSomething = false;
         do {
             didSomething = false;
@@ -474,11 +481,18 @@ export class Minimatch {
                         p2 === '..') {
                         continue;
                     }
+                    // Check before changing parts or allocating the new row.
+                    const addedCells = parts.length - 1;
+                    if (globParts.length >= braceExpandMax ||
+                        splitCells + addedCells > maxSplitCells) {
+                        throw new RangeError(`optimizationLevel 2: too many patterns from '**/..'`);
+                    }
                     didSomething = true;
                     // edit parts in place, and push the new one
                     parts.splice(gs, 1);
                     const other = parts.slice(0);
                     other[gs] = '**';
+                    splitCells += addedCells;
                     globParts.push(other);
                     gs--;
                 }
@@ -528,6 +542,10 @@ export class Minimatch {
     // {<pre>/**/<rest>,<pre>/**/<p>/<rest>} -> <pre>/**/<rest>
     // ^-- not valid because ** doens't follow symlinks
     secondPhasePreProcess(globParts) {
+        // each pattern is compared to each other one, so skip this for
+        // large sets. The patterns match the same paths either way.
+        if (globParts.length > 1000)
+            return globParts;
         for (let i = 0; i < globParts.length - 1; i++) {
             for (let j = i + 1; j < globParts.length; j++) {
                 const matched = this.partsMatch(globParts[i], globParts[j], !this.preserveMultipleSlashes);
