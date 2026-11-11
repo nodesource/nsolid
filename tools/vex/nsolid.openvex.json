@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-edae8b8044275b0cf185d73b4757b87af5091f542c5697defa20e0d7f8c1fc87",
+  "@id": "https://openvex.dev/docs/public/vex-69a27ae4d64af4cec92ba95a1c78021a113c844af5dac512ad41e254f4de3af9",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-11-09T17:47:00.286912Z",
+  "timestamp": "2026-11-11T16:28:33.262424Z",
   "statements": [
     {
       "vulnerability": {
@@ -191,7 +191,7 @@
           "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
-              "@id": "pkg:generic/hdrhistogram@0.11.2"
+              "@id": "pkg:generic/hdrhistogram"
             }
           ]
         }
@@ -210,7 +210,7 @@
           "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
-              "@id": "pkg:generic/hdrhistogram@0.11.2"
+              "@id": "pkg:generic/hdrhistogram"
             }
           ]
         }
@@ -229,7 +229,7 @@
           "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
-              "@id": "pkg:generic/hdrhistogram@0.11.2"
+              "@id": "pkg:generic/hdrhistogram"
             }
           ]
         }
@@ -248,7 +248,7 @@
           "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
-              "@id": "pkg:generic/hdrhistogram@0.11.2"
+              "@id": "pkg:generic/hdrhistogram"
             }
           ]
         }
