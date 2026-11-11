@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-43658eefc2f04f8a78bfcb193a0fdb03f36b94447c6a4409df085b3f871c420e",
+  "@id": "https://openvex.dev/docs/public/vex-cb823e2554c8b36878c00c467ae2057e4473c4464a74190e93086df5394c17f1",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-10-22T09:24:54.341815Z",
+  "timestamp": "2026-11-11T20:01:06.936456Z",
   "statements": [
     {
       "vulnerability": {
@@ -35,6 +35,165 @@
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "The stack-exhaustion denial of service (CVE-2026-93687, GHSA-vfj7-8cjw-p6xm) requires evaluating deeply nested, attacker-controlled brace-expansion patterns. The braces maintainer considers the advisory only exploitable when an application passes user-supplied patterns to braces: hitting a nesting depth of 5,000 already requires more than 10,000 characters of input, and input-length limits (maxLength) are a sufficient, already-supported mitigation (https://github.com/micromatch/braces/issues/70). In N|Solid, braces reaches the runtime only inside the ncm-ng agent through fast-glob -> micromatch -> braces, and every glob pattern ncm-ng evaluates is hardcoded (workers/certifyNG/install-scripts.js and workers/general/getLocalModuleFilePaths.js match fixed patterns such as '**/*.js' under the user's own working directory), so adversarial brace patterns cannot reach braces through N|Solid. braces has no patched release (every version <= 3.0.3 is affected), so an exemption is the only available remediation. npm audit surfaces this single advisory in deps/ncm-ng as three findings (braces directly, plus the micromatch and fast-glob chain findings), tracked in https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2934, https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2935 and https://github.com/nodesource/nsolid-dependency-vuln-assessments/issues/2936."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-118764",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-118764"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/minimatch@10.2.5"
+            },
+            {
+              "@id": "pkg:npm/minimatch@10.2.6"
+            },
+            {
+              "@id": "pkg:npm/glob@13.0.6"
+            }
+          ]
+        }
+      ],
+      "status": "fixed",
+      "action_statement": "Upstream fixes backported to the minimatch copies bundled with npm and with Node.js, and to the copy inlined in npm's glob 13.0.6 bundles: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-118773",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-118773"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/glob@13.0.6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in how glob handles an AbortSignal: after an aborted walk rejects, glob keeps reading directories. npm never passes a signal to glob (its callers are the help and help-search commands, @npmcli/map-workspaces, @npmcli/package-json and cacache), so the affected abort branches never run."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14683",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-14683"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/hdrhistogram"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14684",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-14684"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/hdrhistogram"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14685",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-14685"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/hdrhistogram"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14686",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-14686"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/hdrhistogram"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-111497",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-111497"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/brotli@1.2.0"
+            },
+            {
+              "@id": "pkg:generic/brotli@1.2.1"
+            }
+          ]
+        }
+      ],
+      "status": "fixed",
+      "action_statement": "Fixed in Node.js 24.22.1, which N|Solid 6.3.9 and later include: the upstream decoder fix (google/brotli 0ed4268a4401abcb44720963) is cherry-picked into deps/brotli 1.2.0. Node.js 24.22.3 updates deps/brotli to 1.2.1, which includes the fix."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-118772",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-118772"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/joi"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The quadratic split is in joi's string().email() with the multiple option. joi reaches N|Solid only as a dependency of the ncm-ng agent, which fetches it from the npm registry when the package is built, so its version depends on the build date: builds made since 28 October 2026 get 17.13.9, which has the fix. ncm-ng never calls string().email(), so the affected code never runs in any build."
     }
   ]
 }
