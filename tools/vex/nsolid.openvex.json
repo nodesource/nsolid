@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-c94b9e046ad57faa631aa85395f4d43dcb6c635640ae1aa26c485d8667fc0dd3",
+  "@id": "https://openvex.dev/docs/public/vex-cb823e2554c8b36878c00c467ae2057e4473c4464a74190e93086df5394c17f1",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-11-11T19:54:08.935723Z",
+  "timestamp": "2026-11-11T20:01:06.936456Z",
   "statements": [
     {
       "vulnerability": {
@@ -175,6 +175,25 @@
       ],
       "status": "fixed",
       "action_statement": "Fixed in Node.js 24.22.1, which N|Solid 6.3.9 and later include: the upstream decoder fix (google/brotli 0ed4268a4401abcb44720963) is cherry-picked into deps/brotli 1.2.0. Node.js 24.22.3 updates deps/brotli to 1.2.1, which includes the fix."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-118772",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-118772"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/joi"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The quadratic split is in joi's string().email() with the multiple option. joi reaches N|Solid only as a dependency of the ncm-ng agent, which fetches it from the npm registry when the package is built, so its version depends on the build date: builds made since 28 October 2026 get 17.13.9, which has the fix. ncm-ng never calls string().email(), so the affected code never runs in any build."
     }
   ]
 }
