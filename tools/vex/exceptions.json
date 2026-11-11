@@ -128,5 +128,19 @@
         }
       ]
     }
+  },
+  {
+    "cve": "CVE-2026-118772",
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "impact_statement": "The quadratic split is in joi's string().email() with the multiple option. joi reaches N|Solid only as a dependency of the ncm-ng agent, which fetches it from the npm registry when the package is built, so its version depends on the build date: builds made since 28 October 2026 get 17.13.9, which has the fix. ncm-ng never calls string().email(), so the affected code never runs in any build.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/joi"
+        }
+      ]
+    }
   }
 ]
