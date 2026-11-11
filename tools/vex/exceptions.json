@@ -136,7 +136,7 @@
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
         {
-          "@id": "pkg:generic/hdrhistogram@0.11.2"
+          "@id": "pkg:generic/hdrhistogram"
         }
       ]
     }
@@ -150,7 +150,7 @@
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
         {
-          "@id": "pkg:generic/hdrhistogram@0.11.2"
+          "@id": "pkg:generic/hdrhistogram"
         }
       ]
     }
@@ -164,7 +164,7 @@
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
         {
-          "@id": "pkg:generic/hdrhistogram@0.11.2"
+          "@id": "pkg:generic/hdrhistogram"
         }
       ]
     }
@@ -178,7 +178,7 @@
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
         {
-          "@id": "pkg:generic/hdrhistogram@0.11.2"
+          "@id": "pkg:generic/hdrhistogram"
         }
       ]
     }
