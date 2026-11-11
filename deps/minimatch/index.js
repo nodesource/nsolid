@@ -1497,6 +1497,8 @@ var Minimatch = class {
   // **/*/<rest> -> */**/<rest> <== not valid because ** doesn't follow
   // this WOULD be allowed if ** did follow symlinks, or * didn't
   firstPhasePreProcess(globParts) {
+    // each **/.. split doubles the patterns, so stop at the brace max
+    const { braceExpandMax = 100000 } = this.options;
     let didSomething = false;
     do {
       didSomething = false;
@@ -1515,7 +1517,7 @@ var Minimatch = class {
           const p2 = parts[gs + 3];
           if (next !== "..")
             continue;
-          if (!p || p === "." || p === ".." || !p2 || p2 === "." || p2 === "..") {
+          if (!p || p === "." || p === ".." || !p2 || p2 === "." || p2 === ".." || globParts.length >= braceExpandMax) {
             continue;
           }
           didSomething = true;
@@ -1566,6 +1568,10 @@ var Minimatch = class {
   // {<pre>/**/<rest>,<pre>/**/<p>/<rest>} -> <pre>/**/<rest>
   // ^-- not valid because ** doens't follow symlinks
   secondPhasePreProcess(globParts) {
+    // each pattern is compared to each other one, so skip this for
+    // large sets. The patterns match the same paths either way.
+    if (globParts.length > 1000)
+      return globParts;
     for (let i = 0; i < globParts.length - 1; i++) {
       for (let j = i + 1; j < globParts.length; j++) {
         const matched = this.partsMatch(globParts[i], globParts[j], !this.preserveMultipleSlashes);
