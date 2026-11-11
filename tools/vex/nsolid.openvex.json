@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-b279427d1f595f87fb8f0a279431d2b470fa71971fb7fa47bac0bb8476657ede",
+  "@id": "https://openvex.dev/docs/public/vex-33edb43de8e33d5f7b073c3b6da357f152fad0e0f6079d88d4c60a5fde199641",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-11-09T17:45:39.263339Z",
+  "timestamp": "2026-11-11T16:32:15.994212Z",
   "statements": [
     {
       "vulnerability": {
@@ -53,6 +53,119 @@
       ],
       "status": "fixed",
       "action_statement": "Upstream fix backported to the minimatch copy bundled with npm: at optimizationLevel 2, splitting **/.. portions stops at braceExpandMax patterns, and sets of more than 1000 patterns are not deduplicated. Upstream fix: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-118773",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-118773"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/glob@13.0.6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in how glob handles an AbortSignal: after an aborted walk rejects, glob keeps reading directories. npm never passes a signal to glob (its callers are the help and help-search commands, @npmcli/map-workspaces, @npmcli/package-json and cacache), so the affected abort branches never run."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14683",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-14683"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/hdrhistogram"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14684",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-14684"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/hdrhistogram"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14685",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-14685"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/hdrhistogram"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14686",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-14686"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/hdrhistogram"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "This CVE is in HdrHistogram's Java implementation (org.HdrHistogram, through 2.2.2). N|Solid bundles HdrHistogram_c, the separate C implementation in deps/histogram, which shares none of the affected code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-111497",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-111497"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:generic/brotli@1.2.0"
+            }
+          ]
+        }
+      ],
+      "status": "fixed",
+      "action_statement": "Fixed in Node.js 26.12.1, which N|Solid 6.3.9 and later include: the upstream decoder fix (google/brotli 0ed4268a4401abcb44720963) is cherry-picked into deps/brotli, so the bundled copy still reports version 1.2.0."
     }
   ]
 }
