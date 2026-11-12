@@ -37,6 +37,11 @@ class SecureContext final : public BaseObject {
   using KeylogCb = void (*)(const SSL*, const char*);
   using NewSessionCb = int (*)(SSL*, SSL_SESSION*);
   using SelectSNIContextCb = int (*)(SSL*, int*, void*);
+#ifdef OPENSSL_IS_BORINGSSL
+  using ClientHelloCb = ssl_select_cert_result_t (*)(const SSL_CLIENT_HELLO*);
+#else
+  using ClientHelloCb = int (*)(SSL*, int*, void*);
+#endif
 
   ~SecureContext() override;
 
@@ -48,6 +53,12 @@ class SecureContext final : public BaseObject {
   static SecureContext* Create(Environment* env);
 
   const ncrypto::SSLCtxPointer& ctx() const { return ctx_; }
+  // True if CA certificates were added with addCACert(), as opposed to the
+  // context relying on the default root store.
+  bool has_own_ca() const { return has_own_ca_; }
+  const std::string& session_id_context() const {
+    return session_id_context_;
+  }
 
   // Non-const ctx() that allows for non-default initialization of
   // the SecureContext.
@@ -59,6 +70,7 @@ class SecureContext final : public BaseObject {
   void SetKeylogCallback(KeylogCb cb);
   void SetNewSessionCallback(NewSessionCb cb);
   void SetSelectSNIContextCallback(SelectSNIContextCb cb);
+  void SetClientHelloCallback(ClientHelloCb cb);
 
   inline const ncrypto::X509Pointer& issuer() const { return issuer_; }
   inline const ncrypto::X509Pointer& cert() const { return cert_; }
@@ -164,6 +176,8 @@ class SecureContext final : public BaseObject {
   ncrypto::X509Pointer issuer_;
   // Non-owning cache for SSL_CTX_get_cert_store(ctx_.get())
   X509_STORE* own_cert_store_cache_ = nullptr;
+  bool has_own_ca_ = false;
+  std::string session_id_context_;
 #ifndef OPENSSL_NO_ENGINE
   bool client_cert_engine_provided_ = false;
   ncrypto::EnginePointer private_key_engine_;

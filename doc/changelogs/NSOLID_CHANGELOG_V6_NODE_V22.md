@@ -2,6 +2,28 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-11-11, Version 22.23.5-nsolid-v6.3.10 'Jod'
+
+### Commits
+
+* \[[`86f125454c`](https://github.com/nodesource/nsolid/commit/86f125454c)] - Merge tag 'v22.23.5' into node-v22.23.5-nsolid-v6.3.10-release (RafaelGSS) [#677](https://github.com/nodesource/nsolid/pull/677)
+* \[[`c567ccca67`](https://github.com/nodesource/nsolid/commit/c567ccca67)] - **agents**: bound StatsD send queue processing (Santiago Gimeno) [#632](https://github.com/nodesource/nsolid/pull/632)
+* \[[`704a4fc624`](https://github.com/nodesource/nsolid/commit/704a4fc624)] - **agents**: fix OTLP gRPC endpoint security (Santiago Gimeno) [#628](https://github.com/nodesource/nsolid/pull/628)
+* \[[`7c77abd25f`](https://github.com/nodesource/nsolid/commit/7c77abd25f)] - **agents**: fix gRPC ownership after auth failures (Santiago Gimeno) [#627](https://github.com/nodesource/nsolid/pull/627)
+* \[[`9302087ccf`](https://github.com/nodesource/nsolid/commit/9302087ccf)] - **deps**: cap the minimatch \*\*/.. split pass (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`4a2c57c292`](https://github.com/nodesource/nsolid/commit/4a2c57c292)] - **(CVE-2026-118764)** **deps**: fix CVE-2026-118764 in minimatch (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`eef72d4cf3`](https://github.com/nodesource/nsolid/commit/eef72d4cf3)] - **(CVE-2026-118764)** **deps**: fix CVE-2026-118764 in npm minimatch (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`2b7ee7ef7d`](https://github.com/nodesource/nsolid/commit/2b7ee7ef7d)] - **(CVE-2026-111997)** **deps**: update npm ip-address\@10.7.4 (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`774cf19af4`](https://github.com/nodesource/nsolid/commit/774cf19af4)] - **http2**: avoid overflowing ALTSVC buffers (Matteo Collina) [#677](https://github.com/nodesource/nsolid/pull/677)
+* \[[`c11513274a`](https://github.com/nodesource/nsolid/commit/c11513274a)] - **lib**: restore jsdoc lint directives on 22.x (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`107ddbccd5`](https://github.com/nodesource/nsolid/commit/107ddbccd5)] - **lib,src,agents**: escape telemetry JSON strings (Santiago Gimeno) [#630](https://github.com/nodesource/nsolid/pull/630)
+* \[[`c71c5c5d57`](https://github.com/nodesource/nsolid/commit/c71c5c5d57)] - **test**: adapt the backported tests to 22.x (Bryce Baril) [#677](https://github.com/nodesource/nsolid/pull/677)
+* \[[`8529df18bd`](https://github.com/nodesource/nsolid/commit/8529df18bd)] - **vex**: add a statement for the joi finding (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`4a056d93f8`](https://github.com/nodesource/nsolid/commit/4a056d93f8)] - **vex**: update the minimatch statement (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`a2b912e8d5`](https://github.com/nodesource/nsolid/commit/a2b912e8d5)] - **vex**: don't pin HdrHistogram's version (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`f40b6d8163`](https://github.com/nodesource/nsolid/commit/f40b6d8163)] - **vex**: stop pinning the sigstore statements to 6.3.6 (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+* \[[`f19680413f`](https://github.com/nodesource/nsolid/commit/f19680413f)] - **vex**: record scanner findings that don't affect N|Solid (Bryce Baril) [#672](https://github.com/nodesource/nsolid/pull/672)
+
 ## 2026-10-22, Version 22.23.4-nsolid-v6.3.9 'Jod'
 
 ### Commits

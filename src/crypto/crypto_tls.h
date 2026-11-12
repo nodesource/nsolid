@@ -34,6 +34,7 @@
 #include <openssl/ssl.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace node {
@@ -64,6 +65,9 @@ class TLSWrap : public AsyncWrap,
   void set_cert_cb_running(bool on = true) { cert_cb_running_ = on; }
   void set_awaiting_new_session(bool on = true) { awaiting_new_session_ = on; }
   void enable_session_callbacks() { session_callbacks_ = true; }
+  bool is_resumption_disabled() const { return resumption_disabled_; }
+  bool BindSessionsToServerName(std::string_view servername);
+  bool PinServerName(std::string_view servername);
   bool is_server() const { return kind_ == Kind::kServer; }
   bool is_client() const { return kind_ == Kind::kClient; }
   bool is_awaiting_new_session() const { return awaiting_new_session_; }
@@ -170,8 +174,6 @@ class TLSWrap : public AsyncWrap,
 
   int SetCACerts(SecureContext* sc);
 
-  static int SelectSNIContextCallback(SSL* s, int* ad, void* arg);
-
   static void CertCbDone(const v8::FunctionCallbackInfo<v8::Value>& args);
   static void DestroySSL(const v8::FunctionCallbackInfo<v8::Value>& args);
   static void EnableCertCb(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -254,6 +256,7 @@ class TLSWrap : public AsyncWrap,
   v8::Global<v8::ArrayBufferView> ocsp_response_;
   BaseObjectPtr<SecureContext> sni_context_;
   BaseObjectPtr<SecureContext> sc_;
+  std::string servername_;
 
   // BIO buffers hold encrypted data.
   BIO* enc_in_ = nullptr;   // StreamListener fills this for SSL_read().
@@ -281,6 +284,8 @@ class TLSWrap : public AsyncWrap,
   // is set to true, so it's likely redundant.
   bool established_ = false;
   bool write_callback_scheduled_ = false;
+  bool servername_pinned_ = false;
+  bool resumption_disabled_ = false;
 
   int cycle_depth_ = 0;
 

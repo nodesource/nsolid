@@ -766,8 +766,13 @@ void StatsDAgent::send_stats_msg_cb_(nsuv::ns_async*,
   }
 
   string_vector sv;
-  while (agent->send_stats_msg_q_.dequeue(sv)) {
+  // Let configuration and shutdown callbacks run even while workers keep
+  // sending.
+  for (size_t i = 0; i < 1024 && agent->send_stats_msg_q_.dequeue(sv); i++) {
     agent->connection_->write(sv);
+  }
+  if (!agent->send_stats_msg_q_.empty()) {
+    ASSERT_EQ(0, agent->send_stats_msg_.send());
   }
 }
 

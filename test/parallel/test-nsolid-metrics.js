@@ -24,5 +24,12 @@ nsolid.metrics((er, m) => {
     assert.strictEqual(er, null);
     metricsUtil.checkMetrics(m);
     assert.strictEqual(m.threadName, 'my_thread');
+    const threadName = 'thread"\\\n\t';
+    nsolid.setThreadName(threadName);
+    nsolid.metrics((er, m) => {
+      assert.strictEqual(er, null);
+      metricsUtil.checkMetrics(m);
+      assert.strictEqual(m.threadName, threadName);
+    });
   });
 });
