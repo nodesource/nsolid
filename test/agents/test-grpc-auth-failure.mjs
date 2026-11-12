@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustCall, mustSucceed, sleepSync } from '../common/index.mjs';
+import { mustCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { fork } from 'node:child_process';
 import { Worker } from 'node:worker_threads';
@@ -8,6 +8,11 @@ import nsolid from 'nsolid';
 import { GRPCServer } from '../common/nsolid-grpc-agent/index.js';
 
 const { internalBinding } = binding;
+
+// 22.x's test/common has no sleepSync().
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
 
 if (process.argv[2] === 'child') {
   const interval = setInterval(() => {}, 100);
