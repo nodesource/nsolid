@@ -2,6 +2,29 @@
 
 <!--lint disable maximum-line-length no-literal-urls prohibited-strings-->
 
+## 2026-11-11, Version 24.22.3-nsolid-v6.3.10 'Krypton'
+
+### Commits
+
+* \[[`06561d81c1`](https://github.com/nodesource/nsolid/commit/06561d81c1)] - Merge tag 'v24.22.3' into node-v24.22.3-nsolid-v6.3.10-release (RafaelGSS) [#675](https://github.com/nodesource/nsolid/pull/675)
+* \[[`5a007d6045`](https://github.com/nodesource/nsolid/commit/5a007d6045)] - **agents**: fix OTLP gRPC endpoint security (Santiago Gimeno) [#628](https://github.com/nodesource/nsolid/pull/628)
+* \[[`0a0760893e`](https://github.com/nodesource/nsolid/commit/0a0760893e)] - **agents**: fix gRPC ownership after auth failures (Santiago Gimeno) [#627](https://github.com/nodesource/nsolid/pull/627)
+* \[[`4daed5bcf9`](https://github.com/nodesource/nsolid/commit/4daed5bcf9)] - **agents**: back off command stream reconnects (Santiago Gimeno) [#601](https://github.com/nodesource/nsolid/pull/601)
+* \[[`0d96c33c2c`](https://github.com/nodesource/nsolid/commit/0d96c33c2c)] - **agents**: bound StatsD send queue processing (Santiago Gimeno) [#632](https://github.com/nodesource/nsolid/pull/632)
+* \[[`dad7f7cbde`](https://github.com/nodesource/nsolid/commit/dad7f7cbde)] - **agents**: export span events and links (Santiago Gimeno) [#609](https://github.com/nodesource/nsolid/pull/609)
+* \[[`ca26142e05`](https://github.com/nodesource/nsolid/commit/ca26142e05)] - **agents**: honor gRPC heap redaction requests (Santiago Gimeno) [#629](https://github.com/nodesource/nsolid/pull/629)
+* \[[`ef8a6568f1`](https://github.com/nodesource/nsolid/commit/ef8a6568f1)] - **deps**: cap the minimatch \*\*/.. split pass (Bryce Baril) [#673](https://github.com/nodesource/nsolid/pull/673)
+* \[[`03e883226b`](https://github.com/nodesource/nsolid/commit/03e883226b)] - **(CVE-2026-118764)** **deps**: fix CVE-2026-118764 in minimatch (Bryce Baril) [#673](https://github.com/nodesource/nsolid/pull/673)
+* \[[`361ff15600`](https://github.com/nodesource/nsolid/commit/361ff15600)] - **(CVE-2026-118764)** **deps**: fix CVE-2026-118764 in npm minimatch (Bryce Baril) [#673](https://github.com/nodesource/nsolid/pull/673)
+* \[[`2012ca448f`](https://github.com/nodesource/nsolid/commit/2012ca448f)] - **deps**: fix CPU profile timestamp truncation (Santiago Gimeno) [#600](https://github.com/nodesource/nsolid/pull/600)
+* \[[`42202e45b1`](https://github.com/nodesource/nsolid/commit/42202e45b1)] - **lib**: fix OpenTelemetry span time inputs (Santiago Gimeno) [#631](https://github.com/nodesource/nsolid/pull/631)
+* \[[`82fa9a131b`](https://github.com/nodesource/nsolid/commit/82fa9a131b)] - **lib,src,agents**: escape telemetry JSON strings (Santiago Gimeno) [#630](https://github.com/nodesource/nsolid/pull/630)
+* \[[`b8df771f7a`](https://github.com/nodesource/nsolid/commit/b8df771f7a)] - **test**: adapt the backported tests to 24.x (Bryce Baril) [#675](https://github.com/nodesource/nsolid/pull/675)
+* \[[`0a62b62954`](https://github.com/nodesource/nsolid/commit/0a62b62954)] - **vex**: add a statement for the joi finding (Bryce Baril) [#673](https://github.com/nodesource/nsolid/pull/673)
+* \[[`1e9bdd5ef8`](https://github.com/nodesource/nsolid/commit/1e9bdd5ef8)] - **vex**: update the minimatch and brotli statements (Bryce Baril) [#673](https://github.com/nodesource/nsolid/pull/673)
+* \[[`d4e9afc386`](https://github.com/nodesource/nsolid/commit/d4e9afc386)] - **vex**: don't pin HdrHistogram's version (Bryce Baril) [#673](https://github.com/nodesource/nsolid/pull/673)
+* \[[`b3ae3bd0b5`](https://github.com/nodesource/nsolid/commit/b3ae3bd0b5)] - **vex**: record scanner findings that don't affect N|Solid (Bryce Baril) [#673](https://github.com/nodesource/nsolid/pull/673)
+
 ## 2026-10-22, Version 24.22.1-nsolid-v6.3.9 'Krypton'
 
 ### Commits

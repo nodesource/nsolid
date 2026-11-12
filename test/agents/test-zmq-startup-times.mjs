@@ -84,9 +84,11 @@ tests.push({
   test: async (playground) => {
     return new Promise((resolve) => {
       playground.bootstrap(mustSucceed(async (agentId) => {
+        const escapedTime = 'custom"\\\n\t';
         assert.ok(await playground.client.startupTimes('customTime'));
+        assert.ok(await playground.client.startupTimes(escapedTime));
         const requestId = playground.zmqAgentBus.agentStartupTimesRequest(agentId, mustSucceed((info) => {
-          checkStartupTimesData(info, requestId, agentId, [ 'customTime' ]);
+          checkStartupTimesData(info, requestId, agentId, [ 'customTime', escapedTime ]);
           resolve();
         }));
       }));

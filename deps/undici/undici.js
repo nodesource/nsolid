@@ -1509,6 +1509,20 @@ var require_util = __commonJS({
       return ret;
     }
     __name(parseRawHeaders, "parseRawHeaders");
+    function toRawHeaders(headers) {
+      const rawHeaders = [];
+      for (const [name, value] of Object.entries(headers)) {
+        if (Array.isArray(value)) {
+          for (const entry of value) {
+            rawHeaders.push(Buffer.from(name, "latin1"), Buffer.from(`${entry}`, "latin1"));
+          }
+        } else {
+          rawHeaders.push(Buffer.from(name, "latin1"), Buffer.from(`${value}`, "latin1"));
+        }
+      }
+      return rawHeaders;
+    }
+    __name(toRawHeaders, "toRawHeaders");
     function encodeRawHeaders(headers) {
       if (!Array.isArray(headers)) {
         throw new TypeError("expected headers to be an array");
@@ -2047,6 +2061,7 @@ var require_util = __commonJS({
       removeAllListeners,
       errorRequest,
       parseRawHeaders,
+      toRawHeaders,
       encodeRawHeaders,
       parseHeaders,
       parseKeepAliveTimeout,
@@ -2967,7 +2982,7 @@ var require_request = __commonJS({
         this.headersTimeout = headersTimeout;
         this.bodyTimeout = bodyTimeout;
         this.method = method;
-        this.typeOfService = typeOfService ?? 0;
+        this.typeOfService = typeOfService;
         this.abort = null;
         if (body == null) {
           this.body = null;
@@ -6871,19 +6886,38 @@ var require_body = __commonJS({
     });
     function extractBody(object, keepalive = false) {
       let stream = null;
-      let controller = null;
       if (webidl.is.ReadableStream(object)) {
         stream = object;
       } else if (webidl.is.Blob(object)) {
         stream = object.stream();
       } else {
         stream = new ReadableStream({
-          pull() {
+          start() {
           },
-          start(c) {
-            controller = c;
+          async pull(controller) {
+            const result = action();
+            const iterator = result?.[Symbol.asyncIterator]?.();
+            if (iterator == null) {
+              if (result?.length && !isErrored(stream)) {
+                controller.enqueue(typeof result === "string" ? textEncoder.encode(result) : new Uint8Array(result));
+              }
+              queueMicrotask(() => readableStreamClose(controller));
+              return;
+            }
+            while (true) {
+              const { value, done } = await iterator.next();
+              if (done) {
+                queueMicrotask(() => readableStreamClose(controller));
+                return;
+              }
+              if (value.length && !isErrored(stream)) {
+                controller.enqueue(new Uint8Array(value));
+                return;
+              }
+            }
           },
-          cancel() {
+          cancel(reason) {
+            return action()[Symbol.asyncIterator]?.().return(reason);
           },
           type: "bytes"
         });
@@ -6940,7 +6974,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           length = null;
         }
         source = object;
-        action = /* @__PURE__ */ __name(async function* () {
+        const parts = (async function* () {
           for (const part of blobParts) {
             if (part.stream) {
               yield* part.stream();
@@ -6948,7 +6982,8 @@ Content-Type: ${value.type || "application/octet-stream"}\r
               yield part;
             }
           }
-        }, "action");
+        })();
+        action = /* @__PURE__ */ __name(() => parts, "action");
         type = `multipart/form-data; boundary=${boundary}`;
       } else if (webidl.is.Blob(object)) {
         source = object;
@@ -6968,28 +7003,8 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         stream = webidl.is.ReadableStream(object) ? object : ReadableStreamFrom(object);
       }
       if (typeof source === "string" || isUint8Array(source)) {
-        action = /* @__PURE__ */ __name(() => {
-          length = typeof source === "string" ? Buffer.byteLength(source) : source.length;
-          return source;
-        }, "action");
-      }
-      if (action != null) {
-        ;
-        (async () => {
-          const result = action();
-          const iterator = result?.[Symbol.asyncIterator]?.();
-          if (iterator) {
-            for await (const bytes of iterator) {
-              if (isErrored(stream)) break;
-              if (bytes.length) {
-                controller.enqueue(new Uint8Array(bytes));
-              }
-            }
-          } else if (result?.length && !isErrored(stream)) {
-            controller.enqueue(typeof result === "string" ? textEncoder.encode(result) : new Uint8Array(result));
-          }
-          queueMicrotask(() => readableStreamClose(controller));
-        })();
+        action = /* @__PURE__ */ __name(() => source, "action");
+        length = typeof source === "string" ? Buffer.byteLength(source) : source.length;
       }
       const body = { stream, source, length };
       return [body, type];
@@ -7190,6 +7205,7 @@ var require_client_h1 = __commonJS({
     var kIdleSocketValidation = /* @__PURE__ */ Symbol("kIdleSocketValidation");
     var kIdleSocketValidationTimeout = /* @__PURE__ */ Symbol("kIdleSocketValidationTimeout");
     var kSocketUsed = /* @__PURE__ */ Symbol("kSocketUsed");
+    var kTypeOfService = /* @__PURE__ */ Symbol("kTypeOfService");
     var extractBody;
     function lazyllhttp() {
       const llhttpWasmData = process.env.JEST_WORKER_ID ? require_llhttp_wasm() : void 0;
@@ -7992,6 +8008,25 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     __name(shouldSendContentLength, "shouldSendContentLength");
+    function setTypeOfService(socket, request) {
+      if (typeof socket.setTypeOfService !== "function") {
+        return;
+      }
+      const typeOfService = request.typeOfService;
+      if (typeOfService === void 0) {
+        return;
+      }
+      const currentTypeOfService = socket[kTypeOfService];
+      if (currentTypeOfService === typeOfService) {
+        return;
+      }
+      try {
+        socket.setTypeOfService(typeOfService);
+        socket[kTypeOfService] = typeOfService;
+      } catch {
+      }
+    }
+    __name(setTypeOfService, "setTypeOfService");
     function writeH1(client, request) {
       const { method, path, host, upgrade, blocking, reset } = request;
       let { body, headers, contentLength } = request;
@@ -8068,9 +8103,7 @@ var require_client_h1 = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      if (socket.setTypeOfService) {
-        socket.setTypeOfService(request.typeOfService);
-      }
+      setTypeOfService(socket, request);
       let header = `${method} ${path} HTTP/1.1\r
 `;
       if (typeof host === "string") {
@@ -12913,7 +12946,7 @@ var require_subresource_integrity = __commonJS({
     __name(getStrongestMetadata, "getStrongestMetadata");
     function parseMetadata(metadata) {
       const result = [];
-      for (const item of metadata.split(" ")) {
+      for (const item of metadata.split(/[\t\n\f\r ]+/)) {
         const expressionAndOptions = item.split("?", 1);
         const algorithmExpression = expressionAndOptions[0];
         let base64Value = "";
