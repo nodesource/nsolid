@@ -115,7 +115,8 @@ function validateSpan(span, spanType, threadId) {
       assert.strictEqual(span.attributes['http.method'], 'GET');
       assert.strictEqual(span.attributes['http.status_code'], 200);
       assert.strictEqual(span.attributes['http.status_text'], 'OK "quoted" \\status');
-      assert.ok(span.attributes['http.url'].startsWith('http://127.0.0.1:'));
+      // On this line the client span takes its authority from the Host header.
+      assert.strictEqual(span.attributes['http.url'], 'http://quoted"host\\name/');
       break;
     case 'dns_lookup':
       assert.strictEqual(span.kind, 2);
