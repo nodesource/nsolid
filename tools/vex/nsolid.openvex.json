@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-2376f6c1a2296483b9922769877f13b6bc3a27dd6b5f2d2deb6e2241fc69c5e3",
+  "@id": "https://openvex.dev/docs/public/vex-492b4fd7afa71ae45fbbfd335dffb1d77980cd06b9b2506a0cc622c74df33c65",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-11-11T20:01:03.428407Z",
+  "timestamp": "2026-11-13T16:33:26.391740Z",
   "statements": [
     {
       "vulnerability": {
@@ -51,11 +51,35 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/nodesource/nsolid"
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/pacote@19.0.2"
+            }
+          ]
         }
       ],
       "status": "fixed",
       "action_statement": "Upstream fix backported; vulnerable regex replaced with linear indexOf()/slice() logic. Upstream fix: https://github.com/npm/pacote/commit/627a7dc1a214d857472a13b48e42559c75288c9e"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-9496",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-9496"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/pacote@20.0.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "npm also carries pacote 20.0.1, which only @npmcli/metavuln-calculator uses: for npm audit, it calls pacote.packument() with the registry names of packages that have advisories. The vulnerable regex is in addGitSha(), which runs only when resolving git dependencies, so it never runs in this copy."
     },
     {
       "vulnerability": {
