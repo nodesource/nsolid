@@ -41,7 +41,29 @@
           "@id": "pkg:npm/glob@13.0.6"
         }
       ]
-    }
+    },
+    "verify": [
+      {
+        "path": "deps/npm/node_modules/minimatch/dist/commonjs/index.js",
+        "contains": "too many patterns"
+      },
+      {
+        "path": "deps/npm/node_modules/minimatch/dist/esm/index.js",
+        "contains": "too many patterns"
+      },
+      {
+        "path": "deps/npm/node_modules/glob/dist/commonjs/index.min.js",
+        "contains": "too many patterns"
+      },
+      {
+        "path": "deps/npm/node_modules/glob/dist/esm/index.min.js",
+        "contains": "too many patterns"
+      },
+      {
+        "path": "deps/minimatch/index.js",
+        "contains": "too many patterns"
+      }
+    ]
   },
   {
     "cve": "CVE-2026-118773",
