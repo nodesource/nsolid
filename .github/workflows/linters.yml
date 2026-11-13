@@ -169,9 +169,11 @@ jobs:
             /doc/
             /lib/
             /src/node_version.h
+            /test/fixtures/tools/
             /tools/
             pyproject.toml
             *.py
+            *.gyp
           sparse-checkout-cone-mode: false
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
@@ -182,6 +184,8 @@ jobs:
         run: |
           make lint-py-build
           make lint-py
+      - name: Test Python tools
+        run: make tooltest
   lint-yaml:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-slim
