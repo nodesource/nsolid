@@ -232,9 +232,8 @@ def render_findings(exceptions, repo=REPO):
       '| Package | CVE | Status | Path |',
       '| --- | --- | --- | --- |',
   ]
-  for r in rows:
-    lines.append(f"| {r['package']} | [{r['cve']}](#{r['cve'].lower()}) | "
-                 f"{r['status']} | `{r['path']}` |")
+  lines.extend(f"| {r['package']} | [{r['cve']}](#{r['cve'].lower()}) | "
+               f"{r['status']} | `{r['path']}` |" for r in rows)
 
   def escape(text):
     return text.replace('\\', '\\\\').replace('*', '\\*').replace('_', '\\_')
