@@ -10,7 +10,15 @@ import { GRPCServer } from '../common/nsolid-grpc-agent/index.js';
 const { internalBinding } = binding;
 
 if (process.argv[2] === 'child') {
+  // The agent gives up after 20 rejections. With its backoff, that takes
+  // minutes, so retry within 0.5 s.
+  internalBinding('nsolid_grpc_agent').disableBackoffForTesting();
   const interval = setInterval(() => {}, 100);
+  // Exit if the parent dies, so a timed-out run leaves no agent behind.
+  let leaving = false;
+  process.on('disconnect', () => {
+    if (!leaving) process.exit(1);
+  });
   process.on('message', mustCall(() => {
     // Let the queued stop callback finish before using the stopped agent.
     setTimeout(mustCall(() => {
@@ -34,6 +42,7 @@ if (process.argv[2] === 'child') {
       // Allow the unblocked-loop hook to run before exiting.
       setTimeout(() => {
         clearInterval(interval);
+        leaving = true;
         process.disconnect();
       }, 500);
     }), 500);

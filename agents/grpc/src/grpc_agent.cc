@@ -89,6 +89,9 @@ const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
 constexpr uint64_t kCommandRetryMaxMs = 60000;
 
+// See GrpcAgent::DisableBackoffForTesting().
+static std::atomic<bool> no_backoff_for_testing = false;
+
 const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4 MiB
 
 const int PUB_KEY_SIZE = 40;
@@ -467,6 +470,10 @@ void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* bl_event,
   blocked_body->set_callback_cntr(body["callback_cntr"].get<int32_t>());
 }
 
+/*static*/ void GrpcAgent::DisableBackoffForTesting() {
+  no_backoff_for_testing = true;
+}
+
 /*static*/ SharedGrpcAgent GrpcAgent::Inst(bool reset) {
   static Mutex mutex;
   Mutex::ScopedLock lock(mutex);
@@ -668,8 +675,10 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
 
   const uint64_t delay = command_retry_interval_ -
       uv_hrtime() % (command_retry_interval_ / 2 + 1);
+  const uint64_t max_retry_ms =
+      no_backoff_for_testing ? auth_timer_interval : kCommandRetryMaxMs;
   command_retry_interval_ =
-      std::min<uint64_t>(command_retry_interval_ * 2, kCommandRetryMaxMs);
+      std::min<uint64_t>(command_retry_interval_ * 2, max_retry_ms);
   Debug("Command stream closed (%d). Retrying in %" PRIu64 " ms\n",
         static_cast<int>(code), delay);
 
