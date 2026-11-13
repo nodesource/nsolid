@@ -181,7 +181,7 @@ def nsolid_strict_files(options, action):
   if action == uninstall:
     action(options, [link_path], 'bin/ncm-agent')
   elif action == install:
-    subprocess.call([abspath(options.install_path, 'lib/node_modules/ncm-ng/install.sh')])
+    subprocess.check_call([abspath(options.install_path, 'lib/node_modules/ncm-ng/install.sh')])
     try_symlink(options, '../lib/node_modules/ncm-ng/parallel/agent.js', link_path)
   else:
     assert(0) # unhandled action type
