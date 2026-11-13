@@ -145,6 +145,10 @@ static void Start(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(agent != nullptr ? agent->start() : UV_ECANCELED);
 }
 
+static void DisableBackoffForTesting(const FunctionCallbackInfo<Value>& args) {
+  GrpcAgent::DisableBackoffForTesting();
+}
+
 static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(Snapshot);
   registry->Register(StartCPUProfile);
@@ -154,6 +158,7 @@ static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
   registry->Register(StartHeapSampling);
   registry->Register(EndHeapSampling);
   registry->Register(Start);
+  registry->Register(DisableBackoffForTesting);
 }
 
 void InitGrpcAgent(Local<Object> exports,
@@ -172,6 +177,8 @@ void InitGrpcAgent(Local<Object> exports,
   }
 
   NODE_SET_METHOD(exports, "start", Start);
+  NODE_SET_METHOD(exports, "disableBackoffForTesting",
+                  DisableBackoffForTesting);
 }
 
 }  // namespace grpc
