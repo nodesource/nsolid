@@ -223,7 +223,8 @@ def render_findings(exceptions, repo=REPO):
       'Scanners that match package versions report these CVEs in packages that N|Solid installs. '
       "Each one is fixed in N|Solid's copy or doesn't affect N|Solid. "
       '[nsolid.openvex.json](nsolid.openvex.json) records the same statuses as an OpenVEX document, '
-      'for scanners that can import one.',
+      'for scanners that can import one. Prisma Cloud can\'t, so '
+      '[prisma_tags.py](prisma_tags.py) turns the statements into Prisma Cloud tag assignments.',
       '',
       'Paths are relative to the N|Solid installation directory: `/usr/local` in NodeSource\'s '
       'container images, or the directory a release tarball was extracted to.',
