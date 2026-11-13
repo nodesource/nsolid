@@ -38,7 +38,13 @@
           "@id": "pkg:npm/pacote@19.0.2"
         }
       ]
-    }
+    },
+    "verify": [
+      {
+        "path": "deps/npm/node_modules/pacote/lib/util/add-git-sha.js",
+        "contains": "hashIndex"
+      }
+    ]
   },
   {
     "cve": "CVE-2026-9496",
@@ -93,7 +99,21 @@
           "@id": "pkg:npm/minimatch@10.2.6"
         }
       ]
-    }
+    },
+    "verify": [
+      {
+        "path": "deps/npm/node_modules/minimatch/dist/commonjs/index.js",
+        "contains": "too many patterns"
+      },
+      {
+        "path": "deps/npm/node_modules/minimatch/dist/esm/index.js",
+        "contains": "too many patterns"
+      },
+      {
+        "path": "deps/minimatch/index.js",
+        "contains": "too many patterns"
+      }
+    ]
   },
   {
     "cve": "CVE-2026-118773",
