@@ -2387,9 +2387,10 @@ ErrorType GrpcAgent::do_start_prof_init(
     opt.start_timestamp = uv_hrtime();
   }, options);
 
+  // A heap profile ends in a heap snapshot, so it is disabled with snapshots.
   it = config.find("disableSnapshots");
-  if (type == ProfileType::kHeapSnapshot && it != config.end() &&
-      it->get<bool>()) {
+  if ((type == ProfileType::kHeapSnapshot || type == ProfileType::kHeapProf) &&
+      it != config.end() && it->get<bool>()) {
     return ErrorType::ESnapshotDisabled;
   }
 

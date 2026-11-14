@@ -6,6 +6,28 @@
 namespace node {
 namespace nsolid {
 
+namespace {
+
+// Apply the process's snapshot settings to a snapshot or a heap profile, which
+// ends in a snapshot, whatever asked for it. Returns true if snapshots are
+// disabled; otherwise turns on redaction if the process requires it.
+bool SnapshotsDisabled(bool* redacted) {
+  nlohmann::json config = EnvList::Inst()->CurrentConfigJSON();
+  auto it = config.find("disableSnapshots");
+  if (it != config.end() && it->is_boolean() && it->get<bool>()) {
+    return true;
+  }
+
+  it = config.find("redactSnapshots");
+  if (it != config.end() && it->is_boolean() && it->get<bool>()) {
+    *redacted = true;
+  }
+
+  return false;
+}
+
+}  // namespace
+
 NSolidHeapSnapshot::NSolidHeapSnapshot() {
   ASSERT_EQ(0, in_progress_heap_snapshots_.init(true));
   ASSERT_EQ(0, in_progress_heap_sampling_.init(true));
@@ -221,6 +243,10 @@ int NSolidHeapSnapshot::StartTrackingHeapObjects(
     uint64_t duration,
     internal::user_data data,
     Snapshot::snapshot_proxy_sig proxy) {
+  if (SnapshotsDisabled(&redacted)) {
+    return UV_EPERM;
+  }
+
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
   uint64_t profile_id =
@@ -256,6 +282,10 @@ int NSolidHeapSnapshot::GetHeapSnapshot(SharedEnvInst envinst,
                                         void* data,
                                         Snapshot::snapshot_proxy_sig proxy,
                                         internal::deleter_sig deleter) {
+  if (SnapshotsDisabled(&redacted)) {
+    return UV_EPERM;
+  }
+
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
   auto it = threads_running_snapshots_.find(thread_id);

@@ -943,10 +943,13 @@ Recognized Substitutions:
 Disable IPv6 in case it's not supported by the host system.
 .
 .It Ev NSOLID_DISABLE_SNAPSHOTS
-Force disable snapshots. Once set it cannot be reset.
+Force disable heap snapshots, and heap profiles, which end in a snapshot.
+Once set it cannot be reset.
 .
 .It Ev NSOLID_REDACT_SNAPSHOTS
-Redact all strings from snapshots.
+Redact strings from heap snapshots and heap profiles: string values, RegExp
+sources, and the property names of objects used as dictionaries.
+Once set it cannot be reset.
 .
 .It Ev NSOLID_INTERVAL Ar interval
 Override the default metrics reporting interval (milliseconds) of the N|Solid Agent.
