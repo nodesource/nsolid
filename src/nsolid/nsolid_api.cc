@@ -1253,6 +1253,17 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     old = current_config_;
 
     validate_config(&validated_config);
+    // Once snapshots are disabled or redacted, they stay that way: a later
+    // update, from the Console or from JS, can't turn the setting off.
+    for (const char* key : { "disableSnapshots", "redactSnapshots" }) {
+      auto curr_it = current_config_.find(key);
+      auto new_it = validated_config.find(key);
+      if (curr_it != current_config_.end() && *curr_it == true &&
+          new_it != validated_config.end() && *new_it != true) {
+        validated_config.erase(new_it);
+      }
+    }
+
     current_config_.merge_patch(validated_config);
     curr = current_config_;
     auto it = curr.find("interval");

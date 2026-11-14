@@ -53,18 +53,42 @@ server.start(mustSucceed(async (port) => {
       }
     }
   }
+
+  // Once on, redaction can't be turned off.
+  const config = await child.config({ redactSnapshots: false });
+  assert.strictEqual(config.redactSnapshots, true);
+  const { data } = await server.heapSnapshot(agentId, {
+    threadId: 0,
+    duration: 100,
+    heapSnapshot: { redacted: false },
+  });
+  assert.strictEqual(data.msg.common.error, null);
+  checkRedacted(data.msg.data, true);
+  let exit = await child.shutdown(0);
+  assert.strictEqual(exit.code, 0);
+  assert.strictEqual(exit.signal, null);
+
+  // Apply config and request collection in the same child message handler,
+  // each time in a new process, where redaction starts off.
   for (const [method, event] of [ ['snapshot', 'snapshot'],
                                   ['heapProfile', 'heap_profile'] ]) {
-    await child.config({ assetsEnabled: false, redactSnapshots: false });
+    const connected = once(server, 'command');
+    const child2 = new TestClient([], {
+      env: {
+        NSOLID_GRPC: `localhost:${port}`,
+        NSOLID_GRPC_INSECURE: '1',
+      },
+    });
+    await connected;
+    await child2.config({ assetsEnabled: false });
     const result = once(server, event);
-    // Apply config and request collection in the same child message handler.
-    await child[method](100, { assetsEnabled: true, redactSnapshots: true });
+    await child2[method](100, { assetsEnabled: true, redactSnapshots: true });
     const [{ msg }] = await result;
     assert.strictEqual(msg.common.error, null);
     checkRedacted(msg.data, true);
+    exit = await child2.shutdown(0);
+    assert.strictEqual(exit.code, 0);
+    assert.strictEqual(exit.signal, null);
   }
-  const { code, signal } = await child.shutdown(0);
-  assert.strictEqual(code, 0);
-  assert.strictEqual(signal, null);
   server.close();
 }));

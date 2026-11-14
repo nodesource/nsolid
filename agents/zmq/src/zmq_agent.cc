@@ -2229,9 +2229,10 @@ int ZmqAgent::do_start_prof_init(const nlohmann::json& message,
     opt.metadata = std::move(metadata);
   }, options);
 
+  // A heap profile ends in a heap snapshot, so it is disabled with snapshots.
   config_it = config.find("disableSnapshots");
-  if (type == ProfileType::kHeapSnapshot && config_it != config.end() &&
-      config_it->get<bool>()) {
+  if ((type == ProfileType::kHeapSnapshot || type == ProfileType::kHeapProf) &&
+      config_it != config.end() && config_it->get<bool>()) {
     return UV_EINVAL;
   }
 
