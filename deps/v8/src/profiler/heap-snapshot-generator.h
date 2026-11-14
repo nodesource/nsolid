@@ -264,6 +264,16 @@ class HeapSnapshot {
   HeapEntry* GetEntryById(SnapshotObjectId id);
   void FillChildren();
 
+  // Property edges of dictionary-mode objects. Those objects are hash tables,
+  // where data such as session IDs ends up as property names, so redacted
+  // snapshots don't serialize the names of these edges.
+  void AddRedactableEdge(const HeapGraphEdge* edge) {
+    redactable_edges_.insert(edge);
+  }
+  bool IsRedactableEdge(const HeapGraphEdge* edge) const {
+    return redactable_edges_.count(edge) != 0;
+  }
+
   void Print(int max_depth);
 
  private:
@@ -281,6 +291,7 @@ class HeapSnapshot {
   std::deque<HeapEntry> entries_;
   std::deque<HeapGraphEdge> edges_;
   std::vector<HeapGraphEdge*> children_;
+  std::unordered_set<const HeapGraphEdge*> redactable_edges_;
   std::unordered_map<SnapshotObjectId, HeapEntry*> entries_by_id_cache_;
   std::vector<EntrySourceLocation> locations_;
   SnapshotObjectId max_snapshot_js_object_id_ = -1;
@@ -571,6 +582,8 @@ class V8_EXPORT_PRIVATE V8HeapExplorer : public HeapEntriesAllocator {
   HeapObjectsMap* heap_object_map_;
   SnapshottingProgressReportingInterface* progress_;
   HeapSnapshotGenerator* generator_ = nullptr;
+  // Set while the properties of a dictionary-mode object are extracted.
+  bool extracting_dictionary_properties_ = false;
   std::unordered_map<Tagged<JSGlobalObject>, const char*, Object::Hasher>
       global_object_tag_map_;
   UnorderedHeapObjectMap<const char*> strong_gc_subroot_names_;
@@ -737,8 +750,8 @@ class HeapSnapshotJSONSerializer {
   int GetStringId(const char* s);
   V8_INLINE int to_node_index(const HeapEntry* e);
   V8_INLINE int to_node_index(int entry_index);
-  void SerializeEdge(HeapGraphEdge* edge, bool first_edge);
-  void SerializeEdges();
+  void SerializeEdge(HeapGraphEdge* edge, bool first_edge, bool redact = false);
+  void SerializeEdges(bool redact = false);
   void SerializeImpl(bool redact = false);
   void SerializeNode(const HeapEntry* entry, bool redact = false);
   void SerializeNodes(bool redact = false);

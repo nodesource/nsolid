@@ -46,9 +46,10 @@ function checkSnapshotData(snapshot, metadata, requestId, agentId, options) {
   assert.strictEqual(metadata['nsolid-agent-id'][0], agentId);
 }
 
-function checkSnapshotError(profile, metadata, requestId, agentId, code, msg) {
+function checkSnapshotError(profile, metadata, requestId, agentId, code, msg,
+                            command = 'snapshot') {
   assert.strictEqual(profile.common.requestId, requestId);
-  assert.strictEqual(profile.common.command, 'snapshot');
+  assert.strictEqual(profile.common.command, command);
   // From here check at least that all the fields are present
   validateObject(profile.common.recorded, 'recorded');
   const recSeconds = BigInt(profile.common.recorded.seconds);
@@ -324,6 +325,16 @@ tests.push({
                            500,
                            'Heap Snapshots disabled(1004)');
         assert.deepStrictEqual(disabled.data.msg.metadata, metadata);
+
+        // A heap profile ends in a heap snapshot, so it is disabled too.
+        const disabledProfile = await grpcServer.heapProfile(agentId, snapshotOpts);
+        checkSnapshotError(disabledProfile.data.msg,
+                           disabledProfile.data.metadata,
+                           disabledProfile.requestId,
+                           agentId,
+                           500,
+                           'Heap Snapshots disabled(1004)',
+                           'heap_profile');
 
         await child.shutdown(0);
         grpcServer.close();

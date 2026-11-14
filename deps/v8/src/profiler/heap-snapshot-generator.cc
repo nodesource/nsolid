@@ -2006,6 +2006,7 @@ void V8HeapExplorer::ExtractPropertyReferences(Tagged<JSObject> js_obj,
     Tagged<SwissNameDictionary> dictionary =
         js_obj->property_dictionary_swiss();
     ReadOnlyRoots roots(isolate);
+    extracting_dictionary_properties_ = true;
     for (InternalIndex i : dictionary->IterateEntries()) {
       Tagged<Object> k = dictionary->KeyAt(i);
       if (!dictionary->IsKey(roots, k)) continue;
@@ -2014,9 +2015,11 @@ void V8HeapExplorer::ExtractPropertyReferences(Tagged<JSObject> js_obj,
       SetDataOrAccessorPropertyReference(details.kind(), entry, Name::cast(k),
                                          value);
     }
+    extracting_dictionary_properties_ = false;
   } else {
     Tagged<NameDictionary> dictionary = js_obj->property_dictionary();
     ReadOnlyRoots roots(isolate);
+    extracting_dictionary_properties_ = true;
     for (InternalIndex i : dictionary->IterateEntries()) {
       Tagged<Object> k = dictionary->KeyAt(i);
       if (!dictionary->IsKey(roots, k)) continue;
@@ -2025,6 +2028,7 @@ void V8HeapExplorer::ExtractPropertyReferences(Tagged<JSObject> js_obj,
       SetDataOrAccessorPropertyReference(details.kind(), entry, Name::cast(k),
                                          value);
     }
+    extracting_dictionary_properties_ = false;
   }
 }
 
@@ -2518,6 +2522,9 @@ void V8HeapExplorer::SetPropertyReference(HeapEntry* parent_entry,
           : names_->GetName(reference_name);
 
   parent_entry->SetNamedReference(type, name, child_entry, generator_);
+  if (extracting_dictionary_properties_) {
+    snapshot_->AddRedactableEdge(&snapshot_->edges().back());
+  }
   MarkVisitedField(field_offset);
 }
 
@@ -3106,7 +3113,7 @@ void HeapSnapshotJSONSerializer::SerializeImpl(bool redact) {
   if (writer_->aborted()) return;
   writer_->AddString("],\n");
   writer_->AddString("\"edges\":[");
-  SerializeEdges();
+  SerializeEdges(redact);
   if (writer_->aborted()) return;
   writer_->AddString("],\n");
 
@@ -3195,15 +3202,21 @@ static int utoa(T value, base::Vector<char> buffer, int buffer_pos) {
 }
 
 void HeapSnapshotJSONSerializer::SerializeEdge(HeapGraphEdge* edge,
-                                               bool first_edge) {
+                                               bool first_edge,
+                                               bool redact) {
   // The buffer needs space for 3 unsigned ints, 3 commas, \n and \0
   static const int kBufferSize =
       MaxDecimalDigitsIn<sizeof(unsigned)>::kUnsigned * 3 + 3 + 2;
   base::EmbeddedVector<char, kBufferSize> buffer;
-  int edge_name_or_index = edge->type() == HeapGraphEdge::kElement ||
-                                   edge->type() == HeapGraphEdge::kHidden
-                               ? edge->index()
-                               : GetStringId(edge->name());
+  int edge_name_or_index;
+  if (edge->type() == HeapGraphEdge::kElement ||
+      edge->type() == HeapGraphEdge::kHidden) {
+    edge_name_or_index = edge->index();
+  } else if (redact && snapshot_->IsRedactableEdge(edge)) {
+    edge_name_or_index = GetStringId("(redacted)");
+  } else {
+    edge_name_or_index = GetStringId(edge->name());
+  }
   int buffer_pos = 0;
   if (!first_edge) {
     buffer[buffer_pos++] = ',';
@@ -3218,12 +3231,12 @@ void HeapSnapshotJSONSerializer::SerializeEdge(HeapGraphEdge* edge,
   writer_->AddString(buffer.begin());
 }
 
-void HeapSnapshotJSONSerializer::SerializeEdges() {
+void HeapSnapshotJSONSerializer::SerializeEdges(bool redact) {
   std::vector<HeapGraphEdge*>& edges = snapshot_->children();
   for (size_t i = 0; i < edges.size(); ++i) {
     DCHECK(i == 0 ||
            edges[i - 1]->from()->index() <= edges[i]->from()->index());
-    SerializeEdge(edges[i], i == 0);
+    SerializeEdge(edges[i], i == 0, redact);
     if (writer_->aborted()) return;
   }
 }
@@ -3243,7 +3256,9 @@ void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry,
   }
   buffer_pos = utoa(entry->type(), buffer, buffer_pos);
   buffer[buffer_pos++] = ',';
-  if (redact && entry->type() == HeapEntry::kString) {
+  // A RegExp node is named after its source, which can hold data too.
+  if (redact && (entry->type() == HeapEntry::kString ||
+                 entry->type() == HeapEntry::kRegExp)) {
     buffer_pos = utoa(GetStringId("(redacted)"), buffer, buffer_pos);
   } else {
     buffer_pos = utoa(GetStringId(entry->name()), buffer, buffer_pos);
