@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustCall, mustSucceed } from '../common/index.mjs';
+import { isWindows, mustCall, mustSucceed } from '../common/index.mjs';
 import fixtures from '../common/fixtures.js';
 import assert from 'node:assert';
 import {
@@ -9,7 +9,21 @@ import {
   TestClient,
 } from '../common/nsolid-grpc-agent/index.js';
 
+const SIGABRT = 6;
 const SIGTERM = 15;
+
+// An abort ends the process by SIGABRT, or on Windows with exit code 134.
+const aborted = isWindows ? { code: 134 } : { code: SIGABRT, signal: 'SIGABRT' };
+
+function checkAborted(exit) {
+  assert.ok(exit);
+  if (isWindows) {
+    assert.strictEqual(exit.code, 134);
+  } else {
+    assert.strictEqual(exit.code, null);
+    assert.strictEqual(exit.signal, 'SIGABRT');
+  }
+}
 
 const tests = [];
 
@@ -20,7 +34,8 @@ tests.push({
       const grpcServer = new GRPCServer({ tls: isSecure });
       grpcServer.start(mustSucceed(async (port) => {
         grpcServer.on('exit', mustCall((data) => {
-          checkExitData(data.msg, data.metadata, agentId, { code: SIGTERM, error: null, profile: '' });
+          checkExitData(data.msg, data.metadata, agentId,
+                        { code: SIGTERM, signal: 'SIGTERM', error: null, profile: '' });
           grpcServer.close();
           resolve();
         }));
@@ -122,6 +137,101 @@ tests.push({
         assert.ok(exit);
         assert.strictEqual(exit.code, 1);
         assert.strictEqual(exit.signal, null);
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should exit even if the exit event is never answered',
+  test: async (getEnv, isSecure) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer({ tls: isSecure, hangExit: true });
+      grpcServer.start(mustSucceed(async (port) => {
+        grpcServer.on('exit', mustCall((data) => {
+          checkExitData(data.msg, data.metadata, agentId, { code: 0, error: null, profile: '' });
+        }));
+
+        const env = getEnv(port, isSecure);
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        const start = Date.now();
+        const exit = await child.shutdown(0);
+        // The agent waits 5 seconds for the answer, then exits all the same.
+        const waited = Date.now() - start;
+        assert.ok(waited >= 4000 && waited < 15000, `exited after ${waited} ms`);
+        assert.strictEqual(exit.code, 0);
+        assert.strictEqual(exit.signal, null);
+        grpcServer.close();
+        resolve();
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should work if agent aborts',
+  test: async (getEnv, isSecure) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer({ tls: isSecure });
+      grpcServer.start(mustSucceed(async (port) => {
+        grpcServer.on('exit', mustCall((data) => {
+          // process.abort() aborts at its line in Node's source; the stack is
+          // the JS that called it.
+          const error = { message: /^Aborted at .+:\d+$/, stack: /client\.js/ };
+          checkExitData(data.msg, data.metadata, agentId, { ...aborted, error, profile: '' });
+          grpcServer.close();
+          resolve();
+        }));
+
+        const env = getEnv(port, isSecure);
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        checkAborted(await child.abort());
+      }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should work if agent runs out of memory',
+  test: async (getEnv, isSecure) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer({ tls: isSecure });
+      grpcServer.start(mustSucceed(async (port) => {
+        grpcServer.on('exit', mustCall((data) => {
+          // Out of memory, there's no reading the JS stack.
+          const error = {
+            message: /^FATAL ERROR: .*Allocation failed - JavaScript heap out of memory$/,
+          };
+          checkExitData(data.msg, data.metadata, agentId, { ...aborted, error, profile: '' });
+          assert.strictEqual(data.msg.body.error.stack, '');
+          grpcServer.close();
+          resolve();
+        }));
+
+        const env = {
+          ...getEnv(port, isSecure),
+          NODE_OPTIONS: '--max-old-space-size=32',
+        };
+
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        const agentId = await child.id();
+        checkAborted(await child.oom());
       }));
     });
   },
