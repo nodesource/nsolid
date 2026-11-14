@@ -83,6 +83,7 @@ jobs:
             /doc/
             /lib/
             /src/node_version.h
+            /test/fixtures/tools/
             /tools/
             pyproject.toml
             *.py
@@ -95,6 +96,8 @@ jobs:
         run: |
           make lint-py-build
           make lint-py
+      - name: Test Python tools
+        run: make tooltest
 
   lint-sh:
     if: github.event.pull_request.draft == false
