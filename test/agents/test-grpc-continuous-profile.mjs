@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustCall, mustNotCall, mustSucceed } from '../common/index.mjs';
+import { mustCallAtLeast, mustNotCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { setTimeout } from 'node:timers/promises';
 import validators from 'internal/validators';
@@ -44,7 +44,9 @@ function checkContinuousProfileData(profile, metadata, agentId, options, interva
   const now = Date.now();
   assert.ok(now - profile.startTs > 0);
   assert.ok(now - profile.startTs < 5000);
-  assert.ok(now - profile.endTs > 0);
+  // endTs comes from the monotonic clock, which reads up to about 1 ms ahead
+  // of Date.now(), so a profile delivered at once can seem to end later.
+  assert.ok(now - profile.endTs > -10);
   assert.ok(now - profile.endTs < 5000);
 
   validateString(profile.data, 'profile.data');
@@ -85,9 +87,10 @@ tests.push({
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         let times = 0;
-        grpcServer.on('profile', mustCall(async (data) => {
+        grpcServer.on('profile', mustCallAtLeast(async (data) => {
+          // More profiles can arrive while the child shuts down.
+          if (++times > 2) return;
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
-          times++;
           if (times === 2) {
             const diff = process.hrtime(startTime);
             assert.strictEqual(diff[0], 0);
@@ -259,7 +262,11 @@ tests.push({
         const workers = await child.workers();
         const wid = workers[0];
 
-        grpcServer.on('profile', mustCall(async (data) => {
+        // A thread can send its third profile before the other sends its
+        // second, and more can arrive while the child shuts down.
+        let done = false;
+        grpcServer.on('profile', mustCallAtLeast(async (data) => {
+          if (done) return;
           if (data.msg.threadId === '0') {
             timesMainThread++;
           } else {
@@ -272,7 +279,8 @@ tests.push({
           };
 
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
-          if (timesMainThread === 2 && timesWorker === 2) {
+          if (timesMainThread >= 2 && timesWorker >= 2) {
+            done = true;
             const diff = process.hrtime(startTime);
             assert.strictEqual(diff[0], 0);
             assert.ok(diff[1] > 200000000);
@@ -293,9 +301,10 @@ tests.push({
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         let times = 0;
-        grpcServer.on('profile', mustCall(async (data) => {
+        grpcServer.on('profile', mustCallAtLeast(async (data) => {
+          // More profiles can arrive while the child shuts down.
+          if (++times > 2) return;
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
-          times++;
           if (times === 2) {
             const diff = process.hrtime(startTime);
             assert.strictEqual(diff[0], 0);
