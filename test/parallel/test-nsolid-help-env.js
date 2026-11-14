@@ -13,7 +13,9 @@ for (const file of ['agents/grpc/src/grpc_agent.cc',
                     'agents/zmq/src/zmq_agent.cc']) {
   const nativeSource = fs.readFileSync(path.join(root, file), 'utf8');
   for (const [, name] of nativeSource.matchAll(/"(NSOLID_[A-Z0-9_]+)"/g)) {
-    names.add(name);
+    // Variables that only tests set, such as NSOLID_TEST_GRPC_NO_BACKOFF, are
+    // not documented.
+    if (!name.startsWith('NSOLID_TEST_')) names.add(name);
   }
 }
 const manpage = fs.readFileSync(path.join(root, 'doc/nsolid.1'), 'utf8');
