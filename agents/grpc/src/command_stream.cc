@@ -104,6 +104,13 @@ void CommandStream::OnWriteDone(bool ok/*ok*/) {
 }
 
 void CommandStream::NextWrite() {
+  // Never start a write once writes are done. gRPC destroys the stream before
+  // it calls OnDone, so a write started after the stream finished would use
+  // freed memory. Responses still queued are dropped with the stream.
+  if (write_state_.done || write_state_.writes_done) {
+    return;
+  }
+
   if (write_state_.write_done && response_q_.dequeue(write_state_.resp)) {
     StartWrite(&write_state_.resp);
     write_state_.write_done = false;
