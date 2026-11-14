@@ -74,6 +74,16 @@ const char* const kNSOLID_GRPC_KEYLOG = "NSOLID_GRPC_KEYLOG";
 
 const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
+constexpr uint64_t kCommandRetryMaxMs = 60000;
+
+// Tests set NSOLID_TEST_GRPC_NO_BACKOFF to retry every 0.5 s, as before the
+// backoff, so the agent gives up on a rejected token in seconds.
+static uint64_t CommandRetryMaxMs() {
+  static const bool no_backoff =
+      per_process::system_environment->Get("NSOLID_TEST_GRPC_NO_BACKOFF")
+          .has_value();
+  return no_backoff ? auth_timer_interval : kCommandRetryMaxMs;
+}
 
 const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4 MiB
 
@@ -81,6 +91,8 @@ const int PUB_KEY_SIZE = 40;
 const int CONSOLE_ID_SIZE = 36;
 
 const seconds DEFAULT_GRPC_TIMEOUT = seconds{ 60 };
+// How long an ending process waits for its exit event to be sent.
+const seconds EXIT_EVENT_TIMEOUT = seconds{5};
 
 JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)) {
@@ -553,9 +565,19 @@ void GrpcAgent::set_asset_cb(SharedEnvInst envinst,
 }
 
 void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
+  if (exiting_ || nsolid_service_stub_ == nullptr) {
+    return;
+  }
+
+  const uint64_t established = command_stream_ ?
+      command_stream_->established_at() : 0;
+  if (established != 0 &&
+      uv_hrtime() / 1000000 - established >= kCommandRetryMaxMs) {
+    command_retry_interval_ = auth_timer_interval;
+    auth_retries_ = 0;
+  }
   const ::grpc::StatusCode code = status.error_code();
   if (code == ::grpc::StatusCode::UNAUTHENTICATED) {
-    Debug("Error Authenticating. Retrying in %ld ms\n", auth_timer_interval);
     auth_retries_++;
     if (auth_retries_ == MAX_AUTH_RETRIES) {
       fprintf(stderr,
@@ -574,12 +596,14 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
       }, weak_from_this());
       return;
     }
-  } else if (code == ::grpc::StatusCode::UNAVAILABLE) {
-    Debug("Service unavailable. Retrying in %ld ms\n", auth_timer_interval);
-  } else {
-    reset_command_stream();
-    return;
   }
+
+  const uint64_t delay = command_retry_interval_ -
+      uv_hrtime() % (command_retry_interval_ / 2 + 1);
+  command_retry_interval_ =
+      std::min<uint64_t>(command_retry_interval_ * 2, CommandRetryMaxMs());
+  Debug("Command stream closed (%d). Retrying in %" PRIu64 " ms\n",
+        static_cast<int>(code), delay);
 
   ASSERT_EQ(0, auth_timer_.start(+[](nsuv::ns_timer*, WeakGrpcAgent agent_wp) {
     SharedGrpcAgent agent = agent_wp.lock();
@@ -588,7 +612,7 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
     }
 
     agent->reset_command_stream();
-  }, auth_timer_interval, 0, weak_from_this()));
+  }, delay, 0, weak_from_this()));
 }
 
 int GrpcAgent::start() {
@@ -1075,6 +1099,8 @@ int GrpcAgent::config(const json& config) {
   }
 
   if (grpc_changed || saas_changed) {
+    command_retry_interval_ = auth_timer_interval;
+    auth_retries_ = 0;
     ResetGrpcClients();
     auto it = config_.find("grpc");
     if (it != config_.end() || saas_) {
@@ -1379,7 +1405,11 @@ void GrpcAgent::got_asset_done_msg() {
         prof_stor.stream = nullptr;
         if (prof_stor.done) {
           profile_state.pending_profiles_map.erase(it);
-          profile_state.nr_profiles--;
+          // Heap snapshots aren't counted (see do_start_prof_init): taking one
+          // off would wrap the counter, and exit would wait on it forever.
+          if (stor.type != kHeapSnapshot) {
+            profile_state.nr_profiles--;
+          }
         }
       } else {
         delete stor.stream;
@@ -1864,6 +1894,10 @@ void GrpcAgent::send_exit() {
   PopulateCommon(exit_event->mutable_common(), "exit", nullptr);
   grpcagent::ExitBody* exit_body = exit_event->mutable_body();
   exit_body->set_code(GetExitCode());
+  int exit_signal = GetExitSignal();
+  if (exit_signal != 0) {
+    exit_body->set_signal(node::signo_string(exit_signal));
+  }
   auto* error = GetExitError();
   if (error) {
     grpcagent::Error* error_info = exit_body->mutable_error();
@@ -1877,30 +1911,36 @@ void GrpcAgent::send_exit() {
   }
 
   auto context = GrpcClient::MakeClientContext(rpc_metadata());
+  // The process waits on this to exit, or to abort: a console that is reached
+  // but doesn't answer mustn't keep it from ending.
+  context->set_deadline(system_clock::now() + EXIT_EVENT_TIMEOUT);
   uv_cond_t cond;
   uv_mutex_t lock;
   bool signaled = false;
 
   uv_mutex_init(&lock);
   uv_cond_init(&cond);
-  GrpcClient::DelegateAsyncExport<grpcagent::ExitEvent>(
-    nsolid_service_stub_.get(),
-    &nsolid_grpc_async::ExportExit,
-    std::move(context), std::move(arena), std::move(*exit_event),
-    [&lock, &cond, &signaled](::grpc::Status,
-        std::unique_ptr<Arena> &&,
-        const grpcagent::ExitEvent& event,
-        grpcagent::EventResponse*) {
-      uv_mutex_lock(&lock);
-      signaled = true;
-      uv_cond_signal(&cond);
-      uv_mutex_unlock(&lock);
-      return true;
-    });
+  int r = GrpcClient::DelegateAsyncExport<grpcagent::ExitEvent>(
+      nsolid_service_stub_.get(),
+      &nsolid_grpc_async::ExportExit,
+      std::move(context),
+      std::move(arena),
+      std::move(*exit_event),
+      [&lock, &cond, &signaled](::grpc::Status,
+                                std::unique_ptr<Arena>&&,
+                                const grpcagent::ExitEvent& event,
+                                grpcagent::EventResponse*) {
+        uv_mutex_lock(&lock);
+        signaled = true;
+        uv_cond_signal(&cond);
+        uv_mutex_unlock(&lock);
+        return true;
+      });
 
-  // wait for the exit event to be sent
+  // wait for the exit event to be sent; when it couldn't be, nothing will call
+  // back.
   uv_mutex_lock(&lock);
-  while (!signaled) {
+  while (r == 0 && !signaled) {
     uv_cond_wait(&cond, &lock);
   }
   uv_mutex_unlock(&lock);
