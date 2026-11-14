@@ -34,6 +34,9 @@ test-snapshot-reproducible: SKIP
 # https://ci.nodejs.org/job/node-stress-single-test/800 (38/1000)
 test-repl-user-error-handler: PASS, FLAKY
 
+# https://github.com/nodesource/nsolid/issues/682
+test-nsolid-snapshot: PASS,FLAKY
+
 [$system==win32]
 # https://github.com/nodejs/node/issues/59090
 test-inspector-network-fetch: PASS, FLAKY
