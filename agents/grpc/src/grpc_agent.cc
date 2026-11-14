@@ -89,6 +89,15 @@ const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
 constexpr uint64_t kCommandRetryMaxMs = 60000;
 
+// Tests set NSOLID_TEST_GRPC_NO_BACKOFF to retry every 0.5 s, as before the
+// backoff, so the agent gives up on a rejected token in seconds.
+static uint64_t CommandRetryMaxMs() {
+  static const bool no_backoff =
+      per_process::system_environment->Get("NSOLID_TEST_GRPC_NO_BACKOFF")
+          .has_value();
+  return no_backoff ? auth_timer_interval : kCommandRetryMaxMs;
+}
+
 const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4 MiB
 
 const int PUB_KEY_SIZE = 40;
@@ -669,7 +678,7 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
   const uint64_t delay = command_retry_interval_ -
       uv_hrtime() % (command_retry_interval_ / 2 + 1);
   command_retry_interval_ =
-      std::min<uint64_t>(command_retry_interval_ * 2, kCommandRetryMaxMs);
+      std::min<uint64_t>(command_retry_interval_ * 2, CommandRetryMaxMs());
   Debug("Command stream closed (%d). Retrying in %" PRIu64 " ms\n",
         static_cast<int>(code), delay);
 
