@@ -1,0 +1,13 @@
+prefix agents
+
+# To mark a test as flaky, list the test name in the appropriate section
+# below, without its extension, followed by ": PASS,FLAKY". Example:
+# sample-test                        : PASS,FLAKY
+
+[true] # This section applies to all platforms
+# https://github.com/nodesource/nsolid/issues/683
+test-zmq-heap-profile: PASS,FLAKY
+test-zmq-profile: PASS,FLAKY
+# https://github.com/nodesource/nsolid/issues/688
+test-grpc-continuous-profile: PASS,FLAKY
+test-otlp-grpc-tls: PASS,FLAKY
