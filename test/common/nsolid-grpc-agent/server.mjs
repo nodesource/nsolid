@@ -107,9 +107,14 @@ async function startServer(cb) {
       call.on('end', () => {
         console.log('end');
         // The client has finished sending
-        // You can end the call here
-        call.end();
-        commandCallMap.delete(agentId);
+        // You can end the call here, unless the server already ended it.
+        if (!call.writableEnded) {
+          call.end();
+        }
+        // The agent may already have reconnected with a new call.
+        if (commandCallMap.get(agentId) === call) {
+          commandCallMap.delete(agentId);
+        }
       });
 
       // The common name of the verified client certificate, if any.
@@ -305,11 +310,29 @@ process.on('message', (message) => {
     sendSourceCode(message.agentId, message.requestId, message.options);
   } else if (message.type === 'startup_times') {
     sendStartupTimes(message.agentId, message.requestId);
+  } else if (message.type === 'end_command_stream') {
+    endCommandStream(message.agentId, message.burst);
   } else if (message.type === 'close') {
     server.forceShutdown();
     process.exit(0);
   }
 });
+
+// Send `burst` info commands, then end the command stream at once, as a
+// Console that goes away while the agent still has commands to answer.
+function endCommandStream(agentId, burst = 0) {
+  const call = commandCallMap.get(agentId);
+  if (!call) {
+    return;
+  }
+
+  commandCallMap.delete(agentId);
+  for (let i = 0; i < burst; i++) {
+    call.write({ requestId: `burst-${i}`, id: agentId, command: 'info', args: {} });
+  }
+
+  call.end();
+}
 
 async function sendCommand(command, agentId, requestId, args = {}) {
   return new Promise((resolve, reject) => {

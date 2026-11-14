@@ -381,6 +381,12 @@ class GRPCServer extends EventEmitter {
     });
   }
 
+  // Send `burst` info commands to the agent, then end its command stream at
+  // once, without waiting for the acknowledgements.
+  endCommandStream(agentId, burst = 0) {
+    this.#server?.send({ type: 'end_command_stream', agentId, burst });
+  }
+
   close() {
     if (this.#server.exitCode !== null || this.#server.signalCode !== null) {
       return Promise.resolve();
