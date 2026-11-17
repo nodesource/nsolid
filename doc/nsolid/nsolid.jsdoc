@@ -170,7 +170,8 @@
  * - `IPv6` [2001:cdba::3257:9652]
  * - `hostname` nsolid_hub.local
  * @property {boolean} disableIpv6 - Whether to support IPv6 or only IPv4999.
- * @property {string} disableSnapshots - The version of the package.
+ * @property {boolean} disableSnapshots - Whether N\|Solid refuses to take
+ * heap snapshots and heap profiles. Once true, it stays true.
  * @property {string} env - Overrides the NODE_ENV variable. Defaults to 'prod'.
  * @property {string} hostname - The hostname the N\|Solid process is running
  * on (overrides system-determined hostname).
@@ -187,7 +188,8 @@
  * server.
  * @property {boolean} redactSnapshots - Boolean to indicate if you want heap
  * snapshots to obscure string variable contents. This may impede your ability
- * to debug and is meant for sensitive production environments.
+ * to debug and is meant for sensitive production environments. Once true, it
+ * stays true.
  * @property {string|number} statsd - The route to a StatsD collector if you
  * wish to send metrics directly to an external data collection service from the
  * N\|Solid process. Without this environment variable, the N\|Solid Agent will
