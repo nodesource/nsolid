@@ -116,9 +116,21 @@ def generate_document(exceptions, timestamp=None):
   return document
 
 
+def write(path, text):
+  # LF on every platform. Path.write_text() takes newline= only in 3.10+.
+  with open(path, 'w', encoding='utf-8', newline='\n') as f:
+    f.write(text)
+
+
 def main():
-  document = generate_document(json.loads((ROOT / 'exceptions.json').read_text()))
-  (ROOT / 'nsolid.openvex.json').write_text(json.dumps(document, indent=2) + '\n')
+  exceptions = json.loads((ROOT / 'exceptions.json').read_text(encoding='utf-8'))
+  vex = ROOT / 'nsolid.openvex.json'
+  old = json.loads(vex.read_text(encoding='utf-8')) if vex.exists() else {}
+  # Keep the old timestamp, and with it the old @id, unless the content changed.
+  document = generate_document(exceptions, old.get('timestamp'))
+  if document != old:
+    document = generate_document(exceptions)
+  write(vex, json.dumps(document, indent=2) + '\n')
 
 if __name__ == '__main__':
   main()
