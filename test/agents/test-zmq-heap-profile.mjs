@@ -224,6 +224,30 @@ function testNullArgs(playground) {
   });
 }
 
+// A heap profile ends in a heap snapshot, so it's refused with snapshots, and
+// with the same error a snapshot request gets.
+function testDisabledSnapshots(playground) {
+  return new Promise((resolve) => {
+    const options = {
+      duration: 100,
+      threadId: 0,
+      trackAllocations: false,
+    };
+
+    const bootstrapOpts = {
+      opts: { env: { NSOLID_DISABLE_SNAPSHOTS: 1 } },
+    };
+
+    playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
+      playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
+        assert.strictEqual(err.code, 422);
+        assert.strictEqual(err.message, 'Invalid arguments');
+        resolve();
+      }));
+    }));
+  });
+}
+
 function testProfileAlreadyRunningMain(playground) {
   return new Promise((resolve) => {
     let events = 0;
@@ -484,6 +508,11 @@ tests.push({
 tests.push({
   name: 'should return 422 no args field',
   test: testNullArgs,
+});
+
+tests.push({
+  name: 'should return 422 if snapshots are disabled',
+  test: testDisabledSnapshots,
 });
 
 tests.push({
