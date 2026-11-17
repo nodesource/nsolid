@@ -16,6 +16,7 @@ const BootstrapState = {
   GOTINFO: 1 << 0,
   GOTPACKAGES: 1 << 1,
   GOTMETRICS: 1 << 2,
+  DONE: (1 << 0) | (1 << 1) | (1 << 2),
 };
 
 const defaultForkOpts = {
@@ -255,11 +256,9 @@ class TestClient {
 class TestPlayground {
   client;
   #config;
-  #bootstrapState;
   constructor(config) {
     this.zmqAgentBus = new ZmqAgentBus(config);
     this.#config = config;
-    this.#bootstrapState = BootstrapState.INIT;
     this.client = null;
   }
 
@@ -298,6 +297,7 @@ class TestPlayground {
       id: null,
       events: this.#config.saas ? -1 : 0,
       authCount: 0,
+      bootstrap: BootstrapState.INIT,
     };
     eventTypes.forEach((eventType) => {
       this.zmqAgentBus.on(eventType, (agentId, data) => {
@@ -342,16 +342,16 @@ class TestPlayground {
     });
   }
 
-  #checkInitialSequence(eventType, data) {
-    if (eventType === 'agent-info') {
-      this.#bootstrapState |= BootstrapState.GOTINFO;
-      // parse info data
-    } else if (eventType === 'agent-packages') {
-      this.#bootstrapState |= BootstrapState.GOTPACKAGES;
-      // parse packages data
-    } else if (eventType === 'agent-metrics') {
-      this.#bootstrapState |= BootstrapState.GOTMETRICS;
-      // parse metrics data
+  #checkInitialSequence(eventType) {
+    switch (eventType) {
+      case 'agent-info':
+        return BootstrapState.GOTINFO;
+      case 'agent-packages':
+        return BootstrapState.GOTPACKAGES;
+      case 'agent-metrics':
+        return BootstrapState.GOTMETRICS;
+      default:
+        return BootstrapState.INIT;
     }
   }
 
@@ -367,6 +367,20 @@ class TestPlayground {
         assert.strictEqual(state.id, agentId);
       }
 
+      if (state.bootstrap === BootstrapState.DONE) {
+        if (this.#config.saas) {
+          assert.strictEqual(state.authCount, 3);
+        }
+        // The agent sends metrics periodically, and they'd interleave with
+        // the sequences the tests check. Once it reconnects, though, its
+        // initial sequence, metrics included, is the test's to check.
+        if (eventType === 'agent-connected')
+          state.reconnected = true;
+        if (next && (state.reconnected || eventType !== 'agent-metrics'))
+          next(eventType, agentId, data);
+        return;
+      }
+
       switch (++state.events) {
         case 0:
           assert.strictEqual(eventType, 'agent-authorized');
@@ -375,32 +389,18 @@ class TestPlayground {
         case 1:
           assert.strictEqual(eventType, 'agent-connected');
           break;
-        case 2:
+        default:
+          // Then info, packages and metrics, in any order, metrics maybe more
+          // than once. With SaaS, the agent is authorized again meanwhile.
           if (this.#config.saas && eventType === 'agent-authorized') {
-            --state.events;
             ++state.authCount;
+            break;
           }
 
-          this.#checkInitialSequence(eventType, data);
-          if (eventType === 'agent-metrics') {
-            --state.events;
+          state.bootstrap |= this.#checkInitialSequence(eventType);
+          if (state.bootstrap === BootstrapState.DONE) {
+            done(null, agentId);
           }
-          break;
-        case 3:
-          this.#checkInitialSequence(eventType, data);
-          break;
-        case 4:
-          this.#checkInitialSequence(eventType, data);
-          assert.ok(this.#bootstrapState &&
-                    (BootstrapState.GOTINFO | BootstrapState.GOTPACKAGES | BootstrapState.GOTMETRICS));
-          done(null, agentId);
-          break;
-        default:
-          if (this.#config.saas) {
-            assert.strictEqual(state.authCount, 3);
-          }
-          if (next)
-            next(eventType, agentId, data);
       }
     } catch (err) {
       this.stopClient();
