@@ -42,13 +42,33 @@ Security notifications will be distributed via <https://nodesource.com/blog/>
 
 ## Vulnerability Exploitability eXchange (VEX)
 
-N|Solid publishes an OpenVEX document with releases to identify vulnerabilities
-in bundled dependencies that do not affect N|Solid. The document is installed at
-`share/doc/nsolid/nsolid.openvex.json` and contains only reviewed
-`not_affected` statements; it does not replace security advisories or the
-security reporting process above.
+N|Solid publishes an OpenVEX document with releases. It lists reviewed
+vulnerabilities in bundled dependencies that do not affect N|Solid
+(`not_affected`), or that N|Solid fixes in its own copy of the dependency
+(`fixed`). The document is installed at `share/doc/nsolid/nsolid.openvex.json`.
+It does not replace security advisories or the security reporting process
+above.
 
-Maintainers add reviewed exceptions to `tools/vex/exceptions.json` and
-regenerate the document with `make install` (or `python3 tools/vex/generate.py`)
-when preparing a release. Each exception must include a CVE ID and a valid
-OpenVEX justification.
+[`tools/vex/SCANNER-FINDINGS.md`](tools/vex/SCANNER-FINDINGS.md) lists the same
+statements for each npm package that N|Solid installs, with the package's path
+and, for a fix made in N|Solid's copy, a command that checks for it.
+[`tools/vex/prisma_tags.py`](tools/vex/prisma_tags.py) turns the statements
+into Prisma Cloud tag assignments. Read its notes before using it: a tag also
+hides the CVE in other copies of the package.
+
+Maintainers add reviewed exceptions to `tools/vex/exceptions.json` and run
+`python3 tools/vex/generate.py`, which regenerates `nsolid.openvex.json` and
+`SCANNER-FINDINGS.md`. `make install` installs the document but doesn't
+regenerate it. In `exceptions.json`:
+
+* Each exception needs a CVE ID. A `not_affected` exception, the default, also
+  needs a valid OpenVEX justification.
+* A `fixed` exception for a fix made in N|Solid's copy of a package lists
+  `verify` checks: files with a string that only the fixed code contains.
+  `test/parallel/test-nsolid-vex-fixes.js` runs them, so an update that
+  replaces a fixed file fails the test.
+* An exception about packages that ncm-ng installs sets `installed_under` to
+  `ncm-ng`. Otherwise its npm packages must be ones that npm bundles.
+
+`test/tools/test_vex.py` fails when the committed `nsolid.openvex.json` or
+`SCANNER-FINDINGS.md` doesn't match what `generate.py` makes.

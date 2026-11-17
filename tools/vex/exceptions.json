@@ -1,22 +1,18 @@
 [
   {
     "cve": "CVE-2026-93687",
+    "installed_under": "ncm-ng",
     "product": {
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
         {
-          "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
-          "subcomponents": [
-            {
-              "@id": "pkg:npm/fast-glob@3.3.3"
-            },
-            {
-              "@id": "pkg:npm/micromatch@4.0.8"
-            },
-            {
-              "@id": "pkg:npm/braces@3.0.3"
-            }
-          ]
+          "@id": "pkg:npm/fast-glob@3.3.3"
+        },
+        {
+          "@id": "pkg:npm/micromatch@4.0.8"
+        },
+        {
+          "@id": "pkg:npm/braces@3.0.3"
         }
       ]
     },
