@@ -10,6 +10,9 @@ import { GRPCServer } from '../common/nsolid-grpc-agent/index.js';
 const { internalBinding } = binding;
 
 if (process.argv[2] === 'child') {
+  // The agent gives up after 20 rejections. With its backoff, that takes
+  // minutes, so retry within 0.5 s.
+  internalBinding('nsolid_grpc_agent').disableBackoffForTesting();
   const interval = setInterval(() => {}, 100);
   // Exit if the parent dies, so a timed-out run leaves no agent behind.
   let leaving = false;
@@ -54,9 +57,6 @@ if (process.argv[2] === 'child') {
         env: {
           NSOLID_GRPC: `localhost:${port}`,
           NSOLID_GRPC_INSECURE: '1',
-          // The agent gives up after 20 rejections. With its backoff, that
-          // takes minutes, so retry every 0.5 s.
-          NSOLID_TEST_GRPC_NO_BACKOFF: '1',
         },
         stdio: ['ignore', 'inherit', 'pipe', 'ipc'],
       });
