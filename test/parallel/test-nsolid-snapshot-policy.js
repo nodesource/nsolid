@@ -2,8 +2,9 @@
 'use strict';
 
 // Snapshot settings apply to heap profiles, which end in a heap snapshot.
-// Redaction covers the property names of dictionary-mode objects and RegExp
-// sources, and once snapshots are redacted or disabled they stay that way.
+// Redaction covers the property names of dictionary-mode objects, RegExp
+// sources and WeakMap pairs' names, and once snapshots are redacted or disabled
+// they stay that way.
 
 const common = require('../common');
 const assert = require('assert');
@@ -13,14 +14,19 @@ const { internalBinding } = require('internal/test/binding');
 const { UV_EPERM } = internalBinding('uv');
 
 // Data used as property names, in a store like express-session's MemoryStore.
-// Object.create(null) objects are dictionaries.
+// Objects without a prototype are dictionaries.
 const tag = `${process.hrtime.bigint()}${Math.random().toString(36).slice(2)}`;
 const sessionId = `session-${tag}`;
 const reSource = `secret-${tag}`;
-// eslint-disable-next-line node-core/prefer-proto
-const sessions = Object.create(null);
+// Flat, as from JSON.parse(): V8 names a concatenated string
+// "(concatenated string)" rather than by its contents.
+const weakValue = JSON.parse(`"weak-${tag}"`);
+const sessions = { __proto__: null };
 sessions[sessionId] = { user: 'alice' };
 const pattern = new RegExp(reSource);
+// A WeakMap pair's edges are named after its key and value.
+const weakKey = {};
+const weak = new WeakMap([[weakKey, weakValue]]);
 
 async function heapProfile() {
   const stream = nsolid.heapProfileStream(0, 100, false);
@@ -33,7 +39,8 @@ async function heapProfile() {
 }
 
 function hasSecrets(strings) {
-  return strings.some((s) => s.includes(sessionId) || s.includes(reSource));
+  return strings.some((s) => s.includes(sessionId) || s.includes(reSource) ||
+                             s.includes(weakValue));
 }
 
 function heapProfileFails() {
@@ -48,11 +55,13 @@ function heapProfileFails() {
 }
 
 (async () => {
-  // Without redaction both secrets are in the snapshot, so the checks below
-  // can't pass by accident.
+  // Without redaction the secrets are in the snapshot, the WeakMap one in its
+  // pair's edge name too, so the checks below can't pass by accident.
   let strings = await heapProfile();
   assert(strings.includes(sessionId));
   assert(strings.some((s) => s.includes(reSource)));
+  assert(strings.some((s) => s.includes('pair in WeakMap') &&
+                             s.includes(weakValue)));
 
   nsolid.start({ redactSnapshots: true });
   strings = await heapProfile();
@@ -74,4 +83,5 @@ function heapProfileFails() {
   // The objects stayed alive for every snapshot above.
   assert.strictEqual(sessions[sessionId].user, 'alice');
   assert(pattern.test(reSource));
+  assert.strictEqual(weak.get(weakKey), weakValue);
 })().then(common.mustCall());
