@@ -943,12 +943,19 @@ Recognized Substitutions:
 Disable IPv6 in case it's not supported by the host system.
 .
 .It Ev NSOLID_DISABLE_SNAPSHOTS
-Force disable heap snapshots, and heap profiles, which end in a snapshot.
+Force disable the heap snapshots N|Solid takes, for the Console or through the
+nsolid module, and its heap profiles, which end in a snapshot.
+Snapshots that Node.js takes itself, as with v8.writeHeapSnapshot() or
+--heapsnapshot-signal, aren't covered.
 Once set it cannot be reset.
 .
 .It Ev NSOLID_REDACT_SNAPSHOTS
-Redact strings from heap snapshots and heap profiles: string values, RegExp
-sources, and the property names of objects used as dictionaries.
+Redact strings from the heap snapshots and heap profiles N|Solid takes: string
+values, RegExp sources, the WeakMap entry names made from either, and the
+property names of the objects V8 keeps as hash tables, such as objects without
+a prototype and objects with many or deleted properties.
+Other objects' property names, and strings' lengths, aren't redacted, nor are
+snapshots that Node.js takes itself.
 Once set it cannot be reset.
 .
 .It Ev NSOLID_INTERVAL Ar interval
