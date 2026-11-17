@@ -72,6 +72,11 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   static SharedGrpcAgent Inst(bool reset = false);
 
+  // Tests only, through the internal binding: retry the command stream within
+  // 0.5 s, as before the backoff, so the agent gives up on a rejected token
+  // in seconds.
+  static void DisableBackoffForTesting();
+
   virtual void on_asset_stream_done(const ::grpc::Status&, AssetStor&& stor);
 
   virtual void on_command_received(grpcagent::CommandRequest&&);

@@ -76,13 +76,11 @@ const int MAX_AUTH_RETRIES = 20;
 const uint64_t auth_timer_interval = 500;
 constexpr uint64_t kCommandRetryMaxMs = 60000;
 
-// Tests set NSOLID_TEST_GRPC_NO_BACKOFF to retry every 0.5 s, as before the
-// backoff, so the agent gives up on a rejected token in seconds.
+// See GrpcAgent::DisableBackoffForTesting().
+static std::atomic<bool> no_backoff_for_testing = false;
+
 static uint64_t CommandRetryMaxMs() {
-  static const bool no_backoff =
-      per_process::system_environment->Get("NSOLID_TEST_GRPC_NO_BACKOFF")
-          .has_value();
-  return no_backoff ? auth_timer_interval : kCommandRetryMaxMs;
+  return no_backoff_for_testing ? auth_timer_interval : kCommandRetryMaxMs;
 }
 
 const size_t GRPC_MAX_SIZE = 4L * 1024 * 1024;  // 4 MiB
@@ -461,6 +459,10 @@ void PopulateUnblockedLoopEvent(grpcagent::UnblockedLoopEvent* bl_event,
   blocked_body->set_blocked_for(body["blocked_for"].get<int32_t>());
   blocked_body->set_loop_id(body["loop_id"].get<int32_t>());
   blocked_body->set_callback_cntr(body["callback_cntr"].get<int32_t>());
+}
+
+/*static*/ void GrpcAgent::DisableBackoffForTesting() {
+  no_backoff_for_testing = true;
 }
 
 /*static*/ SharedGrpcAgent GrpcAgent::Inst(bool reset) {
