@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parents[2] / 'tools' / 'vex'))
+VEX = Path(__file__).parents[2] / 'tools' / 'vex'
+sys.path.insert(0, str(VEX))
 from generate import generate_document, render_findings
 
 NSOLID = 'pkg:generic/nodesource/nsolid'
@@ -27,6 +29,14 @@ def findings(exceptions):
 
 
 class GenerateVEXTest(unittest.TestCase):
+  def test_committed_files_are_current(self):
+    exceptions = json.loads((VEX / 'exceptions.json').read_text(encoding='utf-8'))
+    committed = json.loads((VEX / 'nsolid.openvex.json').read_text(encoding='utf-8'))
+    rerun = 'Run python3 tools/vex/generate.py and commit the result.'
+    self.assertEqual(generate_document(exceptions, committed['timestamp']), committed, rerun)
+    self.assertEqual(render_findings(exceptions),
+                     (VEX / 'SCANNER-FINDINGS.md').read_text(encoding='utf-8'), rerun)
+
   def test_without_exceptions(self):
     document = generate_document([], '2026-01-01T00:00:00Z')
     self.assertEqual(document['statements'], [])
