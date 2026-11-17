@@ -9,6 +9,7 @@ from urllib.parse import unquote
 
 ROOT = Path(__file__).parent
 REPO = ROOT.parents[1]
+NSOLID = 'pkg:generic/nodesource/nsolid'
 CVE_PATTERN = re.compile(r'^CVE-[0-9]{4}-[0-9]{4,}$')
 PRODUCT_PATTERN = re.compile(r'^pkg:[^\s]+$')
 JUSTIFICATIONS = {
@@ -58,9 +59,18 @@ def validate_verify(verify):
 
 def make_product(product):
   if product is None:
-    return {'@id': 'pkg:generic/nodesource/nsolid'}
+    return {'@id': NSOLID}
   if isinstance(product, str):
     return {'@id': product}
+  return product
+
+def fixed_product(product, version):
+  # OpenVEX's fixed means "these product versions contain a fix", so name the
+  # N|Solid version that the document comes with.
+  if product['@id'] == NSOLID and version:
+    product = {**product, '@id': f'{NSOLID}@{version}'}
+  if '@' not in product['@id'].split('?')[0].split('#')[0]:
+    raise ValueError(f"Fixed statements need a versioned product: {product['@id']!r}")
   return product
 
 def validate_exception(exception):
@@ -96,17 +106,20 @@ def validate_exception(exception):
     validate_product(product)
 
 
-def generate_document(exceptions, timestamp=None):
+def generate_document(exceptions, timestamp=None, version=None):
   for exception in exceptions:
     validate_exception(exception)
   statements = []
   for exception in exceptions:
+    product = make_product(exception.get('product'))
+    if exception.get('status') == 'fixed':
+      product = fixed_product(product, version)
     statement = {
         'vulnerability': {
             'name': exception['cve'],
             '@id': f"https://www.cve.org/CVERecord?id={exception['cve']}",
         },
-        'products': [make_product(exception.get('product'))],
+        'products': [product],
         'status': exception.get('status', 'not_affected'),
     }
     if statement['status'] == 'not_affected':
@@ -181,6 +194,10 @@ def version_macros(repo):
   # {'NODE_MAJOR_VERSION': '26', 'NSOLID_PATCH_VERSION': '10', ...}
   header = (repo / 'src' / 'node_version.h').read_text(encoding='utf-8')
   return dict(re.findall(r'^#define (\w+_VERSION) (\d+)$', header, re.MULTILINE))
+
+def nsolid_version(repo=REPO):
+  macros = version_macros(repo)
+  return '.'.join(macros[f'NSOLID_{part}_VERSION'] for part in ('MAJOR', 'MINOR', 'PATCH'))
 
 def render_findings(exceptions, repo=REPO):
   # A page for people whose scanners match versions: every installed npm
@@ -267,10 +284,11 @@ def main():
   exceptions = json.loads((ROOT / 'exceptions.json').read_text(encoding='utf-8'))
   vex = ROOT / 'nsolid.openvex.json'
   old = json.loads(vex.read_text(encoding='utf-8')) if vex.exists() else {}
+  version = nsolid_version()
   # Keep the old timestamp, and with it the old @id, unless the content changed.
-  document = generate_document(exceptions, old.get('timestamp'))
+  document = generate_document(exceptions, old.get('timestamp'), version)
   if document != old:
-    document = generate_document(exceptions)
+    document = generate_document(exceptions, version=version)
   # Render the page first: it fails for a stale statement.
   page = render_findings(exceptions)
   write(vex, json.dumps(document, indent=2) + '\n')

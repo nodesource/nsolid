@@ -7,7 +7,7 @@ from pathlib import Path
 
 VEX = Path(__file__).parents[2] / 'tools' / 'vex'
 sys.path.insert(0, str(VEX))
-from generate import generate_document, render_findings
+from generate import generate_document, nsolid_version, render_findings
 
 NSOLID = 'pkg:generic/nodesource/nsolid'
 
@@ -33,7 +33,8 @@ class GenerateVEXTest(unittest.TestCase):
     exceptions = json.loads((VEX / 'exceptions.json').read_text(encoding='utf-8'))
     committed = json.loads((VEX / 'nsolid.openvex.json').read_text(encoding='utf-8'))
     rerun = 'Run python3 tools/vex/generate.py and commit the result.'
-    self.assertEqual(generate_document(exceptions, committed['timestamp']), committed, rerun)
+    self.assertEqual(generate_document(exceptions, committed['timestamp'], nsolid_version()),
+                     committed, rerun)
     self.assertEqual(render_findings(exceptions),
                      (VEX / 'SCANNER-FINDINGS.md').read_text(encoding='utf-8'), rerun)
 
@@ -97,12 +98,19 @@ class GenerateVEXTest(unittest.TestCase):
         'cve': 'CVE-2099-0002',
         'status': 'fixed',
         'action_statement': 'Backported upstream fix.',
-    }], '2026-01-01T00:00:00Z')
+    }], '2026-01-01T00:00:00Z', '6.3.10')
     statement = document['statements'][0]
     self.assertEqual(statement['status'], 'fixed')
     self.assertEqual(statement['vulnerability']['name'], 'CVE-2099-0002')
     self.assertEqual(statement['action_statement'], 'Backported upstream fix.')
+    self.assertEqual(statement['products'], [{'@id': f'{NSOLID}@6.3.10'}])
     self.assertNotIn('justification', statement)
+
+  def test_fixed_needs_versioned_product(self):
+    for product, version in ((None, None), ('pkg:generic/foo', '6.3.10')):
+      with self.assertRaisesRegex(ValueError, 'Fixed statements need a versioned product'):
+        generate_document([{'cve': 'CVE-2099-0002', 'status': 'fixed', 'product': product}],
+                          version=version)
 
   def test_fixed_with_justification_error(self):
     with self.assertRaisesRegex(ValueError, 'Fixed statements must not include justification'):
@@ -115,7 +123,7 @@ class GenerateVEXTest(unittest.TestCase):
   def test_verify(self):
     document = generate_document([{'cve': 'CVE-2099-0002', 'status': 'fixed',
                                    'verify': [{'path': 'deps/a.js', 'contains': 'fixed code'}]}],
-                                 '2026-01-01T00:00:00Z')
+                                 '2026-01-01T00:00:00Z', '6.3.10')
     self.assertNotIn('verify', document['statements'][0])
 
   def test_verify_needs_fixed(self):
