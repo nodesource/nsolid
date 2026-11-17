@@ -1,8 +1,51 @@
 diff --git a/deps/v8/src/profiler/heap-snapshot-generator.h b/deps/v8/src/profiler/heap-snapshot-generator.h
-index d7ae312d8c9..b2e20514f80 100644
+index d7ae312d8c988bb0205bd3f6d13d8f02506dde26..b5013028a18517843cc4ddc7ed5146722bc6111b 100644
 --- a/deps/v8/src/profiler/heap-snapshot-generator.h
 +++ b/deps/v8/src/profiler/heap-snapshot-generator.h
-@@ -724,7 +724,7 @@ class HeapSnapshotJSONSerializer {
+@@ -83,6 +83,14 @@
+   V8_INLINE HeapEntry* from() const;
+   HeapEntry* to() const { return to_entry_; }
+ 
++  // Whether a redacted snapshot hides this edge's name, as when it can hold
++  // data: a dictionary-mode object's property name, or a name made from a
++  // string's contents.
++  bool redactable() const { return RedactableField::decode(bit_field_); }
++  void set_redactable() {
++    bit_field_ = RedactableField::update(bit_field_, true);
++  }
++
+   V8_INLINE Isolate* isolate() const;
+ 
+  private:
+@@ -90,7 +98,9 @@
+   int from_index() const { return FromIndexField::decode(bit_field_); }
+ 
+   using TypeField = base::BitField<Type, 0, 3>;
+-  using FromIndexField = base::BitField<int, 3, 29>;
++  // HeapEntry::index_ has 28 bits, which leaves one here for the flag.
++  using FromIndexField = base::BitField<int, 3, 28>;
++  using RedactableField = base::BitField<bool, 31, 1>;
+   uint32_t bit_field_;
+   HeapEntry* to_entry_;
+   union {
+@@ -263,6 +273,7 @@
+   void AddSyntheticRootEntries();
+   HeapEntry* GetEntryById(SnapshotObjectId id);
+   void FillChildren();
++
+ 
+   void Print(int max_depth);
+ 
+@@ -571,6 +582,8 @@
+   HeapObjectsMap* heap_object_map_;
+   SnapshottingProgressReportingInterface* progress_;
+   HeapSnapshotGenerator* generator_ = nullptr;
++  // Set while the properties of a dictionary-mode object are extracted.
++  bool extracting_dictionary_properties_ = false;
+   std::unordered_map<Tagged<JSGlobalObject>, const char*, Object::Hasher>
+       global_object_tag_map_;
+   UnorderedHeapObjectMap<const char*> strong_gc_subroot_names_;
+@@ -724,7 +737,7 @@
    HeapSnapshotJSONSerializer(const HeapSnapshotJSONSerializer&) = delete;
    HeapSnapshotJSONSerializer& operator=(const HeapSnapshotJSONSerializer&) =
        delete;
@@ -11,13 +54,17 @@ index d7ae312d8c9..b2e20514f80 100644
  
   private:
    V8_INLINE static bool StringsMatch(void* key1, void* key2) {
-@@ -739,9 +739,9 @@ class HeapSnapshotJSONSerializer {
+@@ -737,11 +750,11 @@
+   int GetStringId(const char* s);
+   V8_INLINE int to_node_index(const HeapEntry* e);
    V8_INLINE int to_node_index(int entry_index);
-   void SerializeEdge(HeapGraphEdge* edge, bool first_edge);
-   void SerializeEdges();
+-  void SerializeEdge(HeapGraphEdge* edge, bool first_edge);
+-  void SerializeEdges();
 -  void SerializeImpl();
 -  void SerializeNode(const HeapEntry* entry);
 -  void SerializeNodes();
++  void SerializeEdge(HeapGraphEdge* edge, bool first_edge, bool redact = false);
++  void SerializeEdges(bool redact = false);
 +  void SerializeImpl(bool redact = false);
 +  void SerializeNode(const HeapEntry* entry, bool redact = false);
 +  void SerializeNodes(bool redact = false);

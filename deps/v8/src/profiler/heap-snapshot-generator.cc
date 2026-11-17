@@ -1445,12 +1445,20 @@ void V8HeapExplorer::ExtractEphemeronHashTableReferences(
           "part of key (%s @%u) -> value (%s @%u) pair in WeakMap (table @%u)",
           key_entry->name(), key_entry->id(), value_entry->name(),
           value_entry->id(), table_entry->id());
+      // The name holds the key's and value's names: a string's contents, or a
+      // RegExp's source.
+      const bool redactable = key_entry->type() == HeapEntry::kString ||
+                              key_entry->type() == HeapEntry::kRegExp ||
+                              value_entry->type() == HeapEntry::kString ||
+                              value_entry->type() == HeapEntry::kRegExp;
       key_entry->SetNamedAutoIndexReference(HeapGraphEdge::kInternal, edge_name,
                                             value_entry, names_, generator_,
                                             HeapEntry::kEphemeron);
+      if (redactable) snapshot_->edges().back().set_redactable();
       table_entry->SetNamedAutoIndexReference(
           HeapGraphEdge::kInternal, edge_name, value_entry, names_, generator_,
           HeapEntry::kEphemeron);
+      if (redactable) snapshot_->edges().back().set_redactable();
     }
   }
 }
@@ -2523,7 +2531,7 @@ void V8HeapExplorer::SetPropertyReference(HeapEntry* parent_entry,
 
   parent_entry->SetNamedReference(type, name, child_entry, generator_);
   if (extracting_dictionary_properties_) {
-    snapshot_->AddRedactableEdge(&snapshot_->edges().back());
+    snapshot_->edges().back().set_redactable();
   }
   MarkVisitedField(field_offset);
 }
@@ -3107,8 +3115,8 @@ void HeapSnapshotJSONSerializer::SerializeImpl(bool redact) {
   if (writer_->aborted()) return;
   writer_->AddString("},\n");
   writer_->AddString("\"nodes\":[");
-  // This is where strings are copied into the strings_ cache so redaction must
-  // be performed here
+  // Node and edge names are copied into the strings_ cache as they're
+  // serialized, so that's where redaction happens.
   SerializeNodes(redact);
   if (writer_->aborted()) return;
   writer_->AddString("],\n");
@@ -3212,7 +3220,7 @@ void HeapSnapshotJSONSerializer::SerializeEdge(HeapGraphEdge* edge,
   if (edge->type() == HeapGraphEdge::kElement ||
       edge->type() == HeapGraphEdge::kHidden) {
     edge_name_or_index = edge->index();
-  } else if (redact && snapshot_->IsRedactableEdge(edge)) {
+  } else if (redact && edge->redactable()) {
     edge_name_or_index = GetStringId("(redacted)");
   } else {
     edge_name_or_index = GetStringId(edge->name());
