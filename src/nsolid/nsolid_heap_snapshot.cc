@@ -9,13 +9,16 @@ namespace nsolid {
 namespace {
 
 // Apply the process's snapshot settings to a snapshot or a heap profile, which
-// ends in a snapshot, whatever asked for it. Returns true if snapshots are
-// disabled; otherwise turns on redaction if the process requires it.
-bool SnapshotsDisabled(bool* redacted) {
+// ends in a snapshot, whatever asked for it: UV_EPERM if snapshots are
+// disabled, and otherwise redaction if the process requires it. They can
+// change while a heap profile runs, so they're applied again when its snapshot
+// is taken. This reads the config under its own lock, so call it before
+// taking in_progress_heap_snapshots_.
+int ApplySnapshotPolicy(bool* redacted) {
   nlohmann::json config = EnvList::Inst()->CurrentConfigJSON();
   auto it = config.find("disableSnapshots");
   if (it != config.end() && it->is_boolean() && it->get<bool>()) {
-    return true;
+    return UV_EPERM;
   }
 
   it = config.find("redactSnapshots");
@@ -23,7 +26,7 @@ bool SnapshotsDisabled(bool* redacted) {
     *redacted = true;
   }
 
-  return false;
+  return 0;
 }
 
 }  // namespace
@@ -243,8 +246,9 @@ int NSolidHeapSnapshot::StartTrackingHeapObjects(
     uint64_t duration,
     internal::user_data data,
     Snapshot::snapshot_proxy_sig proxy) {
-  if (SnapshotsDisabled(&redacted)) {
-    return UV_EPERM;
+  int err = ApplySnapshotPolicy(&redacted);
+  if (err != 0) {
+    return err;
   }
 
   uint64_t thread_id = envinst->thread_id();
@@ -282,8 +286,9 @@ int NSolidHeapSnapshot::GetHeapSnapshot(SharedEnvInst envinst,
                                         void* data,
                                         Snapshot::snapshot_proxy_sig proxy,
                                         internal::deleter_sig deleter) {
-  if (SnapshotsDisabled(&redacted)) {
-    return UV_EPERM;
+  int err = ApplySnapshotPolicy(&redacted);
+  if (err != 0) {
+    return err;
   }
 
   uint64_t thread_id = envinst->thread_id();
@@ -334,6 +339,8 @@ int NSolidHeapSnapshot::StopTrackingHeapObjects(SharedEnvInst envinst) {
 
 int NSolidHeapSnapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
   uint64_t thread_id = envinst->thread_id();
+  bool redact = false;
+  const int policy = ApplySnapshotPolicy(&redact);
   nsuv::ns_mutex::scoped_lock lock(&in_progress_heap_snapshots_);
   auto it = threads_running_snapshots_.find(thread_id);
   // Make sure there is a snapshot running
@@ -356,6 +363,14 @@ int NSolidHeapSnapshot::StopTrackingHeapObjectsSync(SharedEnvInst envinst) {
 
   v8::HandleScope scope(isolate);
 
+  if (policy != 0) {
+    profiler->StopTrackingHeapObjects();
+    stor.cb(policy, std::string(), stor.data.get());
+    threads_running_snapshots_.erase(it);
+    return 0;
+  }
+
+  stor.redacted = stor.redacted || redact;
   const v8::HeapSnapshot* snapshot = profiler->TakeHeapSnapshot();
   if (snapshot == nullptr) {
     stor.cb(heap_profiler::HEAP_SNAPSHOT_FAILURE,
@@ -395,6 +410,8 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
     SharedEnvInst envinst,
     NSolidHeapSnapshot* snapshotter) {
   uint64_t thread_id = envinst->thread_id();
+  bool redact = false;
+  const int policy = ApplySnapshotPolicy(&redact);
   nsuv::ns_mutex::scoped_lock lock(&snapshotter->in_progress_heap_snapshots_);
   auto it = snapshotter->threads_running_snapshots_.find(thread_id);
   if (it == snapshotter->threads_running_snapshots_.end()) {
@@ -418,6 +435,14 @@ void NSolidHeapSnapshot::stop_tracking_heap_objects(
 
   v8::HandleScope scope(isolate);
 
+  if (policy != 0) {
+    profiler->StopTrackingHeapObjects();
+    QueueCallback(snapshot_cb, thread_id, policy, std::string(), snapshotter);
+    stor.flags |= kFlagIsDone;
+    return;
+  }
+
+  stor.redacted = stor.redacted || redact;
   const v8::HeapSnapshot* snapshot = profiler->TakeHeapSnapshot();
   if (snapshot == nullptr) {
     QueueCallback(snapshot_cb,
@@ -522,7 +547,10 @@ void NSolidHeapSnapshot::take_snapshot(SharedEnvInst envinst,
 
   v8::HandleScope scope(isolate);
 
-  const v8::HeapSnapshot* snapshot = profiler->TakeHeapSnapshot();
+  bool redact = false;
+  const int policy = ApplySnapshotPolicy(&redact);
+  const v8::HeapSnapshot* snapshot =
+      policy == 0 ? profiler->TakeHeapSnapshot() : nullptr;
 
   uint64_t thread_id = envinst->thread_id();
   nsuv::ns_mutex::scoped_lock lock(&snapshotter->in_progress_heap_snapshots_);
@@ -532,7 +560,13 @@ void NSolidHeapSnapshot::take_snapshot(SharedEnvInst envinst,
   }
 
   HeapSnapshotStor& stor = it->second;
-  if (snapshot == nullptr) {
+  stor.redacted = stor.redacted || redact;
+  if (policy != 0) {
+    if (stor.flags & kFlagIsTrackingHeapObjects) {
+      profiler->StopTrackingHeapObjects();
+    }
+    QueueCallback(snapshot_cb, thread_id, policy, std::string(), snapshotter);
+  } else if (snapshot == nullptr) {
     QueueCallback(snapshot_cb,
                   thread_id,
                   heap_profiler::HEAP_SNAPSHOT_FAILURE,

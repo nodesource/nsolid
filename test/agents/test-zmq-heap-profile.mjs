@@ -245,6 +245,31 @@ tests.push({
 });
 
 tests.push({
+  name: 'should return 422 if snapshots are disabled',
+  test: async (playground) => {
+    return new Promise((resolve) => {
+      const options = {
+        duration: 100,
+        threadId: 0,
+        trackAllocations: false,
+      };
+
+      const bootstrapOpts = {
+        opts: { env: { NSOLID_DISABLE_SNAPSHOTS: 1 } },
+      };
+
+      playground.bootstrap(bootstrapOpts, mustSucceed((agentId) => {
+        playground.zmqAgentBus.agentHeapProfileStart(agentId, options, mustCall((err) => {
+          assert.strictEqual(err.code, 422);
+          assert.strictEqual(err.message, 'Invalid arguments');
+          resolve();
+        }));
+      }));
+    });
+  },
+});
+
+tests.push({
   name: 'should return 409 if profile in progress in main thread',
   test: async (playground) => {
     return new Promise((resolve) => {
