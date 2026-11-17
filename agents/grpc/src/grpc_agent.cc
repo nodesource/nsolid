@@ -137,6 +137,9 @@ ErrorType translate_error(int err) {
       return ErrorType::ENotAvailable;
     case UV_ENOMEM:
       return ErrorType::ENoMemory;
+    case UV_EPERM:
+      // The runtime applies the snapshot settings itself, too.
+      return ErrorType::ESnapshotDisabled;
     default:
       return ErrorType::EUnknown;
   }
@@ -2389,7 +2392,7 @@ ErrorType GrpcAgent::do_start_prof_init(
   // A heap profile ends in a heap snapshot, so it is disabled with snapshots.
   it = config.find("disableSnapshots");
   if ((type == ProfileType::kHeapSnapshot || type == ProfileType::kHeapProf) &&
-      it != config.end() && it->get<bool>()) {
+      it != config.end() && it->is_boolean() && it->get<bool>()) {
     return ErrorType::ESnapshotDisabled;
   }
 

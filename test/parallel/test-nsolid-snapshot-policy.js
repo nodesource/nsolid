@@ -1,13 +1,15 @@
 // Flags: --expose-internals
 'use strict';
 
-// Snapshot settings apply to heap profiles, which end in a heap snapshot.
-// Redaction covers the property names of dictionary-mode objects, RegExp
-// sources and WeakMap pairs' names, and once snapshots are redacted or disabled
+// Snapshot settings apply to heap profiles, which end in a heap snapshot,
+// including one that's already running. Redaction covers the property names
+// of dictionary-mode objects, RegExp sources and WeakMap pairs' names. The
+// settings are read as booleans, and once snapshots are redacted or disabled
 // they stay that way.
 
 const common = require('../common');
 const assert = require('assert');
+const { spawnSync } = require('child_process');
 const nsolid = require('nsolid');
 const { internalBinding } = require('internal/test/binding');
 
@@ -43,15 +45,28 @@ function hasSecrets(strings) {
                              s.includes(weakValue));
 }
 
-function heapProfileFails() {
+function heapProfileFails(duration = 100) {
   return new Promise((resolve) => {
-    const stream = nsolid.heapProfileStream(0, 100, false);
+    const stream = nsolid.heapProfileStream(0, duration, false);
     stream.on('error', common.mustCall((err) => {
       assert.strictEqual(err.code, UV_EPERM);
       resolve();
     }));
     stream.resume();
   });
+}
+
+// Settings that aren't booleans are read as booleans, which is what the agents
+// and the runtime expect.
+{
+  const child = spawnSync(process.execPath, ['-e', `
+    const nsolid = require('nsolid');
+    nsolid.start({ disableSnapshots: 1, redactSnapshots: 'true' });
+    const { disableSnapshots, redactSnapshots } = nsolid.config;
+    console.log(JSON.stringify([disableSnapshots, redactSnapshots]));
+  `], { encoding: 'utf8' });
+  assert.strictEqual(child.status, 0, child.stderr);
+  assert.deepStrictEqual(JSON.parse(child.stdout), [true, true]);
 }
 
 (async () => {
@@ -73,7 +88,11 @@ function heapProfileFails() {
   strings = await heapProfile();
   assert(!hasSecrets(strings));
 
+  // Disabling snapshots also ends a heap profile that's running, without
+  // taking its snapshot.
+  const running = heapProfileFails(1000);
   nsolid.start({ disableSnapshots: true });
+  await running;
   await heapProfileFails();
 
   nsolid.start({ disableSnapshots: false });
