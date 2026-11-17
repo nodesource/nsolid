@@ -30,6 +30,9 @@ def validate_product(product):
     if not isinstance(subs, list):
       raise ValueError(f'Invalid OpenVEX product subcomponents: {subs!r}')
     for s in subs:
+      # OpenVEX 0.2.0 subcomponents can't have subcomponents of their own.
+      if not isinstance(s, dict) or 'subcomponents' in s:
+        raise ValueError(f'Invalid OpenVEX subcomponent: {s!r}')
       validate_product(s)
   else:
     raise ValueError(f'Invalid OpenVEX product: {product!r}')

@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-43658eefc2f04f8a78bfcb193a0fdb03f36b94447c6a4409df085b3f871c420e",
+  "@id": "https://openvex.dev/docs/public/vex-279cf58ad0cb5271c0d09985c6a09e6a234ef10af9de5fb98e1ffd44e3025acf",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-10-22T09:24:54.341815Z",
+  "timestamp": "2026-11-17T00:54:43.239686Z",
   "statements": [
     {
       "vulnerability": {
@@ -16,18 +16,13 @@
           "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
-              "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
-              "subcomponents": [
-                {
-                  "@id": "pkg:npm/fast-glob@3.3.3"
-                },
-                {
-                  "@id": "pkg:npm/micromatch@4.0.8"
-                },
-                {
-                  "@id": "pkg:npm/braces@3.0.3"
-                }
-              ]
+              "@id": "pkg:npm/fast-glob@3.3.3"
+            },
+            {
+              "@id": "pkg:npm/micromatch@4.0.8"
+            },
+            {
+              "@id": "pkg:npm/braces@3.0.3"
             }
           ]
         }
