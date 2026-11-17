@@ -1,5 +1,6 @@
 'use strict';
 
+const { once } = require('node:events');
 const http = require('node:http');
 const { parseArgs } = require('node:util');
 const { isMainThread, parentPort, Worker, threadId } = require('node:worker_threads');
@@ -97,6 +98,9 @@ function handleTrace(msg) {
 
 if (isMainThread) {
   const workers = new Map();
+  // A worker the agent doesn't know yet answers commands with 410 (thread
+  // gone), so the workers are reported once they've all started.
+  const workersOnline = [];
   process.on('message', (msg) => {
     if (msg.type === 'block') {
       if (threadId === msg.threadId) {
@@ -150,7 +154,9 @@ if (isMainThread) {
         workers.get(msg.threadId).postMessage(msg);
       }
     } else if (msg.type === 'workers') {
-      process.send({ type: 'workers', ids: Array.from(workers.keys()) });
+      Promise.all(workersOnline).then(() => {
+        process.send({ type: 'workers', ids: Array.from(workers.keys()) });
+      });
     } else if (msg.type === 'enableTraces') {
       nsolid.enableTraces();
     } else if (msg.type === 'disableTraces') {
@@ -168,6 +174,7 @@ if (isMainThread) {
       for (let i = 0; i < NUM_WORKERS; i++) {
         const worker = new Worker(__filename);
         workers.set(worker.threadId, worker);
+        workersOnline.push(once(worker, 'online'));
       }
     }
   }
