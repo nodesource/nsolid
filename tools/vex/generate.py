@@ -235,7 +235,10 @@ def render_findings(exceptions, repo=REPO):
       '',
       'Scanners that match package versions report these CVEs in npm packages that N|Solid installs. '
       "Each one is fixed in N|Solid's copy or doesn't affect N|Solid. "
-      '[nsolid.openvex.json](nsolid.openvex.json) records the same statuses as an OpenVEX document.',
+      '[nsolid.openvex.json](nsolid.openvex.json) records the same statuses as an OpenVEX document. '
+      '[prisma_tags.py](prisma_tags.py) turns them into Prisma Cloud tag assignments. Read its notes '
+      'first: a tag also hides the CVE in other copies of the package, and in other N|Solid releases, '
+      'on the same resources.',
       '',
       'Paths are relative to the N|Solid installation directory, the one that contains `bin/nsolid`. '
       'On Windows, it contains `nsolid.exe`, and the paths start at `node_modules` rather than '
