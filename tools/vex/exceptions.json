@@ -1,6 +1,7 @@
 [
   {
     "cve": "CVE-2026-93687",
+    "installed_under": "ncm-ng",
     "product": {
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [

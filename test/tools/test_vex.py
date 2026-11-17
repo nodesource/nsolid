@@ -1,10 +1,29 @@
 #!/usr/bin/env python3
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2] / 'tools' / 'vex'))
-from generate import generate_document
+from generate import generate_document, render_findings
+
+NSOLID = 'pkg:generic/nodesource/nsolid'
+
+
+def findings(exceptions):
+  # Renders the page against a repository that bundles foo 1.0.0 and 2.0.0
+  # with npm.
+  with tempfile.TemporaryDirectory() as tmp:
+    repo = Path(tmp)
+    for rel, text in {
+        'deps/npm/node_modules/foo/package.json': '{"name": "foo", "version": "1.0.0"}',
+        'deps/npm/node_modules/bar/node_modules/foo/package.json':
+            '{"name": "foo", "version": "2.0.0"}',
+        'src/node_version.h': '#define NODE_MAJOR_VERSION 99\n',
+    }.items():
+      (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+      (repo / rel).write_text(text)
+    return render_findings(exceptions, repo)
 
 
 class GenerateVEXTest(unittest.TestCase):
@@ -99,6 +118,56 @@ class GenerateVEXTest(unittest.TestCase):
                    [{'path': '/a.js', 'contains': 'x'}], [{'path': 'a.js', 'contains': ''}]):
       with self.assertRaisesRegex(ValueError, 'Invalid verify'):
         generate_document([{'cve': 'CVE-2099-0002', 'status': 'fixed', 'verify': verify}])
+
+  def test_invalid_installed_under(self):
+    with self.assertRaisesRegex(ValueError, 'Invalid installed_under'):
+      generate_document([{'cve': 'CVE-2099-0001', 'justification': 'vulnerable_code_not_present',
+                          'installed_under': 'yarn'}])
+
+  def test_findings_page(self):
+    page = findings([
+        {'cve': 'CVE-2099-0001', 'status': 'fixed', 'action_statement': 'Patched.',
+         'product': {'@id': NSOLID, 'subcomponents': [{'@id': 'pkg:npm/foo@1.0.0'}]},
+         'verify': [{'path': 'deps/npm/node_modules/foo/index.js', 'contains': 'fixed code'},
+                    {'path': 'deps/other/index.js', 'contains': 'fixed code'}]},
+        {'cve': 'CVE-2099-0002', 'justification': 'vulnerable_code_not_in_execute_path',
+         'impact_statement': 'Never called.',
+         'product': {'@id': NSOLID, 'subcomponents': [
+             {'@id': 'pkg:npm/foo@2.0.0'}, {'@id': 'pkg:generic/zlib@1.3.1'}]}},
+        # ncm-ng's copies, even of a package that npm bundles too.
+        {'cve': 'CVE-2099-0002', 'justification': 'vulnerable_code_not_in_execute_path',
+         'impact_statement': 'Never called by ncm-ng.', 'installed_under': 'ncm-ng',
+         'product': {'@id': NSOLID, 'subcomponents': [
+             {'@id': 'pkg:npm/foo'}, {'@id': 'pkg:npm/qux@3.0.0'}]}},
+    ])
+    self.assertIn('# Known scanner findings in N|Solid for Node.js 99\n', page)
+    rows = [line for line in page.splitlines() if line.startswith('| ') and 'CVE-' in line]
+    self.assertEqual(rows, [
+        '| foo | [CVE-2099-0002](#cve-2099-0002) | Not affected | '
+        '`lib/node_modules/ncm-ng/node_modules/foo` |',
+        '| foo 1.0.0 | [CVE-2099-0001](#cve-2099-0001) | Fixed in place | '
+        '`lib/node_modules/npm/node_modules/foo` |',
+        '| foo 2.0.0 | [CVE-2099-0002](#cve-2099-0002) | Not affected | '
+        '`lib/node_modules/npm/node_modules/bar/node_modules/foo` |',
+        '| qux 3.0.0 | [CVE-2099-0002](#cve-2099-0002) | Not affected | '
+        '`lib/node_modules/ncm-ng/node_modules/qux` |',
+    ])
+    self.assertIn('**foo 1.0.0: fixed in place.** Patched.', page)
+    self.assertIn('**foo 2.0.0: not affected** (vulnerable code not in execute path). Never called.', page)
+    self.assertIn('**foo, qux 3.0.0: not affected** (vulnerable code not in execute path). '
+                  'Never called by ncm-ng.', page)
+    self.assertIn("grep -q 'fixed code' lib/node_modules/npm/node_modules/foo/index.js", page)
+    # Packages that aren't npm's and checks outside npm don't show up.
+    for absent in ('zlib', 'deps/other'):
+      self.assertNotIn(absent, page)
+
+  def test_findings_page_stale_statement(self):
+    # A statement about a version npm no longer bundles fails rather than
+    # dropping off the page.
+    for purl in ('pkg:npm/foo@9.9.9', 'pkg:npm/baz'):
+      with self.assertRaisesRegex(ValueError, f"CVE-2099-0001: npm doesn't bundle {purl}"):
+        findings([{'cve': 'CVE-2099-0001', 'justification': 'vulnerable_code_not_present',
+                   'product': {'@id': NSOLID, 'subcomponents': [{'@id': purl}]}}])
 
 
 
