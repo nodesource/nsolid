@@ -76,6 +76,23 @@ class GenerateVEXTest(unittest.TestCase):
           'justification': 'vulnerable_code_not_present',
       }])
 
+  def test_verify(self):
+    document = generate_document([{'cve': 'CVE-2099-0002', 'status': 'fixed',
+                                   'verify': [{'path': 'deps/a.js', 'contains': 'fixed code'}]}],
+                                 '2026-01-01T00:00:00Z')
+    self.assertNotIn('verify', document['statements'][0])
+
+  def test_verify_needs_fixed(self):
+    with self.assertRaisesRegex(ValueError, 'Only fixed statements can have verify checks'):
+      generate_document([{'cve': 'CVE-2099-0001', 'justification': 'vulnerable_code_not_present',
+                          'verify': [{'path': 'a.js', 'contains': 'x'}]}])
+
+  def test_invalid_verify(self):
+    for verify in ([], [{'path': 'a.js'}], [{'path': '../a.js', 'contains': 'x'}],
+                   [{'path': '/a.js', 'contains': 'x'}], [{'path': 'a.js', 'contains': ''}]):
+      with self.assertRaisesRegex(ValueError, 'Invalid verify'):
+        generate_document([{'cve': 'CVE-2099-0002', 'status': 'fixed', 'verify': verify}])
+
 
 
 if __name__ == '__main__':
