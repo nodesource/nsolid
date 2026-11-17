@@ -86,6 +86,14 @@ class HeapGraphEdge {
   V8_INLINE HeapEntry* from() const;
   HeapEntry* to() const { return to_entry_; }
 
+  // Whether a redacted snapshot hides this edge's name, as when it can hold
+  // data: a dictionary-mode object's property name, or a name made from a
+  // string's contents.
+  bool redactable() const { return RedactableField::decode(bit_field_); }
+  void set_redactable() {
+    bit_field_ = RedactableField::update(bit_field_, true);
+  }
+
   V8_INLINE Isolate* isolate() const;
 
  private:
@@ -93,7 +101,9 @@ class HeapGraphEdge {
   int from_index() const { return FromIndexField::decode(bit_field_); }
 
   using TypeField = base::BitField<Type, 0, 3>;
-  using FromIndexField = base::BitField<int, 3, 29>;
+  // HeapEntry::index_ has 28 bits, which leaves one here for the flag.
+  using FromIndexField = base::BitField<int, 3, 28>;
+  using RedactableField = base::BitField<bool, 31, 1>;
   uint32_t bit_field_;
   HeapEntry* to_entry_;
   union {
@@ -272,16 +282,6 @@ class HeapSnapshot {
   void AddScriptLineEnds(int script_id, String::LineEndsVector&& line_ends);
   String::LineEndsVector& GetScriptLineEnds(int script_id);
 
-  // Property edges of dictionary-mode objects. Those objects are hash tables,
-  // where data such as session IDs ends up as property names, so redacted
-  // snapshots don't serialize the names of these edges.
-  void AddRedactableEdge(const HeapGraphEdge* edge) {
-    redactable_edges_.insert(edge);
-  }
-  bool IsRedactableEdge(const HeapGraphEdge* edge) const {
-    return redactable_edges_.count(edge) != 0;
-  }
-
   void Print(int max_depth);
 
  private:
@@ -299,7 +299,6 @@ class HeapSnapshot {
   std::deque<HeapEntry> entries_;
   std::deque<HeapGraphEdge> edges_;
   std::vector<HeapGraphEdge*> children_;
-  std::unordered_set<const HeapGraphEdge*> redactable_edges_;
   std::unordered_map<SnapshotObjectId, HeapEntry*> entries_by_id_cache_;
   std::vector<EntrySourceLocation> locations_;
   SnapshotObjectId max_snapshot_js_object_id_ = -1;

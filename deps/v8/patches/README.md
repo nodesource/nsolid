@@ -6,14 +6,13 @@ This directory contains individual patches applied to the V8 dependency for N|So
 
 - **001-clang-macros-fix.patch**: Fixes is_trivially_copyable for Clang versions <= 17 in base/macros.h
 - **002-cpu-profiler-sigprof-fix.patch**: Prevents crash when handling SIGPROF signal during profiler shutdown in cpu-profiler.cc
-- **003-heap-snapshot-generator-header.patch**: Updates header for redaction support in heap-snapshot-generator.h
-- **004-heap-snapshot-generator-redact.patch**: Adds redaction support to heap snapshot serialization in heap-snapshot-generator.cc
+- **003-heap-snapshot-generator-header.patch**: Updates header for redaction support in heap-snapshot-generator.h, including the flag on edges whose names redacted snapshots hide
+- **004-heap-snapshot-generator-redact.patch**: Adds redaction support to heap snapshot serialization in heap-snapshot-generator.cc: string and RegExp node names, the property names of dictionary-mode objects, and the WeakMap edge names made from a string's or RegExp's name
 - **005-output-stream-escape.patch**: Adds string escaping functions to output-stream-writer.h
 - **006-profile-generator-json-fix.patch**: Improves JSON serialization in profile-generator.cc
 - **007-redacted-heap-snapshot-api.patch**: Implements RedactedHeapSnapshot in api.cc
 - **008-redacted-heap-snapshot-header.patch**: Adds RedactedHeapSnapshot class to v8-profiler.h
 - **010-profile-generator-timestamps-fix.patch**: Preserves CPU profile timestamps without 32-bit truncation and tests them against native profile values
-- **011-heap-snapshot-redact-property-names.patch**: Redacts the property names of dictionary-mode objects and RegExp sources in redacted heap snapshots in heap-snapshot-generator.cc and heap-snapshot-generator.h
 
 ## Usage
 
@@ -27,6 +26,10 @@ The script is idempotent - it can be run multiple times safely, as it will skip 
 
 The former `009-int64-lowering-tuple-fix.patch` is obsolete: V8 now uses
 `MakeTuple`; restoring the old `Tuple` API breaks 32-bit builds.
+
+Patches mustn't change lines that an earlier patch adds or uses as context,
+or that patch no longer reverse-applies and the script stops at it. Change
+such lines in the earlier patch instead.
 
 ## Updating the Node.js base
 

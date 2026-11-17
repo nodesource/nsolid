@@ -1,17 +1,76 @@
 diff --git a/deps/v8/src/profiler/heap-snapshot-generator.cc b/deps/v8/src/profiler/heap-snapshot-generator.cc
-index 7185ba33ac5..e14c5b2fae3 100644
+index 0e87a0d..a728bdd 100644
 --- a/deps/v8/src/profiler/heap-snapshot-generator.cc
 +++ b/deps/v8/src/profiler/heap-snapshot-generator.cc
-@@ -3342,7 +3342,7 @@ bool HeapSnapshotGenerator::FillReferences() {
+@@ -1715,12 +1715,20 @@ void V8HeapExplorer::ExtractEphemeronHashTableReferences(
+           "part of key (%s @%u) -> value (%s @%u) pair in WeakMap (table @%u)",
+           key_entry->name(), key_entry->id(), value_entry->name(),
+           value_entry->id(), table_entry->id());
++      // The name holds the key's and value's names: a string's contents, or a
++      // RegExp's source.
++      const bool redactable = key_entry->type() == HeapEntry::kString ||
++                              key_entry->type() == HeapEntry::kRegExp ||
++                              value_entry->type() == HeapEntry::kString ||
++                              value_entry->type() == HeapEntry::kRegExp;
+       key_entry->SetNamedAutoIndexReference(HeapGraphEdge::kInternal, edge_name,
+                                             value_entry, names_, generator_,
+                                             HeapEntry::kEphemeron);
++      if (redactable) snapshot_->edges().back().set_redactable();
+       table_entry->SetNamedAutoIndexReference(
+           HeapGraphEdge::kInternal, edge_name, value_entry, names_, generator_,
+           HeapEntry::kEphemeron);
++      if (redactable) snapshot_->edges().back().set_redactable();
+     }
+   }
+ }
+@@ -2301,6 +2309,7 @@ void V8HeapExplorer::ExtractPropertyReferences(Tagged<JSObject> js_obj,
+     Tagged<SwissNameDictionary> dictionary =
+         js_obj->property_dictionary_swiss();
+     ReadOnlyRoots roots(isolate);
++    extracting_dictionary_properties_ = true;
+     for (InternalIndex i : dictionary->IterateEntries()) {
+       Tagged<Object> k = dictionary->KeyAt(i);
+       if (!dictionary->IsKey(roots, k)) continue;
+@@ -2309,9 +2318,11 @@ void V8HeapExplorer::ExtractPropertyReferences(Tagged<JSObject> js_obj,
+       SetDataOrAccessorPropertyReference(details.kind(), entry, Cast<Name>(k),
+                                          value);
+     }
++    extracting_dictionary_properties_ = false;
+   } else {
+     Tagged<NameDictionary> dictionary = js_obj->property_dictionary();
+     ReadOnlyRoots roots(isolate);
++    extracting_dictionary_properties_ = true;
+     for (InternalIndex i : dictionary->IterateEntries()) {
+       Tagged<Object> k = dictionary->KeyAt(i);
+       if (!dictionary->IsKey(roots, k)) continue;
+@@ -2320,6 +2331,7 @@ void V8HeapExplorer::ExtractPropertyReferences(Tagged<JSObject> js_obj,
+       SetDataOrAccessorPropertyReference(details.kind(), entry, Cast<Name>(k),
+                                          value);
+     }
++    extracting_dictionary_properties_ = false;
+   }
+ }
+ 
+@@ -2866,6 +2878,9 @@ void V8HeapExplorer::SetPropertyReference(HeapEntry* parent_entry,
+                          : names_->GetName(reference_name);
+ 
+   parent_entry->SetNamedReference(type, name, child_entry, generator_);
++  if (extracting_dictionary_properties_) {
++    snapshot_->edges().back().set_redactable();
++  }
+   MarkVisitedField(field_offset);
+ }
+ 
+@@ -3465,7 +3480,7 @@ bool HeapSnapshotGenerator::FillReferences() {
  const int HeapSnapshotJSONSerializer::kNodeFieldsCountWithTraceNodeId = 7;
  const int HeapSnapshotJSONSerializer::kNodeFieldsCountWithoutTraceNodeId = 6;
-
+ 
 -void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
 +void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream, bool redact) {
    v8::base::ElapsedTimer timer;
    timer.Start();
    DCHECK_NULL(writer_);
-@@ -3353,7 +3353,7 @@ void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
+@@ -3476,7 +3491,7 @@ void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
      trace_function_count_ =
          static_cast<uint32_t>(tracker->function_info_list().size());
    }
@@ -19,31 +78,71 @@ index 7185ba33ac5..e14c5b2fae3 100644
 +  SerializeImpl(redact);
    delete writer_;
    writer_ = nullptr;
-
-@@ -3364,7 +3364,7 @@ void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
+ 
+@@ -3487,7 +3502,7 @@ void HeapSnapshotJSONSerializer::Serialize(v8::OutputStream* stream) {
    timer.Stop();
  }
-
+ 
 -void HeapSnapshotJSONSerializer::SerializeImpl() {
 +void HeapSnapshotJSONSerializer::SerializeImpl(bool redact) {
    DCHECK_EQ(0, snapshot_->root()->index());
    writer_->AddCharacter('{');
    writer_->AddString("\"snapshot\":{");
-@@ -3372,7 +3372,9 @@ void HeapSnapshotJSONSerializer::SerializeImpl() {
+@@ -3495,11 +3510,13 @@ void HeapSnapshotJSONSerializer::SerializeImpl() {
    if (writer_->aborted()) return;
    writer_->AddString("},\n");
    writer_->AddString("\"nodes\":[");
 -  SerializeNodes();
-+  // This is where strings are copied into the strings_ cache so redaction must
-+  // be performed here
++  // Node and edge names are copied into the strings_ cache as they're
++  // serialized, so that's where redaction happens.
 +  SerializeNodes(redact);
    if (writer_->aborted()) return;
    writer_->AddString("],\n");
    writer_->AddString("\"edges\":[");
-@@ -3442,13 +3444,18 @@ void HeapSnapshotJSONSerializer::SerializeEdges() {
+-  SerializeEdges();
++  SerializeEdges(redact);
+   if (writer_->aborted()) return;
+   writer_->AddString("],\n");
+ 
+@@ -3540,11 +3557,17 @@ int HeapSnapshotJSONSerializer::GetStringId(const char* s) {
+ }
+ 
+ void HeapSnapshotJSONSerializer::SerializeEdge(HeapGraphEdge* edge,
+-                                               bool first_edge) {
+-  int edge_name_or_index = edge->type() == HeapGraphEdge::kElement ||
+-                                   edge->type() == HeapGraphEdge::kHidden
+-                               ? edge->index()
+-                               : GetStringId(edge->name());
++                                               bool first_edge,
++                                               bool redact) {
++  int edge_name_or_index;
++  if (edge->type() == HeapGraphEdge::kElement ||
++      edge->type() == HeapGraphEdge::kHidden) {
++    edge_name_or_index = edge->index();
++  } else if (redact && edge->redactable()) {
++    edge_name_or_index = GetStringId("(redacted)");
++  } else {
++    edge_name_or_index = GetStringId(edge->name());
++  }
+   if (!first_edge) {
+     writer_->AddCharacter(',');
+   }
+@@ -3555,23 +3578,30 @@ void HeapSnapshotJSONSerializer::SerializeEdge(HeapGraphEdge* edge,
+   writer_->AddNumber(to_node_index(edge->to()));
+ }
+ 
+-void HeapSnapshotJSONSerializer::SerializeEdges() {
++void HeapSnapshotJSONSerializer::SerializeEdges(bool redact) {
+   const std::vector<HeapGraphEdge*>& edges = snapshot_->children();
+   for (size_t i = 0; i < edges.size(); ++i) {
+     DCHECK(i == 0 ||
+            edges[i - 1]->from()->index() <= edges[i]->from()->index());
+-    SerializeEdge(edges[i], i == 0);
++    SerializeEdge(edges[i], i == 0, redact);
+     if (writer_->aborted()) return;
    }
  }
-
+ 
 -void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
 +void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry,
 +                                               bool redact) {
@@ -53,7 +152,9 @@ index 7185ba33ac5..e14c5b2fae3 100644
    writer_->AddNumber(static_cast<int>(entry->type()));
    writer_->AddCharacter(',');
 -  writer_->AddNumber(GetStringId(entry->name()));
-+  if (redact && entry->type() == HeapEntry::kString) {
++  // A RegExp node is named after its source, which can hold data too.
++  if (redact && (entry->type() == HeapEntry::kString ||
++                 entry->type() == HeapEntry::kRegExp)) {
 +    writer_->AddNumber(GetStringId("(redacted)"));
 +  } else {
 +    writer_->AddNumber(GetStringId(entry->name()));
@@ -61,10 +162,10 @@ index 7185ba33ac5..e14c5b2fae3 100644
    writer_->AddCharacter(',');
    writer_->AddNumber(entry->id());
    writer_->AddCharacter(',');
-@@ -3465,10 +3472,10 @@ void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
+@@ -3588,10 +3618,10 @@ void HeapSnapshotJSONSerializer::SerializeNode(const HeapEntry* entry) {
    writer_->AddNumber(entry->detachedness());
  }
-
+ 
 -void HeapSnapshotJSONSerializer::SerializeNodes() {
 +void HeapSnapshotJSONSerializer::SerializeNodes(bool redact) {
    const std::deque<HeapEntry>& entries = snapshot_->entries();
