@@ -39,6 +39,13 @@ class GenerateVEXTest(unittest.TestCase):
     self.assertEqual(product['@id'], 'pkg:generic/foo@1.0.0')
     self.assertEqual(product['subcomponents'][0]['@id'], 'pkg:npm/bar@2.0.0')
 
+  def test_invalid_subcomponents(self):
+    for sub in ('pkg:npm/bar@2.0.0',
+                {'@id': 'pkg:npm/bar@2.0.0', 'subcomponents': [{'@id': 'pkg:npm/baz@3.0.0'}]}):
+      with self.assertRaisesRegex(ValueError, 'Invalid OpenVEX subcomponent'):
+        generate_document([{'cve': 'CVE-2099-0001', 'justification': 'vulnerable_code_not_present',
+                            'product': {'@id': 'pkg:generic/foo', 'subcomponents': [sub]}}])
+
   def test_invalid_impact_statement(self):
     with self.assertRaisesRegex(ValueError, 'Invalid impact statement'):
       generate_document([{'cve': 'CVE-2099-0001', 'justification':
