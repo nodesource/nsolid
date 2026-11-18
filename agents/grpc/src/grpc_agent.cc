@@ -1700,16 +1700,18 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
 
 void GrpcAgent::got_continuous_profile(
     const ProfileCollector::ProfileQStor& stor) {
-  static double performance_process_start_timestamp =
-    performance::performance_process_start_timestamp / 1e3;
   google::protobuf::Struct metadata;
   uint64_t thread_id;
   uint64_t start_timestamp;
-  std::visit([&metadata, &thread_id, &start_timestamp](auto& opt) {
-    thread_id = opt.thread_id;
-    metadata = opt.metadata_pb;
-    start_timestamp = opt.start_timestamp;
-  }, stor.options);
+  double start_ts;
+  std::visit(
+      [&metadata, &thread_id, &start_timestamp, &start_ts](auto& opt) {
+        thread_id = opt.thread_id;
+        metadata = opt.metadata_pb;
+        start_timestamp = opt.start_timestamp;
+        start_ts = opt.start_epoch_timestamp;
+      },
+      stor.options);
 
   Debug("got_continuous_profile. len: %ld, status: %d. thread_id: %ld\n",
         stor.profile.length(),
@@ -1746,12 +1748,9 @@ void GrpcAgent::got_continuous_profile(
   // Check if the profile is complete
   bool profileStreamComplete = stor.profile.length() == 0;
   if (profileStreamComplete) {
-    uint64_t now = uv_hrtime() - performance::performance_process_start;
-    uint64_t start = start_timestamp - performance::performance_process_start;
-    double start_ts =
-        performance_process_start_timestamp + start / 1e6;
-    double end_ts = performance_process_start_timestamp + now / 1e6;
-    uint64_t duration = (now - start) / 1e6;
+    uint64_t elapsed = uv_hrtime() - start_timestamp;
+    double end_ts = start_ts + elapsed / 1e6;
+    uint64_t duration = elapsed / 1e6;
     // Create complete profile
     grpcagent::Asset asset;
     PopulateCommon(asset.mutable_common(),

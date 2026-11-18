@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <limits>
 
 #ifdef __POSIX__
 #include <unistd.h>  // getpid, _exit
@@ -310,9 +311,6 @@ void EnvInst::GetThreadMetrics(ThreadMetrics::MetricsStor* stor) {
   CHECK_NE(env(), nullptr);
 
   stor->current_hrtime_ = uv_hrtime();
-  // TODO(trevnorris): Does this work instead of calling ms_since_epoch?
-  // stor->timestamp = (stor->current_hrtime_ - env()->time_origin()) / 1e6 +
-  //     env()->time_origin_timestamp() / 1e3;
   stor->timestamp = utils::ms_since_epoch();
   stor->thread_id = thread_id();
   stor->thread_name = GetThreadName();
@@ -1653,8 +1651,7 @@ void EnvInst::send_datapoint(MetricsStream::Type type,
                              MetricsStream::DatapointAttrs attrs) {
   double ts = 0;
   if (has_metrics_stream_hooks_) {
-    ts = (PERFORMANCE_NOW() - env()->time_origin()) / 1e6 +
-         env()->time_origin_timestamp() / 1e3;
+    ts = GetCurrentTimeInMicroseconds() / 1000;
   }
 
   EnvList::Inst()->datapoints_q_.Enqueue(
@@ -2802,7 +2799,8 @@ void BindingData::PushServerBucketImpl(BindingData* data,
 
 void BindingData::SlowPushSpanDataDouble(
     const FunctionCallbackInfo<Value>& args) {
-  DCHECK_EQ(args.Length(), 4);
+  DCHECK(args.Length() == 4 || args.Length() == 5);
+  DCHECK(args.Length() == 4 || args[4]->IsNumber());
   DCHECK(args[0]->IsUint32());
   DCHECK(args[1]->IsUint32());
   DCHECK(args[2]->IsUint32());
@@ -2812,39 +2810,45 @@ void BindingData::SlowPushSpanDataDouble(
       args[1].As<Uint32>()->Value();
   uint32_t type = args[2].As<Uint32>()->Value();
   double val = args[3].As<Number>()->Value();
+  double monotonic = args.Length() == 5
+                         ? args[4].As<Number>()->Value()
+                         : std::numeric_limits<double>::quiet_NaN();
   PushSpanDataDoubleImpl(PrincipalRealm::GetBindingData<BindingData>(args),
                          span_id,
                          type,
-                         val);
+                         val,
+                         monotonic);
 }
-
 
 void BindingData::FastPushSpanDataDouble(v8::Local<v8::Object> receiver,
                                          uint32_t span_id_high,
                                          uint32_t span_id_low,
                                          uint32_t type,
-                                         double val) {
+                                         double val,
+                                         double monotonic) {
   TRACK_V8_FAST_API_CALL("nsolid.pushSpanDataDouble");
   const uint64_t span_id =
       (uint64_t{span_id_high} << 32) | span_id_low;
-  PushSpanDataDoubleImpl(FromJSObject<BindingData>(receiver),
-                         span_id,
-                         type,
-                         val);
+  PushSpanDataDoubleImpl(
+      FromJSObject<BindingData>(receiver), span_id, type, val, monotonic);
 }
-
 
 void BindingData::PushSpanDataDoubleImpl(BindingData* data,
                                          uint64_t span_id,
                                          uint32_t type,
-                                         double val) {
+                                         double val,
+                                         double monotonic) {
   Span::PropType prop_type = static_cast<Span::PropType>(type);
-  auto prop = Span::createSpanProp<double>(prop_type, val);
+  std::unique_ptr<tracing::SpanPropBase> prop;
+  if (prop_type == Span::kSpanStart) {
+    prop = Span::createSpanProp(prop_type, Span::StartTime{val, monotonic});
+  } else {
+    prop = Span::createSpanProp<double>(prop_type, val);
+  }
   EnvInst* envinst = data->env()->envinst_.get();
   EnvList::Inst()->GetTracer()->pushSpanData(
       SpanItem{ span_id, envinst->thread_id(), std::move(prop) });
 }
-
 
 void BindingData::SlowPushSpanDataUint64(
     const FunctionCallbackInfo<Value>& args) {

@@ -71,11 +71,13 @@ class BindingData : public SnapshotableObject {
                                      uint32_t span_id_high,
                                      uint32_t span_id_low,
                                      uint32_t type,
-                                     double val);
+                                     double val,
+                                     double monotonic);
   static void PushSpanDataDoubleImpl(BindingData* data,
                                      uint64_t span_id,
                                      uint32_t type,
-                                     double val);
+                                     double val,
+                                     double monotonic);
 
   static void SlowPushSpanDataUint64(
       const v8::FunctionCallbackInfo<v8::Value>& args);
