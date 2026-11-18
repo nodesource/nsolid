@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -122,6 +123,12 @@ class Span {
 #undef V
   };
 
+  // Wall-clock start (timestamp); end = timestamp + (now - monotonic).
+  struct StartTime {
+    double timestamp;
+    double monotonic;
+  };
+
   static const char* traceTypeToString(const Tracer::SpanType& type);
 
   template <typename T>
@@ -132,11 +139,14 @@ class Span {
 
   void add_prop(const SpanPropBase& prop);
   void add_attribute(const SpanPropBase& prop);
+  void end();
 
   Tracer::SpanType type() const;
 
   friend class TracerImpl;
   Tracer::SpanStor stor_;
+  // Unset for explicit epoch starts; forced ends use wall time.
+  std::optional<double> start_monotonic_;
 };
 
 

@@ -27,7 +27,9 @@ checkTracesOnExit(addon, highs.map((high, i) => ({
 
 setupNSolid({ lookup: false }, common.mustCall(() => {
   function pushStart(high) {
-    binding.pushSpanDataDouble(high, low, c.kSpanStart, performance.now());
+    const monotonic = performance.now();
+    binding.pushSpanDataDouble(high, low, c.kSpanStart,
+                               performance.timeOrigin + monotonic, monotonic);
   }
 
   function pushType(high) {
@@ -67,6 +69,7 @@ setupNSolid({ lookup: false }, common.mustCall(() => {
                                high.toString(16) + low.toString(16));
     binding.pushSpanDataString(high, low, c.kSpanTraceId, traceIds[i]);
     binding.pushSpanDataUint64(high, low, c.kSpanHttpStatusCode, 200);
-    binding.pushSpanDataDouble(high, low, c.kSpanEnd, performance.now());
+    binding.pushSpanDataDouble(high, low, c.kSpanEnd,
+                               performance.timeOrigin + performance.now());
   }
 }));

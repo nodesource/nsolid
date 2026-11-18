@@ -33,6 +33,7 @@ struct ProfileOptionsBase {
   uint64_t thread_id;
   uint64_t duration;
   uint64_t start_timestamp;
+  double start_epoch_timestamp = 0;
   nlohmann::json metadata;
   google::protobuf::Struct metadata_pb;
 };

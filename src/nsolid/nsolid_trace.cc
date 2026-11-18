@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <cmath>
+
 #include "nsolid_api.h"
 #include "nsolid_trace.h"
 #include "nsolid_util.h"
@@ -39,14 +42,15 @@ Span::Span(uint64_t thread_id) {
   stor_.thread_id = thread_id;
 }
 
-
 void Span::add_prop(const SpanPropBase& prop) {
-  static double performance_process_start_timestamp =
-    performance::performance_process_start_timestamp / 1e3;
   switch (prop.type()) {
     case Span::kSpanStart:
     {
-      stor_.start = performance_process_start_timestamp + prop.val<double>();
+      const auto& start = prop.val<StartTime>();
+      stor_.start = start.timestamp;
+      if (std::isfinite(start.monotonic)) {
+        start_monotonic_ = start.monotonic;
+      }
     }
     break;
     case Span::kSpanTraceId:
@@ -66,7 +70,7 @@ void Span::add_prop(const SpanPropBase& prop) {
     break;
     case Span::kSpanEnd:
     {
-      stor_.end = performance_process_start_timestamp + prop.val<double>();
+      stor_.end = prop.val<double>();
     }
     break;
     case Span::kSpanName:
@@ -115,6 +119,16 @@ void Span::add_prop(const SpanPropBase& prop) {
   }
 }
 
+void Span::end() {
+  double end;
+  if (start_monotonic_.has_value()) {
+    double now = (uv_hrtime() - performance::performance_process_start) / 1e6;
+    end = stor_.start + (now - start_monotonic_.value());
+  } else {
+    end = GetCurrentTimeInMicroseconds() / 1000;
+  }
+  stor_.end = std::max(stor_.start, end);
+}
 
 void Span::add_attribute(const SpanPropBase& prop) {
   switch (prop.type()) {
@@ -202,23 +216,24 @@ void TracerImpl::addSpanItem(const SpanItem& item) {
 }
 
 void TracerImpl::endPendingSpans() {
-  int r = nsolid::QueueCallback(+[](TracerImpl* tracer) {
-    double now = GetCurrentTimeInMicroseconds() / 1000;
-    for (auto& item : tracer->pending_spans_) {
-      auto& span = item.second;
-      span.stor_.end_reason = Tracer::kSpanEndExit;
-      span.stor_.end = now;
-      span.stor_.attrs.pop_back();
-      span.stor_.attrs += "}";
-      tracer->trace_hook_list_.for_each([&](auto& stor) {
-        if (stor.flags & span.type()) {
-          stor.cb(stor.tracer, span.stor_, stor.data.get());
+  int r = nsolid::QueueCallback(
+      +[](TracerImpl* tracer) {
+        for (auto& item : tracer->pending_spans_) {
+          auto& span = item.second;
+          span.stor_.end_reason = Tracer::kSpanEndExit;
+          span.end();
+          span.stor_.attrs.pop_back();
+          span.stor_.attrs += "}";
+          tracer->trace_hook_list_.for_each([&](auto& stor) {
+            if (stor.flags & span.type()) {
+              stor.cb(stor.tracer, span.stor_, stor.data.get());
+            }
+          });
         }
-      });
-    }
 
-    tracer->pending_spans_.clear();
-  }, this);
+        tracer->pending_spans_.clear();
+      },
+      this);
   if (r != 0) {
     // Nothing to do here
   }
@@ -278,7 +293,7 @@ void TracerImpl::update_flags() {
 
 void TracerImpl::expired_span_cb_(Span span, TracerImpl* tracer) {
   span.stor_.end_reason = Tracer::kSpanEndExpired;
-  span.stor_.end = GetCurrentTimeInMicroseconds() / 1000;
+  span.end();
   span.stor_.attrs.pop_back();
   span.stor_.attrs += "}";
   tracer->trace_hook_list_.for_each([&](auto& stor) {

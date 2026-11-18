@@ -4,47 +4,77 @@
 const common = require('../common');
 const assert = require('assert');
 const fixtures = require('../common/fixtures');
-const { internalBinding } = require('internal/test/binding');
-const { tracerProvider } = require('internal/otel/trace');
-const { getTimeOriginTimestamp, now } = require('internal/perf/utils');
+const { internalBinding, primordials } = require('internal/test/binding');
+const { getTimeOriginTimestamp } = require('internal/perf/utils');
+const { readFileSync } = require('fs');
+const { resolve } = require('path');
+const { compileFunction } = require('vm');
+
+const origin = getTimeOriginTimestamp();
+let monotonic = 10000;
+let offset = 0;
+let monotonicReads = 0;
+let wallReads = 0;
+const now = () => {
+  monotonicReads++;
+  return monotonic;
+};
+// Load the source with independent clocks without changing the host clock.
+const traceModule = { exports: {} };
+const binding = internalBinding('nsolid_api');
+const testBinding = {
+  ...binding,
+};
+compileFunction(readFileSync(resolve(__dirname,
+                                     '../../lib/internal/otel/trace.js'), 'utf8'),
+                ['require', 'internalBinding', 'primordials', 'module'])(
+  (id) => (id === 'internal/perf/utils' ?
+    { now, getTimeOriginTimestamp } : require(id)),
+  (id) => (id === 'nsolid_api' ? testBinding : internalBinding(id)),
+  Object.setPrototypeOf({ DateNow: () => {
+    wallReads++;
+    return origin + monotonic + offset;
+  } }, primordials),
+  traceModule);
+const { tracerProvider } = traceModule.exports;
 const api = require(require.resolve('@opentelemetry/api',
                                     { paths: [fixtures.fixturesDir] }));
 require('nsolid').otel.register(api);
 
-const binding = internalBinding('nsolid_api');
 binding.trace_flags[0] = binding.nsolid_consts.kSpanCustom;
 binding.trace_sample_rate[0] = 1;
 const timestamps = [];
 const events = [];
-binding.pushSpanDataDouble = common.mustCallAtLeast((high, low, type, time) => {
-  assert.strictEqual(typeof time, 'number');
-  timestamps.push(time);
-});
-binding.pushSpanDataString = (high, low, type, value) => {
+testBinding.pushSpanDataDouble = common.mustCallAtLeast(
+  (high, low, type, time, monotonicStart) => {
+    assert.strictEqual(typeof time, 'number');
+    assert.strictEqual(typeof monotonicStart, 'number');
+    timestamps.push(time);
+  });
+testBinding.pushSpanDataString = (high, low, type, value) => {
   if (type === binding.nsolid_consts.kSpanEvent) {
     events.push(JSON.parse(value).time);
   }
 };
-binding.pushSpanDataUint64 = () => {};
+testBinding.pushSpanDataUint64 = () => {};
 
-const origin = getTimeOriginTimestamp();
 const epoch = Math.floor(origin) + 1000;
 const relative = 123.5;
 const tracer = tracerProvider.getTracer('time-input');
 for (const [input, expected] of [
-  [epoch, epoch - origin],
-  [epoch - 2000, epoch - 2000 - origin],
-  [origin / 2 - 1, origin / 2 - 1],
-  [origin / 2, -origin / 2],
-  [origin / 2 + 1, origin / 2 + 1 - origin],
-  [new Date(epoch), epoch - origin],
-  [[Math.floor(epoch / 1000), (epoch % 1000) * 1e6], epoch - origin],
-  [relative, relative],
-  [0, 0],
-  [-1, -1],
-  [new Date(0), -origin],
-  [[0, 0], -origin],
-  [9223372036854, 9223372036854 - origin],
+  [epoch, epoch],
+  [epoch - 2000, epoch - 2000],
+  [origin / 2 - 1, origin + (origin / 2 - 1)],
+  [origin / 2, origin / 2],
+  [origin / 2 + 1, origin / 2 + 1],
+  [new Date(epoch), epoch],
+  [[Math.floor(epoch / 1000), (epoch % 1000) * 1e6], epoch],
+  [relative, origin + relative],
+  [0, origin],
+  [-1, origin - 1],
+  [new Date(0), 0],
+  [[0, 0], 0],
+  [9223372036854, 9223372036854],
 ]) {
   const span = tracer.startSpan('time-input', { startTime: input });
   span.addEvent('overload', input);
@@ -54,7 +84,7 @@ for (const [input, expected] of [
   assert.strictEqual(timestamps.shift(), expected);
   assert.strictEqual(timestamps.shift(), expected);
   for (let i = 0; i < 3; i++) {
-    assert.strictEqual(events.shift(), origin + expected);
+    assert.strictEqual(events.shift(), expected);
   }
 }
 
@@ -70,7 +100,7 @@ for (const input of [undefined, null, {}, 'invalid', NaN, Infinity,
   span.end(input);
   const after = now();
   for (const time of timestamps.splice(0)) {
-    assert.ok(time >= before && time <= after);
+    assert.ok(time >= origin + before && time <= origin + after);
   }
   const time = events.shift();
   assert.ok(time >= origin + before && time <= origin + after);
@@ -81,6 +111,91 @@ const future = Math.floor(origin + now()) + 60000;
 for (const endTime of [undefined, future - 1, new Date(future - 1)]) {
   const span = tracer.startSpan('negative-duration', { startTime: future });
   span.end(endTime);
-  assert.strictEqual(timestamps.shift(), future - origin);
-  assert.strictEqual(timestamps.shift(), future - origin);
+  assert.strictEqual(timestamps.shift(), future);
+  assert.strictEqual(timestamps.shift(), future);
 }
+
+// New spans use the current wall clock; existing spans keep elapsed durations.
+for (const shift of [3600000, -3600000]) {
+  offset = 0;
+  const before = monotonic;
+  const span = tracer.startSpan('clock-step');
+  assert.strictEqual(timestamps.shift(), origin + before);
+  offset = shift;
+  monotonic += 2000;
+  span.addEvent('after-step');
+  span.recordException('after-step');
+  span.end();
+  assert.strictEqual(timestamps.shift(), origin + before + 2000);
+  assert.deepStrictEqual(events.splice(0),
+                         [origin + before + 2000, origin + before + 2000]);
+
+  const beforeStartReads = monotonicReads;
+  const resumed = tracer.startSpan('after-resume', {
+    internal: true,
+    startTime: monotonic,
+  });
+  assert.strictEqual(monotonicReads, beforeStartReads);
+  assert.strictEqual(timestamps.shift(), origin + monotonic + shift);
+  // DNS spans reuse their captured monotonic start and end.
+  monotonic += 100;
+  const beforeEndReads = monotonicReads;
+  resumed.end(monotonic);
+  assert.strictEqual(monotonicReads, beforeEndReads);
+  assert.strictEqual(timestamps.shift(), origin + monotonic + shift);
+
+  // Explicit relative starts still use the same clock correction.
+  const internal = tracer.startSpan('relative', { startTime: monotonic - 100 });
+  assert.strictEqual(timestamps.shift(), origin + monotonic - 100 + shift);
+  internal.end(monotonic);
+  assert.strictEqual(timestamps.shift(), origin + monotonic + shift);
+
+  // Explicit epoch timestamps must not receive the clock correction again.
+  const explicit = tracer.startSpan('explicit', { startTime: new Date(epoch) });
+  assert.strictEqual(timestamps.shift(), epoch);
+  explicit.addEvent('default-time');
+  explicit.end();
+  assert.strictEqual(events.shift(), origin + monotonic + shift);
+  assert.strictEqual(timestamps.shift(),
+                     Math.max(epoch, origin + monotonic + shift));
+}
+
+// Internal starts trust captured monotonic values, including zero.
+for (const startTime of [0, monotonic - 5, monotonic]) {
+  const beforeMonotonic = monotonicReads;
+  const beforeWall = wallReads;
+  const startTimestamp = origin + monotonic + offset;
+  const span = tracer.startSpan('internal-cost', { internal: true, startTime });
+  assert.strictEqual(monotonicReads, beforeMonotonic);
+  assert.strictEqual(wallReads, beforeWall + 1);
+  assert.strictEqual(timestamps.shift(), startTimestamp);
+  span.end(startTime + 100);
+  assert.strictEqual(monotonicReads, beforeMonotonic);
+  assert.strictEqual(timestamps.shift(), startTimestamp + 100);
+}
+
+// Default starts read each clock once and send only one start item.
+for (const internal of [false, true]) {
+  const beforeMonotonic = monotonicReads;
+  const beforeWall = wallReads;
+  const sampled = tracer.startSpan('default-cost', { internal });
+  assert.strictEqual(monotonicReads, beforeMonotonic + 1);
+  assert.strictEqual(wallReads, beforeWall + 1);
+  assert.strictEqual(timestamps.length, 1);
+  sampled.end();
+  assert.strictEqual(timestamps.length, 2);
+  timestamps.length = 0;
+}
+
+// Unsampled spans must not read clocks or send any properties.
+binding.trace_sample_rate[0] = 0;
+const afterMonotonic = monotonicReads;
+const afterWall = wallReads;
+for (const options of [{}, { internal: true, startTime: monotonic }]) {
+  const unsampled = tracer.startSpan('unsampled', options);
+  unsampled.addEvent('ignored');
+  unsampled.end();
+}
+assert.strictEqual(monotonicReads, afterMonotonic);
+assert.strictEqual(wallReads, afterWall);
+assert.strictEqual(timestamps.length, 0);

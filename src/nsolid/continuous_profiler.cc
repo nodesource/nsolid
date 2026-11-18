@@ -1,5 +1,6 @@
 #include "continuous_profiler.h"
 #include "asserts-cpp/asserts.h"
+#include "node_internals.h"
 
 namespace node {
 namespace nsolid {
@@ -218,6 +219,7 @@ int ContinuousProfiler::start_cpu_profiling_for_thread(uint64_t thread_id) {
   options.thread_id = thread_id;
   options.duration = interval_;  // Use the interval as the duration
   options.start_timestamp = uv_hrtime();
+  options.start_epoch_timestamp = GetCurrentTimeInMicroseconds() / 1000;
 
   // Start CPU profiling for this thread
   int result = profile_collector_->StartCPUProfile(options);
