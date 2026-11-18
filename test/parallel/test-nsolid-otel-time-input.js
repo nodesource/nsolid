@@ -10,6 +10,13 @@ const { readFileSync } = require('fs');
 const { resolve } = require('path');
 const { compileFunction } = require('vm');
 
+// Read the shared symbol from source when testing against an older binary.
+const coreModule = { exports: {} };
+compileFunction(readFileSync(resolve(__dirname,
+                                     '../../lib/internal/otel/core.js'), 'utf8'),
+                ['require', 'primordials', 'module'])(require, primordials, coreModule);
+const { kStartSpan } = coreModule.exports;
+
 const origin = getTimeOriginTimestamp();
 let monotonic = 10000;
 let offset = 0;
@@ -28,8 +35,11 @@ const testBinding = {
 compileFunction(readFileSync(resolve(__dirname,
                                      '../../lib/internal/otel/trace.js'), 'utf8'),
                 ['require', 'internalBinding', 'primordials', 'module'])(
-  (id) => (id === 'internal/perf/utils' ?
-    { now, getTimeOriginTimestamp } : require(id)),
+  (id) => {
+    if (id === 'internal/perf/utils') return { now, getTimeOriginTimestamp };
+    if (id === 'internal/otel/core') return { ...require(id), kStartSpan };
+    return require(id);
+  },
   (id) => (id === 'nsolid_api' ? testBinding : internalBinding(id)),
   Object.setPrototypeOf({ DateNow: () => {
     wallReads++;
@@ -45,10 +55,14 @@ binding.trace_flags[0] = binding.nsolid_consts.kSpanCustom;
 binding.trace_sample_rate[0] = 1;
 const timestamps = [];
 const events = [];
+let lastMonotonicStart;
 testBinding.pushSpanDataDouble = common.mustCallAtLeast(
   (high, low, type, time, monotonicStart) => {
     assert.strictEqual(typeof time, 'number');
     assert.strictEqual(typeof monotonicStart, 'number');
+    if (type === binding.nsolid_consts.kSpanStart) {
+      lastMonotonicStart = monotonicStart;
+    }
     timestamps.push(time);
   });
 testBinding.pushSpanDataString = (high, low, type, value) => {
@@ -61,6 +75,8 @@ testBinding.pushSpanDataUint64 = () => {};
 const epoch = Math.floor(origin) + 1000;
 const relative = 123.5;
 const tracer = tracerProvider.getTracer('time-input');
+assert.strictEqual(typeof kStartSpan, 'symbol');
+assert.strictEqual(tracer._startSpan, undefined);
 for (const [input, expected] of [
   [epoch, epoch],
   [epoch - 2000, epoch - 2000],
@@ -131,8 +147,7 @@ for (const shift of [3600000, -3600000]) {
                          [origin + before + 2000, origin + before + 2000]);
 
   const beforeStartReads = monotonicReads;
-  const resumed = tracer.startSpan('after-resume', {
-    internal: true,
+  const resumed = tracer[kStartSpan]('after-resume', {
     startTime: monotonic,
   });
   assert.strictEqual(monotonicReads, beforeStartReads);
@@ -160,12 +175,38 @@ for (const shift of [3600000, -3600000]) {
                      Math.max(epoch, origin + monotonic + shift));
 }
 
-// Internal starts trust captured monotonic values, including zero.
+// Public options cannot select internal timing or native span types.
+for (const startTime of [
+  new Date(epoch),
+  [Math.floor(epoch / 1000), (epoch % 1000) * 1e6],
+]) {
+  const span = tracer.startSpan('public-options', {
+    internal: true,
+    type: binding.nsolid_consts.kSpanDns,
+    startTime,
+  });
+  assert.strictEqual(span.type, binding.nsolid_consts.kSpanCustom);
+  assert.ok(Number.isNaN(lastMonotonicStart));
+  assert.strictEqual(timestamps.shift(), epoch);
+  span.end(epoch);
+  assert.strictEqual(timestamps.shift(), epoch);
+}
+
+const publicOptions = {
+  startTime: new Date(epoch),
+  get internal() { return assert.fail('Public API read internal'); },
+  get type() { return assert.fail('Public API read type'); },
+};
+tracer.startActiveSpan('public-active', publicOptions, common.mustCall(() => {
+  assert.strictEqual(timestamps.shift(), epoch);
+}));
+
+// Internal starts reuse finite monotonic values, including zero.
 for (const startTime of [0, monotonic - 5, monotonic]) {
   const beforeMonotonic = monotonicReads;
   const beforeWall = wallReads;
   const startTimestamp = origin + monotonic + offset;
-  const span = tracer.startSpan('internal-cost', { internal: true, startTime });
+  const span = tracer[kStartSpan]('internal-cost', { startTime });
   assert.strictEqual(monotonicReads, beforeMonotonic);
   assert.strictEqual(wallReads, beforeWall + 1);
   assert.strictEqual(timestamps.shift(), startTimestamp);
@@ -174,11 +215,27 @@ for (const startTime of [0, monotonic - 5, monotonic]) {
   assert.strictEqual(timestamps.shift(), startTimestamp + 100);
 }
 
+// Reject nonnumeric clock values even through the private entry point.
+for (const startTime of [
+  'invalid', new Date(epoch), {}, [1, 0],
+  NaN, Infinity, -Infinity, 1n, Symbol('start'),
+]) {
+  const beforeMonotonic = monotonicReads;
+  const startTimestamp = origin + monotonic + offset;
+  const span = tracer[kStartSpan]('invalid-internal', { startTime });
+  assert.strictEqual(monotonicReads, beforeMonotonic + 1);
+  assert.strictEqual(lastMonotonicStart, monotonic);
+  assert.strictEqual(timestamps.shift(), startTimestamp);
+  span.end();
+  assert.strictEqual(timestamps.shift(), startTimestamp);
+}
+
 // Default starts read each clock once and send only one start item.
 for (const internal of [false, true]) {
   const beforeMonotonic = monotonicReads;
   const beforeWall = wallReads;
-  const sampled = tracer.startSpan('default-cost', { internal });
+  const sampled = internal ? tracer[kStartSpan]('default-cost') :
+    tracer.startSpan('default-cost');
   assert.strictEqual(monotonicReads, beforeMonotonic + 1);
   assert.strictEqual(wallReads, beforeWall + 1);
   assert.strictEqual(timestamps.length, 1);
@@ -191,11 +248,20 @@ for (const internal of [false, true]) {
 binding.trace_sample_rate[0] = 0;
 const afterMonotonic = monotonicReads;
 const afterWall = wallReads;
-for (const options of [{}, { internal: true, startTime: monotonic }]) {
-  const unsampled = tracer.startSpan('unsampled', options);
+for (const internal of [false, true]) {
+  const unsampled = internal ?
+    tracer[kStartSpan]('unsampled', { startTime: monotonic }) :
+    tracer.startSpan('unsampled');
   unsampled.addEvent('ignored');
   unsampled.end();
 }
 assert.strictEqual(monotonicReads, afterMonotonic);
 assert.strictEqual(wallReads, afterWall);
+assert.strictEqual(timestamps.length, 0);
+
+// A public internal flag must not bypass disabled tracing.
+binding.trace_flags[0] = 0;
+binding.trace_sample_rate[0] = 1;
+const disabled = tracer.startSpan('disabled', { internal: true });
+assert.strictEqual(disabled.spanContext().traceFlags, api.TraceFlags.NONE);
 assert.strictEqual(timestamps.length, 0);
