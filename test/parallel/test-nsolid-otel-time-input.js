@@ -31,6 +31,10 @@ const traceModule = { exports: {} };
 const binding = internalBinding('nsolid_api');
 const testBinding = {
   ...binding,
+  getWallTime() {
+    wallReads++;
+    return origin + monotonic + offset;
+  },
 };
 compileFunction(readFileSync(resolve(__dirname,
                                      '../../lib/internal/otel/trace.js'), 'utf8'),
@@ -41,10 +45,7 @@ compileFunction(readFileSync(resolve(__dirname,
     return require(id);
   },
   (id) => (id === 'nsolid_api' ? testBinding : internalBinding(id)),
-  Object.setPrototypeOf({ DateNow: () => {
-    wallReads++;
-    return origin + monotonic + offset;
-  } }, primordials),
+  primordials,
   traceModule);
 const { tracerProvider } = traceModule.exports;
 const api = require(require.resolve('@opentelemetry/api',
@@ -228,6 +229,37 @@ for (const startTime of [
   assert.strictEqual(timestamps.shift(), startTimestamp);
   span.end();
   assert.strictEqual(timestamps.shift(), startTimestamp);
+}
+
+// Fractional wall anchors keep closely nested spans on the same timeline.
+{
+  const previousOffset = offset;
+  const wallStart = Math.floor(origin + monotonic) + 0.875;
+  offset = wallStart - origin - monotonic;
+  const parent = tracer.startSpan('fractional-parent');
+  const parentStart = timestamps.shift();
+  assert.strictEqual(parentStart, wallStart);
+  const context = api.trace.setSpan(api.ROOT_CONTEXT, parent);
+  monotonic += 0.25;
+  const child = tracer[kStartSpan]('fractional-child', { startTime: monotonic }, context);
+  const childStart = timestamps.shift();
+  assert.strictEqual(childStart, wallStart + 0.25);
+  monotonic += 0.125;
+  child.end();
+  const childEnd = timestamps.shift();
+  assert.strictEqual(childEnd, wallStart + 0.375);
+  monotonic += 0.125;
+  parent.end();
+  const parentEnd = timestamps.shift();
+  assert.strictEqual(parentEnd, wallStart + 0.5);
+  assert.ok(parentStart <= childStart && childEnd <= parentEnd);
+
+  // Explicit epoch starts also retain fractional wall time on a default end.
+  const explicit = tracer.startSpan('fractional-fallback', { startTime: new Date(epoch) });
+  assert.strictEqual(timestamps.shift(), epoch);
+  explicit.end();
+  assert.strictEqual(timestamps.shift(), wallStart + 0.5);
+  offset = previousOffset;
 }
 
 // Default starts read each clock once and send only one start item.

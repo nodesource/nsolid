@@ -126,6 +126,9 @@ class BindingData : public SnapshotableObject {
   static void FastGetTraceId(v8::Local<v8::Value> receiver,
                              const v8::FastApiTypedArray<uint8_t>& output);
 
+  static void SlowGetWallTime(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static double FastGetWallTime(v8::Local<v8::Value> receiver);
+
   static void Initialize(v8::Local<v8::Object> target,
                          v8::Local<v8::Value> unused,
                          v8::Local<v8::Context> context,
@@ -143,6 +146,7 @@ class BindingData : public SnapshotableObject {
   static v8::CFunction fast_push_span_data_string3_;
   static v8::CFunction fast_get_span_id_;
   static v8::CFunction fast_get_trace_id_;
+  static v8::CFunction fast_get_wall_time_;
 };
 
 }  // namespace nsolid

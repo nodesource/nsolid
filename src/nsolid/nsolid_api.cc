@@ -2999,6 +2999,20 @@ void BindingData::PushSpanDataStringImpl3(BindingData* data,
       SpanItem{ span_id, envinst->thread_id(), std::move(prop) });
 }
 
+static double WallTimeMs() {
+  uv_timespec64_t ts;
+  CHECK_EQ(0, uv_clock_gettime(UV_CLOCK_REALTIME, &ts));
+  return ts.tv_sec * 1e3 + ts.tv_nsec / 1e6;
+}
+
+void BindingData::SlowGetWallTime(const FunctionCallbackInfo<Value>& args) {
+  args.GetReturnValue().Set(WallTimeMs());
+}
+
+double BindingData::FastGetWallTime(v8::Local<v8::Value> receiver) {
+  TRACK_V8_FAST_API_CALL("nsolid.getWallTime");
+  return WallTimeMs();
+}
 
 void BindingData::SlowGetSpanId(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsUint8Array());
@@ -3718,7 +3732,8 @@ v8::CFunction BindingData::fast_get_span_id_(
     v8::CFunction::Make(FastGetSpanId));
 v8::CFunction BindingData::fast_get_trace_id_(
     v8::CFunction::Make(FastGetTraceId));
-
+v8::CFunction BindingData::fast_get_wall_time_(
+    v8::CFunction::Make(FastGetWallTime));
 
 void BindingData::Initialize(Local<Object> target,
                              Local<Value> unused,
@@ -3777,6 +3792,8 @@ void BindingData::Initialize(Local<Object> target,
                 "getTraceId",
                 SlowGetTraceId,
                 &fast_get_trace_id_);
+  SetFastMethodNoSideEffect(
+      context, target, "getWallTime", SlowGetWallTime, &fast_get_wall_time_);
 
   SetMethod(context, target, "agentId", AgentId);
   SetMethod(context, target, "writeLog", WriteLog);
@@ -3968,6 +3985,9 @@ void BindingData::RegisterExternalReferences(
 
   registry->Register(SlowGetTraceId);
   registry->Register(fast_get_trace_id_);
+
+  registry->Register(SlowGetWallTime);
+  registry->Register(fast_get_wall_time_);
 
   registry->Register(AgentId);
   registry->Register(WriteLog);
