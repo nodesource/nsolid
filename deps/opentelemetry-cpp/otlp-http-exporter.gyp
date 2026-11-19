@@ -30,6 +30,7 @@
         'ext/src/http/client/curl/http_client_curl.cc',
         'ext/src/http/client/curl/http_client_factory_curl.cc',
         'ext/src/http/client/curl/http_operation_curl.cc',
+        'ext/src/http/client/curl/http_time_util.cc',
         'sdk/src/common/base64.cc',
         'sdk/src/common/env_variables.cc',
         'sdk/src/common/global_log_handler.cc',
