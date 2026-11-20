@@ -48,7 +48,8 @@ Checks:
   - readability-redundant-control-flow
   - readability-redundant-declaration
   - readability-redundant-function-ptr-dereference
-  - readability-redundant-parentheses
+  # readability-redundant-nested-if  # would need local suppression in a handful of cases
+  # - readability-redundant-parentheses
   - readability-redundant-preprocessor
   - readability-suspicious-call-argument
   - readability-uppercase-literal-suffix
