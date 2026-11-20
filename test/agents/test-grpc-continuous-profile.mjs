@@ -1,5 +1,5 @@
 // Flags: --expose-internals
-import { mustSucceed } from '../common/index.mjs';
+import { mustCallAtLeast, mustNotCall, mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
 import { setTimeout } from 'node:timers/promises';
 import validators from 'internal/validators';
@@ -44,7 +44,9 @@ function checkContinuousProfileData(profile, metadata, agentId, options, interva
   const now = Date.now();
   assert.ok(now - profile.startTs > 0);
   assert.ok(now - profile.startTs < 5000);
-  assert.ok(now - profile.endTs > 0);
+  // endTs comes from the monotonic clock, which reads up to about 1 ms ahead
+  // of Date.now(), so a profile delivered at once can seem to end later.
+  assert.ok(now - profile.endTs > -10);
   assert.ok(now - profile.endTs < 5000);
 
   validateString(profile.data, 'profile.data');
@@ -85,9 +87,10 @@ tests.push({
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         let times = 0;
-        grpcServer.on('profile', async (data) => {
+        grpcServer.on('profile', mustCallAtLeast(async (data) => {
+          // More profiles can arrive while the child shuts down.
+          if (++times > 2) return;
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
-          times++;
           if (times === 2) {
             const diff = process.hrtime(startTime);
             assert.strictEqual(diff[0], 0);
@@ -96,7 +99,7 @@ tests.push({
             grpcServer.close();
             resolve();
           }
-        });
+        }, 2));
         const env = getEnv(port);
 
         const opts = {
@@ -132,18 +135,15 @@ tests.push({
         };
 
         const child = new TestClient([], opts);
-        const agentId = await child.id();
+        await child.id();
 
-        let profileCount = 0;
-        grpcServer.on('profile', (data) => {
-          assert.strictEqual(data.metadata['nsolid-agent-id'][0], agentId);
-          profileCount++;
-        });
+        grpcServer.on(
+          'profile',
+          mustNotCall('continuous profiles should not be emitted when assets are disabled'),
+        );
 
         // Wait slightly longer than two intervals (100ms) to see if any profile arrives.
         await setTimeout(300);
-        assert.strictEqual(profileCount, 0);
-
         await child.shutdown(0);
         grpcServer.close();
         resolve();
@@ -262,7 +262,11 @@ tests.push({
         const workers = await child.workers();
         const wid = workers[0];
 
-        grpcServer.on('profile', async (data) => {
+        // A thread can send its third profile before the other sends its
+        // second, and more can arrive while the child shuts down.
+        let done = false;
+        grpcServer.on('profile', mustCallAtLeast(async (data) => {
+          if (done) return;
           if (data.msg.threadId === '0') {
             timesMainThread++;
           } else {
@@ -275,7 +279,8 @@ tests.push({
           };
 
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
-          if (timesMainThread === 2 && timesWorker === 2) {
+          if (timesMainThread >= 2 && timesWorker >= 2) {
+            done = true;
             const diff = process.hrtime(startTime);
             assert.strictEqual(diff[0], 0);
             assert.ok(diff[1] > 200000000);
@@ -283,7 +288,7 @@ tests.push({
             grpcServer.close();
             resolve();
           }
-        });
+        }, 4));
       }));
     });
   },
@@ -296,9 +301,10 @@ tests.push({
       const grpcServer = new GRPCServer();
       grpcServer.start(mustSucceed(async (port) => {
         let times = 0;
-        grpcServer.on('profile', async (data) => {
+        grpcServer.on('profile', mustCallAtLeast(async (data) => {
+          // More profiles can arrive while the child shuts down.
+          if (++times > 2) return;
           checkContinuousProfileData(data.msg, data.metadata, agentId, options);
-          times++;
           if (times === 2) {
             const diff = process.hrtime(startTime);
             assert.strictEqual(diff[0], 0);
@@ -307,7 +313,7 @@ tests.push({
             grpcServer.close();
             resolve();
           }
-        });
+        }, 2));
         const env = getEnv(port);
 
         const opts = {
@@ -341,7 +347,7 @@ tests.push({
         // Start TestClient without continuous profiling
         const env = getEnv(port);
         delete env.NSOLID_CONT_CPU_PROFILE;
-        delete env.NSOLID_CONT_CPU_PROFILE;
+        delete env.NSOLID_CONT_CPU_PROFILE_INTERVAL;
 
         const opts = {
           stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
