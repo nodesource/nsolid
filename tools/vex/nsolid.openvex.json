@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-2376f6c1a2296483b9922769877f13b6bc3a27dd6b5f2d2deb6e2241fc69c5e3",
+  "@id": "https://openvex.dev/docs/public/vex-b71fb3944306da27617160401adebd5ec3182955808d6fe890c99967791986bb",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-11-11T20:01:03.428407Z",
+  "timestamp": "2026-11-17T01:12:44.549495Z",
   "statements": [
     {
       "vulnerability": {
@@ -51,11 +51,35 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/nodesource/nsolid"
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/pacote@19.0.2"
+            }
+          ]
         }
       ],
       "status": "fixed",
       "action_statement": "Upstream fix backported; vulnerable regex replaced with linear indexOf()/slice() logic. Upstream fix: https://github.com/npm/pacote/commit/627a7dc1a214d857472a13b48e42559c75288c9e"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-9496",
+        "@id": "https://www.cve.org/CVERecord?id=CVE-2026-9496"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/nodesource/nsolid",
+          "subcomponents": [
+            {
+              "@id": "pkg:npm/pacote@20.0.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "npm also carries pacote 20.0.1, which only @npmcli/metavuln-calculator uses: for npm audit, it calls pacote.packument() with the registry names of packages that have advisories. The vulnerable regex is in addGitSha(), which runs only when resolving git dependencies, so it never runs in this copy."
     },
     {
       "vulnerability": {
@@ -67,18 +91,13 @@
           "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
-              "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
-              "subcomponents": [
-                {
-                  "@id": "pkg:npm/fast-glob@3.3.3"
-                },
-                {
-                  "@id": "pkg:npm/micromatch@4.0.8"
-                },
-                {
-                  "@id": "pkg:npm/braces@3.0.3"
-                }
-              ]
+              "@id": "pkg:npm/fast-glob@3.3.3"
+            },
+            {
+              "@id": "pkg:npm/micromatch@4.0.8"
+            },
+            {
+              "@id": "pkg:npm/braces@3.0.3"
             }
           ]
         }
@@ -98,15 +117,12 @@
           "subcomponents": [
             {
               "@id": "pkg:npm/minimatch@9.0.9"
-            },
-            {
-              "@id": "pkg:npm/minimatch@10.2.6"
             }
           ]
         }
       ],
       "status": "fixed",
-      "action_statement": "Upstream fixes backported to the minimatch copies bundled with npm and with Node.js: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336"
+      "action_statement": "Upstream fixes backported to the minimatch copy bundled with npm: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336"
     },
     {
       "vulnerability": {

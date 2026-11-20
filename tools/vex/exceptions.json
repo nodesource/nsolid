@@ -31,7 +31,34 @@
     "cve": "CVE-2026-9496",
     "status": "fixed",
     "action_statement": "Upstream fix backported; vulnerable regex replaced with linear indexOf()/slice() logic. Upstream fix: https://github.com/npm/pacote/commit/627a7dc1a214d857472a13b48e42559c75288c9e",
-    "product": "pkg:generic/nodesource/nsolid"
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/pacote@19.0.2"
+        }
+      ]
+    },
+    "verify": [
+      {
+        "path": "deps/npm/node_modules/pacote/lib/util/add-git-sha.js",
+        "contains": "hashIndex"
+      }
+    ]
+  },
+  {
+    "cve": "CVE-2026-9496",
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "impact_statement": "npm also carries pacote 20.0.1, which only @npmcli/metavuln-calculator uses: for npm audit, it calls pacote.packument() with the registry names of packages that have advisories. The vulnerable regex is in addGitSha(), which runs only when resolving git dependencies, so it never runs in this copy.",
+    "product": {
+      "@id": "pkg:generic/nodesource/nsolid",
+      "subcomponents": [
+        {
+          "@id": "pkg:npm/pacote@20.0.1"
+        }
+      ]
+    }
   },
   {
     "cve": "CVE-2026-93687",
@@ -39,18 +66,13 @@
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
         {
-          "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
-          "subcomponents": [
-            {
-              "@id": "pkg:npm/fast-glob@3.3.3"
-            },
-            {
-              "@id": "pkg:npm/micromatch@4.0.8"
-            },
-            {
-              "@id": "pkg:npm/braces@3.0.3"
-            }
-          ]
+          "@id": "pkg:npm/fast-glob@3.3.3"
+        },
+        {
+          "@id": "pkg:npm/micromatch@4.0.8"
+        },
+        {
+          "@id": "pkg:npm/braces@3.0.3"
         }
       ]
     },
@@ -61,18 +83,25 @@
   {
     "cve": "CVE-2026-118764",
     "status": "fixed",
-    "action_statement": "Upstream fixes backported to the minimatch copies bundled with npm and with Node.js: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336",
+    "action_statement": "Upstream fixes backported to the minimatch copy bundled with npm: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336",
     "product": {
       "@id": "pkg:generic/nodesource/nsolid",
       "subcomponents": [
         {
           "@id": "pkg:npm/minimatch@9.0.9"
-        },
-        {
-          "@id": "pkg:npm/minimatch@10.2.6"
         }
       ]
-    }
+    },
+    "verify": [
+      {
+        "path": "deps/npm/node_modules/minimatch/dist/commonjs/index.js",
+        "contains": "too many patterns"
+      },
+      {
+        "path": "deps/npm/node_modules/minimatch/dist/esm/index.js",
+        "contains": "too many patterns"
+      }
+    ]
   },
   {
     "cve": "CVE-2026-118773",
