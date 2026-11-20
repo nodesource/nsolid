@@ -84,6 +84,9 @@ class ProfileCollector: public std::enable_shared_from_this<ProfileCollector> {
   }
   ~ProfileCollector();
 
+  // Stop delivery and close the queue on its owning loop thread.
+  void Close() { profile_queue_->close(); }
+
   int StartCPUProfile(const CPUProfileOptions& options);
   int StartHeapProfile(const HeapProfileOptions& options);
   int StartHeapSampling(const HeapSamplingOptions& options);
