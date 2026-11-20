@@ -385,6 +385,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
   TSQueue<StartProfStor> start_profiling_msg_q_;
 
   // Continuous Profiling
+  uint64_t cont_profile_hook_id_ = 0;
   ProfileStorMap cont_profile_stor_map_;
   std::shared_ptr<AsyncTSQueue<ProfileCollector::ProfileQStor>>
     cont_profile_queue_;

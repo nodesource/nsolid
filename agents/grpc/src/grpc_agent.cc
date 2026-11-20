@@ -696,19 +696,20 @@ void GrpcAgent::command_stream_closed(const ::grpc::Status& status) {
 }
 
 int GrpcAgent::start() {
+  uv_mutex_lock(&start_lock_);
   int r = 0;
-  if (ready_ == false) {
-    uv_mutex_lock(&start_lock_);
+  if (exiting_ || (hooks_init_ && !ready_)) {
+    r = UV_ECANCELED;
+  } else if (ready_ == false) {
     r = thread_.create(run_, weak_from_this());
     if (r == 0) {
       while (ready_ == false) {
         uv_cond_wait(&start_cond_, &start_lock_);
       }
     }
-
-    uv_mutex_unlock(&start_lock_);
   }
 
+  uv_mutex_unlock(&start_lock_);
   return r;
 }
 
@@ -963,7 +964,7 @@ int GrpcAgent::start_heap_snapshot_from_js(
     const ProfileCollector::ProfileQStor& profile_data,
     WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
-  if (agent == nullptr || agent->cont_profile_queue_ == nullptr) {
+  if (agent == nullptr) {
     return;
   }
 
@@ -1460,8 +1461,9 @@ void GrpcAgent::do_start() {
       },
       weak_from_this());
 
-  EnvList::Inst()->GetContinuousProfiler()->RegisterHook(cont_profiler_cb,
-                                                         weak_from_this());
+  cont_profile_hook_id_ =
+      EnvList::Inst()->GetContinuousProfiler()->RegisterHook(cont_profiler_cb,
+                                                             weak_from_this());
 
   ready_ = true;
 
@@ -1492,8 +1494,14 @@ void GrpcAgent::do_stop() {
   trace_exporter_.reset();
   ready_ = false;
   span_collector_.reset();
-  profile_collector_.reset();
-  blocked_loop_queue_.reset();
+  {
+    nsuv::ns_mutex::scoped_lock lock(profile_state_lock_);
+    profile_collector_->Close();
+    profile_collector_.reset();
+  }
+  // Hooks can still lock the agent after stop; keep their closed queues alive.
+  blocked_loop_queue_->close();
+  cont_profile_queue_->close();
   asset_done_msg_.close();
   command_msg_.close();
   command_stream_done_msg_.close();
@@ -1505,7 +1513,8 @@ void GrpcAgent::do_stop() {
   env_msg_.close();
   shutdown_.close();
   start_profiling_msg_.close();
-  cont_profile_queue_.reset();
+  EnvList::Inst()->GetContinuousProfiler()->UnregisterHook(
+      cont_profile_hook_id_);
 }
 
 void GrpcAgent::got_spans(const UniqRecordables& recordables) {
@@ -2384,6 +2393,10 @@ ErrorType GrpcAgent::do_start_prof_init(
   }
 
   nsuv::ns_mutex::scoped_lock lock(profile_state_lock_);
+  if (!ready_ || exiting_) {
+    return ErrorType::ENotAvailable;
+  }
+
   ProfileState& profile_state = profile_state_[type];
   ProfileStor stor{ req.requestid(),
                     nullptr,

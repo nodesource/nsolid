@@ -72,7 +72,16 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
   /**
    * Destructor for AsyncTSQueue
    */
-  ~AsyncTSQueue() {
+  ~AsyncTSQueue() { close(); }
+
+  // Call on the loop thread before releasing the owner. Late producers may
+  // retain the queue, but must not send to or close handles on a stopped loop.
+  void close() {
+    Spinlock::ScopedLock lock(close_lock_);
+    if (async_handle_ == nullptr) {
+      return;
+    }
+
     async_handle_->close_and_delete();
     async_handle_ = nullptr;
     if (timer_) {
@@ -85,7 +94,7 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
    * Enqueue an item to the queue (copy or move)
    *
    * @param item The item to enqueue
-   * @return The current size of the queue after enqueuing
+   * @return The current size of the queue, or 0 if it has been closed
    */
   size_t enqueue(const T& item) {
     return enqueue_impl(item);
@@ -99,6 +108,11 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
   // DRY helper for enqueue logic
   template<typename U>
   size_t enqueue_impl(U&& item) {
+    Spinlock::ScopedLock lock(close_lock_);
+    if (async_handle_ == nullptr) {
+      return 0;
+    }
+
     size_t size = queue_.enqueue(std::forward<U>(item));
     if (batching_enabled_) {
       if (size == 1) {
@@ -260,6 +274,7 @@ class AsyncTSQueue : public std::enable_shared_from_this<AsyncTSQueue<T>> {
 
   uv_loop_t* loop_;
   nsuv::ns_async* async_handle_;
+  Spinlock close_lock_;
   TSQueue<T> queue_;
   ProcessCallback process_callback_;
 
