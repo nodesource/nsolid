@@ -3,9 +3,10 @@
 #include "gtest/gtest.h"
 #include "node_test_fixture.h"
 
-#include <vector>
-#include <utility>
+#include <atomic>
 #include <memory>
+#include <utility>
+#include <vector>
 // NOLINTNEXTLINE(build/c++11)
 #include <chrono>
 // NOLINTNEXTLINE(build/c++11)
@@ -642,4 +643,48 @@ TEST_F(AsyncTSQueueTest, ThreadSafetyBatching) {
   EXPECT_EQ(processed.size(), 10u);
   std::sort(processed.begin(), processed.end());
   for (int i = 0; i < 10; ++i) EXPECT_EQ(processed[i], i);
+}
+
+// Keep a producer alive past handle closure and loop destruction. Exercise both
+// immediate notification and batching (which also owns a timer handle).
+TEST(AsyncTSQueueLifecycleTest, CloseWithLiveProducer) {
+  for (const auto& opts : {node::nsolid::AsyncTSQueueOptions{},
+                           node::nsolid::AsyncTSQueueOptions{2, 1}}) {
+    uv_loop_t loop;
+    ASSERT_EQ(0, uv_loop_init(&loop));
+    auto queue = AsyncTSQueue<int>::create(&loop, opts, [](int&&) {
+      FAIL() << "A closed queue must not deliver pending items";
+    });
+    std::atomic<bool> producing{false};
+    std::atomic<bool> closed{false};
+    std::atomic<bool> loop_closed{false};
+    std::thread producer([queue, &producing, &closed, &loop_closed] {
+      EXPECT_GT(queue->enqueue(1), 0u);
+      producing.store(true, std::memory_order_release);
+      for (int i = 0; i < 1000 && !closed.load(std::memory_order_acquire);
+           i++) {
+        queue->enqueue(2);
+      }
+      while (!closed.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+      }
+      EXPECT_EQ(queue->enqueue(3), 0u);
+      while (!loop_closed.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+      }
+      EXPECT_EQ(queue->enqueue(4), 0u);
+      // The last reference is released on this thread after the loop is gone.
+    });
+    while (!producing.load(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
+    queue->close();
+    queue->close();
+    closed.store(true, std::memory_order_release);
+    queue.reset();
+    EXPECT_EQ(0, uv_run(&loop, UV_RUN_DEFAULT));
+    EXPECT_EQ(0, uv_loop_close(&loop));
+    loop_closed.store(true, std::memory_order_release);
+    producer.join();
+  }
 }
