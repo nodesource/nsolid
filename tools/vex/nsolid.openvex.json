@@ -1,10 +1,10 @@
 {
   "version": 1,
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-4dc288d74a55776088f80433bc1f4fb4f25cd3489d157e84cf7feedfe42be29e",
+  "@id": "https://openvex.dev/docs/public/vex-8440303e970b5fc583b2dc264d96bb0693d59ce9229a1616248121677253ef43",
   "author": "N|Solid Security",
   "role": "Project",
-  "timestamp": "2026-11-11T20:01:07.918317Z",
+  "timestamp": "2026-11-17T01:12:45.494140Z",
   "statements": [
     {
       "vulnerability": {
@@ -16,18 +16,13 @@
           "@id": "pkg:generic/nodesource/nsolid",
           "subcomponents": [
             {
-              "@id": "pkg:npm/%40ns-private/ncm-ng@2.9.9",
-              "subcomponents": [
-                {
-                  "@id": "pkg:npm/fast-glob@3.3.3"
-                },
-                {
-                  "@id": "pkg:npm/micromatch@4.0.8"
-                },
-                {
-                  "@id": "pkg:npm/braces@3.0.3"
-                }
-              ]
+              "@id": "pkg:npm/fast-glob@3.3.3"
+            },
+            {
+              "@id": "pkg:npm/micromatch@4.0.8"
+            },
+            {
+              "@id": "pkg:npm/braces@3.0.3"
             }
           ]
         }
@@ -49,16 +44,13 @@
               "@id": "pkg:npm/minimatch@10.2.5"
             },
             {
-              "@id": "pkg:npm/minimatch@10.2.6"
-            },
-            {
               "@id": "pkg:npm/glob@13.0.6"
             }
           ]
         }
       ],
       "status": "fixed",
-      "action_statement": "Upstream fixes backported to the minimatch copies bundled with npm and with Node.js, and to the copy inlined in npm's glob 13.0.6 bundles: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336"
+      "action_statement": "Upstream fixes backported to the minimatch copy bundled with npm and to the copy inlined in npm's glob 13.0.6 bundles: at optimizationLevel 2, the **/.. split pass throws a RangeError rather than make more than braceExpandMax patterns or add more than 1,000,000 path portions, and sets of more than 1000 patterns are not deduplicated. Upstream fixes: https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8 and https://github.com/isaacs/minimatch/pull/336"
     },
     {
       "vulnerability": {
