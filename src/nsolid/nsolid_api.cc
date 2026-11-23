@@ -2153,14 +2153,16 @@ void EnvInst::custom_command_(SharedEnvInst envinst_sp,
                      const CustomCommandStor& stor,
                      int err,
                      SharedEnvInst& envinst_sp) {
+    {
+      ns_mutex::scoped_lock lock(envinst_sp->custom_command_stor_map_lock_);
+      if (envinst_sp->custom_command_stor_map_.erase(req_id) == 0) return;
+    }
     stor.cb(req_id,
             stor.command,
             err,
-            { false, std::string() },
-            { false, std::string() },
+            {false, std::string()},
+            {false, std::string()},
             stor.data);
-    ns_mutex::scoped_lock lock(envinst_sp->custom_command_stor_map_lock_);
-    envinst_sp->custom_command_stor_map_.erase(req_id);
   };
 
   CustomCommandStor stor;
@@ -2196,11 +2198,16 @@ void EnvInst::custom_command_(SharedEnvInst envinst_sp,
       NewStringType::kNormal).ToLocalChecked()
   };
 
-  Local<Value> ret = env->nsolid_on_command_fn()->Call(env->context(),
-                                                       env->process_object(),
-                                                       arraysize(argv),
-                                                       argv).ToLocalChecked();
-  int r = ret->Int32Value(env->context()).ToChecked();
+  v8::TryCatch try_catch(isolate);
+  Local<Value> ret;
+  int32_t r;
+  if (!env->nsolid_on_command_fn()
+           ->Call(env->context(), env->process_object(), arraysize(argv), argv)
+           .ToLocal(&ret) ||
+      !ret->Int32Value(env->context()).To(&r)) {
+    error_cb(req_id, stor, UV_EINVAL, envinst_sp);
+    return;
+  }
   if (r != 0) {
     error_cb(req_id, stor, r, envinst_sp);
   }

@@ -1,5 +1,6 @@
 import { mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import fixtures from '../common/fixtures.js';
 import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 
 // Data has this format:
@@ -126,6 +127,7 @@ import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 const expectedPackageNames = [
   'base64-js', 'base85', 'buffer', 'ieee754', 'ip-address', 'jsbn', 'lodash',
   'nan', 'node-gyp-build', 'sprintf-js', 'zeromq', 'nan', 'node-gyp-build',
+  'nsolid_test',
 ];
 
 const expectedPackagesMajorVersions = ['1', '3', '6', '1', '5', '1', '4', '2', '4', '1', '1', '5', '2', '4'];
@@ -157,7 +159,8 @@ function checkPackagesData(packages, requestId, agentId) {
     assert.ok(pkg.version);
     assert.ok(pkg.main);
     assert.ok(pkg.dependencies);
-    assert.strictEqual(pkg.required, false);
+    assert.strictEqual(pkg.required, pkg.name === 'nsolid_test');
+    assert.strictEqual(pkg.nsolid, undefined);
   }
 
   assert.ok(packages.body.packages.every(
@@ -198,7 +201,14 @@ tests.push({
   name: 'should provide default values correctly',
   test: async (playground) => {
     return new Promise((resolve) => {
-      playground.bootstrap(mustSucceed(async (agentId) => {
+      const options = {
+        opts: {
+          env: {
+            NODE_OPTIONS: `--require=${JSON.stringify(fixtures.path('node_modules', 'nsolid-type-module'))}`,
+          },
+        },
+      };
+      playground.bootstrap(options, mustSucceed(async (agentId) => {
         // Call agentPackagesRequest until checkPackagesData returns true
         let packages;
         let requestId;

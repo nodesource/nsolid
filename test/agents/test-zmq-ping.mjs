@@ -71,6 +71,7 @@ tests.push({
     });
     const messages = [
       '{', 'null', '[]', '{}',
+      `{"command":"ping","requestId":"deep","version":4,"args":${'['.repeat(100)}0${']'.repeat(100)}}`,
       JSON.stringify({ command: 'ping', version: 4 }),
       JSON.stringify({ requestId: 'invalid', version: 4 }),
       JSON.stringify({ command: 42, requestId: 'invalid', version: 4 }),

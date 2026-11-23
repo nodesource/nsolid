@@ -246,6 +246,9 @@ ZmqSocket::ZmqSocket(void* context, int type)
     ASSERT_EQ(0, zmq_errno());
   }
 
+  const int64_t max_message_size = 4 * 1024 * 1024;
+  ASSERT_EQ(
+      0, setopt(ZMQ_MAXMSGSIZE, &max_message_size, sizeof(max_message_size)));
   size_t len = sizeof(fd_);
   ASSERT_EQ(0, getopt(ZMQ_FD, &fd_, &len));
 }
@@ -1208,8 +1211,13 @@ int ZmqAgent::config_message(const json& message) {
 }
 
 void ZmqAgent::command_handler(const std::string& cmd) {
-  json message = json::parse(cmd, nullptr, false);
-  if (message.is_discarded() || !message.is_object()) {
+  bool too_deep = false;
+  auto check_depth = [&too_deep](int depth, json::parse_event_t, json&) {
+    too_deep = too_deep || depth > 64;
+    return !too_deep;
+  };
+  json message = json::parse(cmd, check_depth, false);
+  if (too_deep || message.is_discarded() || !message.is_object()) {
     Debug("Rejecting invalid command JSON\n");
     if (data_handle_ != nullptr) send_error_message("invalid command", 400);
     return;
@@ -1790,7 +1798,14 @@ int ZmqAgent::send_packages(const char* request_id) {
   if (er)
     return send_error_response(request_id, kPackages, er);
 
-  const std::string packages = "{\"packages\":" + packs + "}";
+  json modules = json::parse(packs, nullptr, false);
+  if (!modules.is_array()) {
+    return send_error_response(request_id, kPackages, UV_EINVAL);
+  }
+  for (auto& module : modules) {
+    if (module.is_object()) module.erase("nsolid");
+  }
+  const std::string packages = json({{"packages", modules}}).dump();
   return send_command_message(kPackages, request_id, packages.c_str());
 }
 
@@ -2249,12 +2264,6 @@ int ZmqAgent::do_start_prof_end(int err,
     return send_error_response(req_id, cmd, err);
   }
 
-  // send profile command reponse thru data channel
-  err = send_command_message(cmd, req_id.c_str(), nullptr);
-  if (err < 0) {
-    return err;
-  }
-
   uint64_t thread_id =
     std::visit([](auto&& opt) { return opt.thread_id; }, options);
   ProfileState& profile_state = profile_state_[type];
@@ -2266,7 +2275,7 @@ int ZmqAgent::do_start_prof_end(int err,
     profile_state.nr_profiles++;
   }
 
-  return 0;
+  return send_command_message(cmd, req_id.c_str(), nullptr);
 }
 
 int ZmqAgent::do_start_cpu_prof(const nlohmann::json&, ProfileOptions& opts) {
@@ -2526,23 +2535,7 @@ std::string ZmqAgent::get_auth_url() const {
   return NSOLID_AUTH_URL;
 }
 
-
 int ZmqAgent::validate_reconfigure(const json& in, json& out) const {
-  static json allowed_opts = {
-    "assetsEnabled",
-    "blockedLoopThreshold",
-    kInterval,
-    "pauseMetrics",
-    "promiseTracking",
-    "redactSnapshots",
-    "statsd",
-    "statsdBucket",
-    "statsdTags",
-    "tags",
-    "tracingEnabled",
-    "tracingModulesBlacklist"
-  };
-
   std::string message;
   for (auto it = in.begin(); it != in.end(); ++it) {
     const nlohmann::json& val = it.value();
@@ -2639,18 +2632,39 @@ send_validation_error:
   return -1;
 }
 
-
 int ZmqAgent::reconfigure(const nlohmann::json& msg,
                           const std::string& req_id) {
   if (!data_handle_) {
     return UV_ENOTCONN;
   }
 
+  static const json allowed_opts = {"assetsEnabled",
+                                    "blockedLoopThreshold",
+                                    kInterval,
+                                    "pauseMetrics",
+                                    "promiseTracking",
+                                    "redactSnapshots",
+                                    "statsd",
+                                    "statsdBucket",
+                                    "statsdTags",
+                                    "tags",
+                                    "tracingEnabled",
+                                    "tracingModulesBlacklist"};
+
+  auto reply_config = [&]() {
+    const json current = json::parse(GetConfig(), nullptr, false);
+    json filtered = json::object();
+    for (const auto& key : allowed_opts) {
+      const auto it = current.find(key.get<std::string>());
+      if (it != current.end()) filtered[it.key()] = it.value();
+    }
+    return filtered.dump();
+  };
+
   auto it = msg.find("args");
   if (it == msg.end()) {
-    return send_command_message(kReconfigure,
-                                req_id.c_str(),
-                                config_.dump().c_str());
+    return send_command_message(
+        kReconfigure, req_id.c_str(), reply_config().c_str());
   }
 
   if (!it->is_null() && !it->is_object()) {
@@ -2667,9 +2681,8 @@ int ZmqAgent::reconfigure(const nlohmann::json& msg,
   }
 
   UpdateConfig(out.dump());
-  return send_command_message(kReconfigure,
-                              req_id.c_str(),
-                              GetConfig().c_str());
+  return send_command_message(
+      kReconfigure, req_id.c_str(), reply_config().c_str());
 }
 
 void ZmqAgent::auth() {
@@ -2856,7 +2869,7 @@ int ZmqCommandHandle::init() {
   return ZmqHandle::init(agent_.loop());
 }
 
-void ZmqCommandHandle::handle_poll_cb(nsuv::ns_poll*,
+void ZmqCommandHandle::handle_poll_cb(nsuv::ns_poll* poll,
                                       int status,
                                       int events,
                                       ZmqAgent* agent) {
@@ -2870,6 +2883,7 @@ void ZmqCommandHandle::handle_poll_cb(nsuv::ns_poll*,
     int rc;
 
     std::string complete_payload;
+    bool too_large = false;
     int segment_num = 0;
 
     // Read all parts of a message before processing it.  ZMQ guarantees
@@ -2901,14 +2915,21 @@ void ZmqCommandHandle::handle_poll_cb(nsuv::ns_poll*,
       // Append the chunk to the accumulated string, but skip
       // the first segment because that's the subscription
       if (segment_num++) {
-        complete_payload += std::string(static_cast<char*>(zmq_msg_data(&msg)),
-                                        zmq_msg_size(&msg));
+        too_large = too_large || zmq_msg_size(&msg) >
+                                     4 * 1024 * 1024 - complete_payload.size();
+        if (!too_large) {
+          complete_payload.append(static_cast<char*>(zmq_msg_data(&msg)),
+                                  zmq_msg_size(&msg));
+        }
       }
 
       ASSERT_EQ(0, zmq_msg_close(&msg));
     } while (zmq_msg_more(&msg));
 
+    if (too_large) continue;
     agent->command_handler(complete_payload);
+    const auto* current = agent->command_handle();
+    if (current == nullptr || current->poll_ != poll) return;
   }
 }
 

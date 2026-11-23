@@ -20,22 +20,14 @@ const {
 //   interval: 3000,
 //   version: 4,
 //   body: {
-//     app: 'untitled application',
 //     blockedLoopThreshold: 200,
-//     command: 'localhost:9001',
-//     disablePackageScan: false,
-//     env: 'prod',
-//     hostname: 'sgimeno-N8xxEZ',
-//     iisNode: false,
 //     interval: 3000,
 //     pauseMetrics: false,
 //     promiseTracking: false,
-//     pubkey: 'oX1><^wd#q69Kh2NqT<EXtO*baE8^^f=VS<P[5ek',
 //     statsdBucket: 'nsolid.${env}.${app}.${hostname}.${shortId}',
 //     tags: [],
 //     tracingEnabled: false,
-//     tracingModulesBlacklist: 0,
-//     trackGlobalPackages: false
+//     tracingModulesBlacklist: 0
 //   },
 //   time: 1704814130274,
 //   timeNS: '1704814130273547654'
@@ -56,7 +48,17 @@ function checkReconfigureData(reconfigure, requestId, agentId, nsolidConfig) {
   validateObject(reconfigure.body, 'body');
   validateInteger(reconfigure.time, 'time');
   // also the body fields
-  assert.deepStrictEqual(reconfigure.body, nsolidConfig);
+  const allowedKeys = [
+    'assetsEnabled', 'blockedLoopThreshold', 'interval', 'pauseMetrics',
+    'promiseTracking', 'redactSnapshots', 'statsd', 'statsdBucket',
+    'statsdTags', 'tags', 'tracingEnabled', 'tracingModulesBlacklist',
+  ];
+  const expectedConfig = Object.fromEntries(
+    Object.entries(nsolidConfig).filter(([key]) => allowedKeys.includes(key)));
+  assert.deepStrictEqual(reconfigure.body, expectedConfig);
+  for (const key of ['saas', 'otlpConfig', 'pubkey']) {
+    assert.strictEqual(Object.hasOwn(reconfigure.body, key), false);
+  }
 }
 
 const tests = [];
