@@ -1518,6 +1518,14 @@ void GrpcAgent::got_spans(const UniqRecordables& recordables) {
 void GrpcAgent::got_asset_done_msg() {
   AssetStor stor;
   while (asset_done_q_.dequeue(stor)) {
+    // A continuous profile's stream ends early when a write fails. Its entry
+    // mustn't keep pointing at it once it's deleted below.
+    auto cont_it = cont_profile_stor_map_.find(stor.thread_id);
+    if (cont_it != cont_profile_stor_map_.end() &&
+        cont_it->second.stream == stor.stream) {
+      cont_it->second.stream = nullptr;
+    }
+
     nsuv::ns_mutex::scoped_lock lock(profile_state_lock_);
     ProfileState& profile_state = profile_state_[stor.type];
     // get and remove associated data from pending_profiles_map
@@ -1747,6 +1755,16 @@ void GrpcAgent::got_continuous_profile(
 
   // Check if the profile is complete
   bool profileStreamComplete = stor.profile.length() == 0;
+
+  // The profile's stream ended early (see got_asset_done_msg()): drop the rest
+  // of this profile, and send the next one on a new stream.
+  if (stream == nullptr) {
+    if (profileStreamComplete) {
+      cont_profile_stor_map_.erase(it);
+    }
+    return;
+  }
+
   if (profileStreamComplete) {
     uint64_t elapsed = uv_hrtime() - start_timestamp;
     double end_ts = start_ts + elapsed / 1e6;
