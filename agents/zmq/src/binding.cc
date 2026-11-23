@@ -155,7 +155,13 @@ static void Stop(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(ZmqAgent::Inst()->stop(false));
 }
 
+static void DeferProfileRegistrationForTesting(
+    const FunctionCallbackInfo<Value>& args) {
+  ZmqAgent::DeferProfileRegistrationForTesting();
+}
+
 static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
+  registry->Register(DeferProfileRegistrationForTesting);
   registry->Register(Status);
   registry->Register(Snapshot);
   registry->Register(StartCPUProfile);
@@ -187,6 +193,9 @@ void InitZmqAgent(Local<Object> exports,
 
   NODE_SET_METHOD(exports, "config", Config);
   NODE_SET_METHOD(exports, "start", Start);
+  NODE_SET_METHOD(exports,
+                  "deferProfileRegistrationForTesting",
+                  DeferProfileRegistrationForTesting);
   NODE_SET_METHOD(exports, "stop", Stop);
   AtExitHook(at_exit, ZmqAgent::Inst());
 }

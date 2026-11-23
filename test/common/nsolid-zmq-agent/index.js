@@ -75,6 +75,18 @@ class TestClient {
     });
   }
 
+  async profileRegistration(profileType, defer) {
+    return new Promise((resolve) => {
+      this.#child.send({ type: 'profileRegistration', profileType, defer }, resolve);
+    });
+  }
+
+  async snapshotBurst(count, defer) {
+    return new Promise((resolve) => {
+      this.#child.send({ type: 'snapshotBurst', count, defer }, resolve);
+    });
+  }
+
   async config(config = null) {
     return new Promise((resolve) => {
       if (this.#child) {

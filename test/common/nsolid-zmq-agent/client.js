@@ -104,6 +104,11 @@ if (isMainThread) {
       } else {
         workers.get(msg.threadId).postMessage(msg);
       }
+    } else if (msg.type === 'profileRegistration') {
+      require('../nsolid-profile-registration')(
+        'zmq', msg.profileType, msg.defer);
+    } else if (msg.type === 'snapshotBurst') {
+      require('../../fixtures/nsolid-snapshot-burst')(msg.count, msg.defer);
     } else if (msg.type === 'config') {
       if (msg.config) {
         nsolid.start(msg.config);

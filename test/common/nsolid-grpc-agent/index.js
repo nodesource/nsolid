@@ -453,6 +453,12 @@ class TestClient {
     });
   }
 
+  async profileRegistration(profileType, defer) {
+    return new Promise((resolve) => {
+      this.#child.send({ type: 'profileRegistration', profileType, defer }, resolve);
+    });
+  }
+
   async config(config = null) {
     if (!this.#child)
       return null;

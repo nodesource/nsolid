@@ -80,6 +80,9 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   static SharedGrpcAgent Inst(bool reset = false);
 
+  // Tests only: leave registration queued until the first profile result.
+  static void DeferProfileRegistrationForTesting();
+
   // Tests only, through the internal binding: retry the command stream within
   // 0.5 s, as before the backoff, so the agent gives up on a rejected token
   // in seconds.

@@ -149,7 +149,13 @@ static void DisableBackoffForTesting(const FunctionCallbackInfo<Value>& args) {
   GrpcAgent::DisableBackoffForTesting();
 }
 
+static void DeferProfileRegistrationForTesting(
+    const FunctionCallbackInfo<Value>& args) {
+  GrpcAgent::DeferProfileRegistrationForTesting();
+}
+
 static void RegisterExternalReferences(ExternalReferenceRegistry* registry) {
+  registry->Register(DeferProfileRegistrationForTesting);
   registry->Register(Snapshot);
   registry->Register(StartCPUProfile);
   registry->Register(EndCPUProfile);
@@ -177,6 +183,9 @@ void InitGrpcAgent(Local<Object> exports,
   }
 
   NODE_SET_METHOD(exports, "start", Start);
+  NODE_SET_METHOD(exports,
+                  "deferProfileRegistrationForTesting",
+                  DeferProfileRegistrationForTesting);
   NODE_SET_METHOD(
       exports, "disableBackoffForTesting", DisableBackoffForTesting);
 }
