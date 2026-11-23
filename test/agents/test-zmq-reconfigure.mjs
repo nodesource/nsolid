@@ -1,6 +1,7 @@
 // Flags: --expose-internals
 import { mustSucceed } from '../common/index.mjs';
 import assert from 'node:assert';
+import { once } from 'node:events';
 import validators from 'internal/validators';
 import { TestPlayground } from '../common/nsolid-zmq-agent/index.js';
 
@@ -154,6 +155,35 @@ tests.push({
 
         resolve();
       }));
+    });
+  },
+});
+
+tests.push({
+  name: 'should resume periodic metrics after removing pauseMetrics',
+  test: async (playground) => {
+    return new Promise((resolve) => {
+      let reconfigured = false;
+      let metrics = 0;
+      const opts = { opts: { env: { NSOLID_INTERVAL: '3600000' } } };
+      playground.bootstrap(opts, mustSucceed(async () => {
+        const child = playground.client.child();
+        for (const config of [
+          { pauseMetrics: true },
+          { pauseMetrics: null, interval: 50, app: 'resumed-metrics' },
+        ]) {
+          const reply = once(child, 'message');
+          child.send({ type: 'nativeConfig', config });
+          const [msg] = await reply;
+          assert.strictEqual(msg.type, 'nativeConfig');
+        }
+        reconfigured = true;
+      }), (eventType, agentId, data) => {
+        if (reconfigured && eventType === 'agent-metrics' &&
+            data.app === 'resumed-metrics' && ++metrics === 2) {
+          resolve();
+        }
+      });
     });
   },
 });

@@ -1217,6 +1217,23 @@ void EnvList::validate_trace_sample_rate(nlohmann::json* config) {
 
 
 void EnvList::validate_config(nlohmann::json* config) {
+  for (const char* key : {"assetsEnabled",
+                          "contCpuProfile",
+                          "disableIpv6",
+                          "disablePackageScan",
+                          "disableSnapshots",
+                          "iisNode",
+                          "pauseMetrics",
+                          "promiseTracking",
+                          "redactSnapshots",
+                          "tracingEnabled",
+                          "trackGlobalPackages"}) {
+    auto it = config->find(key);
+    if (it != config->end() && !it->is_null() && !it->is_boolean()) {
+      config->erase(it);
+    }
+  }
+
   validate_trace_sample_rate(config);
   auto it = config->find("interval");
   if (it != config->end() &&
@@ -1237,6 +1254,10 @@ void EnvList::validate_config(nlohmann::json* config) {
 
 
 void EnvList::UpdateConfig(const nlohmann::json& config) {
+  if (!config.is_object()) {
+    return;
+  }
+
   nlohmann::json curr;
   nlohmann::json old;
   nlohmann::json validated_config = config;
@@ -1246,15 +1267,9 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
     old = current_config_;
 
     validate_config(&validated_config);
-    // Once snapshots are disabled or redacted, they stay that way: a later
-    // update, from the Console or from JS, can't turn the setting off.
-    for (const char* key : { "disableSnapshots", "redactSnapshots" }) {
-      auto curr_it = current_config_.find(key);
-      auto new_it = validated_config.find(key);
-      if (curr_it != current_config_.end() && *curr_it == true &&
-          new_it != validated_config.end() && *new_it != true) {
-        validated_config.erase(new_it);
-      }
+    // Rejected fields must not initialize the configuration.
+    if (!config.empty() && validated_config.empty()) {
+      return;
     }
 
     current_config_.merge_patch(validated_config);
@@ -1270,9 +1285,10 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
   // If the actual configuration hasn't changed, don't call the hook
   if (!diff.empty()) {
     current_config_version_++;
-    auto it = config.find("promiseTracking");
-    if (it != config.end()) {
-      bool tracking = *it;
+    nlohmann::json::const_iterator it =
+        validated_config.find("promiseTracking");
+    if (it != validated_config.cend()) {
+      bool tracking = it->is_boolean() && it->get<bool>();
       PromiseTracking(tracking);
     }
 
@@ -1285,13 +1301,13 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
       uint64_t contCpuProfileInterval = kDefaultContCpuProfileIntervalMs;
 
       it = curr.find("assetsEnabled");
-      if (it != curr.end() && !it->is_null()) {
+      if (it != curr.end() && it->is_boolean()) {
         assetsEnabled = it->get<bool>();
       }
 
       if (assetsEnabled) {
         it = curr.find("contCpuProfile");
-        if (it != curr.end() && !it->is_null()) {
+        if (it != curr.end() && it->is_boolean()) {
           contCpuProfile = it->get<bool>();
         }
 
@@ -1354,7 +1370,6 @@ void EnvList::UpdateConfig(const nlohmann::json& config) {
 
 void EnvList::UpdateConfig(const std::string& config_s) {
   auto config = nlohmann::json::parse(config_s, nullptr, false);
-  CHECK(!config.is_discarded());
   UpdateConfig(config);
 }
 

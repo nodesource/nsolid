@@ -54,16 +54,16 @@ server.start(mustSucceed(async (port) => {
     }
   }
 
-  // Once on, redaction can't be turned off.
+  // Turning redaction off permits unredacted subsequent requests.
   const config = await child.config({ redactSnapshots: false });
-  assert.strictEqual(config.redactSnapshots, true);
+  assert.strictEqual(config.redactSnapshots, false);
   const { data } = await server.heapSnapshot(agentId, {
     threadId: 0,
     duration: 100,
     heapSnapshot: { redacted: false },
   });
   assert.strictEqual(data.msg.common.error, null);
-  checkRedacted(data.msg.data, true);
+  checkRedacted(data.msg.data, false);
   let exit = await child.shutdown(0);
   assert.strictEqual(exit.code, 0);
   assert.strictEqual(exit.signal, null);

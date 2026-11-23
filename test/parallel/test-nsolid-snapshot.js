@@ -62,11 +62,11 @@ setImmediate(common.mustCall(() => {
     );
 
     nsolid.enableAssets();
-    nsolid.snapshot(common.mustSucceed(runDisableSnapshotsTests));
+    runDisableSnapshotsTests();
   }));
 }));
 
-// Disabling snapshots can't be undone, so it is tested last.
+// Disabling snapshots can be undone after rejecting requests.
 function runDisableSnapshotsTests() {
   nsolid.start({
     command: 'localhost:9001',
@@ -89,19 +89,15 @@ function runDisableSnapshotsTests() {
       assert.notStrictEqual(err.code, 0);
       assert.strictEqual(err.message, 'Heap snapshot could not be generated');
 
-      // Once set, disableSnapshots cannot be reset.
+      // Re-enable snapshots after rejecting requests while disabled.
       nsolid.start({
         command: 'localhost:9001',
         data: 'localhost:9002',
         disableSnapshots: false,
       });
-      assert.strictEqual(nsolid.config.disableSnapshots, true);
+      assert.strictEqual(nsolid.config.disableSnapshots, false);
       setImmediate(common.mustCall(() => {
-        nsolid.snapshot(common.mustCall((err) => {
-          assert.notStrictEqual(err.code, 0);
-          assert.strictEqual(err.message,
-                             'Heap snapshot could not be generated');
-        }));
+        nsolid.snapshot(common.mustSucceed());
       }));
     }));
   }));

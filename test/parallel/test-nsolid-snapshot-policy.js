@@ -4,11 +4,14 @@
 // Snapshot settings apply to heap profiles, which end in a heap snapshot,
 // including one that's already running. Redaction covers the property names
 // of dictionary-mode objects, RegExp sources and WeakMap pairs' names. The
-// settings are read as booleans, and once snapshots are redacted or disabled
-// they stay that way.
+// settings can be enabled and disabled at runtime.
 
 const common = require('../common');
 const assert = require('assert');
+const { isMainThread } = require('worker_threads');
+if (!isMainThread)
+  common.skip('This test only works on a main thread');
+
 const { spawnSync } = require('child_process');
 const nsolid = require('nsolid');
 const { internalBinding } = require('internal/test/binding');
@@ -79,14 +82,16 @@ function heapProfileFails(duration = 100) {
                              s.includes(weakValue)));
 
   nsolid.start({ redactSnapshots: true });
-  strings = await heapProfile();
+  const redactedProfile = heapProfile();
+  nsolid.start({ redactSnapshots: false });
+  assert.strictEqual(nsolid.config.redactSnapshots, false);
+  // A profile admitted with redaction stays redacted after reconfiguration.
+  strings = await redactedProfile;
   assert(!hasSecrets(strings));
   assert(strings.includes('(redacted)'));
 
-  nsolid.start({ redactSnapshots: false });
-  assert.strictEqual(nsolid.config.redactSnapshots, true);
   strings = await heapProfile();
-  assert(!hasSecrets(strings));
+  assert(hasSecrets(strings));
 
   // Disabling snapshots also ends a heap profile that's running, without
   // taking its snapshot.
@@ -96,8 +101,9 @@ function heapProfileFails(duration = 100) {
   await heapProfileFails();
 
   nsolid.start({ disableSnapshots: false });
-  assert.strictEqual(nsolid.config.disableSnapshots, true);
-  await heapProfileFails();
+  assert.strictEqual(nsolid.config.disableSnapshots, false);
+  strings = await heapProfile();
+  assert(hasSecrets(strings));
 
   // The objects stayed alive for every snapshot above.
   assert.strictEqual(sessions[sessionId].user, 'alice');
