@@ -96,11 +96,7 @@ class StatsDTcp : public StatsDConnection {
   }
 
  private:
-  enum InternalState {
-    kWriting = 1 << 0,
-    kConnecting = 1 << 1,
-    kClosing = 1 << 2
-  };
+  enum InternalState { kConnecting = 1 << 0, kClosing = 1 << 1 };
 
   static void connect_cb_(nsuv::ns_connect<nsuv::ns_tcp>*, int, StatsDTcp*);
 
@@ -108,7 +104,11 @@ class StatsDTcp : public StatsDConnection {
 
   static void retry_timer_cb_(nsuv::ns_timer*, StatsDTcp*);
 
-  inline void do_delete() { delete this; }
+  inline void do_delete() {
+    if (pending_writes_ == 0 && !(internal_state_ & kConnecting)) {
+      delete this;
+    }
+  }
 
   inline void prep_retry_timer_();
 
@@ -128,6 +128,7 @@ class StatsDTcp : public StatsDConnection {
   std::string addr_str_;
   nsuv::ns_mutex addr_str_lock_;
   int internal_state_;
+  size_t pending_writes_ = 0;
   size_t addr_index_ = 0;
   std::unique_ptr<StatsDEndpoint> endpoint_;
 };

@@ -32,20 +32,20 @@ function testFormatValues(t, done) {
     console.log(expectedBucket);
     assert.strictEqual(nsolid.statsd.format.bucket(), expectedBucket);
     assert.strictEqual(nsolid.statsd.format.tags(), '');
-    assert.strictEqual(nsolid.statsd.format.counter('name', 'val'), `${expectedBucket}.name:val|c`);
-    assert.strictEqual(nsolid.statsd.format.gauge('name', 'val'), `${expectedBucket}.name:val|g`);
+    assert.strictEqual(nsolid.statsd.format.counter('name', 42), `${expectedBucket}.name:42|c`);
+    assert.strictEqual(nsolid.statsd.format.gauge('name', 42), `${expectedBucket}.name:42|g`);
     assert.strictEqual(nsolid.statsd.format.set('name', 'val'), `${expectedBucket}.name:val|s`);
-    assert.strictEqual(nsolid.statsd.format.timing('name', 'val'), `${expectedBucket}.name:val|ms`);
+    assert.strictEqual(nsolid.statsd.format.timing('name', 42), `${expectedBucket}.name:42|ms`);
     nsolid.start({
       statsdTags: 'tag1,tag2',
     });
     waitForStatus('ready', common.mustCall(() => {
       assert.strictEqual(nsolid.statsd.format.bucket(), expectedBucket);
       assert.strictEqual(nsolid.statsd.format.tags(), '|#tag1,tag2');
-      assert.strictEqual(nsolid.statsd.format.counter('name', 'val'), `${expectedBucket}.name:val|c|#tag1,tag2`);
-      assert.strictEqual(nsolid.statsd.format.gauge('name', 'val'), `${expectedBucket}.name:val|g|#tag1,tag2`);
+      assert.strictEqual(nsolid.statsd.format.counter('name', 42), `${expectedBucket}.name:42|c|#tag1,tag2`);
+      assert.strictEqual(nsolid.statsd.format.gauge('name', 42), `${expectedBucket}.name:42|g|#tag1,tag2`);
       assert.strictEqual(nsolid.statsd.format.set('name', 'val'), `${expectedBucket}.name:val|s|#tag1,tag2`);
-      assert.strictEqual(nsolid.statsd.format.timing('name', 'val'), `${expectedBucket}.name:val|ms|#tag1,tag2`);
+      assert.strictEqual(nsolid.statsd.format.timing('name', 42), `${expectedBucket}.name:42|ms|#tag1,tag2`);
       done();
     }));
   }));

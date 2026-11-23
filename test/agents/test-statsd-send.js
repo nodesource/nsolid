@@ -56,16 +56,16 @@ function testTcpSendMetrics() {
       assert.ok(line.startsWith(nsolid.statsd.format.bucket()));
       switch (times++) {
         case 0:
-          assert.ok(line.endsWith('.name:val|c'));
+          assert.ok(line.endsWith('.name:42|c'));
           break;
         case 1:
-          assert.ok(line.endsWith('.name:val|g'));
+          assert.ok(line.endsWith('.name:42|g'));
           break;
         case 2:
           assert.ok(line.endsWith('.name:val|s'));
           break;
         case 3:
-          assert.ok(line.endsWith('.name:val|ms'));
+          assert.ok(line.endsWith('.name:42|ms'));
           rl.close();
           break;
         default:
@@ -92,10 +92,10 @@ function testTcpSendMetrics() {
       waitForStatus('ready', common.mustCall(() => {
         assert.strictEqual(nsolid.statsd.tcpIp(), '127.0.0.1:8125');
         assert.strictEqual(nsolid.statsd.udpIp(), null);
-        nsolid.statsd.counter('name', 'val');
-        nsolid.statsd.gauge('name', 'val');
+        nsolid.statsd.counter('name', 42);
+        nsolid.statsd.gauge('name', 42);
         nsolid.statsd.set('name', 'val');
-        nsolid.statsd.timing('name', 'val');
+        nsolid.statsd.timing('name', 42);
       }));
     });
   });
@@ -122,16 +122,16 @@ function testUdpSendMetrics() {
         assert.ok(line.startsWith(nsolid.statsd.format.bucket()));
         switch (times++) {
           case 0:
-            assert.ok(line.endsWith('.name:val|c'));
+            assert.ok(line.endsWith('.name:42|c'));
             break;
           case 1:
-            assert.ok(line.endsWith('.name:val|g'));
+            assert.ok(line.endsWith('.name:42|g'));
             break;
           case 2:
             assert.ok(line.endsWith('.name:val|s'));
             break;
           case 3:
-            assert.ok(line.endsWith('.name:val|ms'));
+            assert.ok(line.endsWith('.name:42|ms'));
             rl.close();
             break;
           default:
@@ -153,10 +153,10 @@ function testUdpSendMetrics() {
       waitForStatus('ready', common.mustCall(() => {
         assert.strictEqual(nsolid.statsd.tcpIp(), null);
         assert.strictEqual(nsolid.statsd.udpIp(), '127.0.0.1:8125');
-        nsolid.statsd.counter('name', 'val');
-        nsolid.statsd.gauge('name', 'val');
+        nsolid.statsd.counter('name', 42);
+        nsolid.statsd.gauge('name', 42);
         nsolid.statsd.set('name', 'val');
-        nsolid.statsd.timing('name', 'val');
+        nsolid.statsd.timing('name', 42);
       }));
     });
   });

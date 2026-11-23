@@ -96,9 +96,6 @@ const validationErrors = [
   [ { pauseMetrics: 'yes' }, "'pauseMetrics' should be a boolean" ],
   [ { promiseTracking: 'yes' }, "'promiseTracking' should be a boolean" ],
   [ { redactSnapshots: 'yes' }, "'redactSnapshots' should be a boolean" ],
-  [ { statsd: true }, "'statsd' should be a string" ],
-  [ { statsdBucket: true }, "'statsdBucket' should be a string" ],
-  [ { statsdTags: true }, "'statsdTags' should be a string" ],
   [ { tags: 'yes' }, "'tags' should be an array of strings" ],
   [ { tags: [ true ] }, "'tags' should be an array of strings" ],
   [ { tracingEnabled: 'yes' }, "'tracingEnabled' should be a boolean" ],
@@ -131,10 +128,6 @@ const newConfigs = [
   [ 'pauseMetrics', true ],
   [ 'promiseTracking', true ],
   [ 'redactSnapshots', true ],
-  [ 'statsd', 'localhost:8125' ],
-  // eslint-disable-next-line no-template-curly-in-string
-  [ 'statsdBucket', 'nsolidtest.${env}.${app}.${hostname}.${shortId}' ],
-  [ 'statsdTags', 'tag1,tag2' ],
   [ 'tags', [ 'tag1', 'tag2' ] ],
   [ 'tracingEnabled', true ],
   [ 'tracingModulesBlacklist', 1 ],
@@ -145,6 +138,16 @@ tests.push({
   test: async (playground) => {
     return new Promise((resolve) => {
       playground.bootstrap(mustSucceed(async (agentId) => {
+        const originalConfig = await playground.client.config();
+        for (const key of ['statsd', 'statsdBucket', 'statsdTags']) {
+          for (const value of ['ignored', true]) {
+            const { requestId, reconfigure } = await sendReconfigure(playground.zmqAgentBus, agentId, { [key]: value });
+            const nsolidConfig = await playground.client.config();
+            assert.deepStrictEqual(nsolidConfig, originalConfig);
+            checkReconfigureData(reconfigure, requestId, agentId, nsolidConfig);
+          }
+        }
+
         for (const [key, val] of newConfigs) {
           const { requestId, reconfigure } = await sendReconfigure(playground.zmqAgentBus, agentId, { [key]: val });
           assert.deepStrictEqual(reconfigure.body[key], val);

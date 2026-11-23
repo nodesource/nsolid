@@ -118,10 +118,6 @@ const newConfigs = [
   [ 'pauseMetrics', true ],
   [ 'promiseTracking', true ],
   [ 'redactSnapshots', true ],
-  [ 'statsd', 'localhost:8125' ],
-  // eslint-disable-next-line no-template-curly-in-string
-  [ 'statsdBucket', 'nsolidtest.${env}.${app}.${hostname}.${shortId}' ],
-  [ 'statsdTags', 'tag1,tag2' ],
   [ 'tags', [ 'tag1', 'tag2' ] ],
   [ 'tracingEnabled', true ],
   [ 'tracingModulesBlacklist', 1 ],
@@ -143,6 +139,16 @@ tests.push({
 
         const client = new TestClient([], opts);
         const agentId = await client.id();
+
+        const originalConfig = await client.config();
+        for (const key of ['statsd', 'statsdBucket', 'statsdTags']) {
+          for (const value of ['ignored', true]) {
+            const { data, requestId } = await grpcServer.reconfigure(agentId, { [key]: value });
+            const nsolidConfig = await client.config();
+            assert.deepStrictEqual(nsolidConfig, originalConfig);
+            checkReconfigureData(data.msg, data.metadata, requestId, agentId, nsolidConfig);
+          }
+        }
 
         // Send each config update one by one
         async function sendConfigs(index) {
