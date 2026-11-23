@@ -68,6 +68,8 @@ namespace node {
 namespace nsolid {
 namespace grpc {
 
+static std::atomic<bool> defer_profile_registration_for_testing = false;
+
 using ThreadMetricsMap = std::map<uint64_t, ThreadMetrics::MetricsStor>;
 
 constexpr uint64_t span_timer_interval = 1000;
@@ -1132,12 +1134,18 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
   }
 }
 
+void GrpcAgent::DeferProfileRegistrationForTesting() {
+  defer_profile_registration_for_testing = true;
+}
 
-
-/*static*/void GrpcAgent::start_profiling_msg_cb(nsuv::ns_async*,
-                                                 WeakGrpcAgent agent_wp) {
+/*static*/ void GrpcAgent::start_profiling_msg_cb(nsuv::ns_async* handle,
+                                                  WeakGrpcAgent agent_wp) {
   SharedGrpcAgent agent = agent_wp.lock();
   if (agent == nullptr) {
+    return;
+  }
+
+  if (handle != nullptr && defer_profile_registration_for_testing) {
     return;
   }
 
@@ -1595,6 +1603,10 @@ void GrpcAgent::got_proc_metrics() {
 }
 
 void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
+  // JS queues registration before producing results, but separate async
+  // handles can deliver the result callback first.
+  start_profiling_msg_cb(nullptr, weak_from_this());
+
   google::protobuf::Struct metadata;
   uint64_t thread_id;
   uint64_t start_timestamp;

@@ -155,6 +155,9 @@ if (isMainThread) {
       } else {
         workers.get(msg.threadId).postMessage(msg);
       }
+    } else if (msg.type === 'profileRegistration') {
+      require('../nsolid-profile-registration')(
+        'grpc', msg.profileType, msg.defer);
     } else if (msg.type === 'config') {
       if (msg.config) {
         nsolid.start(msg.config);

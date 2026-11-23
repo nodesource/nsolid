@@ -15,6 +15,8 @@
 namespace node {
 namespace nsolid {
 
+static std::atomic<bool> defer_profile_registration_for_testing = false;
+
 using std::chrono::system_clock;
 using std::chrono::time_point;
 using nlohmann::json;
@@ -776,6 +778,7 @@ void ZmqAgent::do_stop() {
   send_exit();
   span_collector_.reset();
   profile_collector_.reset();
+  pending_profile_starts_.clear();
   http_client_.reset(nullptr);
   command_handle_.reset(nullptr);
   data_handle_.reset(nullptr);
@@ -968,13 +971,36 @@ void ZmqAgent::update_state_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
   agent->update_state();
 }
 
-void ZmqAgent::start_profiling_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
+void ZmqAgent::DeferProfileRegistrationForTesting() {
+  defer_profile_registration_for_testing = true;
+}
+
+void ZmqAgent::start_profiling_msg_cb(nsuv::ns_async* handle, ZmqAgent* agent) {
+  if (handle != nullptr && defer_profile_registration_for_testing) {
+    return;
+  }
+
   StartProfStor stor;
   while (agent->start_profiling_msg_q_.dequeue(stor)) {
-    agent->do_start_prof_end(stor.err,
-                             stor.req_id,
-                             stor.type,
-                             std::move(stor.options));
+    agent->pending_profile_starts_.push_back(std::move(stor));
+  }
+
+  auto& starts = agent->pending_profile_starts_;
+  for (auto it = starts.begin(); it != starts.end();) {
+    if (it->err == 0) {
+      uint64_t thread_id =
+          std::visit([](auto& opt) { return opt.thread_id; }, it->options);
+      // The previous asset may still have results queued after its JS stop.
+      if (agent->profile_state_[it->type].pending_profiles_map.count(
+              thread_id)) {
+        ++it;
+        continue;
+      }
+    }
+
+    agent->do_start_prof_end(
+        it->err, it->req_id, it->type, std::move(it->options));
+    it = starts.erase(it);
   }
 }
 
@@ -2091,6 +2117,11 @@ void ZmqAgent::do_got_prof(ProfileType type,
   ProfileState& profile_state = profile_state_[type];
   // get and remove associated data from pending_profiles_map
   auto it = profile_state.pending_profiles_map.find(thread_id);
+  if (it == profile_state.pending_profiles_map.end()) {
+    // Register only when needed: a later start must not overtake this asset.
+    start_profiling_msg_cb(nullptr, this);
+    it = profile_state.pending_profiles_map.find(thread_id);
+  }
   ASSERT(it != profile_state.pending_profiles_map.end());
   ProfileStor prof_stor = it->second;
   if (profileStreamComplete) {
@@ -2098,6 +2129,7 @@ void ZmqAgent::do_got_prof(ProfileType type,
     if (type != kHeapSnapshot) {
       profile_state.nr_profiles--;
     }
+    start_profiling_msg_cb(nullptr, this);
   }
 
   if (type != kHeapSnapshot && thread_id == 0 &&

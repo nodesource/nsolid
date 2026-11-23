@@ -6,6 +6,7 @@
 #include <zmq.h>
 // NOLINTNEXTLINE(build/c++11)
 #include <chrono>
+#include <list>
 #include <memory>
 #include <set>
 #include <string>
@@ -350,6 +351,8 @@ class ZmqBulkHandle : public ZmqHandle {
 //   console, dynamically change the configuration of the agent/runtime, etc.
 
 class ZmqAgent {
+  friend class ZmqProfileRegistrationTestPeer;
+
  public:
   enum Status {
 #define X(type, str)                                                          \
@@ -373,6 +376,9 @@ class ZmqAgent {
   };
 
   static ZmqAgent* Inst();
+
+  // Tests only: leave registration queued until the first profile result.
+  static void DeferProfileRegistrationForTesting();
 
   int setup_metrics_timer(uint64_t period);
 
@@ -732,6 +738,7 @@ class ZmqAgent {
   std::shared_ptr<ProfileCollector> profile_collector_;
   nsuv::ns_async start_profiling_msg_;
   TSQueue<StartProfStor> start_profiling_msg_q_;
+  std::list<StartProfStor> pending_profile_starts_;
 
   // Blocked Loop
   nsuv::ns_async blocked_loop_msg_;
