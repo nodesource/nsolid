@@ -46,6 +46,27 @@ function execHttpTransaction() {
   });
 }
 
+function execHttpUpgradeTransaction() {
+  const server = http.createServer();
+  server.on('upgrade', (req, socket) => {
+    socket.end('HTTP/1.1 101 Switching Protocols\r\n' +
+               'Connection: Upgrade\r\nUpgrade: test\r\n\r\n');
+  });
+
+  server.listen(0, () => {
+    const req = http.request({
+      host: '127.0.0.1',
+      port: server.address().port,
+      headers: { Connection: 'Upgrade', Upgrade: 'test' },
+    });
+    req.on('upgrade', (res, socket) => {
+      socket.destroy();
+      server.close();
+    });
+    req.end();
+  });
+}
+
 function execFetchTransaction() {
   const server = http.createServer((req, res) => {
     req.resume();
@@ -127,6 +148,9 @@ function handleTrace(msg) {
         break;
       case 'fetch':
         execFetchTransaction();
+        break;
+      case 'http-upgrade':
+        execHttpUpgradeTransaction();
         break;
       case 'dns':
         execDnsTransaction();

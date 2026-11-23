@@ -4,10 +4,12 @@
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
 #include <cassert>
-#include <deque>
 #include <functional>
-#include <map>
+#include <iterator>
+#include <list>
 #include <memory>
+#include <unordered_map>
+#include <utility>
 #include "uv.h"
 
 namespace node {
@@ -15,7 +17,10 @@ namespace nsolid {
 
 template <typename Key, typename Value>
 class LRUMap {
-  using iterator = typename std::map<Key, Value>::iterator;
+  // The entries, oldest first. index_ finds a key's entry, and the time it
+  // was inserted.
+  using entry_list = std::list<std::pair<const Key, Value>>;
+  using iterator = typename entry_list::iterator;
   using cb_proxy_sig = void(*)(void*, Value);
   using deleter_sig = void(*)(void*);
 
@@ -35,81 +40,84 @@ class LRUMap {
     proxy_ = &cb_proxy_<G>;
   }
 
-  inline iterator begin() {
-    return map_.begin();
-  }
+  // Holds at most max_size entries: an insert past it hands the oldest to the
+  // expiry callback, as if it had expired. 0, the default, means no limit.
+  inline void set_max_size(size_t max_size) { max_size_ = max_size; }
 
-  inline iterator end() {
-    return map_.end();
-  }
+  inline iterator begin() { return entries_.begin(); }
+
+  inline iterator end() { return entries_.end(); }
 
   inline iterator find(const Key& k) {
-    return map_.find(k);
+    auto it = index_.find(k);
+    return it == index_.end() ? entries_.end() : it->second.first;
   }
 
   inline std::pair<iterator, bool> insert(const Key& k, const Value& v) {
-    auto pair = map_.insert(std::make_pair(k, v));
-    if (pair.second) {
-      deque_.push_back(std::make_pair(pair.first, uv_hrtime()));
-    }
-
-    return pair;
+    return add(k, v);
   }
 
   inline std::pair<iterator, bool> insert(const Key& k, Value&& v) {
-    auto pair = map_.insert(std::make_pair(k, std::move(v)));
-    if (pair.second) {
-      deque_.push_back(std::make_pair(pair.first, uv_hrtime()));
-    }
-
-    return pair;
+    return add(k, std::move(v));
   }
 
   inline size_t erase(const Key& k) {
-    auto it = map_.find(k);
-    if (it == map_.end()) {
+    auto it = index_.find(k);
+    if (it == index_.end()) {
       return 0;
     }
 
-    for (auto i = deque_.begin(); i != deque_.end(); ++i) {
-      if (i->first == it) {
-        deque_.erase(i);
-        break;
-      }
-    }
-
-    map_.erase(it);
+    entries_.erase(it->second.first);
+    index_.erase(it);
     return 1;
   }
 
   // removes entries which have already expired and call the expiration cb
   inline void clean() {
-    while (!deque_.empty()) {
-      auto& it = deque_.front().first;
-      if ((uv_hrtime() - deque_.front().second) > expiry_) {
-        proxy_(data_.get(), it->second);
-        map_.erase(it);
-        deque_.pop_front();
-      } else {
-        break;
-      }
+    while (!entries_.empty() &&
+           (uv_hrtime() - index_.at(entries_.front().first).second) > expiry_) {
+      expire_oldest();
     }
   }
 
   inline void clear() {
-    map_.clear();
-    deque_.clear();
+    entries_.clear();
+    index_.clear();
   }
 
   inline size_t size() const noexcept {
-    assert(map_.size() == deque_.size());
-    return map_.size();
+    assert(entries_.size() == index_.size());
+    return entries_.size();
   }
 
  private:
+  template <typename V>
+  inline std::pair<iterator, bool> add(const Key& k, V&& v) {
+    auto found = index_.find(k);
+    if (found != index_.end()) {
+      return {found->second.first, false};
+    }
+
+    iterator it = entries_.emplace(entries_.end(), k, std::forward<V>(v));
+    index_.emplace(k, std::make_pair(it, uv_hrtime()));
+    if (max_size_ != 0 && entries_.size() > max_size_) {
+      expire_oldest();
+    }
+
+    return {it, true};
+  }
+
+  inline void expire_oldest() {
+    iterator it = entries_.begin();
+    Value value = std::move(it->second);
+    index_.erase(it->first);
+    entries_.erase(it);
+    proxy_(data_.get(), std::move(value));
+  }
+
   template <typename G>
   static void cb_proxy_(void* g, Value v) {
-    (*static_cast<G*>(g))(v);
+    (*static_cast<G*>(g))(std::move(v));
   }
 
   template <typename G>
@@ -117,9 +125,10 @@ class LRUMap {
     delete static_cast<G*>(g);
   }
 
-  std::map<Key, Value> map_;
-  std::deque<std::pair<iterator, uint64_t>> deque_;
+  entry_list entries_;
+  std::unordered_map<Key, std::pair<iterator, uint64_t>> index_;
   uint64_t expiry_;
+  size_t max_size_ = 0;
   std::unique_ptr<void, deleter_sig> data_;
   cb_proxy_sig proxy_;
 };

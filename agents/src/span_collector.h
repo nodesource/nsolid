@@ -3,8 +3,9 @@
 
 #include <nsolid.h>
 #include <nsolid/thread_safe.h>
-#include "nsuv-inl.h"
+#include <atomic>
 #include <vector>
+#include "nsuv-inl.h"
 
 namespace node {
 namespace nsolid {
@@ -84,6 +85,8 @@ class SpanCollector: public std::enable_shared_from_this<SpanCollector> {
   std::function<void(const SpanVector&)> callback_ = nullptr;
   std::function<void(const SpanVector&)> transform_callback_ = nullptr;
   bool sent_ = false;
+  std::atomic<bool> dropped_spans_ = false;
+  bool warned_dropped_spans_ = false;
 };
 
 }  // namespace nsolid

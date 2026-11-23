@@ -317,6 +317,50 @@ tests.push({
   },
 });
 
+tests.push({
+  name: 'should end the spans of an upgraded request',
+  test: async (getEnv) => {
+    return new Promise((resolve) => {
+      const grpcServer = new GRPCServer();
+      grpcServer.start(mustSucceed(async (port) => {
+        const env = getEnv(port);
+        const opts = {
+          stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+          env,
+        };
+        const child = new TestClient([], opts);
+        await child.id();
+        const resourceSpans = [];
+        let done = false;
+        grpcServer.on('spans', mustCallAtLeast(async (spans) => {
+          if (done)
+            return;
+
+          mergeResourceSpans(spans, resourceSpans);
+          const ended = resourceSpans.flatMap((r) => r.scopeSpans)
+                                     .flatMap((s) => s.spans);
+          const server = ended.find((s) => s.kind === 'SPAN_KIND_SERVER');
+          const client = ended.find((s) => s.kind === 'SPAN_KIND_CLIENT');
+          if (!server || !client)
+            return;
+
+          done = true;
+          for (const span of [server, client]) {
+            assert.strictEqual(span.name, 'HTTP GET');
+            assert.ok(BigInt(span.endTimeUnixNano) > 0n);
+          }
+          await child.shutdown(0);
+          grpcServer.close();
+          resolve();
+        }));
+
+        await child.enableTraces();
+        await child.trace('http-upgrade');
+      }));
+    });
+  },
+});
+
 const testConfigs = [
   {
     getEnv: (port) => {

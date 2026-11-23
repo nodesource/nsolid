@@ -70,6 +70,35 @@ TEST(LRUMapTest, Basic) {
   EXPECT_EQ(count, 3);
 }
 
+TEST(LRUMapTest, MaxSize) {
+  int evicted = 0;
+  int last_evicted = -1;
+  LRUMap<int, int> map(60UL * NANOS_PER_SEC, [&](int value) {
+    ++evicted;
+    last_evicted = value;
+  });
+  map.set_max_size(3);
+  for (int i = 0; i < 3; i++) {
+    map.insert(i, i * 10);
+  }
+  EXPECT_EQ(map.size(), 3U);
+  EXPECT_EQ(evicted, 0);
+  // Removing an entry from the middle keeps the others in order.
+  EXPECT_EQ(map.erase(1), 1U);
+  map.insert(3, 30);
+  EXPECT_EQ(evicted, 0);
+  // The oldest entry left, 0, makes room for 4, then 2 for 5.
+  map.insert(4, 40);
+  EXPECT_EQ(evicted, 1);
+  EXPECT_EQ(last_evicted, 0);
+  EXPECT_TRUE(map.find(0) == map.end());
+  map.insert(5, 50);
+  EXPECT_EQ(evicted, 2);
+  EXPECT_EQ(last_evicted, 20);
+  EXPECT_EQ(map.size(), 3U);
+  EXPECT_EQ(map.erase(1), 0U);
+}
+
 static opentelemetry::sdk::metrics::PointDataAttributes makeHistogramPoint(
     const char* address) {
   using opentelemetry::sdk::metrics::Base2ExponentialHistogramAggregation;
