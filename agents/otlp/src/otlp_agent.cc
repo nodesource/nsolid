@@ -222,13 +222,11 @@ int OTLPAgent::config(const nlohmann::json& config) {
     uint64_t period = 0;
     if (metrics_exporter_ != nullptr) {
       auto it = config_.find("pauseMetrics");
-      if (it != config_.end()) {
-        bool pause = *it;
-        if (!pause) {
-          it = config_.find("interval");
-          if (it != config_.end()) {
-            period = *it;
-          }
+      bool pause = it != config_.end() && it->get<bool>();
+      if (!pause) {
+        it = config_.find("interval");
+        if (it != config_.end()) {
+          period = *it;
         }
       }
     }

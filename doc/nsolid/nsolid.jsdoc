@@ -139,6 +139,10 @@
 
 
 /**
+ * Boolean options can be enabled or disabled through nsolid.start(). Explicit
+ * API values take precedence over the option's environment and package settings.
+ * Empty strings, null and unsupported JavaScript values preserve the existing
+ * setting or allow startup to fall back to the next source.
  * @typedef {Object} NSolidConfig
  * @property {string} app - The name of the application that the instance is
  * running. Use this in order to create logical groupings of the processes in
@@ -171,7 +175,7 @@
  * - `hostname` nsolid_hub.local
  * @property {boolean} disableIpv6 - Whether to support IPv6 or only IPv4999.
  * @property {boolean} disableSnapshots - Whether N\|Solid refuses to take
- * heap snapshots and heap profiles. Once true, it stays true.
+ * heap snapshots and heap profiles. Set false to allow them again.
  * @property {string} env - Overrides the NODE_ENV variable. Defaults to 'prod'.
  * @property {string} hostname - The hostname the N\|Solid process is running
  * on (overrides system-determined hostname).
@@ -181,15 +185,16 @@
  * (5 seconds) and must be a positive safe integer. Invalid updates preserve
  * the previous interval.
  * @property {boolean} pauseMetrics - Whether the agent is periodically
- * retrieving metrics or not.
+ * retrieving metrics or not. Defaults to false; can also be configured with
+ * NSOLID_PAUSE_METRICS or the package.json nsolid section.
  * @property {boolean} promiseTracking - Whether the agent is to track the
  * promises created / resolved by the runtime.
  * @property {string} pubkey - The ZMQ public key used with the N\|Solid Console
  * server.
  * @property {boolean} redactSnapshots - Boolean to indicate if you want heap
  * snapshots to obscure string variable contents. This may impede your ability
- * to debug and is meant for sensitive production environments. Once true, it
- * stays true.
+ * to debug and is meant for sensitive production environments. Set false to
+ * stop requiring redaction for subsequent requests.
  * @property {string|number} statsd - The route to a StatsD collector if you
  * wish to send metrics directly to an external data collection service from the
  * N\|Solid process. Without this environment variable, the N\|Solid Agent will

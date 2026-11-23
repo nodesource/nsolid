@@ -795,6 +795,19 @@ N|Solid can be configured via environment variables or an
 .Nm
 section in your package.json file.
 If competing values for a single key are set, the environment variable will take precedence.
+.Pp
+Boolean properties accepted by nsolid.start() can be enabled or disabled at runtime
+with true or false, including disableSnapshots and redactSnapshots.
+At startup, explicit API options take precedence over environment variables,
+then package.json values, then the option's default. An explicit false is a value,
+not a request to fall back to another source.
+Numbers are converted with value != 0. The strings '0' and 'false' disable an
+option; other nonempty strings enable it. Empty strings, null, undefined and
+unsupported JavaScript values are ignored, preserving an existing value or
+allowing startup to fall back to the next source.
+Native configuration updates accept booleans directly. A native null removes
+the property and restores its default behavior; other non-boolean native values
+are ignored without discarding valid properties in the same update.
 .
 .Ss Configuring N|Solid using environment variables
 .Bl -tag -width 6n
@@ -943,11 +956,12 @@ Recognized Substitutions:
 Disable IPv6 in case it's not supported by the host system.
 .
 .It Ev NSOLID_DISABLE_SNAPSHOTS
-Force disable the heap snapshots N|Solid takes, for the Console or through the
+Disable the heap snapshots N|Solid takes, for the Console or through the
 nsolid module, and its heap profiles, which end in a snapshot.
 Snapshots that Node.js takes itself, as with v8.writeHeapSnapshot() or
 --heapsnapshot-signal, aren't covered.
-Once set it cannot be reset.
+Set disableSnapshots to false with nsolid.start() to allow snapshots again.
+Changing this setting does not restart a heap profile that was already rejected.
 .
 .It Ev NSOLID_REDACT_SNAPSHOTS
 Redact strings from the heap snapshots and heap profiles N|Solid takes: string
@@ -956,12 +970,17 @@ property names of the objects V8 keeps as hash tables, such as objects without
 a prototype and objects with many or deleted properties.
 Other objects' property names, and strings' lengths, aren't redacted, nor are
 snapshots that Node.js takes itself.
-Once set it cannot be reset.
+Set redactSnapshots to false with nsolid.start() to stop requiring redaction for
+subsequent requests. A request started with redaction enabled stays redacted.
 .
 .It Ev NSOLID_INTERVAL Ar interval
 Override the default metrics reporting interval (milliseconds) of the N|Solid Agent.
 Must be a positive safe integer. Invalid values fall back to the package setting
 or the default of 5000.
+.
+.It Ev NSOLID_PAUSE_METRICS
+Pause periodic metrics collection. Defaults to false. Set pauseMetrics to false
+with nsolid.start(), or call nsolid.resumeMetrics(), to resume collection.
 .
 .It Ev NSOLID_DELAY_INIT Ar interval
 Delay initializing nsolid for duration (milliseconds) after the process starts.
@@ -1060,6 +1079,7 @@ The following lists all package.json field names along with their environment va
 .It disableSnapshots : Ev NSOLID_DISABLE_SNAPSHOTS
 .It redactSnapshots : Ev NSOLID_REDACT_SNAPSHOTS
 .It interval : Ev NSOLID_INTERVAL
+.It pauseMetrics : Ev NSOLID_PAUSE_METRICS
 .It blockedLoopThreshold : NSOLID_BLOCKED_LOOP_THRESHOLD
 .It disablePackageScan: NSOLID_DISABLE_PACKAGE_SCAN
 .It trackGlobalPackages: NSOLID_TRACK_GLOBAL_PACKAGES

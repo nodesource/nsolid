@@ -1372,13 +1372,11 @@ int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
       utils::find_any_fields_in_diff(diff, { "/interval", "/pauseMetrics" })) {
     uint64_t period = 0;
     auto it = config_.find("pauseMetrics");
-    if (it != config_.end()) {
-      bool pause = *it;
-      if (!pause) {
-        it = config_.find("interval");
-        if (it != config_.end()) {
-          period = *it;
-        }
+    bool pause = it != config_.end() && it->get<bool>();
+    if (!pause) {
+      it = config_.find("interval");
+      if (it != config_.end()) {
+        period = *it;
       }
     }
 

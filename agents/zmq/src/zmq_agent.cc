@@ -957,9 +957,12 @@ void ZmqAgent::config_msg_cb(nsuv::ns_async*, ZmqAgent* agent) {
     json config_msg = json::parse(config_str, nullptr, false);
     // assert because the runtime should never send me an invalid JSON config
     ASSERT(!config_msg.is_discarded());
-    // Runtime snapshots omit removed fields, but config() merges local state.
-    if (!config_msg.contains("contCpuProfile")) {
-      config_msg["contCpuProfile"] = false;
+    // Restore defaults for removed booleans before merging local agent state.
+    for (auto it = agent->config_.begin(); it != agent->config_.end(); ++it) {
+      if (it->is_boolean() && !config_msg.contains(it.key())) {
+        config_msg[it.key()] =
+            default_agent_config.value(it.key(), json(nullptr));
+      }
     }
     agent->config(config_msg);
     // anytime there's a reconfiguration, notify to check 'ready' state.
