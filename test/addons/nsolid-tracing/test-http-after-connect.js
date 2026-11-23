@@ -19,7 +19,7 @@ function setupTracesCheck(port, addresses) {
         'http.url': `http://google.com:80`,
         'network.protocol.version': '1.1',
       },
-      end_reason: binding.kTraceEndOk,
+      end_reason: binding.kSpanEndOk,
       name: 'HTTP CONNECT',
       parentId: '0000000000000000',
       thread_id: 0,
@@ -33,7 +33,7 @@ function setupTracesCheck(port, addresses) {
             'dns.hostname': 'localhost',
             'dns.op_type': binding.kDnsLookup,
           },
-          end_reason: binding.kTraceEndOk,
+          end_reason: binding.kSpanEndOk,
           name: 'DNS lookup',
           thread_id: 0,
           kind: binding.kClient,
@@ -45,7 +45,7 @@ function setupTracesCheck(port, addresses) {
             'http.url': `http://google.com:80`,
             'network.protocol.version': '1.1',
           },
-          end_reason: binding.kSpanEndExit,
+          end_reason: binding.kSpanEndOk,
           name: 'HTTP CONNECT',
           thread_id: 0,
           kind: binding.kServer,
@@ -137,10 +137,6 @@ function setupTracesCheck(port, addresses) {
       ],
     },
   ];
-
-  // The CONNECT http server transaction end is not detected because the
-  // response never goes through the http module but written directly to the
-  // socket
 
   checkTracesOnExit(binding, expectedTraces);
 }

@@ -166,9 +166,13 @@ Tracer::SpanType Span::type() const {
   return stor_.type;
 }
 
+// At most this many spans stay open at once. Past it, the oldest is reported
+// as expired: requests that never end mustn't grow memory without bound.
+constexpr size_t kMaxPendingSpans = 10000;
 
 TracerImpl::TracerImpl():
     pending_spans_(5UL * 60UL * NANOS_PER_SEC, expired_span_cb_, this) {
+  pending_spans_.set_max_size(kMaxPendingSpans);
 }
 
 TSList<TracerImpl::TraceHookStor>::iterator TracerImpl::addHook(

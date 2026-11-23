@@ -40,6 +40,14 @@ struct TSQueue {
     queue_.push(std::move(data));
     return queue_.size();
   }
+  // Like enqueue(), unless max_size items are queued already: then it returns
+  // 0 and leaves data alone.
+  inline size_t enqueue_bounded(DataType&& data, size_t max_size) {
+    Spinlock::ScopedLock lock(lock_);
+    if (queue_.size() >= max_size) return 0;
+    queue_.push(std::move(data));
+    return queue_.size();
+  }
   // NOLINTNEXTLINE(runtime/references)
   NSOLID_WUR inline bool dequeue(DataType& data) {
     Spinlock::ScopedLock lock(lock_);

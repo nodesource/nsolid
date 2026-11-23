@@ -1,8 +1,16 @@
 #include "span_collector.h"
 #include "asserts-cpp/asserts.h"
 
+#include <cstdio>
+#include <queue>
+
 namespace node {
 namespace nsolid {
+
+// Spans waiting for export past which new ones are dropped: four times the
+// largest batch an agent waits for (the gRPC agent's 1000), the ratio
+// OpenTelemetry's batch span processor uses.
+constexpr size_t kMaxQueuedSpans = 4096;
 
 SpanCollector::SpanCollector(uv_loop_t* loop,
                              uint32_t trace_flags,
@@ -31,9 +39,17 @@ void SpanCollector::do_collect() {
         return;
       }
 
+      // A stalled exporter mustn't let the queue grow without bound.
+      size_t queued = collector->span_msg_q_.enqueue_bounded(std::move(span),
+                                                             kMaxQueuedSpans);
+      if (queued == 0) {
+        collector->dropped_spans_.store(true, std::memory_order_relaxed);
+        return;
+      }
+
       // Only notify the loop_ thread if the queue reaches min_span_count_to
       // avoid too many uv_async_t::send() calls.
-      if (collector->span_msg_q_.enqueue(span) > collector->min_span_count_) {
+      if (queued > collector->min_span_count_) {
         if (!collector->sent_) {
           ASSERT_EQ(0, collector->span_msg_->send());
           collector->sent_ = true;
@@ -73,10 +89,22 @@ void SpanCollector::do_collect() {
 }
 
 void SpanCollector::process_spans() {
-  Tracer::SpanStor span;
+  if (!warned_dropped_spans_ &&
+      dropped_spans_.load(std::memory_order_relaxed)) {
+    warned_dropped_spans_ = true;
+    fprintf(stderr,
+            "N|Solid warning: dropped new spans with %zu spans waiting "
+            "for export\n",
+            kMaxQueuedSpans);
+  }
+
+  std::queue<Tracer::SpanStor> queued;
+  span_msg_q_.swap(queued);
   SpanVector spans;
-  while (span_msg_q_.dequeue(span)) {
-    spans.push_back(std::move(span));
+  spans.reserve(queued.size());
+  while (!queued.empty()) {
+    spans.push_back(std::move(queued.front()));
+    queued.pop();
   }
 
   // After processing, call the stored callback with the spans and additional
