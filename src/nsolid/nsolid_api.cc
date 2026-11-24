@@ -3351,20 +3351,62 @@ static void SetTrackPromisesFn(const FunctionCallbackInfo<Value>& args) {
   env->set_nsolid_track_promises_fn(args[0].As<Function>());
 }
 
+// Heap profiler records may be released on other threads and may outlive the
+// requesting isolate. The requester's cleanup hook keeps the callback alive so
+// the Global is always reset on the requesting thread while its isolate exists.
+// The reference sent with the final callback is allocated upfront, so the final
+// callback, which releases the loop reference, can't be lost to an allocation
+// failure.
+struct HeapProfileCallback {
+  HeapProfileCallback(Environment* env, Local<Function> fn)
+      : env(env), fn(env->isolate(), fn) {}
+
+  static std::shared_ptr<HeapProfileCallback> New(Environment* env,
+                                                  Local<Function> fn) {
+    auto cb = std::make_shared<HeapProfileCallback>(env, fn);
+    cb->hook = new std::shared_ptr<HeapProfileCallback>(cb);
+    cb->last = new std::shared_ptr<HeapProfileCallback>(cb);
+    env->AddCleanupHook(Cleanup, cb->hook);
+    // Prevent the loop from exiting until the final callback.
+    env->add_refs(1);
+    return cb;
+  }
+
+  static void Cleanup(void* data) {
+    auto* hook = static_cast<std::shared_ptr<HeapProfileCallback>*>(data);
+    (*hook)->fn.Reset();
+    (*hook)->env->add_refs(-1);
+    delete (*hook)->last.exchange(nullptr);
+    delete hook;
+  }
+
+  void Finish() {
+    env->RemoveCleanupHook(Cleanup, hook);
+    Cleanup(hook);
+  }
+
+  Environment* env;
+  v8::Global<Function> fn;
+  std::shared_ptr<HeapProfileCallback>* hook;
+  std::atomic<std::shared_ptr<HeapProfileCallback>*> last;
+  // First dispatch failure, reported with the final callback. Calls for a
+  // profile are serialized by the profiler.
+  int status = 0;
+};
 
 static void heapprofile_js_cb(SharedEnvInst envinst_sp,
                               int status,
                               std::string profile,
-                              std::shared_ptr<v8::Global<Function>> cb) {
-  Environment* env = envinst_sp->env();
-  bool last = status != 0 || profile.empty();
-  if (last) {
-    env->add_refs(-1);
+                              std::shared_ptr<HeapProfileCallback> cb) {
+  // The requester's Environment was already cleaned up.
+  if (cb->fn.IsEmpty()) {
+    return;
   }
 
+  Environment* env = envinst_sp->env();
+  bool last = status != 0 || profile.empty();
   if (!envinst_sp->can_call_into_js()) {
-    // If we can't call into JS do nothing, the isolate is actually shutting
-    // down.
+    cb->Finish();
     return;
   }
 
@@ -3381,27 +3423,54 @@ static void heapprofile_js_cb(SharedEnvInst envinst_sp,
                                   NewStringType::kNormal).ToLocalChecked())
   };
 
-  Local<Function> fn = cb->Get(isolate);
+  Local<Function> fn = cb->fn.Get(isolate);
+  if (last) {
+    cb->Finish();
+  }
   USE(fn->Call(env->context(), Undefined(isolate), arraysize(argv), argv));
 }
 
+static void heapprofile_last_cb(SharedEnvInst envinst_sp, void* data) {
+  std::unique_ptr<std::shared_ptr<HeapProfileCallback>> cb(
+      static_cast<std::shared_ptr<HeapProfileCallback>*>(data));
+  heapprofile_js_cb(envinst_sp, (*cb)->status, std::string(), *cb);
+}
 
 static void heapprofile_cb(int status,
                            std::string profile,
                            SharedEnvInst envinst_sp,
-                           std::shared_ptr<v8::Global<Function>> cb) {
-  bool last = status != 0 || profile.empty();
-  int ret = nsolid::RunCommand(envinst_sp,
-                               CommandType::EventLoop,
-                               heapprofile_js_cb,
-                               status,
-                               profile,
-                               last ? std::move(cb) : cb);
-  if (ret != 0) {
-    envinst_sp->env()->add_refs(-1);
+                           std::shared_ptr<HeapProfileCallback> cb) {
+  if (status == 0 && !profile.empty()) {
+    int er = nsolid::RunCommand(envinst_sp,
+                                CommandType::EventLoop,
+                                heapprofile_js_cb,
+                                status,
+                                std::move(profile),
+                                cb);
+    // Only UV_ENOMEM is returned. The other failures mean the requester is
+    // gone, so there is nobody to report them to.
+    if (er != 0 && cb->status == 0) {
+      cb->status = er;
+    }
+    return;
+  }
+
+  if (cb->status == 0) {
+    cb->status = status;
+  }
+
+  auto* last = cb->last.exchange(nullptr);
+  // The callback was already released on the requester thread.
+  if (last == nullptr) {
+    return;
+  }
+
+  int er = EnvInst::RunCommand(
+      envinst_sp, heapprofile_last_cb, last, CommandType::EventLoop);
+  if (er != 0) {
+    delete last;
   }
 }
-
 
 static void HeapProfile(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsNumber());  // thread_id
@@ -3415,13 +3484,8 @@ static void HeapProfile(const FunctionCallbackInfo<Value>& args) {
   bool redacted = args[3].As<v8::Boolean>()->Value();
   SharedEnvInst envinst = EnvInst::GetInst(thread_id);
   Isolate* isolate = args.GetIsolate();
-  v8::Global<Function> cb(isolate, args[4].As<Function>());
-  std::shared_ptr<v8::Global<Function>> cb_ptr(
-    new v8::Global<Function>(std::move(cb)),
-    [](v8::Global<Function>* ptr) {
-      ptr->Reset();
-      delete ptr;
-    });
+  auto cb_ptr = HeapProfileCallback::New(Environment::GetCurrent(args),
+                                         args[4].As<Function>());
 
   SharedEnvInst current_envinst = EnvInst::GetCurrent(isolate);
   int ret = Snapshot::StartTrackingHeapObjects(envinst,
@@ -3430,11 +3494,9 @@ static void HeapProfile(const FunctionCallbackInfo<Value>& args) {
                                                duration,
                                                heapprofile_cb,
                                                current_envinst,
-                                               std::move(cb_ptr));
-  if (ret == 0) {
-    // Add a reference to the current environment to prevent the loop from
-    // exiting.
-    current_envinst->env()->add_refs(1);
+                                               cb_ptr);
+  if (ret != 0) {
+    cb_ptr->Finish();
   }
 
   args.GetReturnValue().Set(ret);
@@ -3464,13 +3526,8 @@ static void HeapSampling(const FunctionCallbackInfo<Value>& args) {
     static_cast<v8::HeapProfiler::SamplingFlags>(args[4].As<Uint32>()->Value());
   SharedEnvInst envinst = EnvInst::GetInst(thread_id);
   Isolate* isolate = args.GetIsolate();
-  v8::Global<Function> cb(isolate, args[5].As<Function>());
-  std::shared_ptr<v8::Global<Function>> cb_ptr(
-    new v8::Global<Function>(std::move(cb)),
-    [](v8::Global<Function>* ptr) {
-      ptr->Reset();
-      delete ptr;
-    });
+  auto cb_ptr = HeapProfileCallback::New(Environment::GetCurrent(args),
+                                         args[5].As<Function>());
 
   SharedEnvInst current_envinst = EnvInst::GetCurrent(isolate);
   int ret = Snapshot::StartSampling(envinst,
@@ -3480,11 +3537,9 @@ static void HeapSampling(const FunctionCallbackInfo<Value>& args) {
                                     duration,
                                     heapprofile_cb,
                                     current_envinst,
-                                    std::move(cb_ptr));
-  if (ret == 0) {
-    // Add a reference to the current environment to prevent the loop from
-    // exiting.
-    current_envinst->env()->add_refs(1);
+                                    cb_ptr);
+  if (ret != 0) {
+    cb_ptr->Finish();
   }
 
   args.GetReturnValue().Set(ret);
