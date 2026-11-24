@@ -5,16 +5,20 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono> // NOLINT [build/c++11]
-#include <cmath>
-#include <iomanip>
-#include <sstream>
 #include <cassert>
-#include <random>
-#include <vector>
+#include <chrono>  // NOLINT [build/c++11]
+#include <cmath>
 #include <cstring>
+#include <iomanip>
+#include <random>
+#include <sstream>
+#include <vector>
 
+#include "util.h"
 #include "uv.h"
+#if defined(_AIX) && HAVE_OPENSSL
+#include "ncrypto.h"
+#endif
 #include "nlohmann/json.hpp"
 
 using string_vector = std::vector<std::string>;
@@ -74,50 +78,40 @@ inline std::string buffer_to_hex(const unsigned char* buffer, size_t len) {
   return ss.str();
 }
 
-
-inline void generate_seed(std::array<uint64_t, 2>* state) {
-  std::random_device random_device;
-  std::seed_seq seed_seq{ random_device(),
-                          random_device(),
-                          random_device(),
-                          random_device() };
-  seed_seq.generate(state->begin(), state->end());
-}
-
-
-/*
- * xorshift+ implementation: https://en.wikipedia.org/wiki/Xorshift#xorshift+
- */
-inline uint64_t generate_random() {
-  static uv_once_t init_once = UV_ONCE_INIT;
-  static std::array<uint64_t, 2> xorshift128p_state_;
-  uv_once(&init_once, []() {
-    generate_seed(&xorshift128p_state_);
-  });
-  uint64_t& state_a = xorshift128p_state_[0];
-  uint64_t& state_b = xorshift128p_state_[1];
-  uint64_t t = state_a;
-  uint64_t s = state_b;
-  state_a = s;
-  t ^= t << 23;  // a
-  t ^= t >> 17;  // b
-  t ^= s ^ (s >> 26);  // c
-  state_b = t;
-  return t + s;
-}
-
-
 inline void generate_random_buf(unsigned char* buf, size_t size) {
+#if defined(_AIX) && HAVE_OPENSSL
+  // uv_random() uses blocking /dev/random on AIX; match Node's entropy source.
+  CHECK(ncrypto::CSPRNG(buf, size));
+#else
+  CHECK_EQ(uv_random(nullptr, nullptr, buf, size, 0, nullptr), 0);
+#endif
+}
+
+inline void generate_random_buf(unsigned char* buf,
+                                size_t size,
+                                std::array<uint64_t, 2>* state) {
+  uint64_t& state_a = (*state)[0];
+  uint64_t& state_b = (*state)[1];
+  if ((state_a | state_b) == 0) {
+    do {
+      generate_random_buf(reinterpret_cast<unsigned char*>(state->data()),
+                          sizeof(*state));
+    } while ((state_a | state_b) == 0);
+  }
+
+  // shortcut: xorshift IDs are predictable; use a CSPRNG if IDs become secrets.
   for (size_t i = 0; i < size; i += sizeof(uint64_t)) {
-    uint64_t value = generate_random();
-    if (i + sizeof(uint64_t) <= size) {
-      std::memcpy(&buf[i], &value, sizeof(uint64_t));
-    } else {
-      std::memcpy(&buf[i], &value, size - i);
-    }
+    uint64_t t = state_a;
+    const uint64_t s = state_b;
+    state_a = s;
+    t ^= t << 23;
+    t ^= t >> 17;
+    t ^= s ^ (s >> 26);
+    state_b = t;
+    const uint64_t value = t + s;
+    std::memcpy(buf + i, &value, std::min(sizeof(value), size - i));
   }
 }
-
 
 inline const std::string generate_unique_id() {
   unsigned char buf[20];

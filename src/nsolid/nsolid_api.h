@@ -604,12 +604,6 @@ class EnvList {
 
   void WriteLogLine(SharedEnvInst, LogWriteInfo);
 
-  // Updated to use raw binary data instead of strings
-  // NOLINTNEXTLINE(runtime/references)
-  void popSpanId(std::array<uint8_t, 8>& span_id);
-  // NOLINTNEXTLINE(runtime/references)
-  void popTraceId(std::array<uint8_t, 16>& trace_id);
-
   void UpdateHasMetricsStreamHooks(bool has_metrics);
 
   void UpdateTracingFlags(uint32_t flags);
@@ -668,10 +662,6 @@ class EnvList {
                       std::string* msg,
                       std::string* stack);
 
-  void fill_span_id_q();
-
-  void fill_trace_id_q();
-
   void update_continuous_profiler(bool enabled, uint64_t interval);
   void refresh_min_blocked_threshold();
 
@@ -699,7 +689,6 @@ class EnvList {
   static void disable_promise_tracking_(SharedEnvInst envinst_sp, void*);
   static void update_has_metrics_stream_hooks(SharedEnvInst, bool has_metrics);
   static void update_tracing_flags(SharedEnvInst envinst_sp, uint32_t flags);
-  static void fill_tracing_ids_cb_(nsuv::ns_async*, EnvList* envlist);
   static void q_cb_timeout_cb_(nsuv::ns_timer*, QCbTimeoutStor*);
   static void datapoint_cb_(std::queue<MetricsStream::Datapoint>&&);
 
@@ -775,10 +764,6 @@ class EnvList {
   DispatchQueue<MetricsStream::Datapoint> datapoints_q_;
   TSList<MetricsStreamHookStor> metrics_stream_hook_list_;
 
-  nsuv::ns_async fill_tracing_ids_msg_;
-  // Use arrays of bytes instead of hex strings to avoid conversions
-  TSQueue<std::array<uint8_t, 8>> span_id_q_;
-  TSQueue<std::array<uint8_t, 16>> trace_id_q_;
   tracing::TracerImpl tracer_;
   DispatchQueue<tracing::SpanItem> span_item_q_;
 
