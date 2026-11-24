@@ -82,6 +82,20 @@ class BindingData : public SnapshotableObject {
                                      double val,
                                      double monotonic);
 
+  // ids is an off-heap Uint32Array(8): span id high/low, trace id words,
+  // parent span id high/low. Kept under 8 arguments so the fast path is also
+  // taken on macOS arm64.
+  static void SlowPushSpanStart(
+      const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void FastPushSpanStart(v8::Local<v8::Object> receiver,
+                                v8::Local<v8::Value> ids,
+                                double start,
+                                double monotonic);
+  static void PushSpanStartImpl(BindingData* data,
+                                const uint32_t* ids,
+                                double start,
+                                double monotonic);
+
   static void SlowPushSpanDataUint64(
       const v8::FunctionCallbackInfo<v8::Value>& args);
   static void FastPushSpanDataUint64(v8::Local<v8::Object> receiver,
@@ -147,6 +161,7 @@ class BindingData : public SnapshotableObject {
   static v8::CFunction fast_push_dns_bucket_;
   static v8::CFunction fast_push_server_bucket_;
   static v8::CFunction fast_push_span_data_double_;
+  static v8::CFunction fast_push_span_start_;
   static v8::CFunction fast_push_span_data_uint64_;
   static v8::CFunction fast_push_span_data_string_;
   static v8::CFunction fast_push_span_data_string3_;

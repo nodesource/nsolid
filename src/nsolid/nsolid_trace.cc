@@ -16,6 +16,22 @@ namespace tracing {
 constexpr uint64_t span_item_q_interval = 100;
 constexpr size_t span_item_q_max_size = 100;
 
+// Most significant nibble first, matching the JS encoding of the same words.
+static void AppendHex32(std::string* out, uint32_t val) {
+  static constexpr char kHex[] = "0123456789abcdef";
+  for (int shift = 28; shift >= 0; shift -= 4) {
+    out->push_back(kHex[(val >> shift) & 0xf]);
+  }
+}
+
+static std::string Hex64(uint64_t val) {
+  std::string out;
+  out.reserve(16);
+  AppendHex32(&out, static_cast<uint32_t>(val >> 32));
+  AppendHex32(&out, static_cast<uint32_t>(val));
+  return out;
+}
+
 /*static*/
 const char* Span::traceTypeToString(const Tracer::SpanType& type) {
   switch (type) {
@@ -42,7 +58,7 @@ Span::Span(uint64_t thread_id) {
   stor_.thread_id = thread_id;
 }
 
-void Span::add_prop(const SpanPropBase& prop) {
+void Span::add_prop(const SpanPropBase& prop, uint64_t span_id) {
   switch (prop.type()) {
     case Span::kSpanStart:
     {
@@ -50,6 +66,18 @@ void Span::add_prop(const SpanPropBase& prop) {
       stor_.start = start.timestamp;
       if (std::isfinite(start.monotonic)) {
         start_monotonic_ = start.monotonic;
+      }
+      if (start.has_ids) {
+        stor_.span_id = Hex64(span_id);
+        stor_.trace_id.clear();
+        stor_.trace_id.reserve(32);
+        for (uint32_t word : start.trace_id) {
+          AppendHex32(&stor_.trace_id, word);
+        }
+        // A zero parent keeps the default all-zeros parent_id.
+        if (start.parent_id != 0) {
+          stor_.parent_id = Hex64(start.parent_id);
+        }
       }
     }
     break;
@@ -200,7 +228,7 @@ void TracerImpl::addSpanItem(const SpanItem& item) {
   }
 
   Span& span = it->second;
-  span.add_prop(*item.prop);
+  span.add_prop(*item.prop, item.span_id);
   if (item.prop->type() == Span::kSpanEnd) {
     span.stor_.attrs.pop_back();
     span.stor_.attrs += "}";

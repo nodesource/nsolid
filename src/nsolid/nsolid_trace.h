@@ -124,9 +124,14 @@ class Span {
   };
 
   // Wall-clock start (timestamp); end = timestamp + (now - monotonic).
+  // When has_ids is set, the span, trace and parent IDs travel here as numbers
+  // and are hex-encoded once when the span is created.
   struct StartTime {
     double timestamp;
     double monotonic;
+    bool has_ids = false;
+    std::array<uint32_t, 4> trace_id = {};
+    uint64_t parent_id = 0;
   };
 
   static const char* traceTypeToString(const Tracer::SpanType& type);
@@ -137,7 +142,7 @@ class Span {
  private:
   explicit Span(uint64_t thread_id);
 
-  void add_prop(const SpanPropBase& prop);
+  void add_prop(const SpanPropBase& prop, uint64_t span_id);
   void add_attribute(const SpanPropBase& prop);
   void end();
 
