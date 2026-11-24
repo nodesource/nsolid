@@ -2953,6 +2953,7 @@ void BindingData::SlowGetSpanId(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsUint8Array());
   Local<Uint8Array> output = args[0].As<Uint8Array>();
   DCHECK_EQ(output->Length(), 8);
+  DCHECK(output->HasBuffer());  // Callers must pass an off-heap view.
   uint8_t* buffer =
       static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
   auto* data = FromJSObject<BindingData>(args.This());
@@ -2964,6 +2965,7 @@ void BindingData::FastGetSpanId(v8::Local<v8::Object> receiver,
   TRACK_V8_FAST_API_CALL("nsolid.getSpanId");
   Local<Uint8Array> output = buffer.As<Uint8Array>();
   DCHECK_EQ(output->Length(), 8);
+  DCHECK(output->HasBuffer());  // Callers must pass an off-heap view.
   uint8_t* dst_data =
       static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
   auto* data = FromJSObject<BindingData>(receiver);
@@ -2974,6 +2976,7 @@ void BindingData::SlowGetTraceId(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsUint8Array());
   Local<Uint8Array> output = args[0].As<Uint8Array>();
   DCHECK_EQ(output->Length(), 16);
+  DCHECK(output->HasBuffer());  // Callers must pass an off-heap view.
   uint8_t* buffer =
       static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
   auto* data = FromJSObject<BindingData>(args.This());
@@ -2985,6 +2988,7 @@ void BindingData::FastGetTraceId(v8::Local<v8::Object> receiver,
   TRACK_V8_FAST_API_CALL("nsolid.getTraceId");
   Local<Uint8Array> output = buffer.As<Uint8Array>();
   DCHECK_EQ(output->Length(), 16);
+  DCHECK(output->HasBuffer());  // Callers must pass an off-heap view.
   uint8_t* dst_data =
       static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
   auto* data = FromJSObject<BindingData>(receiver);
