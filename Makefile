@@ -990,7 +990,8 @@ docclean: ## Remove the generated documentation.
 
 RAWVER=$(shell $(PYTHON) tools/getnsolidversion.py)
 VERSION=v$(RAWVER)
-CHANGELOG=doc/changelogs/CHANGELOG_V$(firstword $(subst ., ,$(RAWVER))).md
+NODE_RAWVER=$(shell $(PYTHON) tools/getnodeversion.py)
+CHANGELOG=doc/changelogs/NSOLID_CHANGELOG_V$(firstword $(subst ., ,$(RAWVER)))_NODE_V$(firstword $(subst ., ,$(NODE_RAWVER))).md
 
 # For nightly builds, you must set DISTTYPE to "nightly", "next-nightly" or
 # "custom". For the nightly and next-nightly case, you need to set DATESTRING
