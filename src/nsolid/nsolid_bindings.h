@@ -3,6 +3,9 @@
 
 #if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
 
+#include <array>
+#include <cstdint>
+
 #include "node_snapshotable.h"
 #include "v8-fast-api-calls.h"
 
@@ -121,9 +124,9 @@ class BindingData : public SnapshotableObject {
   // Fast API versions for GetSpanId and GetTraceId
   static void SlowGetSpanId(const v8::FunctionCallbackInfo<v8::Value>& args);
   static void SlowGetTraceId(const v8::FunctionCallbackInfo<v8::Value>& args);
-  static void FastGetSpanId(v8::Local<v8::Value> receiver,
+  static void FastGetSpanId(v8::Local<v8::Object> receiver,
                             v8::Local<v8::Value> buffer);
-  static void FastGetTraceId(v8::Local<v8::Value> receiver,
+  static void FastGetTraceId(v8::Local<v8::Object> receiver,
                              v8::Local<v8::Value> buffer);
 
   static void SlowGetWallTime(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -137,6 +140,9 @@ class BindingData : public SnapshotableObject {
       ExternalReferenceRegistry* registry);
 
  private:
+  // Owned by this realm; regenerated lazily after snapshot deserialization.
+  std::array<uint64_t, 2> tracing_id_state_ = {};
+
   static v8::CFunction fast_push_client_bucket_;
   static v8::CFunction fast_push_dns_bucket_;
   static v8::CFunction fast_push_server_bucket_;

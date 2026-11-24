@@ -1,4 +1,9 @@
+#include "nsolid/nsolid_util.h"
 #include "nsolid/thread_safe.h"
+
+#include <array>
+#include <cstring>
+#include <set>
 
 #include "gtest/gtest.h"
 
@@ -182,4 +187,52 @@ TEST(TSListTest, PointerIterator) {
   list.for_each([](int* v) {
     EXPECT_TRUE(false);
   });
+}
+
+TEST(NsolidRandomTest, TracingIdentifiers) {
+  const std::array<uint64_t, 3> expected = {8388677, 33554692, 70368777736387};
+  for (size_t size : {8U, 16U, 20U}) {
+    std::array<uint64_t, 2> state = {1, 2};
+    std::array<unsigned char, 22> output;
+    output.fill(0xa5);
+    node::nsolid::utils::generate_random_buf(output.data() + 1, size, &state);
+    EXPECT_EQ(std::memcmp(output.data() + 1, expected.data(), size), 0);
+    EXPECT_EQ(output.front(), 0xa5);
+    for (size_t i = size + 1; i < output.size(); ++i) {
+      EXPECT_EQ(output[i], 0xa5);
+    }
+  }
+}
+
+TEST(NsolidRandomTest, ConcurrentIdentifiers) {
+  std::array<uv_thread_t, 8> threads;
+  std::array<std::vector<std::string>, 8> values;
+  for (size_t i = 0; i < threads.size(); ++i) {
+    const int status = uv_thread_create(
+        &threads[i],
+        +[](void* data) {
+          auto* ids = static_cast<std::vector<std::string>*>(data);
+          for (size_t n = 0; n < 256; ++n) {
+            ids->push_back(node::nsolid::utils::generate_unique_id());
+          }
+        },
+        &values[i]);
+    if (status != 0) {
+      for (size_t j = 0; j < i; ++j) {
+        uv_thread_join(&threads[j]);
+      }
+      FAIL() << uv_strerror(status);
+    }
+  }
+  for (auto& thread : threads) {
+    ASSERT_EQ(0, uv_thread_join(&thread));
+  }
+  std::set<std::string> unique;
+  for (const auto& ids : values) {
+    for (const auto& id : ids) {
+      EXPECT_EQ(id.size(), 40U);
+      EXPECT_EQ(id.find_first_not_of("0123456789abcdef"), std::string::npos);
+      EXPECT_TRUE(unique.insert(id).second);
+    }
+  }
 }

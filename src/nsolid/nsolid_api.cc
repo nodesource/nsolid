@@ -36,11 +36,6 @@
 #define MICROS_PER_SEC 1000000
 #define NANOS_PER_SEC 1000000000
 
-#define SPAN_ID_Q_MIN_THRESHOLD   10
-#define SPAN_ID_Q_REFILL_ITEMS    20
-#define TRACE_ID_Q_MIN_THRESHOLD  10
-#define TRACE_ID_Q_REFILL_ITEMS   20
-
 constexpr size_t kHistogramSnapshotQueueLimit = 2;
 
 namespace node {
@@ -892,8 +887,6 @@ EnvList::EnvList(): info_(nlohmann::json()) {
   er = log_written_msg_.init(&thread_loop_, log_written_cb_, this);
   CHECK_EQ(er, 0);
   er = removed_env_msg_.init(&thread_loop_, removed_env_cb_, this);
-  CHECK_EQ(er, 0);
-  er = fill_tracing_ids_msg_.init(&thread_loop_, fill_tracing_ids_cb_, this);
   CHECK_EQ(er, 0);
   er = blocked_loop_timer_.init(&thread_loop_);
   CHECK_EQ(er, 0);
@@ -1920,7 +1913,6 @@ void EnvList::removed_env_cb_(ns_async*, EnvList* envlist) {
   envlist->removed_env_msg_.close();
   envlist->process_callbacks_msg_.close();
   envlist->log_written_msg_.close();
-  envlist->fill_tracing_ids_msg_.close();
   envlist->blocked_loop_timer_.close();
   envlist->metrics_window_timer_.close();
 }
@@ -1939,8 +1931,6 @@ void EnvList::env_list_routine_(ns_thread*, EnvList* envlist) {
   CHECK_EQ(er, 0);
   envlist->blocked_loop_timer_.unref();
   envlist->metrics_window_timer_.unref();
-  envlist->fill_span_id_q();
-  envlist->fill_trace_id_q();
   // We initialize from the N|Solid thread and not the EnvList constructor as
   // DispatchQueue::Init() actually calls EnvList::Inst()
   er = envlist->datapoints_q_.Init(
@@ -2148,13 +2138,6 @@ void EnvList::update_tracing_flags(SharedEnvInst envinst_sp, uint32_t flags) {
                                         argv).FromMaybe(Local<Value>());
 }
 
-
-void EnvList::fill_tracing_ids_cb_(nsuv::ns_async*, EnvList* envlist) {
-  envlist->fill_span_id_q();
-  envlist->fill_trace_id_q();
-}
-
-
 void EnvList::q_cb_timeout_cb_(nsuv::ns_timer* handle, QCbTimeoutStor* ptr) {
   QCbTimeoutStor* stor = static_cast<QCbTimeoutStor*>(ptr);
   stor->cb(stor->data);
@@ -2163,65 +2146,6 @@ void EnvList::q_cb_timeout_cb_(nsuv::ns_timer* handle, QCbTimeoutStor* ptr) {
     handle->close_and_delete();
   delete stor;
 }
-
-
-void EnvList::popSpanId(std::array<uint8_t, 8>& span_id) {
-  int er;
-  size_t s;
-  if (!span_id_q_.dequeue(span_id, s)) {
-    // Generate the buffer synchronously
-    utils::generate_random_buf(span_id.data(), span_id.size());
-    // Notify the nsolid thread to fill the q
-    er = fill_tracing_ids_msg_.send();
-    CHECK_EQ(er, 0);
-    return;
-  }
-
-  if (s < SPAN_ID_Q_MIN_THRESHOLD) {
-    // Notify the nsolid thread to fill the q
-    er = fill_tracing_ids_msg_.send();
-    CHECK_EQ(er, 0);
-  }
-}
-
-
-void EnvList::popTraceId(std::array<uint8_t, 16>& trace_id) {
-  int er;
-  size_t s;
-  if (!trace_id_q_.dequeue(trace_id, s)) {
-    // Generate the buffer synchronously
-    utils::generate_random_buf(trace_id.data(), trace_id.size());
-    // Notify the nsolid thread to fill the q
-    er = fill_tracing_ids_msg_.send();
-    CHECK_EQ(er, 0);
-    return;
-  }
-
-  if (s < TRACE_ID_Q_MIN_THRESHOLD) {
-    // Notify the nsolid thread to fill the q
-    er = fill_tracing_ids_msg_.send();
-    CHECK_EQ(er, 0);
-  }
-}
-
-
-void EnvList::fill_span_id_q() {
-  for (unsigned int i = 0; i < SPAN_ID_Q_REFILL_ITEMS; ++i) {
-    std::array<uint8_t, 8> span_id;
-    utils::generate_random_buf(span_id.data(), span_id.size());
-    span_id_q_.enqueue(span_id);
-  }
-}
-
-
-void EnvList::fill_trace_id_q() {
-  for (unsigned int i = 0; i < TRACE_ID_Q_REFILL_ITEMS; ++i) {
-    std::array<uint8_t, 16> trace_id;
-    utils::generate_random_buf(trace_id.data(), trace_id.size());
-    trace_id_q_.enqueue(trace_id);
-  }
-}
-
 
 void EnvInst::custom_command_(SharedEnvInst envinst_sp,
                               const std::string req_id) {
@@ -3028,74 +2952,44 @@ double BindingData::FastGetWallTime(v8::Local<v8::Value> receiver) {
 void BindingData::SlowGetSpanId(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsUint8Array());
   Local<Uint8Array> output = args[0].As<Uint8Array>();
-
   DCHECK_EQ(output->Length(), 8);
-
-  std::array<uint8_t, 8> span_id;
-  EnvList* envlist = EnvList::Inst();
-  envlist->popSpanId(span_id);
-
-  // Copy binary data to the TypedArray
   uint8_t* buffer =
-    static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
-  for (size_t i = 0; i < span_id.size(); i++) {
-    buffer[i] = span_id[i];
-  }
+      static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
+  auto* data = FromJSObject<BindingData>(args.This());
+  utils::generate_random_buf(buffer, 8, &data->tracing_id_state_);
 }
 
-
-void BindingData::FastGetSpanId(v8::Local<v8::Value> receiver,
+void BindingData::FastGetSpanId(v8::Local<v8::Object> receiver,
                                 v8::Local<v8::Value> buffer) {
+  TRACK_V8_FAST_API_CALL("nsolid.getSpanId");
   Local<Uint8Array> output = buffer.As<Uint8Array>();
-  std::array<uint8_t, 8> span_id;
-  EnvList* envlist = EnvList::Inst();
-  envlist->popSpanId(span_id);
-
-  DCHECK_EQ(output->Length(), span_id.size());
-
+  DCHECK_EQ(output->Length(), 8);
   uint8_t* dst_data =
-    static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
-
-  // Copy binary data directly to the output buffer
-  memcpy(dst_data, span_id.data(), span_id.size());
+      static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
+  auto* data = FromJSObject<BindingData>(receiver);
+  utils::generate_random_buf(dst_data, 8, &data->tracing_id_state_);
 }
-
 
 void BindingData::SlowGetTraceId(const FunctionCallbackInfo<Value>& args) {
   CHECK(args[0]->IsUint8Array());
   Local<Uint8Array> output = args[0].As<Uint8Array>();
-
   DCHECK_EQ(output->Length(), 16);
-
-  std::array<uint8_t, 16> trace_id;
-  EnvList* envlist = EnvList::Inst();
-  envlist->popTraceId(trace_id);
-
-  // Copy binary data to the TypedArray
   uint8_t* buffer =
-    static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
-  for (size_t i = 0; i < trace_id.size(); i++) {
-    buffer[i] = trace_id[i];
-  }
+      static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
+  auto* data = FromJSObject<BindingData>(args.This());
+  utils::generate_random_buf(buffer, 16, &data->tracing_id_state_);
 }
 
-
-void BindingData::FastGetTraceId(v8::Local<v8::Value> receiver,
+void BindingData::FastGetTraceId(v8::Local<v8::Object> receiver,
                                  v8::Local<v8::Value> buffer) {
+  TRACK_V8_FAST_API_CALL("nsolid.getTraceId");
   Local<Uint8Array> output = buffer.As<Uint8Array>();
-  std::array<uint8_t, 16> trace_id;
-  EnvList* envlist = EnvList::Inst();
-  envlist->popTraceId(trace_id);
-
-  DCHECK_EQ(output->Length(), trace_id.size());
-
+  DCHECK_EQ(output->Length(), 16);
   uint8_t* dst_data =
-    static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
-
-  // Copy binary data directly to the output buffer
-  memcpy(dst_data, trace_id.data(), trace_id.size());
+      static_cast<uint8_t*>(output->Buffer()->Data()) + output->ByteOffset();
+  auto* data = FromJSObject<BindingData>(receiver);
+  utils::generate_random_buf(dst_data, 16, &data->tracing_id_state_);
 }
-
 
 static void GetEnvMetrics(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
