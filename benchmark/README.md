@@ -10,6 +10,7 @@ directory, see [the guide on benchmarks](../doc/contributing/writing-and-running
 ## Table of Contents
 
 * [File tree structure](#file-tree-structure)
+* [N|Solid tracing benchmarks](#nsolid-tracing-benchmarks)
 * [Common API](#common-api)
 
 ## File tree structure
@@ -53,6 +54,36 @@ directories.
   summarize the results without R.
 * `scatter.R`: R script for visualizing the output of `scatter.js` with
   scatter plots.
+
+## N|Solid tracing benchmarks
+
+Run these with an N|Solid binary built from the revision being measured:
+
+```console
+./nsolid benchmark/run.js nsolid
+```
+
+`tracing-ids.js` measures native span/trace ID generation using reusable,
+explicitly backed views. `threads=1` runs on the main thread; `threads=4`
+uses four workers and reports aggregate IDs per second. Worker startup and
+warmup are excluded from timing.
+
+`tracing-spans.js` measures unsampled root/child `startSpan()` and `end()`
+calls with explicit contexts. It exercises the built-in JavaScript ID
+helpers without measuring exporters or network work.
+
+Use the standard comparison tool to collect repeated observations:
+
+```console
+./nsolid benchmark/compare.js --old ./nsolid-before --new ./nsolid-after \
+  --filter tracing-ids --runs 10 nsolid > tracing.csv
+Rscript benchmark/compare.R < tracing.csv
+```
+
+Use `--filter tracing-spans` to select the span-lifecycle benchmark instead.
+For older builds whose tracing helpers pass on-heap views to fast callbacks,
+set `NODE_BENCHMARK_FLAGS=--no-turbo-fast-api-calls` on the comparison command
+to disable fast API calls on both sides of the span comparison.
 
 ## Common API
 
