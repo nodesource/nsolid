@@ -30,9 +30,23 @@ def validate_product(product):
     if not isinstance(subs, list):
       raise ValueError(f'Invalid OpenVEX product subcomponents: {subs!r}')
     for s in subs:
+      # OpenVEX 0.2.0 subcomponents can't have subcomponents of their own.
+      if not isinstance(s, dict) or 'subcomponents' in s:
+        raise ValueError(f'Invalid OpenVEX subcomponent: {s!r}')
       validate_product(s)
   else:
     raise ValueError(f'Invalid OpenVEX product: {product!r}')
+
+def validate_verify(verify):
+  # Each check names a repository file the fix lives in and a string that
+  # only the fixed code contains. test-nsolid-vex-fixes.js runs the checks.
+  if not isinstance(verify, list) or not verify:
+    raise ValueError(f'Invalid verify checks: {verify!r}')
+  for check in verify:
+    if (not isinstance(check, dict) or set(check) != {'path', 'contains'} or
+        not all(isinstance(v, str) and v for v in check.values()) or
+        check['path'].startswith('/') or '..' in check['path'].split('/')):
+      raise ValueError(f'Invalid verify check: {check!r}')
 
 def make_product(product):
   if product is None:
@@ -48,6 +62,7 @@ def validate_exception(exception):
   product = exception.get('product')
   impact_statement = exception.get('impact_statement')
   action_statement = exception.get('action_statement')
+  verify = exception.get('verify')
   if not isinstance(cve, str) or not CVE_PATTERN.fullmatch(cve):
     raise ValueError(f'Invalid CVE ID: {cve!r}')
   if status not in STATUSES:
@@ -62,6 +77,10 @@ def validate_exception(exception):
       raise ValueError('Fixed statements must not include justification')
     if action_statement is not None and not isinstance(action_statement, str):
       raise ValueError(f'Invalid action statement: {action_statement!r}')
+  if verify is not None:
+    if status != 'fixed':
+      raise ValueError('Only fixed statements can have verify checks')
+    validate_verify(verify)
   if product is not None:
     validate_product(product)
 
