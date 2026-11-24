@@ -288,6 +288,8 @@ class ZmqCommandHandle : public ZmqHandle {
 };
 
 class ZmqDataHandle : public ZmqHandle {
+  friend class ZmqAgentTest;
+
  public:
   NSOLID_DELETE_UNUSED_CONSTRUCTORS(ZmqDataHandle)
 
@@ -350,6 +352,8 @@ class ZmqBulkHandle : public ZmqHandle {
 //   console, dynamically change the configuration of the agent/runtime, etc.
 
 class ZmqAgent {
+  friend class ZmqAgentTest;
+
  public:
   enum Status {
 #define X(type, str)                                                          \
@@ -471,7 +475,6 @@ class ZmqAgent {
     int err;
     std::string req_id;
     ProfileType type;
-    ProfileOptions options;
   };
 
   ZmqAgent();
@@ -563,13 +566,11 @@ class ZmqAgent {
 
   int do_start_prof_init(
       const nlohmann::json& message,
+      const std::string& req_id,
       ProfileType type,
       ProfileOptions& options);  // NOLINT(runtime/references)
 
-  int do_start_prof_end(int err,
-                        const std::string& req_id,
-                        ProfileType type,
-                        ProfileOptions&& options);
+  int do_start_prof_end(int err, const std::string& req_id, ProfileType type);
 
   // NOLINTNEXTLINE(runtime/references)
   int do_start_cpu_prof(const nlohmann::json&, ProfileOptions& opts);
@@ -726,6 +727,7 @@ class ZmqAgent {
   nsuv::ns_async update_state_msg_;
 
   // Profiling
+  nsuv::ns_mutex profile_state_lock_;
   ProfileState profile_state_[ProfileType::kNumberOfProfileTypes];
   std::atomic<bool> profile_on_exit_;
   std::atomic<bool> cont_cpu_profile_enabled_;
