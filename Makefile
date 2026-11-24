@@ -1829,7 +1829,7 @@ test-with-console:
 
 .PHONY: test-agents-prereqs
 test-agents-prereqs:
-	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 base85 --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock --ignore-scripts
+	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install zeromq@5 base85@3.2.0 --prefix test/common/nsolid-zmq-agent --no-save --no-package-lock --ignore-scripts
 	env npm_config_nodedir=$(PWD) $(NODE) ./deps/npm install nan@latest --no-save --no-package-lock --prefix test/common/nsolid-zmq-agent/node_modules/zeromq
 	# Patch zeromq binding.gyp to use C++20 instead of C++17 before building
 	sed -i.bak 's/c++17/c++20/g' test/common/nsolid-zmq-agent/node_modules/zeromq/binding.gyp && rm -f test/common/nsolid-zmq-agent/node_modules/zeromq/binding.gyp.bak
