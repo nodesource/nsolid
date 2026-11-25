@@ -1307,7 +1307,30 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
     OPENSSL_INIT_set_config_file_flags(settings,
                                        CONF_MFLAGS_IGNORE_MISSING_FILE);
 
-    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, settings);
+    // N|Solid: never let OpenSSL clean up its global state at exit.
+    //
+    // By default the first OPENSSL_init_crypto() call registers
+    // OPENSSL_cleanup() with atexit(). The N|Solid gRPC and OTLP/gRPC agents
+    // run gRPC EventEngine threads that hold OpenSSL per-thread state, and
+    // gRPC does not guarantee those threads have exited when the process does.
+    // When a thread exits while OPENSSL_cleanup() is running, OpenSSL's
+    // thread-exit destructor and ossl_cleanup_thread() free the same state:
+    // "double free or corruption" and SIGABRT (or SIGSEGV) at exit.
+    //
+    // gRPC already passes OPENSSL_INIT_NO_ATEXIT for this reason
+    // (grpc/grpc#42608, deps/grpc/src/core/tsi/ssl_transport_security.cc), but
+    // the atexit registration is a run-once decided by the first full
+    // initialization, which is this one, so gRPC's flag has no effect unless
+    // we pass it here too. OpenSSL upstream is dropping the atexit handler
+    // altogether (openssl/openssl#29385).
+    //
+    // The process exits right after, so nothing is really leaked; leak
+    // checkers may report OpenSSL's allocations as still reachable, and
+    // providers loaded from openssl.cnf no longer get their teardown at exit.
+    // Code that needs it can still call OPENSSL_cleanup() explicitly.
+    // See nodesource/nsolid-private#130.
+    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG | OPENSSL_INIT_NO_ATEXIT,
+                        settings);
     OPENSSL_INIT_free(settings);
 
     if (ERR_peek_error() != 0) {
