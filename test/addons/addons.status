@@ -13,6 +13,7 @@ openssl-binding/test: PASS,FLAKY
 [$system==ibmi]
 openssl-binding/test: SKIP
 openssl-get-ssl-ctx/test: SKIP
+openssl-no-atexit/test: SKIP
 openssl-providers/test-default-only-config: SKIP
 openssl-providers/test-default-properties-config: SKIP
 openssl-providers/test-legacy-provider-config: SKIP
