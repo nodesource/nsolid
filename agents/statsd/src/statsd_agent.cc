@@ -1,4 +1,5 @@
 #include <openssl/sha.h>
+#include <algorithm>
 #include <regex>  // NOLINT(build/c++11)
 #include <thread>  // NOLINT(build/c++11)
 #include <tuple>
@@ -37,6 +38,17 @@ inline void DebugJSON(const char* str, const json& msg) {
   }
 }
 
+static std::string SanitizeField(std::string value) {
+  std::replace_if(
+      value.begin(),
+      value.end(),
+      [](char ch) {
+        return ch == '\r' || ch == '\n' || ch == '|' || ch == ':' ||
+               ch == '#' || ch == ',';
+      },
+      '-');
+  return value;
+}
 
 StatsDTcp::StatsDTcp(uv_loop_t* loop,
                      nsuv::ns_async* update_state_msg)
@@ -68,12 +80,8 @@ void StatsDTcp::close_and_delete() {
     retry_timer_ = nullptr;
   }
 
-  if (internal_state_ == 0) {
-    delete this;
-    return;
-  }
-
   internal_state_ |= kClosing;
+  do_delete();
 }
 
 void StatsDTcp::status(const StatsDTcp::Status& status) {
@@ -107,9 +115,10 @@ int StatsDTcp::write(const string_vector& messages) {
     Debug("Error: '%s' writing. Reconnecting...\n", uv_err_name(r));
     prep_retry_timer_();
     connect_();
+    return r;
   }
 
-  internal_state_ |= kWriting;
+  ++pending_writes_;
   req->set_data(sv);
   return r;
 }
@@ -122,12 +131,6 @@ void StatsDTcp::setup(StatsDEndpoint* endpoint) {
   if (retry_timer_) {
     USE(retry_timer_->stop());
   }
-
-  if (tcp_ != nullptr) {
-    tcp_->close_and_delete();
-  }
-  tcp_ = new nsuv::ns_tcp();
-  ASSERT_EQ(0, tcp_->init(loop_));
 
   endpoint_.reset(endpoint);
   addr_index_ = 0;
@@ -182,13 +185,13 @@ void StatsDTcp::write_cb_(nsuv::ns_write<nsuv::ns_tcp>* req,
   delete sv;
   delete req;
 
-  tcp->internal_state_ &= ~kWriting;
+  --tcp->pending_writes_;
   if (tcp->internal_state_ & kClosing) {
     tcp->do_delete();
     return;
   }
 
-  if (status < 0) {
+  if (status < 0 && tcp->status_ == Connected) {
     tcp->addr_str("");
     Debug("Error: '%s' writing. Reconnecting...\n", uv_err_name(status));
     tcp->connect_();
@@ -220,6 +223,11 @@ void StatsDTcp::retry_after_fail_() {
 }
 
 void StatsDTcp::connect_() {
+  if (tcp_ != nullptr) {
+    tcp_->close_and_delete();
+  }
+  tcp_ = new nsuv::ns_tcp();
+  ASSERT_EQ(0, tcp_->init(loop_));
   auto* ss = &endpoint_->addresses()[addr_index_];
   const struct sockaddr* addr = reinterpret_cast<const struct sockaddr*>(ss);
   addr_str("");
@@ -308,7 +316,7 @@ int StatsDUdp::write(const string_vector& messages) {
 
   size_t dgram_size = 0;
   for (auto& line : *sv) {
-    if (dgram_size + line.length() > UDP_PACKET_MAX_BYTES) {
+    if (!bufs.empty() && dgram_size + line.length() > UDP_PACKET_MAX_BYTES) {
       r = do_send();
       if (r < 0) {
         goto cleanup_and_error;
@@ -942,6 +950,7 @@ void StatsDAgent::config_bucket() {
     bucket_ = calculate_bucket(it != config_.end() ?
                                it->get<std::string>() :
                                def_bucket);
+    bucket_ = SanitizeField(std::move(bucket_));
   }
 }
 
@@ -953,6 +962,8 @@ void StatsDAgent::config_tags() {
       tags_ = "";
     } else {
       tags_ = calculate_tags(*it);
+      tags_ = "|#" +
+              std::regex_replace(tags_.substr(2), std::regex("[\\r\\n|]"), "-");
     }
   }
 }
@@ -1095,7 +1106,7 @@ int StatsDAgent::send_metrics(const json& metrics,
 
     tags += "threadId:" + std::to_string(thread_id);
     if (thread_name && strlen(thread_name)) {
-      tags += ",threadName:" + std::string(thread_name);
+      tags += ",threadName:" + SanitizeField(thread_name);
     }
   }
 

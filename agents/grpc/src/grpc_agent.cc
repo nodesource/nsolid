@@ -1951,15 +1951,6 @@ void GrpcAgent::reconfigure(const grpcagent::CommandRequest& request) {
   if (body.has_redactsnapshots()) {
       out["redactSnapshots"] = body.redactsnapshots();
   }
-  if (body.has_statsd()) {
-      out["statsd"] = body.statsd();
-  }
-  if (body.has_statsdbucket()) {
-      out["statsdBucket"] = body.statsdbucket();
-  }
-  if (body.has_statsdtags()) {
-      out["statsdTags"] = body.statsdtags();
-  }
   if (body.tags_size() > 0) {
       out["tags"] = json::array();
       for (int i = 0; i < body.tags_size(); i++) {

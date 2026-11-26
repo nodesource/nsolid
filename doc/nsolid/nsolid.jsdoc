@@ -565,7 +565,9 @@
 /**
  * @callback StatsDFormatMethod
  * @param {string} name
- * @param {string} value
+ * @param {string|number} value - A finite number or numeric string. Gauge strings
+ * may include a leading + or - for relative updates. Set values may be arbitrary
+ * strings; StatsD separators are replaced with hyphens.
  */
 
 /**
@@ -595,7 +597,9 @@
  * @description Sends that to the StatsD server configured using the
  * configured bucket and tags.
  * @param {string} name
- * @param {string} value
+ * @param {string|number} value - A finite number or numeric string. Gauge strings
+ * may include a leading + or - for relative updates. Set values may be arbitrary
+ * strings; StatsD separators are replaced with hyphens.
  */
 
 /**

@@ -27,14 +27,14 @@ let expectedBucket = getExpectedBucket();
 
 while (nsolid.statsd.format.bucket() !== expectedBucket);
 
-assert.strictEqual(nsolid.statsd.format.counter('name', 'value'),
-                   `${expectedBucket}.name:value|c`);
-assert.strictEqual(nsolid.statsd.format.gauge('name', 'value'),
-                   `${expectedBucket}.name:value|g`);
+assert.strictEqual(nsolid.statsd.format.counter('name', 42),
+                   `${expectedBucket}.name:42|c`);
+assert.strictEqual(nsolid.statsd.format.gauge('name', 42),
+                   `${expectedBucket}.name:42|g`);
 assert.strictEqual(nsolid.statsd.format.set('name', 'value'),
                    `${expectedBucket}.name:value|s`);
-assert.strictEqual(nsolid.statsd.format.timing('name', 'value'),
-                   `${expectedBucket}.name:value|ms`);
+assert.strictEqual(nsolid.statsd.format.timing('name', 42),
+                   `${expectedBucket}.name:42|ms`);
 
 nsolid.start({
   /* eslint-disable no-template-curly-in-string */
@@ -48,11 +48,11 @@ expectedBucket = getExpectedBucket();
 while (nsolid.statsd.format.bucket() !== expectedBucket ||
        nsolid.statsd.format.tags().length === 0);
 
-assert.strictEqual(nsolid.statsd.format.counter('name', 'value'),
-                   `${expectedBucket}.name:value|c|#st1,st2,t1,t2`);
-assert.strictEqual(nsolid.statsd.format.gauge('name', 'value'),
-                   `${expectedBucket}.name:value|g|#st1,st2,t1,t2`);
+assert.strictEqual(nsolid.statsd.format.counter('name', 42),
+                   `${expectedBucket}.name:42|c|#st1,st2,t1,t2`);
+assert.strictEqual(nsolid.statsd.format.gauge('name', 42),
+                   `${expectedBucket}.name:42|g|#st1,st2,t1,t2`);
 assert.strictEqual(nsolid.statsd.format.set('name', 'value'),
                    `${expectedBucket}.name:value|s|#st1,st2,t1,t2`);
-assert.strictEqual(nsolid.statsd.format.timing('name', 'value'),
-                   `${expectedBucket}.name:value|ms|#st1,st2,t1,t2`);
+assert.strictEqual(nsolid.statsd.format.timing('name', 42),
+                   `${expectedBucket}.name:42|ms|#st1,st2,t1,t2`);
