@@ -17,9 +17,16 @@ namespace nsolid {
 
 template <typename Key, typename Value>
 class LRUMap {
-  // The entries, oldest first. index_ finds a key's entry, and the time it
-  // was inserted.
-  using entry_list = std::list<std::pair<const Key, Value>>;
+  // An entry is the key/value pair plus the time it was inserted.
+  struct Entry : std::pair<const Key, Value> {
+    template <typename V>
+    Entry(const Key& k, V&& v, uint64_t t)
+        : std::pair<const Key, Value>(k, std::forward<V>(v)), time(t) {}
+    uint64_t time;
+  };
+
+  // The entries, oldest first. index_ finds a key's entry.
+  using entry_list = std::list<Entry>;
   using iterator = typename entry_list::iterator;
   using cb_proxy_sig = void(*)(void*, Value);
   using deleter_sig = void(*)(void*);
@@ -50,7 +57,7 @@ class LRUMap {
 
   inline iterator find(const Key& k) {
     auto it = index_.find(k);
-    return it == index_.end() ? entries_.end() : it->second.first;
+    return it == index_.end() ? entries_.end() : it->second;
   }
 
   inline std::pair<iterator, bool> insert(const Key& k, const Value& v) {
@@ -67,15 +74,20 @@ class LRUMap {
       return 0;
     }
 
-    entries_.erase(it->second.first);
+    entries_.erase(it->second);
     index_.erase(it);
     return 1;
   }
 
   // removes entries which have already expired and call the expiration cb
   inline void clean() {
-    while (!entries_.empty() &&
-           (uv_hrtime() - index_.at(entries_.front().first).second) > expiry_) {
+    if (entries_.empty()) {
+      return;
+    }
+
+    uint64_t now = uv_hrtime();
+    // expiry_ is minutes at most, so time + expiry_ doesn't overflow.
+    while (!entries_.empty() && entries_.front().time + expiry_ < now) {
       expire_oldest();
     }
   }
@@ -95,11 +107,12 @@ class LRUMap {
   inline std::pair<iterator, bool> add(const Key& k, V&& v) {
     auto found = index_.find(k);
     if (found != index_.end()) {
-      return {found->second.first, false};
+      return {found->second, false};
     }
 
-    iterator it = entries_.emplace(entries_.end(), k, std::forward<V>(v));
-    index_.emplace(k, std::make_pair(it, uv_hrtime()));
+    iterator it =
+        entries_.emplace(entries_.end(), k, std::forward<V>(v), uv_hrtime());
+    index_.emplace(k, it);
     if (max_size_ != 0 && entries_.size() > max_size_) {
       expire_oldest();
     }
@@ -126,7 +139,7 @@ class LRUMap {
   }
 
   entry_list entries_;
-  std::unordered_map<Key, std::pair<iterator, uint64_t>> index_;
+  std::unordered_map<Key, iterator> index_;
   uint64_t expiry_;
   size_t max_size_ = 0;
   std::unique_ptr<void, deleter_sig> data_;
