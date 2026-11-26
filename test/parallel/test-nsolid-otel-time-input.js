@@ -66,6 +66,13 @@ testBinding.pushSpanDataDouble = common.mustCallAtLeast(
     }
     timestamps.push(time);
   });
+testBinding.pushSpanStart = common.mustCallAtLeast(
+  (ids, time, monotonicStart) => {
+    assert.strictEqual(typeof time, 'number');
+    assert.strictEqual(typeof monotonicStart, 'number');
+    lastMonotonicStart = monotonicStart;
+    timestamps.push(time);
+  });
 testBinding.pushSpanDataString = (high, low, type, value) => {
   if (type === binding.nsolid_consts.kSpanEvent) {
     events.push(JSON.parse(value).time);

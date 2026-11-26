@@ -2807,6 +2807,48 @@ void BindingData::PushSpanDataDoubleImpl(BindingData* data,
       SpanItem{ span_id, envinst->thread_id(), std::move(prop) });
 }
 
+static const uint32_t* SpanStartIds(v8::Local<v8::Value> value) {
+  Local<Uint32Array> ids = value.As<Uint32Array>();
+  DCHECK_EQ(ids->Length(), 8);
+  DCHECK(ids->HasBuffer());  // Callers must pass an off-heap view.
+  return reinterpret_cast<const uint32_t*>(
+      static_cast<const uint8_t*>(ids->Buffer()->Data()) + ids->ByteOffset());
+}
+
+void BindingData::SlowPushSpanStart(const FunctionCallbackInfo<Value>& args) {
+  CHECK(args[0]->IsUint32Array());
+  CHECK(args[1]->IsNumber());
+  CHECK(args[2]->IsNumber());
+  PushSpanStartImpl(FromJSObject<BindingData>(args.This()),
+                    SpanStartIds(args[0]),
+                    args[1].As<Number>()->Value(),
+                    args[2].As<Number>()->Value());
+}
+
+void BindingData::FastPushSpanStart(v8::Local<v8::Object> receiver,
+                                    v8::Local<v8::Value> ids,
+                                    double start,
+                                    double monotonic) {
+  TRACK_V8_FAST_API_CALL("nsolid.pushSpanStart");
+  PushSpanStartImpl(
+      FromJSObject<BindingData>(receiver), SpanStartIds(ids), start, monotonic);
+}
+
+void BindingData::PushSpanStartImpl(BindingData* data,
+                                    const uint32_t* ids,
+                                    double start,
+                                    double monotonic) {
+  const uint64_t span_id = (uint64_t{ids[0]} << 32) | ids[1];
+  Span::StartTime start_time{start, monotonic};
+  start_time.has_ids = true;
+  start_time.trace_id = {ids[2], ids[3], ids[4], ids[5]};
+  start_time.parent_id = (uint64_t{ids[6]} << 32) | ids[7];
+  auto prop = Span::createSpanProp(Span::kSpanStart, start_time);
+  EnvInst* envinst = data->env()->envinst_.get();
+  EnvList::Inst()->GetTracer()->pushSpanData(
+      SpanItem{span_id, envinst->thread_id(), std::move(prop)});
+}
+
 void BindingData::SlowPushSpanDataUint64(
     const FunctionCallbackInfo<Value>& args) {
   DCHECK_EQ(args.Length(), 4);
@@ -3713,6 +3755,8 @@ v8::CFunction BindingData::fast_push_server_bucket_(
     v8::CFunction::Make(FastPushServerBucket));
 v8::CFunction BindingData::fast_push_span_data_double_(
     v8::CFunction::Make(FastPushSpanDataDouble));
+v8::CFunction BindingData::fast_push_span_start_(
+    v8::CFunction::Make(FastPushSpanStart));
 v8::CFunction BindingData::fast_push_span_data_uint64_(
     v8::CFunction::Make(FastPushSpanDataUint64));
 v8::CFunction BindingData::fast_push_span_data_string_(
@@ -3758,6 +3802,11 @@ void BindingData::Initialize(Local<Object> target,
                 "pushSpanDataDouble",
                 SlowPushSpanDataDouble,
                 &fast_push_span_data_double_);
+  SetFastMethod(context,
+                target,
+                "pushSpanStart",
+                SlowPushSpanStart,
+                &fast_push_span_start_);
   SetFastMethod(context,
                 target,
                 "pushSpanDataUint64",
@@ -3961,6 +4010,9 @@ void BindingData::RegisterExternalReferences(
 
   registry->Register(SlowPushSpanDataDouble);
   registry->Register(fast_push_span_data_double_);
+
+  registry->Register(SlowPushSpanStart);
+  registry->Register(fast_push_span_start_);
 
   registry->Register(SlowPushSpanDataUint64);
   registry->Register(fast_push_span_data_uint64_);
