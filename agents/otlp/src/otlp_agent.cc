@@ -52,13 +52,6 @@ inline void Debug(Args&&... args) {
                      std::forward<Args>(args)...);
 }
 
-inline void DebugJSON(const char* str, const json& msg) {
-  if (per_process::enabled_debug_list.enabled(
-        DebugCategory::NSOLID_OTLP_AGENT)) {
-    Debug(str, msg.dump(4).c_str());
-  }
-}
-
 JSThreadMetrics::JSThreadMetrics(SharedEnvInst envinst):
     metrics_(ThreadMetrics::Create(envinst)),
     prev_() {
@@ -169,9 +162,6 @@ static string_vector tracing_fields({ "/tracingEnabled",
 
 int OTLPAgent::config(const nlohmann::json& config) {
   json diff = json::diff(config_, config);
-  DebugJSON("Old Config: \n%s\n", config_);
-  DebugJSON("NewConfig: \n%s\n", config);
-  DebugJSON("Diff: \n%s\n", diff);
   config_ = config;
   if (utils::find_any_fields_in_diff(diff, otlp_fields)) {
     config_otlp_agent(config_);

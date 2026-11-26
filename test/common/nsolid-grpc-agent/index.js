@@ -130,6 +130,9 @@ class GRPCServer extends EventEmitter {
   start(cb) {
     let started = false;
     const args = [];
+    if (this.#opts.observeMetadata) {
+      args.push('--observe-metadata');
+    }
     if (this.#opts.rejectAuth) {
       args.push('--reject-auth');
     }
@@ -147,7 +150,7 @@ class GRPCServer extends EventEmitter {
     }
 
     const opts = {
-      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+      stdio: this.#opts.stdio || ['inherit', 'inherit', 'inherit', 'ipc'],
     };
     this.#server = fork(path.join(__dirname, 'server.mjs'), args, opts);
     this.#server.once('error', (err) => cb(err));
@@ -158,6 +161,9 @@ class GRPCServer extends EventEmitter {
     });
     this.#server.on('message', (message) => {
       switch (message.type) {
+        case 'rpc':
+          this.emit('rpc', message.data);
+          break;
         case 'command':
           this.emit('command', message.data);
           break;
@@ -404,7 +410,7 @@ class TestClient {
   constructor(args = [], options = {}) {
     const opts = { ...defaultForkOpts };
     Object.keys(options).forEach((key) => {
-      opts[key] = { ...opts[key], ...options[key] };
+      opts[key] = key === 'env' ? { ...opts[key], ...options[key] } : options[key];
     });
 
     this.#child = fork(path.join(__dirname, 'client.js') + '', args, opts);
@@ -613,18 +619,11 @@ class TestClient {
   }
 
   async log(threadId, level, message) {
-    return new Promise((resolve) => {
-      if (this.#child) {
-        this.#child.send({ type: 'log', level, message, threadId });
-        this.#child.once('message', common.mustCall((msg) => {
-          if (msg.type === 'log') {
-            resolve();
-          }
-        }));
-      } else {
-        resolve();
-      }
-    });
+    if (!this.#child)
+      return;
+    // Wait for the 'log' reply specifically: another late reply mustn't
+    // consume the wait.
+    await this.#sendAndWait({ type: 'log', payload: { level, message, threadId } });
   }
 
   async metrics() {

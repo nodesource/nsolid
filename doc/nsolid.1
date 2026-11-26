@@ -803,6 +803,7 @@ Profiling and snapshots now use the gRPC agent.
 Removed ZeroMQ settings are ignored and produce a one-time startup warning naming the settings.
 If both NSOLID_COMMAND and NSOLID_SAAS are set, NSOLID_SAAS now takes effect.
 Remove stale NSOLID_SAAS tokens when migrating an on-premises deployment to NSOLID_GRPC.
+A leftover NSOLID_SAAS token is sent to the on-premises NSOLID_GRPC address and forces TLS (except for testing tokens), so deployments relying on insecure transport stop connecting.
 .Pp
 The StatsD agent, its configuration options, and the nsolid.statsd API have been removed.
 Local StatsD settings are ignored and produce a one-time warning naming the settings.
@@ -814,14 +815,28 @@ Use NSOLID_GRPC or NSOLID_SAAS to connect to the N|Solid Console.
 .Bl -tag -width 6n
 .It Ev NSOLID_GRPC
 Location of the N|Solid gRPC endpoint.
+Use a hostname or IP address with an optional port, or a port alone to
+connect to localhost.
+Port 0, URL credentials, paths, queries and fragments are rejected.
+When both NSOLID_GRPC and NSOLID_SAAS are set, connect to NSOLID_GRPC
+(port 443 by default) and send the token as nsolid-saas metadata on every
+RPC.
+The same behavior applies to the grpc and saas package.json fields and
+nsolid.start() options, including runtime changes.
+An address alone sends no token.
+An invalid address prints a warning and the agent connects nowhere,
+not even to the token's endpoint, until a valid address is set or the
+address is unset.
+To unset it with nsolid.start(), pass null, an empty string, 0 or false.
 .
 .It Ev NSOLID_GRPC_INSECURE
 Use insecure gRPC transport with 1 or true (case-insensitive).
 Use TLS with 0, false or an empty value. TLS is the default.
 Unrecognized values emit a warning once per process and use TLS.
+Ignored when NSOLID_SAAS is set, except for testing tokens: tokens require TLS.
 .
 .It Ev NSOLID_GRPC_CERTS
-Path of the gRPC CA certificate bundle.
+Path of the gRPC CA certificate bundle, including a private CA for a custom endpoint.
 .
 .It Ev NSOLID_GRPC_CLIENT_CERT
 Path of the PEM certificate the gRPC agent presents to the N|Solid and OTLP endpoints.
@@ -877,6 +892,10 @@ Example: NSOLID_TAGS="api,staging,v1.9.2"
 .
 .It Ev NSOLID_SAAS Ar key
 The SaaS token acquired while signing up for a SaaS account.
+Without an explicit grpc address, connect to <id>.grpc.nodesource.io:443
+(or its staging equivalent) as derived from the token.
+With an explicit address, send the token to that address over TLS.
+With an invalid address, don't connect.
 .
 .It Ev NSOLID_DISABLE_SNAPSHOTS
 Force disable snapshots. Once set it cannot be reset.

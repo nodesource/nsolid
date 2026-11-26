@@ -273,6 +273,7 @@ tests.push({
           config.grpc = correctEnv.NSOLID_GRPC;
         }
         if (correctEnv.NSOLID_SAAS) {
+          config.grpc = null;
           config.saas = correctEnv.NSOLID_SAAS;
         }
 
