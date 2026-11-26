@@ -11,6 +11,7 @@
 #include <list>
 #include <memory>
 #include <queue>
+#include <type_traits>
 
 /* NSOLID_WUR -> NSOLID_WARN_UNUSED_RESULT */
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
@@ -162,15 +163,20 @@ struct TSList {
     list_.push_back(std::move(data));
     return false;
   }
-  inline void for_each(std::function<void(const DataType&)> fn) {
+  // fn takes (const DataType&) or (const DataType&, size_t), the size being
+  // the list size.
+  template <typename Fn>
+  inline void for_each(Fn&& fn) {
     nsuv::ns_mutex::scoped_lock lock(lock_);
-    std::for_each(list_.begin(), list_.end(), fn);
-  }
-  inline void for_each(std::function<void(const DataType&, size_t)> fn) {
-    nsuv::ns_mutex::scoped_lock lock(lock_);
-    size_t current_size = list_.size();
-    for (auto& item : list_) {
-      fn(item, current_size);
+    if constexpr (std::is_invocable_v<Fn&, const DataType&, size_t>) {
+      size_t current_size = list_.size();
+      for (const auto& item : list_) {
+        std::invoke(fn, item, size_t{current_size});
+      }
+    } else {
+      for (const auto& item : list_) {
+        std::invoke(fn, item);
+      }
     }
   }
   inline size_t erase(iterator it) {
@@ -202,15 +208,20 @@ struct TSList<DataType*> {
     list_.push_back(data);
     return --list_.end();
   }
-  inline void for_each(std::function<void(DataType*)> fn) {
+  // fn takes (DataType*) or (DataType*, size_t), the size being the list
+  // size.
+  template <typename Fn>
+  inline void for_each(Fn&& fn) {
     nsuv::ns_mutex::scoped_lock lock(lock_);
-    std::for_each(list_.begin(), list_.end(), fn);
-  }
-  inline void for_each(std::function<void(DataType*, size_t)> fn) {
-    nsuv::ns_mutex::scoped_lock lock(lock_);
-    size_t current_size = list_.size();
-    for (auto& item : list_) {
-      fn(item, current_size);
+    if constexpr (std::is_invocable_v<Fn&, DataType*, size_t>) {
+      size_t current_size = list_.size();
+      for (DataType* item : list_) {
+        std::invoke(fn, static_cast<DataType*>(item), size_t{current_size});
+      }
+    } else {
+      for (DataType* item : list_) {
+        std::invoke(fn, static_cast<DataType*>(item));
+      }
     }
   }
   inline size_t erase(iterator it) {
