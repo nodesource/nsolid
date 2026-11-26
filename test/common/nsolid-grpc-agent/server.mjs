@@ -7,6 +7,10 @@ import protoLoader from '@grpc/proto-loader';
 import fixtures from '../fixtures.js';
 
 const options = {
+  'observe-metadata': {
+    type: 'boolean',
+    default: false,
+  },
   'reject-auth': {
     type: 'boolean',
     default: false,
@@ -46,6 +50,18 @@ const commandCallMap = new Map();
 // Create a local server to receive data from
 async function startServer(cb) {
   const server = new grpc.Server();
+  function addService(service, handlers) {
+    if (args.values['observe-metadata']) {
+      for (const [method, handler] of Object.entries(handlers)) {
+        handlers[method] = (call, callback) => {
+          process.send({ type: 'rpc', data: { method: service[method].path,
+                                              metadata: call.metadata } });
+          return handler(call, callback);
+        };
+      }
+    }
+    server.addService(service, handlers);
+  }
   const opts = {
     keepCase: false,
     longs: String,
@@ -57,7 +73,7 @@ async function startServer(cb) {
 
   const packageDefinitionLogs = await protoLoader.load(logsServiceProtoPath, opts);
   const packageObjectLogs = grpc.loadPackageDefinition(packageDefinitionLogs);
-  server.addService(packageObjectLogs.opentelemetry.proto.collector.logs.v1.LogsService.service, {
+  addService(packageObjectLogs.opentelemetry.proto.collector.logs.v1.LogsService.service, {
     Export: (data, callback) => {
       console.dir(data.request, { depth: null });
       // console.log('Logs received');
@@ -68,7 +84,7 @@ async function startServer(cb) {
 
   const packageDefinitionMetrics = await protoLoader.load(metricsServiceProtoPath, opts);
   const packageObjectMetrics = grpc.loadPackageDefinition(packageDefinitionMetrics);
-  server.addService(packageObjectMetrics.opentelemetry.proto.collector.metrics.v1.MetricsService.service, {
+  addService(packageObjectMetrics.opentelemetry.proto.collector.metrics.v1.MetricsService.service, {
     Export: (data, callback) => {
       // console.dir(data, { depth: null });
       console.log('Metrics received');
@@ -82,7 +98,7 @@ async function startServer(cb) {
 
   const packageDefinitionTrace = await protoLoader.load(traceServiceProtoPath, opts);
   const packageObjectTrace = grpc.loadPackageDefinition(packageDefinitionTrace);
-  server.addService(packageObjectTrace.opentelemetry.proto.collector.trace.v1.TraceService.service, {
+  addService(packageObjectTrace.opentelemetry.proto.collector.trace.v1.TraceService.service, {
     Export: (data, callback) => {
       callback(null, { message: 'Trace received' });
       cb(null, 'spans', data.request);
@@ -91,7 +107,7 @@ async function startServer(cb) {
 
   const packageDefinition = await protoLoader.load(serviceProtoPath, opts);
   const packageObject = grpc.loadPackageDefinition(packageDefinition);
-  server.addService(packageObject.grpcagent.NSolidService.service, {
+  addService(packageObject.grpcagent.NSolidService.service, {
     Command: async (call) => {
       if (args.values['reject-auth']) {
         call.emit('error', { code: grpc.status.UNAUTHENTICATED,

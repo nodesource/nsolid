@@ -164,6 +164,10 @@ void GrpcAgent::RefreshRpcMetadata() {
 void GrpcAgent::ResetGrpcClients() {
   USE(auth_timer_.stop());
   command_stream_.reset();
+  // The old stream can enqueue commands until its destructor finishes.
+  CommandRequestStor request;
+  while (command_q_.dequeue(request)) {
+  }
   nsolid_service_stub_.reset();
   log_exporter_.reset();
   metrics_exporter_.reset();
@@ -1186,9 +1190,6 @@ int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
   json diff = json::diff(old_config, config_);
   const bool saas_changed = utils::find_any_fields_in_diff(diff, { "/saas" });
   const bool grpc_changed = utils::find_any_fields_in_diff(diff, { "/grpc" });
-  DebugJSON("Old Config: \n%s\n", old_config);
-  DebugJSON("NewConfig: \n%s\n", config_);
-  DebugJSON("Diff: \n%s\n", diff);
 
   if (saas_changed) {
     auto it = config_.find("saas");
@@ -1207,7 +1208,12 @@ int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
   if (grpc_changed || saas_changed || reset_grpc_clients) {
     ResetGrpcClients();
     auto it = config_.find("grpc");
-    if (it != config_.end() || saas_) {
+    // A rejected address is kept as a non-string marker. Don't connect
+    // anywhere, not even to the SaaS token's endpoint.
+    const bool grpc_rejected = it != config_.end() && !it->is_string();
+    if (grpc_rejected) {
+      Debug("GrpcAgent not connecting: invalid grpc address\n");
+    } else if (it != config_.end() || saas_) {
       // Setup the client/s
 
       bool insecure = false;
@@ -1227,9 +1233,17 @@ int GrpcAgent::config(const json& config, bool reset_grpc_clients) {
         }
       }
 
-      const std::string& endpoint = !saas_ ?
-                                    it->get<std::string>() :
-                                    saas_->endpoint;
+      std::string endpoint =
+          it != config_.end() ? it->get<std::string>() : saas_->endpoint;
+      // An address alone keeps each client's default port. With a token, use
+      // the TLS port for all of them, as the token's own endpoint does.
+      const size_t colon = endpoint.rfind(':');
+      const size_t bracket = endpoint.rfind(']');
+      if (saas_ && it != config_.end() &&
+          (colon == std::string::npos ||
+           (bracket != std::string::npos && bracket > colon))) {
+        endpoint += ":443";
+      }
       Debug("GrpcAgent configured. Endpoint: %s. Insecure: %d. "
             "Client certificate: %d\n",
             endpoint.c_str(),
@@ -1884,7 +1898,7 @@ void GrpcAgent::handle_command_request(CommandRequestStor&& req) {
 }
 
 void GrpcAgent::parse_saas_token(const std::string& token) {
-  Debug("Parsing SaaS token: %s\n", token.c_str());
+  Debug("Parsing SaaS token\n");
   std::string pubKey = token.substr(0, PUB_KEY_SIZE);
   std::replace(pubKey.begin(), pubKey.end(), ',', '!');
   std::string saasUrl = token.substr(PUB_KEY_SIZE, token.length());
@@ -1895,13 +1909,13 @@ void GrpcAgent::parse_saas_token(const std::string& token) {
   std::getline(saasStream, basePort, ':');
 
   if (baseUrl.empty() || basePort.empty() || pubKey.length() != PUB_KEY_SIZE) {
-    Debug("Invalid SaaS token: %s\n", token.c_str());
+    Debug("Invalid SaaS token\n");
     return;
   }
 
   std::string console_id = baseUrl.substr(0, baseUrl.find('.'));
   if (console_id.size() != CONSOLE_ID_SIZE) {
-    Debug("Invalid SaaS token: %s\n", token.c_str());
+    Debug("Invalid SaaS token\n");
     return;
   }
 
