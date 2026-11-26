@@ -110,11 +110,7 @@ void SpanCollector::process_spans() {
   // After processing, call the stored callback with the spans and additional
   // data.
   if (spans.size()) {
-    if (transform_callback_) {
-      transform_callback_(spans);
-    } else {
-      callback_(spans);
-    }
+    callback_(spans);
   }
 }
 

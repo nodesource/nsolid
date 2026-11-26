@@ -20,9 +20,7 @@ using SpanVector = std::vector<Tracer::SpanStor>;
  * SpanCollector is a class that allows to start collecting spans and report
  * them to a callback function running in a specific uv_loop_t thread. The
  * collector can be configured with a minimum span count and a time interval to
- * report the spans. In addition, the collector can be configured with a
- * transform function that will be applied to the spans before calling the final
- * callback.
+ * report the spans.
  */
 class SpanCollector: public std::enable_shared_from_this<SpanCollector> {
  public:
@@ -41,35 +39,6 @@ class SpanCollector: public std::enable_shared_from_this<SpanCollector> {
     this->do_collect();
   }
 
-  template <typename Transform, typename Cb, typename... Data>
-  void CollectAndTransform(Transform&& transform, Cb&& cb, Data&&... data) {
-    // Store the transform function and callback
-    auto data_tuple = std::make_tuple(std::forward<Data>(data)...);
-    transform_callback_ = [transform = std::forward<Transform>(transform),
-                           cb = std::forward<Cb>(cb),
-                           data_tuple] (const SpanVector& spans) {
-      // Create a vector for transformed spans
-      using TransformedType =
-          decltype(transform(std::declval<Tracer::SpanStor>(),
-                             std::declval<Data>()...));
-      std::vector<TransformedType> transformed_spans;
-      transformed_spans.reserve(spans.size());
-
-      // Apply the transform to each span
-      std::apply([&transform, &spans, &transformed_spans](const Data&... data) {
-        for (const auto& span : spans) {
-          transformed_spans.push_back(transform(span, data...));
-        }
-      }, data_tuple);
-
-      // Call the callback with the transformed spans and additional data
-      std::apply([&cb, &transformed_spans](const Data&... data) {
-        cb(transformed_spans, data...);
-      }, data_tuple);
-    };
-    this->do_collect();
-  }
-
  private:
   void do_collect();
   void process_spans();
@@ -83,7 +52,6 @@ class SpanCollector: public std::enable_shared_from_this<SpanCollector> {
   uint64_t interval_;
   nsuv::ns_timer* span_timer_;
   std::function<void(const SpanVector&)> callback_ = nullptr;
-  std::function<void(const SpanVector&)> transform_callback_ = nullptr;
   bool sent_ = false;
   std::atomic<bool> dropped_spans_ = false;
   bool warned_dropped_spans_ = false;

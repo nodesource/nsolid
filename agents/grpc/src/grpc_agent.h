@@ -265,7 +265,7 @@ class GrpcAgent: public std::enable_shared_from_this<GrpcAgent>,
 
   void got_continuous_profile(const ProfileCollector::ProfileQStor& stor);
 
-  void got_spans(const UniqRecordables& spans);
+  void got_spans(const std::vector<Tracer::SpanStor>& spans);
 
   void handle_command_request(CommandRequestStor&& req);
 

@@ -679,7 +679,8 @@ void fill_histograms(
 }
 
 void fill_log_recordable(LogsRecordable* recordable,
-                         const LogWriteInfo& info) {
+                         const LogWriteInfo& info,
+                         const Resource& resource) {
   recordable->SetBody(info.msg);
   recordable->SetSeverity(
       static_cast<opentelemetry::logs::Severity>(info.severity));
@@ -696,8 +697,7 @@ void fill_log_recordable(LogsRecordable* recordable,
     nanoseconds(static_cast<uint64_t>(info.timestamp))));
   recordable->SetTimestamp(ts);
   recordable->SetObservedTimestamp(ts);
-  auto resource = GetResource();
-  recordable->SetResource(*resource);
+  recordable->SetResource(resource);
   recordable->SetInstrumentationScope(*GetScope());
 }
 
@@ -816,7 +816,9 @@ class JsonAttributes final : public opentelemetry::common::KeyValueIterable {
   const json& attrs_;
 };
 
-void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
+void fill_recordable(Recordable* recordable,
+                     const Tracer::SpanStor& s,
+                     const Resource& resource) {
   recordable->SetName(s.name);
   time_point start{
       duration_cast<time_point::duration>(
@@ -923,9 +925,7 @@ void fill_recordable(Recordable* recordable, const Tracer::SpanStor& s) {
 
   recordable->SetAttribute("thread.id", s.thread_id);
   recordable->SetAttribute("nsolid.span_type", s.type);
-
-  auto resource = GetResource();
-  recordable->SetResource(*resource);
+  recordable->SetResource(resource);
 }
 
 }  // namespace otlp
