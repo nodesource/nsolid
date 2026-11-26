@@ -2796,13 +2796,14 @@ void BindingData::PushSpanDataDoubleImpl(BindingData* data,
                                          double val,
                                          double monotonic) {
   Span::PropType prop_type = static_cast<Span::PropType>(type);
+  EnvInst* envinst = data->env()->envinst_.get();
   std::unique_ptr<tracing::SpanPropBase> prop;
   if (prop_type == Span::kSpanStart) {
-    prop = Span::createSpanProp(prop_type, Span::StartTime{val, monotonic});
+    prop = Span::createSpanProp(
+        prop_type, Span::StartTime{val, monotonic, envinst->GetThreadName()});
   } else {
     prop = Span::createSpanProp<double>(prop_type, val);
   }
-  EnvInst* envinst = data->env()->envinst_.get();
   EnvList::Inst()->GetTracer()->pushSpanData(
       SpanItem{ span_id, envinst->thread_id(), std::move(prop) });
 }

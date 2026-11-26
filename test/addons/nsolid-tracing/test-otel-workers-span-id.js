@@ -12,6 +12,8 @@ function startSpan() {
   nsolid.setThreadName(`tracing-thread-${threadId}`);
   assert.strictEqual(nsolid.otel.register(api), true);
   const span = api.trace.getTracer('test').startSpan('overlapping span');
+  // The span keeps the thread name it started with.
+  nsolid.setThreadName('renamed after start');
   const id = (BigInt(span.spanIdHigh) << 32n) | BigInt(span.spanIdLow);
   assert.strictEqual(id.toString(16).padStart(16, '0'),
                      span.spanContext().spanId);

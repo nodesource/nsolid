@@ -51,6 +51,10 @@ void Span::add_prop(const SpanPropBase& prop) {
       if (std::isfinite(start.monotonic)) {
         start_monotonic_ = start.monotonic;
       }
+      if (!start.thread_name.empty()) {
+        add_attribute(
+            SpanProp<std::string>(kSpanThreadName, start.thread_name));
+      }
     }
     break;
     case Span::kSpanTraceId:
@@ -244,26 +248,7 @@ void TracerImpl::endPendingSpans() {
 }
 
 void TracerImpl::pushSpanData(SpanItem&& item) {
-  std::string thread_name;
-  const uint64_t span_id = item.span_id;
-  uint64_t thread_id = item.thread_id;
-  bool send_thread_name = item.prop->type() == Span::kSpanStart;
-  if (send_thread_name) {
-    auto envinst_sp = GetEnvInst(thread_id);
-    if (envinst_sp != nullptr) {
-      thread_name = envinst_sp->GetThreadName();
-      send_thread_name &= thread_name.size() > 0;
-    }
-  }
-
-  EnvList* envlist = EnvList::Inst();
-  envlist->send_trace_data(std::move(item));
-  if (send_thread_name) {
-    auto prop = Span::createSpanProp<std::string>(Span::kSpanThreadName,
-                                                  thread_name);
-    item = SpanItem { span_id, thread_id, std::move(prop) };
-    envlist->send_trace_data(std::move(item));
-  }
+  EnvList::Inst()->send_trace_data(std::move(item));
 }
 
 
