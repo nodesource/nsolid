@@ -86,7 +86,16 @@ class DispatchQueue {
   nsuv::ns_timer* timer_;
   void (*usr_init_cb_)(int, DispatchQueue*) = nullptr;
   TSQueue<DataType> queue_data_;
-  std::atomic<bool> processing_ = { false };
+  // Set while a run is queued, in progress or left to the timer as a
+  // follow-up. No run_queue_ callback is queued then, so there is at most one,
+  // and none while the queue is processed.
+  std::atomic<bool> scheduled_ = {false};
+  // Set when the next timer run is a follow-up that owns scheduled_. Only used
+  // from the EnvList thread.
+  bool follow_up_ = false;
+  int schedule_run();
+  void process();
+  bool arm_follow_up();
   static void run_queue_(void*);
   static void run_queue_timer_(nsuv::ns_timer*);
   std::atomic<uint64_t> timeout_ = { 0 };
@@ -837,35 +846,24 @@ int DispatchQueue<DataType>::Stop() {
 template <typename DataType>
 int DispatchQueue<DataType>::Enqueue(const DataType& data) {
   size_t size = queue_data_.enqueue(data);
-  int er = 0;
-  // No reason to call QueueCallback() if the data is currently being
-  // processed. This isn't 100% thread safe. There is a slight chance that it
-  // can be enqueued multiple times, but that won't cause any issues.
-  if (!processing_ && max_ > 0 && size > max_) {
-    er = EnvList::Inst()->QueueCallback(run_queue_, this);
+  if (max_ > 0 && size > max_) {
+    return schedule_run();
   }
-  return er;
+  return 0;
 }
 
 template <typename DataType>
 int DispatchQueue<DataType>::Enqueue(DataType&& data) {
   size_t size = queue_data_.enqueue(std::move(data));
-  int er = 0;
-  // No reason to call QueueCallback() if the data is currently being
-  // processed. This isn't 100% thread safe. There is a slight chance that it
-  // can be enqueued multiple times, but that won't cause any issues.
-  if (!processing_ && max_ > 0 && size > max_) {
-    er = EnvList::Inst()->QueueCallback(run_queue_, this);
+  if (max_ > 0 && size > max_) {
+    return schedule_run();
   }
-  return er;
+  return 0;
 }
 
 template <typename DataType>
 int DispatchQueue<DataType>::Dispatch() {
-  if (processing_) {
-    return 0;
-  }
-  return EnvList::Inst()->QueueCallback(run_queue_, this);
+  return schedule_run();
 }
 
 template <typename DataType>
@@ -873,23 +871,78 @@ size_t DispatchQueue<DataType>::Size() {
   return queue_data_.size();
 }
 
+// The queued callback gets the raw DispatchQueue pointer, so the queue must
+// outlive the EnvList thread that runs it. The EnvList queues are members that
+// are destroyed only after that thread has been joined. A queue with another
+// owner, destroyed while a callback is still queued, isn't protected: unlike
+// the timer, this path doesn't go through DQStor and destroy_lock.
+template <typename DataType>
+int DispatchQueue<DataType>::schedule_run() {
+  if (scheduled_.exchange(true)) {
+    return 0;
+  }
+  int er = EnvList::Inst()->QueueCallback(run_queue_, this);
+  if (er) {
+    scheduled_ = false;
+  }
+  return er;
+}
+
+// Enqueue doesn't queue a run for the items that take the queue past max_
+// while scheduled_ is set. If there are any, keep scheduled_ set and process
+// them on the next loop iteration through the timer, rather than in the same
+// process_callbacks_ pass, from here or from a producer.
+template <typename DataType>
+bool DispatchQueue<DataType>::arm_follow_up() {
+  if (max_ == 0 || queue_data_.size() <= max_) {
+    return false;
+  }
+  follow_up_ = true;
+  // It only fails for a closing timer, and then nothing is processed anyway.
+  USE(timer_->start(run_queue_timer_, 0, timeout_));
+  return true;
+}
+
+// Runs on the EnvList thread with scheduled_ set.
+template <typename DataType>
+void DispatchQueue<DataType>::process() {
+  std::queue<DataType> q;
+  queue_data_.swap(q);
+  dispatch_cb_(std::move(q));
+  while (!arm_follow_up()) {
+    scheduled_ = false;
+    // An item that took the queue past max_ before scheduled_ was cleared
+    // didn't queue a run, so take scheduled_ back for it. Later ones do queue
+    // one.
+    if (max_ == 0 || queue_data_.size() <= max_ || scheduled_.exchange(true)) {
+      return;
+    }
+  }
+}
+
 template <typename DataType>
 void DispatchQueue<DataType>::run_queue_(void* data) {
-  DispatchQueue* dq = static_cast<DispatchQueue*>(data);
-  if (dq) {
-    dq->processing_ = true;
-    std::queue<DataType> q;
-    dq->queue_data_.swap(q);
-    dq->dispatch_cb_(std::move(q));
-    dq->processing_ = false;
-  }
+  static_cast<DispatchQueue*>(data)->process();
 }
 
 template <typename DataType>
 void DispatchQueue<DataType>::run_queue_timer_(nsuv::ns_timer* timer) {
   DQStor* stor = timer->get_data<DQStor>();
   nsuv::ns_mutex::scoped_lock lock(stor->destroy_lock);
-  run_queue_(stor->dq);
+  DispatchQueue* dq = stor->dq;
+  if (dq == nullptr) {
+    return;
+  }
+  if (dq->follow_up_) {
+    dq->follow_up_ = false;
+    dq->process();
+    return;
+  }
+  // If a run_queue_ callback is queued, it processes the queue.
+  if (dq->scheduled_.exchange(true)) {
+    return;
+  }
+  dq->process();
 }
 
 template <typename DataType>
@@ -919,7 +972,10 @@ void DispatchQueue<DataType>::timer_start_cb_(void* data) {
     return;
   }
 
-  int er = timer->start(run_queue_timer_, dq->timeout_, dq->timeout_);
+  // Keep an armed follow-up immediate: it holds scheduled_, so nothing else
+  // processes the queue until it runs.
+  uint64_t timeout = dq->follow_up_ ? 0 : dq->timeout_.load();
+  int er = timer->start(run_queue_timer_, timeout, dq->timeout_);
   if (er) { /* TODO */ }
 }
 
@@ -928,6 +984,15 @@ void DispatchQueue<DataType>::timer_stop_cb_(void* data) {
   nsuv::ns_timer* timer = static_cast<nsuv::ns_timer*>(data);
   int er = timer->stop();
   if (er) { /* TODO */ }
+  DQStor* stor = timer->get_data<DQStor>();
+  nsuv::ns_mutex::scoped_lock lock(stor->destroy_lock);
+  DispatchQueue* dq = stor->dq;
+  // The stopped timer won't run the follow-up, so run it now. With max_ at 0
+  // it releases scheduled_, and Dispatch() can process what comes later.
+  if (dq != nullptr && dq->follow_up_) {
+    dq->follow_up_ = false;
+    dq->process();
+  }
 }
 
 template <typename DataType>
