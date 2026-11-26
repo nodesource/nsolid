@@ -1102,7 +1102,8 @@ void GrpcAgent::env_deletion_cb_(SharedEnvInst envinst,
     agent->thr_metrics_cache_.insert_or_assign(thread_id, std::move(stor));
   }
 
-  if (metrics.empty()) return;
+  // Not connected: the thread metrics cache above is still kept up to date.
+  if (metrics.empty() || agent->metrics_exporter_ == nullptr) return;
   data.scope_metric_data_ =
       std::vector<ScopeMetrics>{{otlp::GetScope(), std::move(metrics)}};
   auto result = agent->metrics_exporter_->Export(data);
@@ -1437,6 +1438,9 @@ void GrpcAgent::do_start() {
       }
 
       agent->got_profile(std::move(stor));
+      // got_profile() may drop a profile that has no stream. Check outside the
+      // profile state lock: the exit path takes the locks in the other order.
+      agent->check_exit_on_profile();
     },
     weak_from_this());
 
@@ -1502,6 +1506,12 @@ void GrpcAgent::do_stop() {
 }
 
 void GrpcAgent::got_spans(const UniqRecordables& recordables) {
+  // The transform and this callback run in the same call on the agent loop,
+  // so a missing exporter here was also missing in the transform.
+  if (trace_exporter_ == nullptr) {
+    return;
+  }
+
   Debug("# Spans Exporting: %ld\n", recordables.size());
   auto result =
       trace_exporter_->Export(const_cast<UniqRecordables&>(recordables));
@@ -1541,6 +1551,11 @@ void GrpcAgent::got_asset_done_msg() {
 
 
 void GrpcAgent::got_blocked_loop(BlockedLoopStor&& stor) {
+  // Not connected: no gRPC stub is available.
+  if (nsolid_service_stub_ == nullptr) {
+    return;
+  }
+
   if (stor.blocked) {
     send_blocked_loop_event(std::move(stor));
   } else {
@@ -1551,6 +1566,13 @@ void GrpcAgent::got_blocked_loop(BlockedLoopStor&& stor) {
 void GrpcAgent::got_logs() {
   std::vector<std::unique_ptr<LogsRecordable>> recordables;
   LogInfoStor stor;
+  if (log_exporter_ == nullptr) {
+    // Not connected: drop the queued logs.
+    while (log_msg_q_.dequeue(stor)) {
+    }
+    return;
+  }
+
   while (log_msg_q_.dequeue(stor)) {
     auto recordable = log_exporter_->MakeRecordable();
     otlp::fill_log_recordable(recordable.get(), stor.info);
@@ -1573,8 +1595,10 @@ void GrpcAgent::got_proc_metrics() {
   data.resource_ = resource.get();
   data.scope_metric_data_ =
     std::vector<ScopeMetrics>{{otlp::GetScope(), metrics}};
-  auto result = metrics_exporter_->Export(data);
-  Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
+  if (metrics_exporter_ != nullptr) {
+    auto result = metrics_exporter_->Export(data);
+    Debug("# ProcessMetrics Exported. Result: %d\n", static_cast<int>(result));
+  }
   proc_prev_stor_ = stor;
 }
 
@@ -1607,7 +1631,22 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     profile_state.last_main_profile = prof_stor.req_id;
   }
 
+  // No stream: the agent wasn't connected when the profile started, or the
+  // stream closed early. Forget the profile so a pending exit doesn't wait
+  // on it. Heap snapshots aren't counted (see do_start_prof_init).
+  auto drop_profile = [&]() {
+    profile_state.pending_profiles_map.erase(it);
+    if (stor.type != kHeapSnapshot) {
+      profile_state.nr_profiles--;
+    }
+  };
+
   if (stor.status < 0) {
+    if (prof_stor.stream == nullptr) {
+      drop_profile();
+      return;
+    }
+
     // Send error message back
     auto error = translate_error(stor.status);
     if (error == ErrorType::EUnknown) {
@@ -1628,7 +1667,7 @@ void GrpcAgent::got_profile(const ProfileCollector::ProfileQStor& stor) {
     prof_stor.done = true;
     if (prof_stor.stream == nullptr) {
       // The stream has been closed, so we can't send the profile
-      profile_state.pending_profiles_map.erase(it);
+      drop_profile();
       return;
     }
 
@@ -1719,6 +1758,11 @@ void GrpcAgent::got_continuous_profile(
   // Look if entry in cont_profile_stor_map_. If not create one
   auto it = cont_profile_stor_map_.find(thread_id);
   if (it == cont_profile_stor_map_.end()) {
+    if (nsolid_service_stub_ == nullptr) {
+      Debug("Continuous profile dropped: not connected\n");
+      return;
+    }
+
     // Create a new stream for the continuous profile
     AssetStream* stream = new AssetStream(nsolid_service_stub_.get(),
                                           AssetStor{stor.type, thread_id},
@@ -2394,13 +2438,21 @@ ErrorType GrpcAgent::do_start_prof_end(ErrorType err,
                                        ProfileOptions&& opts) {
   uint64_t thread_id =
     std::visit([](auto&& opt) { return opt.thread_id; }, opts);
-  auto stream = new AssetStream(nsolid_service_stub_.get(),
-                                AssetStor{type, thread_id},
-                                weak_from_this(),
-                                rpc_metadata(),
-                                EXPORT_ASSET);
+  // Not connected: there's nowhere to upload the asset.
+  // A started profile still runs and got_profile() drops it.
+  AssetStream* stream = nullptr;
+  if (nsolid_service_stub_ != nullptr) {
+    stream = new AssetStream(nsolid_service_stub_.get(),
+                             AssetStor{type, thread_id},
+                             weak_from_this(),
+                             rpc_metadata(),
+                             EXPORT_ASSET);
+  }
+
   if (err != ErrorType::ESuccess) {
-    send_asset_error(type, req_id, std::move(opts), stream, err);
+    if (stream != nullptr) {
+      send_asset_error(type, req_id, std::move(opts), stream, err);
+    }
     return err;
   }
 
@@ -2470,7 +2522,7 @@ void GrpcAgent::update_tracer(uint32_t flags) {
       +[](const Tracer::SpanStor& span, WeakGrpcAgent agent_wp)
           -> UniqRecordable {
         SharedGrpcAgent agent = agent_wp.lock();
-        if (agent == nullptr) {
+        if (agent == nullptr || agent->trace_exporter_ == nullptr) {
           return nullptr;
         }
 
