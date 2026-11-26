@@ -613,18 +613,11 @@ class TestClient {
   }
 
   async log(threadId, level, message) {
-    return new Promise((resolve) => {
-      if (this.#child) {
-        this.#child.send({ type: 'log', level, message, threadId });
-        this.#child.once('message', common.mustCall((msg) => {
-          if (msg.type === 'log') {
-            resolve();
-          }
-        }));
-      } else {
-        resolve();
-      }
-    });
+    if (!this.#child)
+      return;
+    // Wait for the 'log' reply specifically: another late reply mustn't
+    // consume the wait.
+    await this.#sendAndWait({ type: 'log', payload: { level, message, threadId } });
   }
 
   async metrics() {

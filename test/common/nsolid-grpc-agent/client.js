@@ -176,10 +176,13 @@ if (isMainThread) {
         nsolid.disableTraces();
       }
 
-      // Wait for the tracing thread to apply the configuration.
+      // Wait for the tracing thread to apply the configuration. getTraceFlags()
+      // can emit flagsUpdated again, re-entering this listener: reply once.
+      let replied = false;
       const onFlagsUpdated = () => {
-        if (!!getTraceFlags() !== enabled)
+        if (!!getTraceFlags() !== enabled || replied)
           return;
+        replied = true;
         nsolidTracer.removeListener('flagsUpdated', onFlagsUpdated);
         process.send({ type: msg.type });
       };
