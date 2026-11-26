@@ -3,6 +3,8 @@
 
 #include "gtest/gtest.h"
 
+#include <vector>
+
 #define NANOS_PER_SEC 1000000000
 
 using node::nsolid::LRUMap;
@@ -97,6 +99,28 @@ TEST(LRUMapTest, MaxSize) {
   EXPECT_EQ(last_evicted, 20);
   EXPECT_EQ(map.size(), 3U);
   EXPECT_EQ(map.erase(1), 0U);
+}
+
+TEST(LRUMapTest, CleanKeepsNewerEntries) {
+  std::vector<int> expired;
+  LRUMap<int, int>* map_ptr = nullptr;
+  LRUMap<int, int> map(NANOS_PER_SEC / 10, [&](int value) {
+    // An entry inserted while clean() runs is newer than its start time, so
+    // it must be kept.
+    if (expired.empty()) {
+      map_ptr->insert(2, 20);
+    }
+    expired.push_back(value);
+  });
+  map_ptr = &map;
+  map.insert(0, 0);
+  map.insert(1, 10);
+  uv_sleep(200);
+  map.clean();
+  EXPECT_EQ(expired, (std::vector<int>{0, 10}));
+  ASSERT_EQ(map.size(), 1U);
+  EXPECT_EQ(map.begin()->first, 2);
+  EXPECT_EQ(map.begin()->second, 20);
 }
 
 static opentelemetry::sdk::metrics::PointDataAttributes makeHistogramPoint(
