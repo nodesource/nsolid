@@ -4,6 +4,7 @@
 #include <nsolid.h>
 #include <nsolid/thread_safe.h>
 #include <memory>
+#include <vector>
 #include "nlohmann/json.hpp"
 
 #include "asserts-cpp/asserts.h"
@@ -81,8 +82,6 @@ class OTLPAgent {
 
   static void thr_metrics_cb_(SharedThreadMetrics, OTLPAgent*);
 
-  static UniqRecordable transf(const Tracer::SpanStor& span, OTLPAgent* agent);
-
   void do_start();
 
   void do_stop();
@@ -104,7 +103,7 @@ class OTLPAgent {
 
   void got_thr_metrics();
 
-  void got_spans(const UniqRecordables& spans);
+  void got_spans(const std::vector<Tracer::SpanStor>& spans);
 
   void setup_trace_otlp_exporter(  // NOLINTNEXTLINE(runtime/references)
     OPENTELEMETRY_NAMESPACE::exporter::otlp::OtlpHttpExporterOptions& opts);

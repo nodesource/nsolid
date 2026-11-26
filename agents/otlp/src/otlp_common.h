@@ -87,11 +87,15 @@ void fill_histograms(std::vector<opentelemetry::sdk::metrics::MetricData>&,
                      uint64_t start_timestamp_ms = 0,
                      uint64_t end_timestamp_ms = 0);
 
-void fill_log_recordable(OPENTELEMETRY_NAMESPACE::sdk::logs::Recordable*,
-                         const LogWriteInfo&);
+// The recordables keep a pointer to the resource: it must outlive the export.
+void fill_log_recordable(
+    OPENTELEMETRY_NAMESPACE::sdk::logs::Recordable*,
+    const LogWriteInfo&,
+    const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource&);
 
 void fill_recordable(OPENTELEMETRY_NAMESPACE::sdk::trace::Recordable*,
-                     const Tracer::SpanStor&);
+                     const Tracer::SpanStor&,
+                     const OPENTELEMETRY_NAMESPACE::sdk::resource::Resource&);
 
 
 }  // namespace otlp

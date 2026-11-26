@@ -1519,10 +1519,19 @@ void GrpcAgent::do_stop() {
       cont_profile_hook_id_);
 }
 
-void GrpcAgent::got_spans(const UniqRecordables& recordables) {
+void GrpcAgent::got_spans(const SpanVector& spans) {
+  // The recordables point to the resource: keep it alive until the export.
+  auto resource = otlp::GetResource();
+  UniqRecordables recordables;
+  recordables.reserve(spans.size());
+  for (const auto& span : spans) {
+    auto recordable = trace_exporter_->MakeRecordable();
+    otlp::fill_recordable(recordable.get(), span, *resource);
+    recordables.push_back(std::move(recordable));
+  }
+
   Debug("# Spans Exporting: %ld\n", recordables.size());
-  auto result =
-      trace_exporter_->Export(const_cast<UniqRecordables&>(recordables));
+  auto result = trace_exporter_->Export(recordables);
   Debug("# Result: %d\n", static_cast<int>(result));
 }
 
@@ -1575,11 +1584,13 @@ void GrpcAgent::got_blocked_loop(BlockedLoopStor&& stor) {
 }
 
 void GrpcAgent::got_logs() {
+  // The recordables point to the resource: keep it alive until the export.
+  auto resource = otlp::GetResource();
   std::vector<std::unique_ptr<LogsRecordable>> recordables;
   LogInfoStor stor;
   while (log_msg_q_.dequeue(stor)) {
     auto recordable = log_exporter_->MakeRecordable();
-    otlp::fill_log_recordable(recordable.get(), stor.info);
+    otlp::fill_log_recordable(recordable.get(), stor.info, *resource);
     recordables.push_back(std::move(recordable));
   }
 
@@ -2501,27 +2512,16 @@ void GrpcAgent::update_tracer(uint32_t flags) {
                                                       trace_flags_,
                                                       span_msg_q_min_size,
                                                       span_timer_interval);
-    span_collector_->CollectAndTransform(
-      +[](const Tracer::SpanStor& span, WeakGrpcAgent agent_wp)
-          -> UniqRecordable {
-        SharedGrpcAgent agent = agent_wp.lock();
-        if (agent == nullptr) {
-          return nullptr;
-        }
+    span_collector_->Collect(
+        +[](const SpanVector& spans, WeakGrpcAgent agent_wp) {
+          SharedGrpcAgent agent = agent_wp.lock();
+          if (agent == nullptr) {
+            return;
+          }
 
-        auto recordable = agent->trace_exporter_->MakeRecordable();
-        otlp::fill_recordable(recordable.get(), span);
-        return recordable;
-      },
-      +[](UniqRecordables& spans, WeakGrpcAgent agent_wp) {
-        SharedGrpcAgent agent = agent_wp.lock();
-        if (agent == nullptr) {
-          return;
-        }
-
-        agent->got_spans(spans);
-      },
-      weak_from_this());
+          agent->got_spans(spans);
+        },
+        weak_from_this());
   }
 }
 

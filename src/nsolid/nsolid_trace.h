@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "lru_map.h"
@@ -124,9 +125,11 @@ class Span {
   };
 
   // Wall-clock start (timestamp); end = timestamp + (now - monotonic).
+  // thread_name is the JS thread's name when the span starts.
   struct StartTime {
     double timestamp;
     double monotonic;
+    std::string thread_name;
   };
 
   static const char* traceTypeToString(const Tracer::SpanType& type);
@@ -168,8 +171,8 @@ class SpanPropBase {
 template <typename Type>
 class SpanProp: public SpanPropBase {
  public:
-  explicit SpanProp(const Span::PropType& t, const Type& v): SpanPropBase(t),
-                                                             value_(v) {}
+  explicit SpanProp(const Span::PropType& t, Type v)
+      : SpanPropBase(t), value_(std::move(v)) {}
   const Type& val() const { return value_; }
  private:
   Type value_;
@@ -227,7 +230,7 @@ class NODE_EXTERN TracerImpl {
 template <typename T>
 std::unique_ptr<SpanPropBase> Span::createSpanProp(Span::PropType type,
                                                    T value) {
-  return std::make_unique<SpanProp<T>>(type, value);
+  return std::make_unique<SpanProp<T>>(type, std::move(value));
 }
 
 

@@ -379,9 +379,18 @@ void OTLPAgent::do_stop() {
 }
 
 
-void OTLPAgent::got_spans(const UniqRecordables& recordables) {
-  auto result =
-      otlp_exporter_->Export(const_cast<UniqRecordables&>(recordables));
+void OTLPAgent::got_spans(const SpanVector& spans) {
+  // The recordables point to the resource: keep it alive until the export.
+  auto resource = GetResource();
+  UniqRecordables recordables;
+  recordables.reserve(spans.size());
+  for (const auto& span : spans) {
+    auto recordable = otlp_exporter_->MakeRecordable();
+    fill_recordable(recordable.get(), span, *resource);
+    recordables.push_back(std::move(recordable));
+  }
+
+  auto result = otlp_exporter_->Export(recordables);
   Debug("# Spans Exported: %ld. Result: %d\n",
         recordables.size(),
         static_cast<int>(result));
@@ -658,24 +667,17 @@ void OTLPAgent::update_tracer(uint32_t flags) {
                                                       trace_flags_,
                                                       span_msg_q_min_size,
                                                       span_timer_interval);
-    span_collector_->CollectAndTransform(
-        transf, +[](UniqRecordables& spans, OTLPAgent* agent) {
-      nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
-      if (!is_running_) {
-        return;
-      }
+    span_collector_->Collect(
+        +[](const SpanVector& spans, OTLPAgent* agent) {
+          nsuv::ns_rwlock::scoped_rdlock lock(exit_lock_);
+          if (!is_running_) {
+            return;
+          }
 
-      agent->got_spans(spans);
-    }, this);
+          agent->got_spans(spans);
+        },
+        this);
   }
-}
-
-UniqRecordable OTLPAgent::transf(const Tracer::SpanStor& span,
-                                 OTLPAgent* agent) {
-  // Transform the span into a recordable
-  auto recordable = agent->otlp_exporter_->MakeRecordable();
-  fill_recordable(recordable.get(), span);
-  return recordable;
 }
 }  // namespace otlp
 }  // namespace nsolid
